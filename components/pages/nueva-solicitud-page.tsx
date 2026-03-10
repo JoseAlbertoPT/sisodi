@@ -1193,6 +1193,7 @@ export function NuevaSolicitudPage() {
 
   const folio = folioSeleccionado ? MOCK_FOLIOS.find((f) => f.id === folioSeleccionado) : null
 
+
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       {/* Header */}
@@ -1226,6 +1227,7 @@ export function NuevaSolicitudPage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               <div className="grid gap-5 md:grid-cols-2">
+
                 {/* Regimen selector */}
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium">Regimen</Label>

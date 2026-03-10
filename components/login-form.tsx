@@ -109,7 +109,7 @@ export function LoginForm() {
           {/* Footer */}
           <div className="border-t border-border px-8 py-4 text-center">
             <p className="text-xs text-muted-foreground">
-              Sistema Institucional v1.0 - Todos los derechos reservados
+              Sistema Institucional  Todos los derechos reservados
             </p>
           </div>
         </div>
