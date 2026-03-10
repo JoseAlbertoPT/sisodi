@@ -17,6 +17,7 @@ import {
   Filter,
   ScanSearch,
   ShieldCheck,
+  Settings,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -32,6 +33,7 @@ export type PageKey =
   | "dictamenes"
   | "calendario"
   | "usuarios"
+  | "configuracion"
   | "perfil"
 
 interface SidebarProps {
@@ -96,6 +98,7 @@ const menuGroups: MenuGroup[] = [
   {
     label: "",
     items: [
+      { key: "configuracion", label: "Configuracion", icon: <Settings className="h-4 w-4" /> },
       { key: "perfil", label: "Perfil", icon: <UserCircle className="h-4 w-4" /> },
     ],
   },

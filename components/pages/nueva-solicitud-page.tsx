@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +20,9 @@ import { useSolicitudes, type TipoAdministracion } from "@/lib/solicitudes-store
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { useAuth } from "@/lib/auth-context"
 import { CAP_3000, CAP_1000, NOMBRAMIENTO_TD, parseDateDMY, isPeriodoVigente } from "@/lib/calendario-recepcion-mock"
+import { parseExcelFile, type HistoricoRow } from "@/lib/parse-excel-historico"
+import { mapHistoricoRowToPrestacion, type HistoricoPrestacionForm } from "@/lib/map-historico-to-prestacion"
+import { useHistoricoStore } from "@/lib/historico-store"
 
 // ── Rangos tabulador (informativo) ──
 const RANGOS_TABULADOR = [
@@ -142,14 +145,59 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
 function FormularioPrestacion({
   prefilled,
   lockVigenciaOnly = false,
+  historicoData = null,
 }: {
   prefilled: boolean
   lockVigenciaOnly?: boolean
+  historicoData?: HistoricoPrestacionForm | null
 }) {
   const lock = lockVigenciaOnly
-  const [regimen, setRegimen] = useState("")
-  const [actividades, setActividades] = useState([""])
-  const [responsabilidades, setResponsabilidades] = useState([""])
+
+  const getInitial = <T,>(fromHistorico: T, fromPrefilled: T, empty: T): T =>
+    historicoData ? fromHistorico : prefilled ? fromPrefilled : empty
+
+  const [secretaria, setSecretaria] = useState(getInitial(historicoData?.secretaria ?? "", "Secretaria de Administracion", ""))
+  const [unidadAdscripcion, setUnidadAdscripcion] = useState(getInitial(historicoData?.unidadAdscripcion ?? "", "dgpic", ""))
+  const [unidadResponsableGasto, setUnidadResponsableGasto] = useState(getInitial(historicoData?.unidadResponsableGasto ?? "", "urg-01", ""))
+  const [programaProyecto, setProgramaProyecto] = useState(getInitial(historicoData?.programaProyecto ?? "", "P-003 Modernizacion Administrativa", ""))
+  const [regimen, setRegimen] = useState(getInitial(historicoData?.regimen ?? "", "honorarios", ""))
+  const [tipoActividad, setTipoActividad] = useState(getInitial(historicoData?.tipoActividad ?? "", "profesional", ""))
+  const [numPrestadores, setNumPrestadores] = useState(getInitial(historicoData?.numPrestadores ?? "", "3", ""))
+  const [vigenciaInicio, setVigenciaInicio] = useState(getInitial(historicoData?.vigenciaInicio ?? "", "2026-01-01", ""))
+  const [vigenciaFin, setVigenciaFin] = useState(getInitial(historicoData?.vigenciaFin ?? "", "2026-06-30", ""))
+  const [importeBruto, setImporteBruto] = useState(getInitial(historicoData?.importeBruto ?? "", "45,000.00", ""))
+  const [objetoContratacion, setObjetoContratacion] = useState(getInitial(historicoData?.objetoContratacion ?? "", "Prestacion de servicios profesionales para el desarrollo, implementacion y seguimiento de sistemas informaticos orientados a la modernizacion administrativa.", ""))
+  const [actividades, setActividades] = useState<string[]>(getInitial(historicoData?.actividades ?? [""], ["Desarrollo de modulos del sistema institucional", "Pruebas de calidad e integracion", "Documentacion tecnica"], [""]))
+  const [responsabilidades, setResponsabilidades] = useState<string[]>(getInitial(historicoData?.responsabilidades ?? [""], ["Cumplir con los plazos establecidos", "Reportar avances semanales"], [""]))
+  const [escolaridadMinima, setEscolaridadMinima] = useState(getInitial(historicoData?.escolaridadMinima ?? "", "licenciatura", ""))
+  const [competenciasAdministrativas, setCompetenciasAdministrativas] = useState(getInitial(historicoData?.competenciasAdministrativas ?? "", "Planeacion, organizacion, control de recursos", ""))
+  const [competenciasTecnicas, setCompetenciasTecnicas] = useState(getInitial(historicoData?.competenciasTecnicas ?? "", "Desarrollo de software, bases de datos, redes", ""))
+  const [competenciasSociales, setCompetenciasSociales] = useState(getInitial(historicoData?.competenciasSociales ?? "", "Trabajo en equipo, comunicacion efectiva", ""))
+  const [valores, setValores] = useState(getInitial(historicoData?.valores ?? "", "Integridad, responsabilidad, transparencia", ""))
+  const [areasExperiencia, setAreasExperiencia] = useState(getInitial(historicoData?.areasExperiencia ?? "", "Tecnologias de la informacion, administracion publica", ""))
+
+  useEffect(() => {
+    if (!historicoData) return
+    setSecretaria(historicoData.secretaria || "Secretaria de Administracion")
+    setUnidadAdscripcion(historicoData.unidadAdscripcion)
+    setUnidadResponsableGasto(historicoData.unidadResponsableGasto)
+    setProgramaProyecto(historicoData.programaProyecto)
+    setRegimen(historicoData.regimen)
+    setTipoActividad(historicoData.tipoActividad)
+    setNumPrestadores(historicoData.numPrestadores)
+    setVigenciaInicio(historicoData.vigenciaInicio)
+    setVigenciaFin(historicoData.vigenciaFin)
+    setImporteBruto(historicoData.importeBruto)
+    setObjetoContratacion(historicoData.objetoContratacion)
+    setActividades(historicoData.actividades.length > 0 ? historicoData.actividades : [""])
+    setResponsabilidades(historicoData.responsabilidades.length > 0 ? historicoData.responsabilidades : [""])
+    setEscolaridadMinima(historicoData.escolaridadMinima)
+    setCompetenciasAdministrativas(historicoData.competenciasAdministrativas)
+    setCompetenciasTecnicas(historicoData.competenciasTecnicas)
+    setCompetenciasSociales(historicoData.competenciasSociales)
+    setValores(historicoData.valores)
+    setAreasExperiencia(historicoData.areasExperiencia)
+  }, [historicoData])
 
   return (
     <div className="flex flex-col gap-6">
@@ -166,7 +214,7 @@ function FormularioPrestacion({
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Secretaria</Label>
               <Input
-                value={prefilled ? "Secretaria de Administracion" : ""}
+                value={secretaria || (prefilled ? "Secretaria de Administracion" : "")}
                 disabled
                 className="bg-muted text-muted-foreground"
               />
@@ -174,7 +222,7 @@ function FormularioPrestacion({
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Unidad Administrativa de Adscripcion</Label>
-              <Select defaultValue={prefilled ? "dgpic" : undefined}>
+              <Select value={unidadAdscripcion || undefined} onValueChange={setUnidadAdscripcion}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione unidad" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="dgpic">Dir. Gral. de Profesionalizacion e Innovacion</SelectItem>
@@ -185,7 +233,7 @@ function FormularioPrestacion({
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Unidad Responsable del Gasto</Label>
-              <Select defaultValue={prefilled ? "urg-01" : undefined}>
+              <Select value={unidadResponsableGasto || undefined} onValueChange={setUnidadResponsableGasto}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione URG" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="urg-01">URG-01 Oficina del Secretario</SelectItem>
@@ -196,11 +244,11 @@ function FormularioPrestacion({
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Programa o Proyecto</Label>
-              <Input defaultValue={prefilled ? "P-003 Modernizacion Administrativa" : ""} placeholder="Nombre del programa" className="bg-background" />
+              <Input value={programaProyecto} onChange={(e) => setProgramaProyecto(e.target.value)} placeholder="Nombre del programa" className="bg-background" />
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Regimen de Contratacion</Label>
-              <RadioGroup value={prefilled ? "honorarios" : regimen} onValueChange={setRegimen} className="flex gap-4 pt-1">
+              <RadioGroup value={regimen} onValueChange={setRegimen} className="flex gap-4 pt-1">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="honorarios" id="reg-hon" />
                   <Label htmlFor="reg-hon" className="text-sm font-normal cursor-pointer">Honorarios</Label>
@@ -213,7 +261,7 @@ function FormularioPrestacion({
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Tipo de Actividades</Label>
-              <Select defaultValue={prefilled ? "profesional" : undefined}>
+              <Select value={tipoActividad || undefined} onValueChange={setTipoActividad}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Segun unidad administrativa" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="profesional">Profesionales</SelectItem>
@@ -225,18 +273,18 @@ function FormularioPrestacion({
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Numero de Prestadores de Servicios</Label>
-              <Input type="number" min={1} defaultValue={prefilled ? "3" : ""} placeholder="Ej. 5" className="bg-background" />
+              <Input type="number" min={1} value={numPrestadores} onChange={(e) => setNumPrestadores(e.target.value)} placeholder="Ej. 5" className="bg-background" />
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Vigencia</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Inicio</span>
-                  <Input type="date" defaultValue={prefilled ? "2026-01-01" : ""} className="bg-background" />
+                  <Input type="date" value={vigenciaInicio} onChange={(e) => setVigenciaInicio(e.target.value)} className="bg-background" />
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Termino</span>
-                  <Input type="date" defaultValue={prefilled ? "2026-06-30" : ""} className="bg-background" />
+                  <Input type="date" value={vigenciaFin} onChange={(e) => setVigenciaFin(e.target.value)} className="bg-background" />
                 </div>
               </div>
             </div>
@@ -246,7 +294,8 @@ function FormularioPrestacion({
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                 <Input
                   type="text"
-                  defaultValue={prefilled ? "45,000.00" : ""}
+                  value={importeBruto}
+                  onChange={(e) => setImporteBruto(e.target.value)}
                   placeholder="0.00"
                   className="bg-background pl-7"
                 />
@@ -272,7 +321,8 @@ function FormularioPrestacion({
         </CardHeader>
         <CardContent>
           <Textarea
-            defaultValue={prefilled ? "Prestacion de servicios profesionales para el desarrollo, implementacion y seguimiento de sistemas informaticos orientados a la modernizacion administrativa." : ""}
+            value={objetoContratacion}
+            onChange={(e) => setObjetoContratacion(e.target.value)}
             placeholder="Describa el objeto de la contratacion de manera detallada..."
             className="bg-background min-h-28"
           />
@@ -287,7 +337,7 @@ function FormularioPrestacion({
         <CardContent>
           <DynamicList
             label=""
-            items={prefilled ? ["Desarrollo de modulos del sistema institucional", "Pruebas de calidad e integracion", "Documentacion tecnica"] : actividades}
+            items={actividades}
             onChange={setActividades}
           />
         </CardContent>
@@ -301,7 +351,7 @@ function FormularioPrestacion({
         <CardContent>
           <DynamicList
             label=""
-            items={prefilled ? ["Cumplir con los plazos establecidos", "Reportar avances semanales"] : responsabilidades}
+            items={responsabilidades}
             onChange={setResponsabilidades}
           />
         </CardContent>
@@ -319,7 +369,7 @@ function FormularioPrestacion({
           <div className="grid gap-5 md:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Escolaridad Minima</Label>
-              <Select defaultValue={prefilled ? "licenciatura" : undefined}>
+              <Select value={escolaridadMinima || undefined} onValueChange={setEscolaridadMinima}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bachillerato">Bachillerato</SelectItem>
@@ -332,23 +382,23 @@ function FormularioPrestacion({
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Competencias Administrativas</Label>
-              <Textarea defaultValue={prefilled ? "Planeacion, organizacion, control de recursos" : ""} placeholder="Describa competencias administrativas" className="bg-background min-h-16" />
+              <Textarea value={competenciasAdministrativas} onChange={(e) => setCompetenciasAdministrativas(e.target.value)} placeholder="Describa competencias administrativas" className="bg-background min-h-16" />
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Competencias Tecnicas</Label>
-              <Textarea defaultValue={prefilled ? "Desarrollo de software, bases de datos, redes" : ""} placeholder="Describa competencias tecnicas" className="bg-background min-h-16" />
+              <Textarea value={competenciasTecnicas} onChange={(e) => setCompetenciasTecnicas(e.target.value)} placeholder="Describa competencias tecnicas" className="bg-background min-h-16" />
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Competencias Sociales</Label>
-              <Textarea defaultValue={prefilled ? "Trabajo en equipo, comunicacion efectiva" : ""} placeholder="Describa competencias sociales" className="bg-background min-h-16" />
+              <Textarea value={competenciasSociales} onChange={(e) => setCompetenciasSociales(e.target.value)} placeholder="Describa competencias sociales" className="bg-background min-h-16" />
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Valores</Label>
-              <Textarea defaultValue={prefilled ? "Integridad, responsabilidad, transparencia" : ""} placeholder="Valores requeridos" className="bg-background min-h-16" />
+              <Textarea value={valores} onChange={(e) => setValores(e.target.value)} placeholder="Valores requeridos" className="bg-background min-h-16" />
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Areas de Experiencia</Label>
-              <Textarea defaultValue={prefilled ? "Tecnologias de la informacion, administracion publica" : ""} placeholder="Areas de experiencia requeridas" className="bg-background min-h-16" />
+              <Textarea value={areasExperiencia} onChange={(e) => setAreasExperiencia(e.target.value)} placeholder="Areas de experiencia requeridas" className="bg-background min-h-16" />
             </div>
           </div>
         </CardContent>
@@ -1158,6 +1208,75 @@ export function NuevaSolicitudPage() {
   const [prefilled, setPrefilled] = useState(false)
   const [lockVigenciaOnly, setLockVigenciaOnly] = useState(false)
 
+  const { historicos: historicosGuardados, getHistoricoById } = useHistoricoStore()
+  const [selectedHistoricoId, setSelectedHistoricoId] = useState<string | null>(null)
+  const [historicoSheetNames, setHistoricoSheetNames] = useState<string[]>([])
+  const [historicoRowsBySheet, setHistoricoRowsBySheet] = useState<Record<string, HistoricoRow[]>>({})
+  const [selectedHistoricoSheet, setSelectedHistoricoSheet] = useState<string>("")
+  const [selectedHistoricoRowIndex, setSelectedHistoricoRowIndex] = useState<number>(0)
+  const [historicoFormData, setHistoricoFormData] = useState<HistoricoPrestacionForm | null>(null)
+  const [historicoParseError, setHistoricoParseError] = useState<string | null>(null)
+
+  const historicoRows = selectedHistoricoSheet ? historicoRowsBySheet[selectedHistoricoSheet] ?? [] : []
+  const selectedHistoricoRow = historicoRows[selectedHistoricoRowIndex] ?? null
+
+  const handleHistoricoFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    setHistoricoParseError(null)
+    setHistoricoFormData(null)
+    setSelectedHistoricoId(null)
+    if (!file) return
+    if (!file.name.endsWith(".xlsx")) {
+      setHistoricoParseError("Solo se aceptan archivos .xlsx")
+      return
+    }
+    try {
+      const { sheetNames, getRowsBySheet } = await parseExcelFile(file)
+      setHistoricoSheetNames(sheetNames)
+      const bySheet: Record<string, HistoricoRow[]> = {}
+      for (const name of sheetNames) {
+        bySheet[name] = getRowsBySheet(name)
+      }
+      setHistoricoRowsBySheet(bySheet)
+      setSelectedHistoricoSheet(sheetNames[0] ?? "")
+      setSelectedHistoricoRowIndex(0)
+    } catch (err) {
+      setHistoricoParseError(err instanceof Error ? err.message : "Error al leer el Excel")
+      setHistoricoSheetNames([])
+      setHistoricoRowsBySheet({})
+      setSelectedHistoricoSheet("")
+    }
+  }, [])
+
+  const handleSelectHistoricoGuardado = useCallback(
+    (id: string) => {
+      if (!id || id === "__none__") {
+        setSelectedHistoricoId(null)
+        setHistoricoSheetNames([])
+        setHistoricoRowsBySheet({})
+        setSelectedHistoricoSheet("")
+        setHistoricoParseError(null)
+        return
+      }
+      const record = getHistoricoById(id)
+      if (!record) return
+      setSelectedHistoricoId(id)
+      setHistoricoParseError(null)
+      setHistoricoFormData(null)
+      setHistoricoSheetNames(record.sheetNames)
+      setHistoricoRowsBySheet(record.sheets)
+      setSelectedHistoricoSheet(record.sheetNames[0] ?? "")
+      setSelectedHistoricoRowIndex(0)
+    },
+    [getHistoricoById]
+  )
+
+  const handleAplicarHistorico = useCallback(() => {
+    if (!selectedHistoricoRow) return
+    setHistoricoFormData(mapHistoricoRowToPrestacion(selectedHistoricoRow))
+  }, [selectedHistoricoRow])
+
   // Silent permission check
   const { getPermisoActivo, consumirPermiso } = useAutorizaciones()
   const { user } = useAuth()
@@ -1538,8 +1657,105 @@ export function NuevaSolicitudPage() {
             )}
           </div>
 
+          {tipo === "prestacion" && (
+            <Card className="shadow-sm border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
+                  <Upload className="h-5 w-5 text-secondary" />
+                  Cargar historico desde Excel
+                </CardTitle>
+                <CardDescription>
+                  Suba el archivo de justificaciones para rellenar el formulario con un registro anterior
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium">Archivo Excel (.xlsx)</Label>
+                  <Input
+                    type="file"
+                    accept=".xlsx"
+                    onChange={handleHistoricoFile}
+                    className="bg-background cursor-pointer file:cursor-pointer"
+                  />
+                </div>
+                {historicosGuardados.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-sm font-medium">O use un historico guardado (Configuracion)</Label>
+                    <Select
+                      value={selectedHistoricoId ?? "__none__"}
+                      onValueChange={handleSelectHistoricoGuardado}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Seleccione un historico guardado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">
+                          Ninguno (subir archivo arriba)
+                        </SelectItem>
+                        {historicosGuardados.map((h) => (
+                          <SelectItem key={h.id} value={h.id}>
+                            {h.nombreArchivo} – {h.sheetNames.join(", ")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {historicoParseError && (
+                  <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
+                    {historicoParseError}
+                  </div>
+                )}
+                {historicoSheetNames.length > 0 && (
+                  <>
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-sm font-medium">Hoja</Label>
+                      <Select value={selectedHistoricoSheet} onValueChange={(v) => { setSelectedHistoricoSheet(v); setSelectedHistoricoRowIndex(0) }}>
+                        <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione hoja" /></SelectTrigger>
+                        <SelectContent>
+                          {historicoSheetNames.map((name) => (
+                            <SelectItem key={name} value={name}>{name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {historicoRows.length > 0 && (
+                      <>
+                        <div className="flex flex-col gap-2">
+                          <Label className="text-sm font-medium">Registro</Label>
+                          <Select
+                            value={String(selectedHistoricoRowIndex)}
+                            onValueChange={(v) => setSelectedHistoricoRowIndex(Number(v))}
+                          >
+                            <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione fila" /></SelectTrigger>
+                            <SelectContent>
+                              {historicoRows.map((row, idx) => {
+                                const folio = row["FOLIO DE JUSTIFICACIÓN"] ?? row["FOLIO DE DICTAMEN/OPINIÓN"] ?? ""
+                                const vigencia = [row["VIGENCIA (INICIO)"], row["VIGENCIA (TÉRMINO)"]].filter(Boolean).join(" – ")
+                                const label = [String(folio).trim(), vigencia].filter(Boolean).join(" | ") || `Fila ${idx + 1}`
+                                return (
+                                  <SelectItem key={idx} value={String(idx)}>{label}</SelectItem>
+                                )
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button type="button" onClick={handleAplicarHistorico} variant="secondary" className="w-fit">
+                          Aplicar al formulario
+                        </Button>
+                      </>
+                    )}
+                    {historicoRows.length === 0 && selectedHistoricoSheet && (
+                      <p className="text-sm text-muted-foreground">Esta hoja no tiene filas de datos.</p>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {tipo === "prestacion" ? (
-            <FormularioPrestacion prefilled={prefilled} lockVigenciaOnly={lockVigenciaOnly} />
+            <FormularioPrestacion prefilled={prefilled} lockVigenciaOnly={lockVigenciaOnly} historicoData={historicoFormData} />
           ) : (
             <FormularioNombramiento prefilled={prefilled} />
           )}

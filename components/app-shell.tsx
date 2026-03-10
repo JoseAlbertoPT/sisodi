@@ -14,7 +14,7 @@ import { CalendarioPage } from "@/components/pages/calendario-page"
 import { UsuariosPage } from "@/components/pages/usuarios-page"
 import { PerfilPage } from "@/components/pages/perfil-page"
 import { ValidacionUefaPage } from "@/components/pages/validacion-uefa-page"
-
+import { ConfiguracionPage } from "@/components/pages/configuracion-page"
 
 export function AppShell() {
   const [currentPage, setCurrentPage] = useState<PageKey>("dashboard")
@@ -63,6 +63,8 @@ export function AppShell() {
         return <CalendarioPage />
       case "usuarios":
         return <UsuariosPage />
+      case "configuracion":
+        return <ConfiguracionPage />
       case "perfil":
         return <PerfilPage />
       default:
