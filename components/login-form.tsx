@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Shield, Eye, EyeOff } from "lucide-react"
+import { RecuperarContra } from "@/components/recuperar-contra"
 
 export function LoginForm() {
   const { login } = useAuth()
@@ -13,6 +14,10 @@ export function LoginForm() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
+  const [showRecuperar, setShowRecuperar] = useState(false)
+  if (showRecuperar) {
+    return <RecuperarContra onBack={() => setShowRecuperar(false)} />
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,10 +28,9 @@ export function LoginForm() {
     }
     const success = login(username, password)
     if (!success) {
-      setError("Credenciales incorrectas")
+      setError("Credeccial Incorrecta")
     }
   }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md">
@@ -38,14 +42,13 @@ export function LoginForm() {
             </div>
             <div className="text-center">
               <h1 className="text-lg font-semibold text-primary-foreground">
-                Sistema de Dictaminacion
+                Sistema de Dictaminación
               </h1>
               <p className="text-sm text-primary-foreground/70">
-                Tecnica Funcional
+                Técnica Funcional
               </p>
             </div>
           </div>
-
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-8 py-8">
             {error && (
@@ -53,7 +56,6 @@ export function LoginForm() {
                 {error}
               </div>
             )}
-
             <div className="flex flex-col gap-2">
               <Label htmlFor="username" className="text-sm font-medium text-card-foreground">
                 Usuario
@@ -70,13 +72,13 @@ export function LoginForm() {
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="password" className="text-sm font-medium text-card-foreground">
-                Contrasena
+                Contraseña
               </Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Ingrese su contrasena"
+                  placeholder="Ingrese su contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-background border-input pr-10"
@@ -85,23 +87,25 @@ export function LoginForm() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-
-            <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium py-5">
-              Ingresar
+            <Button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium py-5"
+            >
+             Ingresar
             </Button>
-
             <div className="text-center">
               <button
                 type="button"
+                onClick={() => setShowRecuperar(true)}
                 className="text-sm text-secondary hover:text-accent hover:underline transition-colors"
               >
-                Recuperar contrasena
+                Recuperar contraseña
               </button>
             </div>
           </form>
@@ -109,7 +113,7 @@ export function LoginForm() {
           {/* Footer */}
           <div className="border-t border-border px-8 py-4 text-center">
             <p className="text-xs text-muted-foreground">
-              Sistema Institucional  Todos los derechos reservados
+              Sistema Institucional — Todos los derechos reservados
             </p>
           </div>
         </div>
