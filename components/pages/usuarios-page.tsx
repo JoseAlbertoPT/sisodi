@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -27,65 +27,140 @@ const SECRETARIAS = [
   "Contraloría General",
 ]
 
-const ROLES = ["Admin", "Capturista / URG", "UEFA", "Revisión (F1)", "Validación (F2)", "Emisión (F3)", "Vista"]
+const ROLES = ["Director Operativo", "Analista", "Revisor", "Capturista", "Administrador"]
 
 type Usuario = {
-  id: number
+  id: string
   nombre: string
-  email: string
+  correo: string
+  rfc: string | null
   rol: string
   secretaria: string
   estatus: "Activo" | "Inactivo"
 }
 
-const initialUsuarios: Usuario[] = [
-  { id: 1, nombre: "Maria Garcia Lopez",  email: "maria.garcia@gobierno.gob.mx",    rol: "Director Operativo", secretaria: "Secretaría de Administración",    estatus: "Activo"   },
-  { id: 2, nombre: "Carlos Martinez R.",  email: "carlos.martinez@gobierno.gob.mx", rol: "Analista",           secretaria: "Secretaría de Finanzas",          estatus: "Activo"   },
-  { id: 3, nombre: "Ana Hernandez P.",    email: "ana.hernandez@gobierno.gob.mx",   rol: "Revisor",            secretaria: "Secretaría de Salud",             estatus: "Activo"   },
-  { id: 4, nombre: "Roberto Diaz S.",     email: "roberto.diaz@gobierno.gob.mx",    rol: "Capturista",         secretaria: "Secretaría de Educación",         estatus: "Inactivo" },
-  { id: 5, nombre: "Luisa Fernandez M.",  email: "luisa.fernandez@gobierno.gob.mx", rol: "Analista",           secretaria: "Secretaría de Obras Públicas",    estatus: "Activo"   },
-  { id: 6, nombre: "Pedro Sanchez T.",    email: "pedro.sanchez@gobierno.gob.mx",   rol: "Administrador",      secretaria: "Contraloría General",             estatus: "Activo"   },
-  { id: 7, nombre: "Maria Lopez",         email: "maria.lopez@gobierno.gob.mx",     rol: "Capturista",         secretaria: "Secretaría de Desarrollo Social",  estatus: "Activo"   },
-  { id: 8, nombre: "Juan Perez",          email: "juan.perez@gobierno.gob.mx",      rol: "Capturista",         secretaria: "Secretaría de Economía",          estatus: "Activo"   },
-]
+const API = "/api"
 
-//  Nuevo Usuario
-type NuevoUsuarioFormProps = {
-  onClose: () => void
-  onSave: (u: Omit<Usuario, "id">) => void
+// ── Funciones de API (sin Authorization header) ───────────────────────────────
+
+async function fetchUsuarios(): Promise<Usuario[]> {
+  const res = await fetch(`${API}/usuarios`)
+  if (!res.ok) throw new Error("Error al cargar usuarios")
+  return res.json()
 }
 
-function NuevoUsuarioModal({ onClose, onSave }: NuevoUsuarioFormProps) {
-  const [form, setForm] = useState({
-    nombre: "",
-    email: "",
-    rol: "",
-    secretaria: "",
-    estatus: "Activo" as "Activo" | "Inactivo",
-    password: "",
+async function crearUsuario(data: {
+  nombre: string
+  correo: string
+  rfc: string
+  password: string
+  rolNombre: string
+  areaNombre: string
+}): Promise<Usuario> {
+  const res = await fetch(`${API}/usuarios`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   })
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? err.message ?? "Error al crear usuario")
+  }
+  return res.json()
+}
+
+async function actualizarUsuario(
+  id: string,
+  data: {
+    nombre?: string
+    correo?: string
+    rfc?: string | null
+    password?: string
+    rolNombre?: string
+    areaNombre?: string
+    activo?: boolean
+  }
+): Promise<Usuario> {
+  const res = await fetch(`${API}/usuarios/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? err.message ?? "Error al actualizar usuario")
+  }
+  return res.json()
+}
+
+function validarRFC(rfc: string): boolean {
+  const rfcRegex = /^([A-ZÑ&]{3,4})(\d{6})([A-Z\d]{3})$/
+  return rfcRegex.test(rfc.toUpperCase())
+}
+
+
+type NuevoUsuarioFormProps = {
+  onClose: () => void
+  onSaved: (u: Usuario) => void
+}
+
+function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
+  const [form, setForm] = useState({
+    nombre:     "",
+    correo:     "",
+    rfc:        "",
+    password:   "",
+    rol:        "",
+    secretaria: "",
+    estatus:    "Activo" as "Activo" | "Inactivo",
+  })
+  const [errors,   setErrors]   = useState<Record<string, string>>({})
+  const [loading,  setLoading]  = useState(false)
+  const [apiError, setApiError] = useState("")
 
   const validate = () => {
     const e: Record<string, string> = {}
     if (!form.nombre.trim())   e.nombre   = "El nombre es requerido"
-    if (!form.email.trim())    e.email    = "El correo es requerido"
-    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Correo inválido"
-    if (!form.rol)             e.rol      = "Seleccione un rol"
-    if (!form.secretaria)      e.secretaria = "Seleccione una secretaría"
+    if (!form.correo.trim())   e.correo   = "El correo es requerido"
+    else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
+    if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc   = "RFC inválido (ej. ABCD850101XYZ)"
     if (!form.password.trim()) e.password = "La contraseña es requerida"
     else if (form.password.length < 6) e.password = "Mínimo 6 caracteres"
+    if (!form.rol)             e.rol      = "Seleccione un rol"
+    if (!form.secretaria)      e.secretaria = "Seleccione una secretaría"
     return e
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
-    onSave({ nombre: form.nombre, email: form.email, rol: form.rol, secretaria: form.secretaria, estatus: form.estatus })
-    onClose()
+    setLoading(true)
+    setApiError("")
+    try {
+      const nuevo = await crearUsuario({
+        nombre:     form.nombre,
+        correo:     form.correo,
+        rfc:        form.rfc.toUpperCase(),
+        password:   form.password,
+        rolNombre:  form.rol,
+        areaNombre: form.secretaria,
+      })
+      onSaved(nuevo)
+      onClose()
+    } catch (err: any) {
+      setApiError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const field = (key: keyof typeof form, label: string, type = "text", placeholder = "") => (
+  const field = (
+    key: keyof typeof form,
+    label: string,
+    type = "text",
+    placeholder = "",
+    hint?: string
+  ) => (
     <div className="flex flex-col gap-1.5">
       <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
       <Input
@@ -95,6 +170,7 @@ function NuevoUsuarioModal({ onClose, onSave }: NuevoUsuarioFormProps) {
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
         className={`bg-background h-9 text-xs ${errors[key] ? "border-destructive" : ""}`}
       />
+      {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
     </div>
   )
@@ -105,6 +181,7 @@ function NuevoUsuarioModal({ onClose, onSave }: NuevoUsuarioFormProps) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="w-full max-w-lg mx-4 rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
             <h2 className="text-sm font-semibold text-card-foreground">Registrar Nuevo Usuario</h2>
@@ -115,12 +192,20 @@ function NuevoUsuarioModal({ onClose, onSave }: NuevoUsuarioFormProps) {
           </Button>
         </div>
 
+        {/* Body */}
         <div className="px-6 py-5 flex flex-col gap-4">
+          {apiError && (
+            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
+              {apiError}
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             {field("nombre",   "Nombre completo",    "text",     "Ej. Juan Pérez García")}
-            {field("email",    "Correo electrónico",  "email",    "usuario@gobierno.gob.mx")}
+            {field("correo",   "Correo electrónico",  "email",    "usuario@gobierno.gob.mx")}
+            {field("rfc",      "RFC",                 "text",     "ABCD850101XYZ", "Opcional — 13 caracteres")}
             {field("password", "Contraseña",          "password", "Mínimo 6 caracteres")}
 
+            {/* Rol */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
               <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
@@ -134,6 +219,7 @@ function NuevoUsuarioModal({ onClose, onSave }: NuevoUsuarioFormProps) {
               {errors.rol && <span className="text-[10px] text-destructive">{errors.rol}</span>}
             </div>
 
+            {/* Secretaría */}
             <div className="flex flex-col gap-1.5 sm:col-span-2">
               <Label className="text-xs font-medium text-muted-foreground">Secretaría Perteneciente</Label>
               <Select value={form.secretaria} onValueChange={(v) => setForm((f) => ({ ...f, secretaria: v }))}>
@@ -147,6 +233,7 @@ function NuevoUsuarioModal({ onClose, onSave }: NuevoUsuarioFormProps) {
               {errors.secretaria && <span className="text-[10px] text-destructive">{errors.secretaria}</span>}
             </div>
 
+            {/* Estatus */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-muted-foreground">Estatus inicial</Label>
               <Select value={form.estatus} onValueChange={(v) => setForm((f) => ({ ...f, estatus: v as "Activo" | "Inactivo" }))}>
@@ -162,10 +249,18 @@ function NuevoUsuarioModal({ onClose, onSave }: NuevoUsuarioFormProps) {
           </div>
         </div>
 
+        {/* Footer */}
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl">
-          <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9" onClick={handleSubmit}>
-            Guardar usuario
+          <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button
+            size="sm"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? "Guardando..." : "Guardar usuario"}
           </Button>
         </div>
       </div>
@@ -173,45 +268,74 @@ function NuevoUsuarioModal({ onClose, onSave }: NuevoUsuarioFormProps) {
   )
 }
 
-//  Modal: Editar Usuario
+// ── Modal: Editar Usuario ─────────────────────────────────────────────────────
+
 type EditarUsuarioModalProps = {
   usuario: Usuario
   onClose: () => void
-  onSave: (updated: Usuario) => void
+  onSaved: (updated: Usuario) => void
 }
 
-function EditarUsuarioModal({ usuario, onClose, onSave }: EditarUsuarioModalProps) {
+function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalProps) {
   const [form, setForm] = useState({
     nombre:          usuario.nombre,
-    email:           usuario.email,
+    correo:          usuario.correo,
+    rfc:             usuario.rfc ?? "",
     rol:             usuario.rol,
     secretaria:      usuario.secretaria,
     estatus:         usuario.estatus,
     password:        "",
     confirmPassword: "",
   })
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errors,   setErrors]   = useState<Record<string, string>>({})
+  const [loading,  setLoading]  = useState(false)
+  const [apiError, setApiError] = useState("")
 
   const validate = () => {
     const e: Record<string, string> = {}
     if (!form.nombre.trim()) e.nombre = "El nombre es requerido"
-    if (!form.email.trim())  e.email  = "El correo es requerido"
-    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Correo inválido"
-    if (!form.rol)           e.rol    = "Seleccione un rol"
-    if (!form.secretaria)    e.secretaria = "Seleccione una secretaría"
+    if (!form.correo.trim()) e.correo = "El correo es requerido"
+    else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
+    if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC inválido (ej. ABCD850101XYZ)"
+    if (!form.rol)        e.rol        = "Seleccione un rol"
+    if (!form.secretaria) e.secretaria = "Seleccione una secretaría"
     if (form.password && form.password.length < 6) e.password = "Mínimo 6 caracteres"
     if (form.password && form.password !== form.confirmPassword) e.confirmPassword = "Las contraseñas no coinciden"
     return e
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
-    onSave({ ...usuario, nombre: form.nombre, email: form.email, rol: form.rol, secretaria: form.secretaria, estatus: form.estatus })
-    onClose()
+    setLoading(true)
+    setApiError("")
+    try {
+      const payload: any = {
+        nombre:     form.nombre,
+        correo:     form.correo,
+        rfc:        form.rfc ? form.rfc.toUpperCase() : null,
+        rolNombre:  form.rol,
+        areaNombre: form.secretaria,
+        activo:     form.estatus === "Activo",
+      }
+      if (form.password) payload.password = form.password
+      const actualizado = await actualizarUsuario(usuario.id, payload)
+      onSaved(actualizado)
+      onClose()
+    } catch (err: any) {
+      setApiError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const field = (key: keyof typeof form, label: string, type = "text", placeholder = "") => (
+  const field = (
+    key: keyof typeof form,
+    label: string,
+    type = "text",
+    placeholder = "",
+    hint?: string
+  ) => (
     <div className="flex flex-col gap-1.5">
       <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
       <Input
@@ -221,6 +345,7 @@ function EditarUsuarioModal({ usuario, onClose, onSave }: EditarUsuarioModalProp
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
         className={`bg-background h-9 text-xs ${errors[key] ? "border-destructive" : ""}`}
       />
+      {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
     </div>
   )
@@ -231,6 +356,7 @@ function EditarUsuarioModal({ usuario, onClose, onSave }: EditarUsuarioModalProp
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="w-full max-w-lg mx-4 rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
             <h2 className="text-sm font-semibold text-card-foreground">Editar Usuario</h2>
@@ -241,11 +367,19 @@ function EditarUsuarioModal({ usuario, onClose, onSave }: EditarUsuarioModalProp
           </Button>
         </div>
 
+        {/* Body */}
         <div className="px-6 py-5 flex flex-col gap-4">
+          {apiError && (
+            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
+              {apiError}
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             {field("nombre", "Nombre completo",   "text",  "Ej. Juan Pérez García")}
-            {field("email",  "Correo electrónico", "email", "usuario@gobierno.gob.mx")}
+            {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx")}
+            {field("rfc",    "RFC",                "text",  "ABCD850101XYZ", "Opcional — 13 caracteres")}
 
+            {/* Rol */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
               <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
@@ -259,6 +393,7 @@ function EditarUsuarioModal({ usuario, onClose, onSave }: EditarUsuarioModalProp
               {errors.rol && <span className="text-[10px] text-destructive">{errors.rol}</span>}
             </div>
 
+            {/* Estatus */}
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs font-medium text-muted-foreground">Estatus</Label>
               <Select value={form.estatus} onValueChange={(v) => setForm((f) => ({ ...f, estatus: v as "Activo" | "Inactivo" }))}>
@@ -272,6 +407,7 @@ function EditarUsuarioModal({ usuario, onClose, onSave }: EditarUsuarioModalProp
               </Select>
             </div>
 
+            {/* Secretaría */}
             <div className="flex flex-col gap-1.5 sm:col-span-2">
               <Label className="text-xs font-medium text-muted-foreground">Secretaría Perteneciente</Label>
               <Select value={form.secretaria} onValueChange={(v) => setForm((f) => ({ ...f, secretaria: v }))}>
@@ -285,7 +421,7 @@ function EditarUsuarioModal({ usuario, onClose, onSave }: EditarUsuarioModalProp
               {errors.secretaria && <span className="text-[10px] text-destructive">{errors.secretaria}</span>}
             </div>
 
-            {/* ── Sección contraseña ── */}
+            {/* Cambiar contraseña */}
             <div className="sm:col-span-2">
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex-1 border-t border-border" />
@@ -299,14 +435,21 @@ function EditarUsuarioModal({ usuario, onClose, onSave }: EditarUsuarioModalProp
                 {field("confirmPassword", "Confirmar contraseña", "password", "Repite la nueva contraseña")}
               </div>
             </div>
-
           </div>
         </div>
 
+        {/* Footer */}
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl">
-          <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9" onClick={handleSubmit}>
-            Guardar cambios
+          <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button
+            size="sm"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>
       </div>
@@ -314,7 +457,8 @@ function EditarUsuarioModal({ usuario, onClose, onSave }: EditarUsuarioModalProp
   )
 }
 
-// Modal: Permisos
+// ── Modal: Permisos ───────────────────────────────────────────────────────────
+
 type PermisoModalProps = {
   usuario: Usuario
   onClose: () => void
@@ -338,10 +482,10 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   const handleHabilitar = () => {
     if (!regimen || !periodo) return
     habilitarPermiso({
-      userId: usuario.nombre,
-      regimen: regimen as "honorarios" | "asimilados" | "nombramiento",
+      userId:    usuario.nombre,
+      regimen:   regimen as "honorarios" | "asimilados" | "nombramiento",
       periodo,
-      grantedBy: user?.name || "Director Operativo",
+      grantedBy: user?.nombre || "Director Operativo",
     })
     setRegimen("")
     setPeriodo("")
@@ -364,7 +508,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
         </div>
 
         <div className="px-6 py-5 flex flex-col gap-5">
-          {/* Habilitar nuevo permiso */}
           <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4">
             <span className="text-xs font-medium text-card-foreground">Habilitar captura (1 uso)</span>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -405,26 +548,17 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
             </div>
           </div>
 
-          {/* Permisos activos */}
           {permisosActivos.length > 0 && (
             <div className="flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Permisos activos</span>
               {permisosActivos.map((p, i) => (
-                <div
-                  key={`${p.regimen}-${p.periodo}-${i}`}
-                  className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2"
-                >
+                <div key={`${p.regimen}-${p.periodo}-${i}`} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-[10px] border-secondary/40 text-secondary">{p.regimen}</Badge>
                     <span className="text-xs text-card-foreground">{p.periodo}</span>
                     <span className="text-[10px] text-muted-foreground">({p.grantedAt})</span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-destructive hover:text-destructive/80"
-                    onClick={() => revocarPermiso(p.userId, p.regimen, p.periodo)}
-                  >
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive/80" onClick={() => revocarPermiso(p.userId, p.regimen, p.periodo)}>
                     Revocar
                   </Button>
                 </div>
@@ -432,15 +566,11 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
             </div>
           )}
 
-          {/* Permisos consumidos */}
           {permisosUsados.length > 0 && (
             <div className="flex flex-col gap-2">
               <span className="text-xs font-medium text-muted-foreground">Permisos consumidos</span>
               {permisosUsados.map((p, i) => (
-                <div
-                  key={`used-${p.regimen}-${p.periodo}-${i}`}
-                  className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2"
-                >
+                <div key={`used-${p.regimen}-${p.periodo}-${i}`} className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
                   <Badge variant="outline" className="text-[10px] text-muted-foreground">{p.regimen}</Badge>
                   <span className="text-xs text-muted-foreground">{p.periodo}</span>
                   <span className="text-[10px] text-muted-foreground">Usado {p.consumedAt || ""}</span>
@@ -462,18 +592,29 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   )
 }
 
+
 export function UsuariosPage() {
-  const [usuarios, setUsuarios]           = useState<Usuario[]>(initialUsuarios)
-  const [searchTerm, setSearchTerm]       = useState("")
-  const [permisoUserId, setPermisoUserId] = useState<number | null>(null)
-  const [editingUserId, setEditingUserId] = useState<number | null>(null)
-  const [showNewForm, setShowNewForm]     = useState(false)
+  const [usuarios,      setUsuarios]      = useState<Usuario[]>([])
+  const [loading,       setLoading]       = useState(true)
+  const [loadError,     setLoadError]     = useState("")
+  const [searchTerm,    setSearchTerm]    = useState("")
+  const [permisoUserId, setPermisoUserId] = useState<string | null>(null)
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
+  const [showNewForm,   setShowNewForm]   = useState(false)
   const { permisos } = useAutorizaciones()
+
+  useEffect(() => {
+    fetchUsuarios()
+      .then(setUsuarios)
+      .catch((err) => setLoadError(err.message))
+      .finally(() => setLoading(false))
+  }, [])
 
   const filtered = usuarios.filter(
     (row) =>
       row.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      row.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      row.correo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (row.rfc ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       row.rol.toLowerCase().includes(searchTerm.toLowerCase()) ||
       row.secretaria.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -481,23 +622,17 @@ export function UsuariosPage() {
   const hasActivePermiso = (nombre: string) =>
     permisos.some((p) => p.userId === nombre && p.active && !p.used)
 
-  const toggleEstatus = (id: number) => {
-    setUsuarios((prev) =>
-      prev.map((u) => u.id === id ? { ...u, estatus: u.estatus === "Activo" ? "Inactivo" : "Activo" } : u)
-    )
-  }
-
-  const handleSaveNuevo = (data: Omit<Usuario, "id">) => {
-    const newId = Math.max(...usuarios.map((u) => u.id)) + 1
-    setUsuarios((prev) => [...prev, { id: newId, ...data }])
-  }
-
-  const handleSaveEditar = (updated: Usuario) => {
-    setUsuarios((prev) => prev.map((u) => u.id === updated.id ? updated : u))
+  const toggleEstatus = async (u: Usuario) => {
+    try {
+      const actualizado = await actualizarUsuario(u.id, { activo: u.estatus === "Activo" ? false : true })
+      setUsuarios((prev) => prev.map((x) => x.id === actualizado.id ? actualizado : x))
+    } catch (err: any) {
+      alert(err.message)
+    }
   }
 
   const usuarioEditando = editingUserId ? usuarios.find((u) => u.id === editingUserId) ?? null : null
-  const usuarioPermiso  = permisoUserId  ? usuarios.find((u) => u.id === permisoUserId)  ?? null : null
+  const usuarioPermiso  = permisoUserId ? usuarios.find((u) => u.id === permisoUserId)  ?? null : null
 
   return (
     <div className="flex flex-col gap-6">
@@ -507,33 +642,26 @@ export function UsuariosPage() {
           <h2 className="text-xl font-semibold text-foreground">Usuarios</h2>
           <p className="text-sm text-muted-foreground">Administración de usuarios del sistema</p>
         </div>
-        <Button
-          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
-          onClick={() => setShowNewForm(true)}
-        >
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2" onClick={() => setShowNewForm(true)}>
           <UserPlus className="h-4 w-4" />
           Nuevo Usuario
         </Button>
       </div>
 
-      {/* Modal: Nuevo usuario */}
+      {/* Modales */}
       {showNewForm && (
         <NuevoUsuarioModal
           onClose={() => setShowNewForm(false)}
-          onSave={handleSaveNuevo}
+          onSaved={(u) => setUsuarios((prev) => [...prev, u])}
         />
       )}
-
-      {/* Modal: Editar usuario */}
       {usuarioEditando && (
         <EditarUsuarioModal
           usuario={usuarioEditando}
           onClose={() => setEditingUserId(null)}
-          onSave={handleSaveEditar}
+          onSaved={(u) => setUsuarios((prev) => prev.map((x) => x.id === u.id ? u : x))}
         />
       )}
-
-      {/* Modal: Permisos */}
       {usuarioPermiso && (
         <PermisoModal
           key={usuarioPermiso.id}
@@ -542,31 +670,37 @@ export function UsuariosPage() {
         />
       )}
 
-      {/* Search */}
+      {/* Buscador */}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar usuario..."
+          placeholder="Buscar por nombre, correo, RFC..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10 bg-card"
         />
       </div>
 
-      {/* Table */}
+      {/* Tabla */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground">
-            {filtered.length} usuarios registrados
+            {loading ? "Cargando..." : `${filtered.length} usuarios registrados`}
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {loadError && (
+            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive mb-4">
+              {loadError}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Nombre</th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Correo</th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">RFC</th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Rol</th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Secretaría</th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Estatus</th>
@@ -576,32 +710,20 @@ export function UsuariosPage() {
               <tbody>
                 {filtered.map((row) => (
                   <tr key={row.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-
-                    {/* Nombre */}
                     <td className="px-4 py-3 font-medium text-card-foreground">
                       <div className="flex items-center gap-2">
                         {row.nombre}
                         {hasActivePermiso(row.nombre) && (
-                          <span
-                            className="inline-block h-2 w-2 rounded-full bg-secondary shrink-0"
-                            title="Permiso activo"
-                          />
+                          <span className="inline-block h-2 w-2 rounded-full bg-secondary shrink-0" title="Permiso activo" />
                         )}
                       </div>
                     </td>
-
-                    {/* Correo */}
-                    <td className="px-4 py-3 text-muted-foreground">{row.email}</td>
-
-                    {/* Rol */}
-                    <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
-
-                    {/* Secretaría */}
-                    <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px]">
-                      {row.secretaria}
+                    <td className="px-4 py-3 text-muted-foreground">{row.correo}</td>
+                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
+                      {row.rfc ?? <span className="text-muted-foreground/50 italic">—</span>}
                     </td>
-
-                    {/* Estatus */}
+                    <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px]">{row.secretaria}</td>
                     <td className="px-4 py-3">
                       {row.estatus === "Activo" ? (
                         <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary/90">Activo</Badge>
@@ -609,52 +731,23 @@ export function UsuariosPage() {
                         <Badge variant="outline" className="text-muted-foreground">Inactivo</Badge>
                       )}
                     </td>
-
-                    {/* Acciones */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-
-                        {/* Permiso — KeyRound */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-secondary hover:text-primary gap-1.5 text-xs"
-                          onClick={() => setPermisoUserId(row.id)}
-                        >
-                          <KeyRound className="h-3.5 w-3.5" />
-                          Permiso
+                        <Button variant="ghost" size="sm" className="text-secondary hover:text-primary gap-1.5 text-xs" onClick={() => setPermisoUserId(row.id)}>
+                          <KeyRound className="h-3.5 w-3.5" />Permiso
                         </Button>
-
-                        {/* Editar */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-primary hover:text-primary/80 gap-1.5 text-xs"
-                          onClick={() => setEditingUserId(row.id)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Editar
+                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1.5 text-xs" onClick={() => setEditingUserId(row.id)}>
+                          <Pencil className="h-3.5 w-3.5" />Editar
                         </Button>
-
-                        {/* Habilitar / Deshabilitar */}
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          title={row.estatus === "Activo" ? "Deshabilitar usuario" : "Habilitar usuario"}
-                          className={`gap-1.5 text-xs ${
-                            row.estatus === "Activo"
-                              ? "text-destructive hover:text-destructive/80"
-                              : "text-secondary hover:text-secondary/80"
-                          }`}
-                          onClick={() => toggleEstatus(row.id)}
+                          variant="ghost" size="sm"
+                          className={`gap-1.5 text-xs ${row.estatus === "Activo" ? "text-destructive hover:text-destructive/80" : "text-secondary hover:text-secondary/80"}`}
+                          onClick={() => toggleEstatus(row)}
                         >
-                          {row.estatus === "Activo" ? (
-                            <><PowerOff className="h-3.5 w-3.5" />Deshabilitar</>
-                          ) : (
-                            <><Power className="h-3.5 w-3.5" />Habilitar</>
-                          )}
+                          {row.estatus === "Activo"
+                            ? <><PowerOff className="h-3.5 w-3.5" />Deshabilitar</>
+                            : <><Power    className="h-3.5 w-3.5" />Habilitar</>}
                         </Button>
-
                       </div>
                     </td>
                   </tr>

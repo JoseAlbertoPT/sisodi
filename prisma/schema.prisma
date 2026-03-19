@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model accion {
@@ -175,18 +176,32 @@ model solicitud {
 }
 
 model usuario {
-  id                  String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre              String                @db.VarChar(150)
-  correo              String                @unique @db.VarChar(150)
-  password_hash       String
-  rol_id              Int
-  area_id             Int?
-  activo              Boolean?              @default(true)
-  fecha_creacion      DateTime?             @default(now()) @db.Timestamp(6)
-  historial_solicitud historial_solicitud[]
-  solicitud           solicitud[]
-  area                area?                 @relation(fields: [area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  rol                 rol                   @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                   String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre               String                @db.VarChar(150)
+  correo               String                @unique @db.VarChar(150)
+  rfc                  String?               @unique @db.VarChar(13)
+  password_hash        String
+  must_change_password Boolean?              @default(false)
+  rol_id               Int
+  area_id              Int?
+  activo               Boolean?              @default(true)
+  fecha_creacion       DateTime?             @default(now()) @db.Timestamp(6)
+  historial_solicitud  historial_solicitud[]
+  solicitud            solicitud[]
+  area                 area?                 @relation(fields: [area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rol                  rol                   @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  codigo_recuperacion  codigo_recuperacion?
 
   @@index([rol_id], map: "idx_usuario_rol")
+  @@index([rfc],    map: "idx_usuario_rfc")
+}
+
+model codigo_recuperacion {
+  id         Int       @id @default(autoincrement())
+  usuario_id String    @unique @db.Uuid
+  codigo     String    @db.VarChar(6)
+  expira_en  DateTime  @db.Timestamp(6)
+  usado      Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  usuario    usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }

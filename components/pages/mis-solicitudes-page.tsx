@@ -1091,9 +1091,9 @@ export function MisSolicitudesPage() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Folio de Justificacion</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Tipo</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Secretaria</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Fecha</th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Nombramiento por Tiempo Determinado</th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Fecha de creación</th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Fecha de recepción </th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Estado</th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Accion</th>
                 </tr>

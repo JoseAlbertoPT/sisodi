@@ -13,7 +13,6 @@ import {
   UserCircle,
   ChevronDown,
   ChevronRight,
-  Shield,
   Filter,
   ScanSearch,
   ShieldCheck,
@@ -57,35 +56,34 @@ const menuGroups: MenuGroup[] = [
   {
     label: "",
     items: [
-      { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+      { key: "dashboard", label: "Tablero Informativo", icon: <LayoutDashboard className="h-4 w-4" /> },
     ],
   },
   {
     label: "Solicitudes",
     items: [
-      { key: "nueva-solicitud", label: "Nueva Solicitud", icon: <FilePlus className="h-4 w-4" /> },
-      { key: "mis-solicitudes", label: "Mis Solicitudes", icon: <FileText className="h-4 w-4" /> },
+      { key: "nueva-solicitud", label: "Nueva Justificiación", icon: <FilePlus className="h-4 w-4" /> },
+      { key: "mis-solicitudes", label: "Mis Justificiación", icon: <FileText className="h-4 w-4" /> },
     ],
   },
   {
     label: "Validacion",
     items: [
-      { key: "validacion-uefa", label: "Validacion UEFA", icon: <ShieldCheck className="h-4 w-4" /> },
+      { key: "validacion-uefa", label: "Validación de Justificiones", icon: <ShieldCheck className="h-4 w-4" /> },
     ],
   },
   {
     label: "Bandeja DO",
     items: [
-      { key: "bandeja-filtro1", label: "Filtro 1", icon: <Filter className="h-4 w-4" /> },
-      { key: "bandeja-filtro2", label: "Filtro 2", icon: <ScanSearch className="h-4 w-4" /> },
-      { key: "bandeja-filtro3", label: "Filtro 3 (DG)", icon: <ShieldCheck className="h-4 w-4" /> },
+      { key: "bandeja-filtro1", label: "Revisión ", icon: <Filter className="h-4 w-4" /> },
+      { key: "bandeja-filtro2", label: "Validación", icon: <ScanSearch className="h-4 w-4" /> },
+      { key: "bandeja-filtro3", label: " Emisión", icon: <ShieldCheck className="h-4 w-4" /> },
     ],
   },
   {
     label: "",
     items: [
       { key: "dictamenes", label: "Dictamenes Emitidos", icon: <FileCheck className="h-4 w-4" /> },
-
     ],
   },
   {
@@ -123,19 +121,23 @@ export function AppSidebar({ currentPage, onNavigate, collapsed }: SidebarProps)
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Logo / Brand */}
-      <div className="flex items-center gap-3 border-b border-sidebar-border px-4 py-5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sidebar-primary">
-          <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
-        </div>
-        {!collapsed && (
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold leading-tight text-sidebar-foreground">SDTF</span>
-            <span className="text-[10px] text-sidebar-foreground/60 leading-tight">Dictaminacion Tecnica</span>
-          </div>
-        )}
-      </div>
+     {/* Logo / Brand */}
 
+           <span className="text-sm font-semibold leading-tight text-sidebar-foreground"><center>SDTF</center></span>
+           <div className="flex flex-col items-center gap-2 border-b border-sidebar-border px-4 py-4">
+             <div className="flex w-full items-center justify-center rounded-md bg-white/10 p-1">
+               <img
+                 src="/logo-20finanzas.png"
+                 alt="Finanzas"
+                 className="w-full h-14 object-contain"
+               />
+             </div>
+             {!collapsed && (
+               <div className="flex flex-col items-center">
+                 <span className="text-[10px] text-sidebar-foreground/60 leading-tight">Dictaminacion Tecnica</span>
+               </div>
+             )}
+           </div>
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="flex flex-col gap-1">
