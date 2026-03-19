@@ -305,13 +305,17 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
         <div className="lg:col-span-2 flex flex-col gap-4">
           <SectionCard title="Datos Generales" icon={<Info className="h-4 w-4 text-secondary" />}>
             <div className="grid gap-4 md:grid-cols-2">
-              <ReadOnlyField label="Folio de Recepción"   value={solicitud.folioRecepcion ?? "—"} />
-              <ReadOnlyField label="Tipo de Solicitud"    value={solicitud.tipo} />
-              <ReadOnlyField label="Secretaría / Área"    value={solicitud.secretaria} />
-              <ReadOnlyField label="Solicitante"          value={raw?.usuario?.nombre ?? "—"} />
-              <ReadOnlyField label="Correo"               value={raw?.usuario?.correo ?? "—"} />
-              <ReadOnlyField label="Período"              value={solicitud.periodo ?? "—"} />
-              <ReadOnlyField label="Fecha de Recepción"   value={solicitud.fechaRecepcionDO ?? "—"} />
+              <ReadOnlyField label="Secretaría"   value={solicitud.secretaria ?? "—"} />
+              <ReadOnlyField label="Unidad Responsable del Gasto"    value={solicitud.tipo} />
+              <ReadOnlyField label="Regimen de Contratacion "    value={solicitud.secretaria} />
+              <ReadOnlyField label="Numero de Prestadores de Servicio"          value={raw?.usuario?.nombre ?? "—"} />
+              <ReadOnlyField label="Vigenvia Inicio"               value={raw?.usuario?.correo ?? "—"} />
+              <ReadOnlyField label="Importe Bruto"              value={solicitud.periodo ?? "—"} />
+              <ReadOnlyField label="Unidad Administrativa de Adscripcion"   value={solicitud.fechaRecepcionDO ?? "—"} />
+               <ReadOnlyField label="Programa o Proyecto"   value={solicitud.fechaRecepcionDO ?? "—"} />
+               <ReadOnlyField label="Tipo de Actividades"   value={solicitud.fechaRecepcionDO ?? "—"} />
+               <ReadOnlyField label="Denominacion"   value={solicitud.fechaRecepcionDO ?? "—"} />
+               <ReadOnlyField label="Vigencia Termino"   value={solicitud.fechaRecepcionDO ?? "—"} />
               <ReadOnlyField label="Extemporánea"         value={solicitud.esRegularizacion ? "Sí" : "No"} />
             </div>
           </SectionCard>

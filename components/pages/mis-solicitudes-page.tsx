@@ -63,8 +63,8 @@ interface BitacoraEntry {
 
 interface UrgSolicitud {
   id: string
-  folio: string                          // Internal ID (SOL-xxxx) - kept for drafts
-  folioJustificacion: string | null      // JUST-AAAA-NNNN - assigned when sent to UEFA
+  folio: string
+  folioJustificacion: string | null
   tipo: "Prestacion de Servicios" | "Nombramiento Tiempo Determinado"
   secretaria: string
   fecha: string
@@ -83,7 +83,7 @@ interface UrgSolicitud {
   fechaDictamen?: string
   regimen: RegimenPeriodo
   periodoAplicacion: string
-  folioRecepcion?: string                 // FE-xxxx - assigned when approved by UEFA and received by DO
+  folioRecepcion?: string
 }
 
 // ── Tab mapping ──
@@ -96,6 +96,11 @@ function getTab(estado: UrgEstado): UrgTab {
     case "En proceso DO": return "En proceso DO"
     case "Emitido": return "Emitidas"
   }
+}
+
+// ── Helper: does this tab use the "Folio Justificacion" layout? ──
+function usaFolioJustificacion(tab: UrgTab): boolean {
+  return tab === "Borradores" || tab === "Enviadas a UEFA"
 }
 
 // ── Badge helpers ──
@@ -154,7 +159,7 @@ function createMockData(): UrgSolicitud[] {
   ]
 
   return [
-    // ── Borradores (2) - no folioJustificacion yet ──
+    // ── Borradores (2) ──
     {
       id: "urg-1", folio: "SOL-2026-0060", folioJustificacion: null, tipo: "Prestacion de Servicios",
       secretaria: "Sec. de Administracion", fecha: "2026-02-18", estado: "Borrador",
@@ -179,7 +184,7 @@ function createMockData(): UrgSolicitud[] {
       ],
       bitacora: defaultBitacora,
     },
-    // ── Enviadas a UEFA (2) - have folioJustificacion ──
+    // ── Enviadas a UEFA (2) ──
     {
       id: "urg-3", folio: "SOL-2026-0055", folioJustificacion: "JUST-2026-0012", tipo: "Prestacion de Servicios",
       secretaria: "Sec. de Educacion", fecha: "2026-02-12", estado: "Enviada a Validacion (UEFA)",
@@ -206,7 +211,7 @@ function createMockData(): UrgSolicitud[] {
       ],
       bitacora: defaultBitacora,
     },
-    // ── Observada por UEFA (1) - has folioJustificacion (keeps it) ──
+    // ── Observada por UEFA (1) ──
     {
       id: "urg-5", folio: "SOL-2026-0048", folioJustificacion: "JUST-2026-0014", tipo: "Prestacion de Servicios",
       secretaria: "Sec. de Desarrollo Social", fecha: "2026-02-08", estado: "Observada por UEFA",
@@ -222,7 +227,7 @@ function createMockData(): UrgSolicitud[] {
       ],
       bitacora: defaultBitacora,
     },
-    // ── Devuelta por DO (1) - has both folioJustificacion and folioRecepcion ──
+    // ── Devuelta por DO (1) ──
     {
       id: "urg-6", folio: "SOL-2026-0042", folioJustificacion: "JUST-2026-0015", folioRecepcion: "FE-010", tipo: "Nombramiento Tiempo Determinado",
       secretaria: "Sec. de Turismo", fecha: "2026-02-03", estado: "Devuelta por DO",
@@ -239,7 +244,7 @@ function createMockData(): UrgSolicitud[] {
       ],
       bitacora: defaultBitacora,
     },
-    // ── En proceso DO (3) - have both folioJustificacion and folioRecepcion ──
+    // ── En proceso DO (3) ──
     {
       id: "urg-7", folio: "SOL-2026-0040", folioJustificacion: "JUST-2026-0016", folioRecepcion: "FE-011", tipo: "Prestacion de Servicios",
       secretaria: "Sec. de Salud", fecha: "2026-02-01", estado: "En proceso DO",
@@ -288,7 +293,7 @@ function createMockData(): UrgSolicitud[] {
       ],
       bitacora: defaultBitacora,
     },
-    // ── Emitidas (2) - have all three: folioJustificacion, folioRecepcion, and numeroDictamen ──
+    // ── Emitidas (2) ──
     {
       id: "urg-10", folio: "SOL-2026-0025", folioJustificacion: "JUST-2026-0019", folioRecepcion: "FE-014", tipo: "Prestacion de Servicios",
       secretaria: "Sec. de Administracion", fecha: "2026-01-15", estado: "Emitido",
@@ -638,9 +643,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
   )
 }
 
-// ══════════════════════════════════════
-// FULL-SCREEN DETAIL VIEW (replaces modal)
-// ══════════════════════════════════════
+// ── Detail view ──
 function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBack: () => void; onUpdatePeriodo?: (id: string, periodo: string) => void }) {
   const { toast } = useToast()
 
@@ -648,7 +651,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
   const isEmitido = sol.estado === "Emitido"
   const isReadOnly = !canEdit && !isEmitido
 
-  // ── Periodo / regimen validation ──
   const periodoCheck = isPeriodoVigente(sol.regimen, sol.periodoAplicacion)
   const tipoCompatible = isRegimenTipoCompatible(sol.regimen, sol.tipo)
   const canSend = periodoCheck.vigente && tipoCompatible
@@ -681,7 +683,7 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
 
   return (
     <div className="flex flex-col gap-4">
-      {/* ── Top bar ── */}
+      {/* Top bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 text-muted-foreground hover:text-card-foreground">
@@ -695,7 +697,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
           {estadoBadge(sol.estado)}
         </div>
         <div className="flex items-center gap-2">
-          {/* Descargar Justificacion PDF — always available */}
           <Button
             variant="outline"
             size="sm"
@@ -721,7 +722,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
             <Download className="h-4 w-4" />
             Justificacion (PDF)
           </Button>
-          {/* Borrador / Devuelta / Observada => Continuar captura + Enviar */}
           {canEdit && (
             <>
               <Button
@@ -746,30 +746,18 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
               )}
             </>
           )}
-          {/* Emitido => Ver dictamen + Descargar */}
           {isEmitido && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => handleDemoAction("Ver dictamen")}
-              >
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleDemoAction("Ver dictamen")}>
                 <FileCheck className="h-4 w-4" />
                 Ver Dictamen
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => handleDemoAction("Descargar")}
-              >
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleDemoAction("Descargar")}>
                 <Download className="h-4 w-4" />
                 Descargar
               </Button>
             </>
           )}
-          {/* En proceso / Enviada => Solo lectura badge */}
           {isReadOnly && (
             <Badge variant="outline" className="gap-1.5 text-muted-foreground py-1.5 px-3">
               <Lock className="h-3 w-3" />
@@ -779,7 +767,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
         </div>
       </div>
 
-      {/* ── Observation / Devolucion banner ── */}
       {sol.observacionMotivo && sol.estado === "Observada por UEFA" && (
         <Card className="border-2 border-amber-400/40 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
@@ -803,7 +790,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
         </Card>
       )}
 
-      {/* ── Periodo fuera de tiempo banner (Borradores) ── */}
       {isBorradorFueraDeTiempo && (
         <Card className="border-2 border-destructive/40 shadow-sm">
           <CardContent className="flex flex-col gap-3 py-4">
@@ -816,7 +802,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
                 </p>
               </div>
             </div>
-            {/* Inline periodo updater */}
             {!editingPeriodo ? (
               <Button
                 variant="outline"
@@ -864,7 +849,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
         </Card>
       )}
 
-      {/* ── Regimen / tipo mismatch banner ── */}
       {canEdit && !tipoCompatible && (
         <Card className="border-2 border-amber-400/40 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
@@ -879,7 +863,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
         </Card>
       )}
 
-      {/* ── Periodo info (Borrador en tiempo) ── */}
       {sol.estado === "Borrador" && periodoCheck.vigente && tipoCompatible && (
         <Card className="border-2 border-secondary/30 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
@@ -894,7 +877,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
         </Card>
       )}
 
-      {/* ── Emitida info ── */}
       {isEmitido && sol.numeroDictamen && (
         <Card className="border-2 border-emerald-400/40 shadow-sm">
           <CardContent className="flex items-center gap-3 py-4">
@@ -909,9 +891,7 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
         </Card>
       )}
 
-      {/* ── Two-column layout: form left, historial right ── */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left: Full form (2/3) */}
         <div className="lg:col-span-2">
           {sol.tipo === "Prestacion de Servicios" ? (
             <ExpedientePrestacion solicitud={sol} />
@@ -920,7 +900,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
           )}
         </div>
 
-        {/* Right: Historial + Bitacora (1/3) */}
         <div className="lg:col-span-1 flex flex-col gap-4">
           <Card className="shadow-sm border-border sticky top-4">
             <CardHeader className="pb-2">
@@ -934,7 +913,6 @@ function DetalleView({ sol, onBack, onUpdatePeriodo }: { sol: UrgSolicitud; onBa
             </CardContent>
           </Card>
 
-          {/* Bitacora de Captura */}
           <Card className="shadow-sm border-border">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1014,7 +992,23 @@ export function MisSolicitudesPage() {
 
   const selectedSolicitud = selectedId ? data.find((s) => s.id === selectedId) ?? null : null
 
-  // ── Detail view (full-screen) ──
+  // ── Determine which column layout to use ──
+  // For "Todas" we mix both layouts per row, so we render per-row.
+  // For specific tabs we use a consistent header.
+  const showFolioJustLayout = activeTab === "Borradores" || activeTab === "Enviadas a UEFA"
+  const showFolioRecLayout =
+    activeTab === "Observadas/Devueltas" ||
+    activeTab === "En proceso DO" ||
+    activeTab === "Emitidas"
+  const showMixed = activeTab === "Todas"
+
+  // Decide per-row which layout a solicitud uses
+  function rowUsesFolioJust(sol: UrgSolicitud): boolean {
+    const tab = getTab(sol.estado)
+    return tab === "Borradores" || tab === "Enviadas a UEFA"
+  }
+
+  // Detail view (full-screen)
   if (selectedSolicitud) {
     return (
       <div className="flex flex-col gap-6">
@@ -1071,7 +1065,7 @@ export function MisSolicitudesPage() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar por folio de justificacion, tipo, secretaria..."
+          placeholder="Buscar por folio, tipo, secretaria..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10 bg-card"
@@ -1090,51 +1084,108 @@ export function MisSolicitudesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Folio de Justificacion</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Nombramiento por Tiempo Determinado</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Fecha de creación</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Fecha de recepción </th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Estado</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Accion</th>
+                  {/* ── Column 1: Folio — header changes by tab ── */}
+                  {showFolioJustLayout && (
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                      Folio de Justificación
+                    </th>
+                  )}
+                  {showFolioRecLayout && (
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                      Folio de Recepción
+                    </th>
+                  )}
+                  {showMixed && (
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                      Folio
+                    </th>
+                  )}
+
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                    Régimen de Contratación
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                    Fecha de Creación
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                    Fecha de Recepción
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                    Estatus
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((sol) => (
-                  <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-card-foreground">
-                      {sol.folioJustificacion || <span className="text-muted-foreground italic">{sol.folio} (borrador)</span>}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{sol.tipo}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{sol.secretaria}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{sol.fecha}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        {estadoBadge(sol.estado)}
-                        {sol.estado === "Observada por UEFA" && (
-                          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-0 text-[10px] px-1.5">
-                            UEFA
-                          </Badge>
+                {filtered.map((sol) => {
+                  // Determine which folio cell to render for this row
+                  const useJust = showMixed ? rowUsesFolioJust(sol) : showFolioJustLayout
+
+                  return (
+                    <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                      {/* ── Folio cell ── */}
+                      <td className="px-4 py-3 font-medium text-card-foreground">
+                        {useJust ? (
+                          // Borradores / Enviadas a UEFA: show Folio Justificacion
+                          sol.folioJustificacion
+                            ? sol.folioJustificacion
+                            : <span className="text-muted-foreground italic">{sol.folio} (borrador)</span>
+                        ) : (
+                          // Observadas/Devueltas / En proceso DO / Emitidas: show Folio Recepcion
+                          sol.folioRecepcion
+                            ? sol.folioRecepcion
+                            : <span className="text-muted-foreground italic">—</span>
                         )}
-                        {sol.estado === "Devuelta por DO" && (
-                          <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-0 text-[10px] px-1.5">
-                            DO
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedId(sol.id)}
-                        className="text-secondary hover:text-primary gap-1.5"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Ver
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      {/* Régimen de Contratación */}
+                      <td className="px-4 py-3 text-muted-foreground">{sol.tipo}</td>
+
+                      {/* Fecha de Creación */}
+                      <td className="px-4 py-3 text-muted-foreground">{sol.fecha}</td>
+
+                      {/* Fecha de Recepción — populated once approved by UEFA */}
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {sol.folioRecepcion
+                          ? sol.historial.find((h) => h.accion.toLowerCase().includes("filtro 1"))?.fecha.split(" ")[0] ?? "—"
+                          : <span className="italic text-muted-foreground/60">—</span>
+                        }
+                      </td>
+
+                      {/* Estatus */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {estadoBadge(sol.estado)}
+                          {sol.estado === "Observada por UEFA" && (
+                            <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-0 text-[10px] px-1.5">
+                              UEFA
+                            </Badge>
+                          )}
+                          {sol.estado === "Devuelta por DO" && (
+                            <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-0 text-[10px] px-1.5">
+                              DO
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="px-4 py-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedId(sol.id)}
+                          className="text-secondary hover:text-primary gap-1.5"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Ver
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                })}
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">

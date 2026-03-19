@@ -102,6 +102,7 @@ export async function PATCH(req: NextRequest) {
         estado_anterior_id: solicitud.estado_id,
         estado_nuevo_id:    estadoNuevo.id,
         comentario:         comentario ?? null,
+
       },
     })
 
