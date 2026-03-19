@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+const INICIALES_MES: Record<number, string> = {
+  1: "EN", 2: "FE", 3: "MR", 4: "AB",
+  5: "MY", 6: "JN", 7: "JL", 8: "AG",
+  9: "SE", 10: "OC", 11: "NO", 12: "DI",
+}
+function generarFolioTemporal(id: number, fecha: Date | null | undefined): string {
+  const f    = fecha ?? new Date()
+  const mes  = f.getMonth() + 1                        // 1-12
+  const ini  = INICIALES_MES[mes] ?? "XX"
+  const num  = String(id).padStart(3, "0")
+  return `${ini}-${num}`
+}
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -42,14 +54,14 @@ export async function GET(req: NextRequest) {
             correo: true,
             rfc: true,
             area: { select: { id: true, nombre: true } },
-            rol: { select: { id: true, nombre: true } },
+            rol:  { select: { id: true, nombre: true } },
           },
         },
         historial_solicitud: {
           orderBy: { fecha: "desc" },
           include: {
-            estado_historial_solicitud_estado_nuevo_idToestado: true,
-            estado_historial_solicitud_estado_anterior_idToestado: true,
+            estado_historial_solicitud_estado_nuevo_idToestado:     true,
+            estado_historial_solicitud_estado_anterior_idToestado:  true,
             usuario: {
               select: { id: true, nombre: true, correo: true },
             },
@@ -87,9 +99,9 @@ export async function GET(req: NextRequest) {
 
       const lastObservedDate = lastObservacion?.fecha
         ? new Date(lastObservacion.fecha).toLocaleDateString("es-MX", {
-            day: "2-digit",
+            day:   "2-digit",
             month: "2-digit",
-            year: "numeric",
+            year:  "numeric",
           })
         : null
 
@@ -103,7 +115,7 @@ export async function GET(req: NextRequest) {
         slaRestante = Math.max(15 - diffDias, -99)
       }
 
-      const etapaFiltro = `F${filtro}`
+      const etapaFiltro    = `F${filtro}`
       const openedInFiltro = sol.checklist_detalle.some(
         (cd) => cd.checklist?.etapa === etapaFiltro
       )
@@ -118,10 +130,10 @@ export async function GET(req: NextRequest) {
       })
 
       const isNuevaEnFiltro = !fueObservadaEnEsteFiltro && !openedInFiltro
-
+      const fechaParaFolio = sol.fecha_envio ?? sol.fecha_creacion
       const folioRecepcion =
         sol.folio_recepcion ??
-        `SOL-${new Date(sol.fecha_creacion ?? Date.now()).getFullYear()}-${String(sol.id).padStart(4, "0")}`
+        generarFolioTemporal(sol.id, fechaParaFolio ? new Date(fechaParaFolio) : null)
 
       const fechaRecepcionDO = sol.fecha_envio
         ? new Date(sol.fecha_envio).toISOString().slice(0, 10)
@@ -131,22 +143,22 @@ export async function GET(req: NextRequest) {
 
       return {
         id: String(sol.id),
-        folioSolicitud: folioRecepcion,
+        folioSolicitud:  folioRecepcion,
         folioRecepcion,
-        folioDictamen: sol.dictamen?.folio ?? sol.folio_dictamen ?? null,
-        folioTemporal: !sol.folio_recepcion,
-        tipo: sol.tipo_solicitud,
-        secretaria: sol.usuario?.area?.nombre ?? "—",
-        estado: sol.estado.nombre,
+        folioDictamen:   sol.dictamen?.folio ?? sol.folio_dictamen ?? null,
+        folioTemporal:   !sol.folio_recepcion,
+        tipo:            sol.tipo_solicitud,
+        secretaria:      sol.usuario?.area?.nombre ?? "—",
+        estado:          sol.estado.nombre,
         esRegularizacion: sol.es_extemporanea ?? false,
         fechaRecepcionDO,
-        periodo: sol.periodo ? `${sol.periodo.mes}/${sol.periodo.anio}` : null,
+        periodo:         sol.periodo ? `${sol.periodo.mes}/${sol.periodo.anio}` : null,
         reingresoCount,
         lastObservedStage,
         lastObservedDate,
         lastObservedEstado,
         slaRestante,
-        openedInFiltro: { [filtro]: openedInFiltro } as Record<number, boolean>,
+        openedInFiltro:  { [filtro]: openedInFiltro } as Record<number, boolean>,
         isNuevaEnFiltro: { [filtro]: isNuevaEnFiltro } as Record<number, boolean>,
         _raw: sol,
       }
@@ -195,9 +207,9 @@ export async function PATCH(req: NextRequest) {
 
     let nombreEstadoNuevo: string
     if (accion === "aprobar") {
-      if (filtro === 1) nombreEstadoNuevo = "En revision DO Filtro 2"
+      if (filtro === 1)      nombreEstadoNuevo = "En revision DO Filtro 2"
       else if (filtro === 2) nombreEstadoNuevo = "En revision DO Filtro 3"
-      else nombreEstadoNuevo = "Aprobado"
+      else                   nombreEstadoNuevo = "Aprobado"
     } else {
       nombreEstadoNuevo = `Observado DO Filtro ${filtro}`
     }
@@ -208,7 +220,7 @@ export async function PATCH(req: NextRequest) {
     if (!estadoNuevo) {
       estadoNuevo = await prisma.estado.create({
         data: {
-          nombre: nombreEstadoNuevo,
+          nombre:      nombreEstadoNuevo,
           descripcion: `Estado generado automáticamente: ${nombreEstadoNuevo}`,
         },
       })
@@ -232,7 +244,7 @@ export async function PATCH(req: NextRequest) {
         periodo: true,
         usuario: {
           select: {
-            id: true,
+            id:     true,
             nombre: true,
             correo: true,
             area: { select: { id: true, nombre: true } },
@@ -243,10 +255,10 @@ export async function PATCH(req: NextRequest) {
 
     await prisma.historial_solicitud.create({
       data: {
-        solicitud_id: Number(solicitudId),
-        usuario_id: usuarioId,
+        solicitud_id:      Number(solicitudId),
+        usuario_id:        usuarioId,
         estado_anterior_id: solicitud.estado_id,
-        estado_nuevo_id: estadoNuevo.id,
+        estado_nuevo_id:   estadoNuevo.id,
         comentario,
       },
     })

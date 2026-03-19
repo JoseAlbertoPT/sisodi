@@ -56,6 +56,24 @@ const MESES = [
   { value: "11", label: "Noviembre" }, { value: "12", label: "Diciembre" },
 ]
 
+// ── Folio formatting ──────────────────────────────────────────────────────────
+const INICIALES_MES_MAP: Record<string, string> = {
+  "01": "EN", "02": "FE", "03": "MR", "04": "AB",
+  "05": "MY", "06": "JN", "07": "JL", "08": "AG",
+  "09": "SE", "10": "OC", "11": "NO", "12": "DI",
+}
+
+function formatearFolio(folio: string | null | undefined): string {
+  if (!folio) return "---"
+  const match = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
+  if (match) {
+    const num = match[1].padStart(3, "0")
+    const mes = match[2].padStart(2, "0")
+    return `${INICIALES_MES_MAP[mes] ?? "XX"}-${num}`
+  }
+  return folio
+}
+
 function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   const estadoEnRevision = `En revision DO Filtro ${filtro}`
   const estadoObservado  = `Observado DO Filtro ${filtro}`
@@ -95,11 +113,11 @@ function getSlaLabel(dias: number | null) {
 }
 
 const TAB_CONFIG: Record<TabKey, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
-  nuevas:       { label: "Nuevas",       icon: <CircleDot className="h-3.5 w-3.5" />,   activeBg: "bg-secondary/10",   activeText: "text-secondary" },
-  correcciones: { label: "Correcciones", icon: <RotateCcw className="h-3.5 w-3.5" />,   activeBg: "bg-accent/10",      activeText: "text-accent-foreground" },
-  revision:     { label: "En revisión",  icon: <Eye className="h-3.5 w-3.5" />,          activeBg: "bg-primary/10",     activeText: "text-primary" },
-  observadas:   { label: "Observadas",   icon: <AlertTriangle className="h-3.5 w-3.5" />,activeBg: "bg-destructive/10", activeText: "text-destructive" },
-  todas:        { label: "Todas",        icon: <ListFilter className="h-3.5 w-3.5" />,   activeBg: "bg-muted",          activeText: "text-card-foreground" },
+  nuevas:       { label: "Nuevas",       icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+  correcciones: { label: "Correcciones", icon: <RotateCcw className="h-3.5 w-3.5" />,    activeBg: "bg-accent/10",      activeText: "text-accent-foreground" },
+  revision:     { label: "En revisión",  icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
+  observadas:   { label: "Observadas",   icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
+  todas:        { label: "Todas",        icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
 }
 
 
@@ -249,6 +267,8 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
       accion:  h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? h.comentario ?? "—",
     }))
 
+  const folioFormateado = formatearFolio(solicitud.folioRecepcion)
+
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
@@ -257,7 +277,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
           <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 text-muted-foreground hover:text-card-foreground">
             <ArrowLeft className="h-4 w-4" />Volver a bandeja
           </Button>
-          <span className="text-sm font-semibold text-card-foreground">{solicitud.folioRecepcion}</span>
+          <span className="text-sm font-semibold text-card-foreground">{folioFormateado}</span>
           <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>
         </div>
         <div className="flex items-center gap-2">
@@ -305,23 +325,23 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
         <div className="lg:col-span-2 flex flex-col gap-4">
           <SectionCard title="Datos Generales" icon={<Info className="h-4 w-4 text-secondary" />}>
             <div className="grid gap-4 md:grid-cols-2">
-              <ReadOnlyField label="Secretaría"   value={solicitud.secretaria ?? "—"} />
-              <ReadOnlyField label="Unidad Responsable del Gasto"    value={solicitud.tipo} />
-              <ReadOnlyField label="Regimen de Contratacion "    value={solicitud.secretaria} />
-              <ReadOnlyField label="Numero de Prestadores de Servicio"          value={raw?.usuario?.nombre ?? "—"} />
-              <ReadOnlyField label="Vigenvia Inicio"               value={raw?.usuario?.correo ?? "—"} />
-              <ReadOnlyField label="Importe Bruto"              value={solicitud.periodo ?? "—"} />
-              <ReadOnlyField label="Unidad Administrativa de Adscripcion"   value={solicitud.fechaRecepcionDO ?? "—"} />
-               <ReadOnlyField label="Programa o Proyecto"   value={solicitud.fechaRecepcionDO ?? "—"} />
-               <ReadOnlyField label="Tipo de Actividades"   value={solicitud.fechaRecepcionDO ?? "—"} />
-               <ReadOnlyField label="Denominacion"   value={solicitud.fechaRecepcionDO ?? "—"} />
-               <ReadOnlyField label="Vigencia Termino"   value={solicitud.fechaRecepcionDO ?? "—"} />
-              <ReadOnlyField label="Extemporánea"         value={solicitud.esRegularizacion ? "Sí" : "No"} />
+              <ReadOnlyField label="Secretaría"                            value={solicitud.secretaria ?? "—"} />
+              <ReadOnlyField label="Unidad Responsable del Gasto"          value={solicitud.tipo} />
+              <ReadOnlyField label="Régimen de Contratación"               value={solicitud.secretaria} />
+              <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.usuario?.nombre ?? "—"} />
+              <ReadOnlyField label="Vigencia Inicio"                       value={raw?.usuario?.correo ?? "—"} />
+              <ReadOnlyField label="Importe Bruto"                         value={solicitud.periodo ?? "—"} />
+              <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={solicitud.fechaRecepcionDO ?? "—"} />
+              <ReadOnlyField label="Programa o Proyecto"                   value={solicitud.fechaRecepcionDO ?? "—"} />
+              <ReadOnlyField label="Tipo de Actividades"                   value={solicitud.fechaRecepcionDO ?? "—"} />
+              <ReadOnlyField label="Denominación"                          value={solicitud.fechaRecepcionDO ?? "—"} />
+              <ReadOnlyField label="Vigencia Término"                      value={solicitud.fechaRecepcionDO ?? "—"} />
+              <ReadOnlyField label="Extemporánea"                          value={solicitud.esRegularizacion ? "Sí" : "No"} />
             </div>
           </SectionCard>
           {filtro >= 2 && solicitud.folioDictamen && (
             <SectionCard title="Dictamen previo" icon={<FileSearch className="h-4 w-4 text-secondary" />}>
-              <ReadOnlyField label="Folio Dictamen" value={solicitud.folioDictamen} />
+              <ReadOnlyField label="Folio Dictamen" value={formatearFolio(solicitud.folioDictamen)} />
             </SectionCard>
           )}
         </div>
@@ -365,7 +385,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
         onClose={() => setShowAprobarModal(false)}
         onConfirm={() => { setShowAprobarModal(false); onAprobar(solicitud.id) }}
         title={`¿${labelAprobar}?`}
-        description={`La solicitud ${solicitud.folioRecepcion} avanzará al siguiente paso del proceso.`}
+        description={`La solicitud ${folioFormateado} avanzará al siguiente paso del proceso.`}
         confirmLabel="Sí, aprobar"
         icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
@@ -373,12 +393,11 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
         open={showObservarModal}
         onClose={() => setShowObservarModal(false)}
         onConfirm={(obs) => { setShowObservarModal(false); onObservar(solicitud.id, obs) }}
-        folio={solicitud.folioRecepcion ?? solicitud.id}
+        folio={folioFormateado}
       />
     </div>
   )
 }
-// pagina principal
 
 interface BandejaFiltroPageProps {
   filtro: 1 | 2 | 3
@@ -388,24 +407,24 @@ interface BandejaFiltroPageProps {
 export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPageProps) {
   const { user } = useAuth()
 
-  const [solicitudes,     setSolicitudes]     = useState<FiltroSolicitud[]>([])
-  const [loading,         setLoading]         = useState(true)
-  const [error,           setError]           = useState<string | null>(null)
-  const [guardando,       setGuardando]       = useState(false)
-  const [activeTab,       setActiveTab]       = useState<TabKey>("todas")
-  const [selectedId,      setSelectedId]      = useState<string | null>(null)
-  const [observarTarget,  setObservarTarget]  = useState<string | null>(null)
-  const [aprobarTarget,   setAprobarTarget]   = useState<string | null>(null)
+  const [solicitudes,    setSolicitudes]    = useState<FiltroSolicitud[]>([])
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState<string | null>(null)
+  const [guardando,      setGuardando]      = useState(false)
+  const [activeTab,      setActiveTab]      = useState<TabKey>("todas")
+  const [selectedId,     setSelectedId]     = useState<string | null>(null)
+  const [observarTarget, setObservarTarget] = useState<string | null>(null)
+  const [aprobarTarget,  setAprobarTarget]  = useState<string | null>(null)
 
   // Filtros de columna
-  const [searchTerm,        setSearchTerm]        = useState("")
-  const [filterAnio,        setFilterAnio]        = useState("2026")
-  const [filterMes,         setFilterMes]         = useState("todos")
-  const [filterSecretaria,  setFilterSecretaria]  = useState("todas")
-  const [filterTipo,        setFilterTipo]        = useState("todos")
-  const [filterSla,         setFilterSla]         = useState("todos")
+  const [searchTerm,       setSearchTerm]       = useState("")
+  const [filterAnio,       setFilterAnio]       = useState("2026")
+  const [filterMes,        setFilterMes]        = useState("todos")
+  const [filterSecretaria, setFilterSecretaria] = useState("todas")
+  const [filterTipo,       setFilterTipo]       = useState("todos")
+  const [filterSla,        setFilterSla]        = useState("todos")
 
-  //  Cargar de la API
+  // Cargar de la API
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
     try {
@@ -436,16 +455,14 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? "Error al aprobar"); return }
       setSolicitudes(prev =>
-        prev.map(s =>
-          s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s
-        )
+        prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
       )
       setSelectedId(null)
     } catch { alert("Error de conexión al aprobar") }
     finally { setGuardando(false); setAprobarTarget(null) }
   }, [filtro, user])
 
-  //  Observar
+  // Observar
   const handleObservar = useCallback(async (id: string, obs: string) => {
     setGuardando(true)
     try {
@@ -485,7 +502,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
     return c
   }, [solicitudes, filtro])
 
-  // Filtrar
+  // Filtrar — búsqueda también acepta el folio formateado
   const filtered = useMemo(() =>
     solicitudes
       .filter(s => activeTab === "todas" || classifySolicitud(s, filtro) === activeTab)
@@ -494,7 +511,9 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         const t = searchTerm.toLowerCase()
         return (
           (s.folioRecepcion?.toLowerCase().includes(t) ?? false) ||
+          formatearFolio(s.folioRecepcion).toLowerCase().includes(t) ||
           (s.folioDictamen?.toLowerCase().includes(t) ?? false) ||
+          formatearFolio(s.folioDictamen).toLowerCase().includes(t) ||
           s.secretaria.toLowerCase().includes(t) ||
           s.tipo.toLowerCase().includes(t)
         )
@@ -510,7 +529,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       .filter(s => filterSecretaria === "todas" || s.secretaria === filterSecretaria)
       .filter(s => filterTipo === "todos" || s.tipo === filterTipo)
       .filter(s => {
-        if (filterSla === "todos") return true
+        if (filterSla === "todos")   return true
         if (filterSla === "vencido") return (s.slaRestante ?? 1) <= 0
         if (filterSla === "critico") return (s.slaRestante ?? 99) >= 1 && (s.slaRestante ?? 99) <= 5
         if (filterSla === "medio")   return (s.slaRestante ?? 99) >= 6 && (s.slaRestante ?? 99) <= 10
@@ -519,6 +538,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       }),
     [solicitudes, activeTab, filtro, searchTerm, filterAnio, filterMes, filterSecretaria, filterTipo, filterSla]
   )
+
   const secretariasUnicas = useMemo(() =>
     [...new Set(solicitudes.map(s => s.secretaria))].filter(Boolean).sort(),
     [solicitudes]
@@ -530,7 +550,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
 
   const selectedSolicitud = selectedId ? solicitudes.find(s => s.id === selectedId) ?? null : null
 
-  //  Vista detalle
+  // Vista detalle
   if (selectedSolicitud) return (
     <DetalleView
       solicitud={selectedSolicitud}
@@ -542,7 +562,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
     />
   )
 
-  //  Vista bandeja
+  // Vista bandeja
   return (
     <div className="flex flex-col gap-6">
       {/* Encabezado */}
@@ -575,10 +595,11 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       {/* Tarjetas resumen */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: "Total en bandeja", value: solicitudes.length, icon: <Filter className="h-5 w-5 text-secondary" />, bg: "bg-secondary/10" },
-          { label: "Nuevas",           value: tabCounts.nuevas,   icon: <CircleDot className="h-5 w-5 text-secondary" />, bg: "bg-secondary/10" },
-          { label: "Correcciones",     value: tabCounts.correcciones, icon: <RotateCcw className="h-5 w-5 text-accent-foreground" />, bg: "bg-accent/10" },
-          { label: "SLA en riesgo",    value: solicitudes.filter(s => s.slaRestante !== null && s.slaRestante <= 5).length, icon: <AlertTriangle className="h-5 w-5 text-destructive" />, bg: "bg-destructive/10" },
+          { label: "Total en bandeja", value: solicitudes.length,             icon: <Filter className="h-5 w-5 text-secondary" />,          bg: "bg-secondary/10" },
+          { label: "Nuevas",           value: tabCounts.nuevas,               icon: <CircleDot className="h-5 w-5 text-secondary" />,        bg: "bg-secondary/10" },
+          { label: "Correcciones",     value: tabCounts.correcciones,         icon: <RotateCcw className="h-5 w-5 text-accent-foreground" />, bg: "bg-accent/10" },
+          { label: "SLA en riesgo",    value: solicitudes.filter(s => s.slaRestante !== null && s.slaRestante <= 5).length,
+                                                                               icon: <AlertTriangle className="h-5 w-5 text-destructive" />,  bg: "bg-destructive/10" },
         ].map((c, i) => (
           <Card key={i} className="shadow-sm border-border">
             <CardContent className="flex items-center gap-3 p-4">
@@ -595,8 +616,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       {/* Tabs */}
       <div className="flex items-center gap-1 rounded-xl bg-muted/50 p-1.5 border border-border flex-wrap">
         {(Object.keys(TAB_CONFIG) as TabKey[]).map((tabKey) => {
-          const config  = TAB_CONFIG[tabKey]
-          const count   = tabCounts[tabKey]
+          const config   = TAB_CONFIG[tabKey]
+          const count    = tabCounts[tabKey]
           const isActive = activeTab === tabKey
           return (
             <button
@@ -675,7 +696,9 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm font-semibold text-card-foreground">
             <span>
-              {loading ? "Cargando..." : `${filtered.length} solicitud${filtered.length !== 1 ? "es" : ""} en ${FILTRO_LABELS[filtro]}`}
+              {loading
+                ? "Cargando..."
+                : `${filtered.length} solicitud${filtered.length !== 1 ? "es" : ""} en ${FILTRO_LABELS[filtro]}`}
             </span>
           </CardTitle>
         </CardHeader>
@@ -697,7 +720,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                     {filtro >= 2 && <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Dictamen</th>}
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Fecha Recepción</th>
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Última obs.</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Plazo</th>
+                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Plazo de Atención</th>
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Acción</th>
                   </tr>
                 </thead>
@@ -730,7 +753,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                         </td>
                         <td className="px-3 py-3 font-medium text-card-foreground">
                           <div className="flex flex-col gap-1">
-                            <span>{sol.folioRecepcion || "---"}</span>
+                            {/* ── Folio formateado ── */}
+                            <span>{formatearFolio(sol.folioRecepcion)}</span>
                             {sol.folioTemporal && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive w-fit">
                                 Folio temporal
@@ -748,7 +772,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                         {filtro >= 2 && (
                           <td className="px-3 py-3">
                             {sol.folioDictamen
-                              ? <span className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-medium text-secondary">{sol.folioDictamen}</span>
+                              ? <span className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-medium text-secondary">
+                                  {/* ── Folio dictamen formateado ── */}
+                                  {formatearFolio(sol.folioDictamen)}
+                                </span>
                               : <span className="text-xs text-muted-foreground">---</span>
                             }
                           </td>
@@ -812,8 +839,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         open={!!aprobarTarget}
         onClose={() => setAprobarTarget(null)}
         onConfirm={() => { if (aprobarTarget) handleAprobar(aprobarTarget) }}
-        title={`¿Aprobar y avanzar al siguiente filtro?`}
-        description={`La solicitud ${solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion ?? ""} avanzará al siguiente paso.`}
+        title="¿Aprobar y avanzar al siguiente filtro?"
+        description={`La solicitud ${formatearFolio(solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion)} avanzará al siguiente paso.`}
         confirmLabel="Sí, aprobar"
         icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
@@ -821,7 +848,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         open={!!observarTarget}
         onClose={() => setObservarTarget(null)}
         onConfirm={(obs) => { if (observarTarget) handleObservar(observarTarget, obs) }}
-        folio={solicitudes.find(s => s.id === observarTarget)?.folioRecepcion ?? ""}
+        folio={formatearFolio(solicitudes.find(s => s.id === observarTarget)?.folioRecepcion)}
       />
     </div>
   )
