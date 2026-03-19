@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model accion {
+  id              Int               @id @default(autoincrement())
+  nombre          String            @db.VarChar(100)
+  descripcion     String?
+  rol_menu_accion rol_menu_accion[]
+}
+
+model adjunto {
+  id             Int       @id @default(autoincrement())
+  solicitud_id   Int
+  nombre_archivo String    @db.VarChar(255)
+  ruta           String
+  tipo           String?   @db.VarChar(100)
+  fecha_subida   DateTime? @default(now()) @db.Timestamp(6)
+  solicitud      solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model area {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @db.VarChar(150)
+  descripcion String?
+  activo      Boolean?  @default(true)
+  usuario     usuario[]
+}
+
+model checklist {
+  id                Int                 @id @default(autoincrement())
+  nombre            String              @db.VarChar(150)
+  etapa             String?             @db.VarChar(10)
+  checklist_detalle checklist_detalle[]
+}
+
+model checklist_detalle {
+  id           Int       @id @default(autoincrement())
+  checklist_id Int
+  solicitud_id Int
+  descripcion  String
+  cumplido     Boolean?  @default(false)
+  checklist    checklist @relation(fields: [checklist_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  solicitud    solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model consecutivo_folio {
+  id          Int     @id @default(autoincrement())
+  tipo        String? @db.VarChar(50)
+  mes         Int?
+  anio        Int?
+  consecutivo Int?    @default(1)
+
+  @@unique([tipo, mes, anio])
+}
+
+model dictamen {
+  id            Int       @id @default(autoincrement())
+  solicitud_id  Int       @unique
+  folio         String    @db.VarChar(50)
+  fecha_emision DateTime  @db.Timestamp(6)
+  tipo_firma    String?   @db.VarChar(20)
+  archivo_pdf   String?
+  solicitud     solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model estado {
+  id                                                                 Int                   @id @default(autoincrement())
+  nombre                                                             String                @unique @db.VarChar(100)
+  descripcion                                                        String?
+  historial_solicitud_historial_solicitud_estado_anterior_idToestado historial_solicitud[] @relation("historial_solicitud_estado_anterior_idToestado")
+  historial_solicitud_historial_solicitud_estado_nuevo_idToestado    historial_solicitud[] @relation("historial_solicitud_estado_nuevo_idToestado")
+  solicitud                                                          solicitud[]
+}
+
+model historial_solicitud {
+  id                                                    Int       @id @default(autoincrement())
+  solicitud_id                                          Int
+  usuario_id                                            String    @db.Uuid
+  estado_anterior_id                                    Int?
+  estado_nuevo_id                                       Int
+  comentario                                            String?
+  fecha                                                 DateTime? @default(now()) @db.Timestamp(6)
+  estado_historial_solicitud_estado_anterior_idToestado estado?   @relation("historial_solicitud_estado_anterior_idToestado", fields: [estado_anterior_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  estado_historial_solicitud_estado_nuevo_idToestado    estado    @relation("historial_solicitud_estado_nuevo_idToestado", fields: [estado_nuevo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  solicitud                                             solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario                                               usuario   @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([solicitud_id], map: "idx_historial_solicitud")
+}
+
+model menu {
+  id       Int        @id @default(autoincrement())
+  nombre   String     @db.VarChar(150)
+  ruta     String?    @db.VarChar(200)
+  orden    Int?       @default(0)
+  activo   Boolean?   @default(true)
+  rol_menu rol_menu[]
+}
+
+model periodo {
+  id           Int         @id @default(autoincrement())
+  mes          Int
+  anio         Int
+  fecha_inicio DateTime    @db.Date
+  fecha_fin    DateTime    @db.Date
+  activo       Boolean?    @default(true)
+  solicitud    solicitud[]
+
+  @@unique([mes, anio])
+}
+
+model rol {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @unique @db.VarChar(100)
+  descripcion String?
+  activo      Boolean?   @default(true)
+  created_at  DateTime?  @default(now()) @db.Timestamp(6)
+  rol_menu    rol_menu[]
+  usuario     usuario[]
+}
+
+model rol_menu {
+  id              Int               @id @default(autoincrement())
+  rol_id          Int
+  menu_id         Int
+  menu            menu              @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rol             rol               @relation(fields: [rol_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rol_menu_accion rol_menu_accion[]
+
+  @@unique([rol_id, menu_id])
+}
+
+model rol_menu_accion {
+  id          Int      @id @default(autoincrement())
+  rol_menu_id Int
+  accion_id   Int
+  activo      Boolean? @default(true)
+  accion      accion   @relation(fields: [accion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rol_menu    rol_menu @relation(fields: [rol_menu_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([rol_menu_id, accion_id])
+}
+
+model solicitud {
+  id                    Int                   @id @default(autoincrement())
+  usuario_id            String                @db.Uuid
+  estado_id             Int
+  periodo_id            Int
+  tipo_solicitud        String                @db.VarChar(100)
+  es_extemporanea       Boolean?              @default(false)
+  folio_recepcion       String?               @db.VarChar(50)
+  folio_justificacion   String?               @db.VarChar(50)
+  folio_dictamen        String?               @db.VarChar(50)
+  fecha_creacion        DateTime?             @default(now()) @db.Timestamp(6)
+  fecha_envio           DateTime?             @db.Timestamp(6)
+  fecha_emision         DateTime?             @db.Timestamp(6)
+  secretaria            String?               @db.VarChar(200)
+  unidad_administrativa String?               @db.VarChar(200)
+  unidad_responsable    String?               @db.VarChar(200)
+  programa_proyecto     String?               @db.VarChar(200)
+  regimen               String?               @db.VarChar(100)
+  tipo_actividades      String?               @db.VarChar(200)
+  numero_prestadores    Int?
+  denominacion          String?               @db.VarChar(200)
+  vigencia_inicio       DateTime?             @db.Date
+  vigencia_fin          DateTime?             @db.Date
+  importe_bruto         Decimal?              @db.Decimal(14, 2)
+  es_renovacion         Boolean?              @default(false)
+  folio_anterior        String?               @db.VarChar(50)
+  nivel_tabulador       String?               @db.VarChar(20)
+  categoria_tabulador   String?               @db.VarChar(10)
+  objeto                String?
+  actividades           String[]
+  responsabilidades     String[]
+  escolaridad           String?               @db.VarChar(100)
+  comp_adm              String?
+  comp_tec              String?
+  comp_soc              String?
+  valores               String?
+  areas_exp             String?
+  adjunto               adjunto[]
+  checklist_detalle     checklist_detalle[]
+  dictamen              dictamen?
+  historial_solicitud   historial_solicitud[]
+  estado                estado                @relation(fields: [estado_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  periodo               periodo               @relation(fields: [periodo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuario               usuario               @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([estado_id], map: "idx_solicitud_estado")
+  @@index([usuario_id], map: "idx_solicitud_usuario")
+}
+
+model usuario {
+  id                   String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre               String                @db.VarChar(150)
+  correo               String                @unique @db.VarChar(150)
+  rfc                  String?               @unique @db.VarChar(13)
+  password_hash        String
+  must_change_password Boolean?              @default(false)
+  rol_id               Int
+  area_id              Int?
+  activo               Boolean?              @default(true)
+  fecha_creacion       DateTime?             @default(now()) @db.Timestamp(6)
+  historial_solicitud  historial_solicitud[]
+  solicitud            solicitud[]
+  area                 area?                 @relation(fields: [area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rol                  rol                   @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  codigo_recuperacion  codigo_recuperacion?
+
+  @@index([rol_id], map: "idx_usuario_rol")
+  @@index([rfc],    map: "idx_usuario_rfc")
+}
+
+model codigo_recuperacion {
+  id         Int       @id @default(autoincrement())
+  usuario_id String    @unique @db.Uuid
+  codigo     String    @db.VarChar(6)
+  expira_en  DateTime  @db.Timestamp(6)
+  usado      Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  usuario    usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}

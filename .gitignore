@@ -18,6 +18,9 @@ out/
 # Vercel
 .vercel
 
+<<<<<<< HEAD
+/lib/generated/prisma
+=======
 # Logs
 *.log
 npm-debug.log*
@@ -30,3 +33,4 @@ Thumbs.db
 
 # Turbo (si se usa)
 .turbo
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d

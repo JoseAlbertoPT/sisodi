@@ -14,17 +14,22 @@ import { Separator } from "@/components/ui/separator"
 import {
   FilePlus, Upload, ArrowLeft, ArrowRight, Plus, Trash2,
   FileText, ClipboardList, Save, SendHorizonal, AlertCircle, Info,
-  ShieldAlert, CheckCircle2, Clock, Calendar,
+  ShieldAlert, CheckCircle2, Clock, Calendar, Lock,
 } from "lucide-react"
 import { useSolicitudes, type TipoAdministracion } from "@/lib/solicitudes-store"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { useAuth } from "@/lib/auth-context"
 import { CAP_3000, CAP_1000, NOMBRAMIENTO_TD, parseDateDMY, isPeriodoVigente } from "@/lib/calendario-recepcion-mock"
+<<<<<<< HEAD
+import { useHistoricoStore } from "@/lib/historico-store"
+import type { HistoricoRow } from "@/lib/parse-excel-historico"
+=======
 import { parseExcelFile, type HistoricoRow } from "@/lib/parse-excel-historico"
 import { mapHistoricoRowToPrestacion, type HistoricoPrestacionForm } from "@/lib/map-historico-to-prestacion"
 import { useHistoricoStore } from "@/lib/historico-store"
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
 
-// ── Rangos tabulador (informativo) ──
+// Tabulador
 const RANGOS_TABULADOR = [
   { min: 32124.36, max: 49846.50, nivel: "105", puesto: "Director General" },
   { min: 24380.00, max: 32123.30, nivel: "106", puesto: "Coordinador de area" },
@@ -36,6 +41,291 @@ const RANGOS_TABULADOR = [
   { min: 0.00,     max: 10553.36, nivel: "303", puesto: "Tecnico operativo / Registrador" },
 ]
 
+//Columnas de Excel
+const COL = {
+  secretaria:             "SECRETARÍA/SUBSECRETARÍA/DEPENDENCIA/ORGANISMO AUXILIAR",
+  unidadAdscripcion:      "UNIDAD ADMINISTRATIVA DE ADSCRIPCIÓN",
+  unidadResponsableGasto: "UNIDAD RESPONSABLE DEL GASTO",
+  programaProyecto:       "PROGRAMA O PROYECTO",
+  regimen:                "RÉGIMEN DE CONTRATACIÓN",
+  tipoActividad:          "TIPO DE ACTIVIDAD",
+  numPrestadores:         "NÚMERO DE PRESTADORES DE SERVICIO",
+  vigenciaInicio:         "VIGENCIA (INICIO)",
+  vigenciaTermino:        "VIGENCIA (TÉRMINO)",
+  importeBruto:           "IMPORTE BRUTO (mensual/por día/por hora)",
+  objeto:                 "OBJETO DE LA CONTRATACIÓN",
+  actividades:            "ACTIVIDADES A REALIZAR POR EL PRESTADOR DE SERVICIOS",
+  responsabilidades:      "RESPONSABILIDADES A CUMPLIR POR EL PRESTADOR DE SERVICIOS",
+  escolaridad:            "ESCOLARIDAD MÍNIMA",
+  compAdm:                "COMPETENCIAS ADMINISTRATIVAS",
+  compTec:                "COMPETENCIAS TÉCNICAS",
+  compSoc:                "COMPETENCIAS SOCIALES",
+  valores:                "VALORES",
+  areasExp:               "ÁREAS DE EXPERIENCIA",
+  folioJustificacion:     "FOLIO DE JUSTIFICACIÓN",
+  folioDictamen:          "FOLIO DE DICTAMEN/OPINIÓN",
+} as const
+
+// Catálogos
+const SECRETARIAS_CATALOGO = [
+  "Secretaria de Administracion",
+  "Secretaria de Finanzas",
+  "Secretaria de Educacion",
+  "Secretaria de Salud",
+  "Secretaria de Gobierno",
+  "Secretaria de Obras Publicas",
+  "Secretaria de Desarrollo Social",
+  "Secretaria de Seguridad Publica",
+]
+type DatosSecretaria = {
+  unidades:  { value: string; label: string }[]
+  urgs:      { value: string; label: string }[]
+  programas: string[]
+  regimen:   string
+}
+const DATOS_FALLBACK: Record<string, DatosSecretaria> = {
+  "Secretaria de Administracion": {
+    unidades: [
+      { value: "Dir. Gral. de Profesionalizacion e Innovacion", label: "Dir. Gral. de Profesionalizacion e Innovacion" },
+      { value: "Dir. Gral. de Administracion y Finanzas",       label: "Dir. Gral. de Administracion y Finanzas" },
+      { value: "Dir. Gral. de Recursos Humanos",                label: "Dir. Gral. de Recursos Humanos" },
+    ],
+    urgs: [
+      { value: "URG-01 Oficina del Secretario",      label: "URG-01 Oficina del Secretario" },
+      { value: "URG-02 Direccion General",           label: "URG-02 Direccion General" },
+      { value: "URG-03 Coordinacion Administrativa", label: "URG-03 Coordinacion Administrativa" },
+    ],
+    programas: ["P-001 Modernizacion Administrativa", "P-002 Profesionalizacion"],
+    regimen: "honorarios",
+  },
+  "Secretaria de Finanzas": {
+    unidades: [
+      { value: "Dir. Gral. de Presupuesto",                  label: "Dir. Gral. de Presupuesto" },
+      { value: "Dir. Gral. de Tesoreria",                    label: "Dir. Gral. de Tesoreria" },
+      { value: "Dir. Gral. de Contabilidad y Fiscalizacion", label: "Dir. Gral. de Contabilidad y Fiscalizacion" },
+    ],
+    urgs: [
+      { value: "URG-F01 Despacho del Secretario",  label: "URG-F01 Despacho del Secretario" },
+      { value: "URG-F02 Subsecretaria de Egresos", label: "URG-F02 Subsecretaria de Egresos" },
+    ],
+    programas: ["F-001 Control Presupuestal", "F-002 Fiscalizacion"],
+    regimen: "asimilados",
+  },
+  "Secretaria de Educacion": {
+    unidades: [
+      { value: "Dir. de Educacion Basica",           label: "Dir. de Educacion Basica" },
+      { value: "Dir. de Educacion Media Superior",   label: "Dir. de Educacion Media Superior" },
+      { value: "Dir. de Educacion Normal y Superior",label: "Dir. de Educacion Normal y Superior" },
+    ],
+    urgs: [
+      { value: "URG-E01 Oficina del Titular",     label: "URG-E01 Oficina del Titular" },
+      { value: "URG-E02 Subsecretaria Academica", label: "URG-E02 Subsecretaria Academica" },
+    ],
+    programas: ["E-001 Cobertura Educativa", "E-002 Calidad Docente"],
+    regimen: "honorarios",
+  },
+  "Secretaria de Salud": {
+    unidades: [
+      { value: "Dir. de Atencion Primaria a la Salud", label: "Dir. de Atencion Primaria a la Salud" },
+      { value: "Dir. de Hospitales y Servicios",       label: "Dir. de Hospitales y Servicios" },
+    ],
+    urgs: [
+      { value: "URG-S01 Despacho Secretarial",                label: "URG-S01 Despacho Secretarial" },
+      { value: "URG-S02 Subsecretaria de Servicios de Salud", label: "URG-S02 Subsecretaria de Servicios de Salud" },
+    ],
+    programas: ["S-001 Atencion Medica Universal", "S-002 Prevencion y Promocion"],
+    regimen: "honorarios",
+  },
+  "Secretaria de Gobierno": {
+    unidades: [
+      { value: "Dir. de Servicios Juridicos",       label: "Dir. de Servicios Juridicos" },
+      { value: "Dir. de Seguridad Publica y Civil", label: "Dir. de Seguridad Publica y Civil" },
+    ],
+    urgs: [
+      { value: "URG-G01 Despacho del Secretario",   label: "URG-G01 Despacho del Secretario" },
+      { value: "URG-G02 Subsecretaria de Gobierno", label: "URG-G02 Subsecretaria de Gobierno" },
+    ],
+    programas: ["G-001 Seguridad Ciudadana", "G-002 Coordinacion Interinstitucional"],
+    regimen: "honorarios",
+  },
+  "Secretaria de Obras Publicas": {
+    unidades: [
+      { value: "Dir. de Obras y Proyectos",        label: "Dir. de Obras y Proyectos" },
+      { value: "Dir. de Control y Calidad",        label: "Dir. de Control y Calidad" },
+      { value: "Dir. de Licitaciones y Contratos", label: "Dir. de Licitaciones y Contratos" },
+    ],
+    urgs: [
+      { value: "URG-O01 Despacho del Secretario", label: "URG-O01 Despacho del Secretario" },
+      { value: "URG-O02 Subsecretaria Tecnica",   label: "URG-O02 Subsecretaria Tecnica" },
+    ],
+    programas: ["O-001 Infraestructura Vial", "O-002 Obra Social"],
+    regimen: "honorarios",
+  },
+  "Secretaria de Desarrollo Social": {
+    unidades: [
+      { value: "Dir. de Desarrollo Social",                  label: "Dir. de Desarrollo Social" },
+      { value: "Dir. de Programas y Proyectos Comunitarios", label: "Dir. de Programas y Proyectos Comunitarios" },
+    ],
+    urgs: [
+      { value: "URG-D01 Despacho Titular",          label: "URG-D01 Despacho Titular" },
+      { value: "URG-D02 Subsecretaria de Bienestar", label: "URG-D02 Subsecretaria de Bienestar" },
+    ],
+    programas: ["D-001 Atencion a Grupos Vulnerables", "D-002 Combate a la Pobreza"],
+    regimen: "asimilados",
+  },
+  "Secretaria de Seguridad Publica": {
+    unidades: [
+      { value: "Dir. de Policia Operativa",               label: "Dir. de Policia Operativa" },
+      { value: "Dir. de Investigacion y Prevencion",      label: "Dir. de Investigacion y Prevencion" },
+      { value: "Dir. de Tecnologias e Inteligencia Criminal", label: "Dir. de Tecnologias e Inteligencia Criminal" },
+    ],
+    urgs: [
+      { value: "URG-SP01 Comisionado General",     label: "URG-SP01 Comisionado General" },
+      { value: "URG-SP02 Subsecretaria Operativa", label: "URG-SP02 Subsecretaria Operativa" },
+    ],
+    programas: ["SP-001 Prevencion del Delito", "SP-002 Proximidad Social"],
+    regimen: "honorarios",
+  },
+}
+
+// HELPERS
+function norm(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+function getCell(row: HistoricoRow, colTarget: string): string {
+  const exact = row[colTarget]
+  if (exact != null) return String(exact).trim()
+  const targetNorm = norm(colTarget)
+  for (const key of Object.keys(row)) {
+    if (norm(key) === targetNorm) {
+      const v = row[key]
+      return v != null ? String(v).trim() : ""
+    }
+  }
+  return ""
+}
+
+function detectarClaves(
+  rows: HistoricoRow[],
+  targets: Record<string, string>
+): Record<string, string> {
+  if (rows.length === 0) return targets
+  const sampleKeys = Object.keys(rows[0])
+  const resultado: Record<string, string> = {}
+  for (const [alias, colTarget] of Object.entries(targets)) {
+    if (sampleKeys.includes(colTarget)) {
+      resultado[alias] = colTarget
+      continue
+    }
+    const targetNorm = norm(colTarget)
+    const found = sampleKeys.find((k) => norm(k) === targetNorm)
+    resultado[alias] = found ?? colTarget
+  }
+  return resultado
+}
+
+function getFallback(secretaria: string): DatosSecretaria | null {
+  if (DATOS_FALLBACK[secretaria]) return DATOS_FALLBACK[secretaria]
+  const key = Object.keys(DATOS_FALLBACK).find(
+    (k) =>
+      k.toLowerCase().includes(secretaria.toLowerCase()) ||
+      secretaria.toLowerCase().includes(k.toLowerCase().split(" ")[1] ?? "___")
+  )
+  return key ? DATOS_FALLBACK[key] : null
+}
+
+function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecretaria | null {
+  if (!secretaria) return null
+
+  if (rows.length > 0) {
+    const claves = detectarClaves(rows, {
+      secretaria:             COL.secretaria,
+      unidadAdscripcion:      COL.unidadAdscripcion,
+      unidadResponsableGasto: COL.unidadResponsableGasto,
+      programaProyecto:       COL.programaProyecto,
+      regimen:                COL.regimen,
+    })
+
+    const secNorm = norm(secretaria)
+    let filas = rows.filter((row) => {
+      const val = norm(getCell(row, claves.secretaria))
+      return val.includes(secNorm) || secNorm.includes(val.split(" ")[1] ?? "___")
+    })
+
+    if (filas.length === 0) filas = rows
+
+    const unidadesMap = new Map<string, string>()
+    filas.forEach((row) => {
+      const u = getCell(row, claves.unidadAdscripcion)
+      if (u) unidadesMap.set(u, u)
+    })
+    const unidades = Array.from(unidadesMap.keys())
+      .sort()
+      .map((u) => ({ value: u, label: u }))
+
+    const urgsMap = new Map<string, string>()
+    filas.forEach((row) => {
+      const urg = getCell(row, claves.unidadResponsableGasto)
+      if (urg) urgsMap.set(urg, urg)
+    })
+    const urgs = Array.from(urgsMap.keys())
+      .sort()
+      .map((u) => ({ value: u, label: u }))
+
+    const programasSet = new Set<string>()
+    filas.forEach((row) => {
+      const p = getCell(row, claves.programaProyecto)
+      if (p) programasSet.add(p)
+    })
+
+    const regimenCount: Record<string, number> = {}
+    filas.forEach((row) => {
+      const r = normalizaRegimen(getCell(row, claves.regimen))
+      regimenCount[r] = (regimenCount[r] ?? 0) + 1
+    })
+    const regimenFrecuente =
+      Object.entries(regimenCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "honorarios"
+
+    if (unidades.length > 0 || urgs.length > 0) {
+      const fb = getFallback(secretaria)
+      return {
+        unidades:  unidades.length > 0  ? unidades  : (fb?.unidades  ?? []),
+        urgs:      urgs.length > 0      ? urgs      : (fb?.urgs      ?? []),
+        programas: programasSet.size > 0 ? Array.from(programasSet).sort() : (fb?.programas ?? []),
+        regimen:   regimenFrecuente,
+      }
+    }
+  }
+
+  return getFallback(secretaria)
+}
+
+// Helpers varios
+function parseImporteBruto(raw: string): string {
+  if (!raw) return ""
+  let clean = raw.replace(/[$\s]/g, "")
+  const commas = (clean.match(/,/g) ?? []).length
+  const dots   = (clean.match(/\./g) ?? []).length
+  if (commas === 2) {
+    const last = clean.lastIndexOf(",")
+    clean = clean.slice(0, last).replace(/,/g, "") + "." + clean.slice(last + 1)
+  } else if (commas === 1 && dots === 0) {
+    const parts = clean.split(",")
+    if (parts[1].length <= 2) clean = parts[0] + "." + parts[1]
+    else clean = parts.join("")
+  } else {
+    clean = clean.replace(/,/g, "")
+  }
+  const n = parseFloat(clean)
+  if (Number.isNaN(n)) return ""
+  return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 function parseMoney(str: string): number {
   if (!str) return -1
   const clean = str.replace(/[$,\s]/g, "")
@@ -43,106 +333,596 @@ function parseMoney(str: string): number {
   return isNaN(n) ? -1 : n
 }
 
-const MOCK_FOLIOS = [
-  { id: "DICT-2026-001", fecha: "02/02/2026", vigencia: "01/01/2026 – 30/06/2026", vencimiento: "30/06/2026" },
-  { id: "DICT-2026-002", fecha: "05/03/2026", vigencia: "01/03/2026 – 31/08/2026", vencimiento: "31/08/2026" },
-  { id: "DICT-2025-015", fecha: "01/04/2025", vigencia: "01/04/2025 – 30/09/2025", vencimiento: "30/09/2025" },
+function splitList(text: string): string[] {
+  const lines = text
+    .split(/\n|\r\n/)
+    .map((s) => s.replace(/^\s*[IVX]+\.\s*/, "").replace(/^\s*[•\-*]\s*/, "").trim())
+    .filter(Boolean)
+  return lines.length > 0 ? lines : [""]
+}
+
+function mapEscolaridad(excel: string): string {
+  const u = excel.toUpperCase()
+  if (u.includes("BACHILLERATO")) return "bachillerato"
+  if (u.includes("TÉCNICO SUPERIOR") || u.includes("TECNICO SUPERIOR")) return "tecnico"
+  if (u.includes("LICENCIATURA") || u.includes("LICENCIADO")) return "licenciatura"
+  if (u.includes("MAESTRÍA") || u.includes("MAESTRIA")) return "maestria"
+  if (u.includes("DOCTORADO")) return "doctorado"
+  return "licenciatura"
+}
+
+function normalizaRegimen(excel: string): string {
+  const u = excel.toUpperCase().trim()
+  if (u.includes("ASIMILADO")) return "asimilados"
+  if (u.includes("HONORARIO")) return "honorarios"
+  if (u.includes("NOMBRAMIENTO") || u.includes("TIEMPO DETERMINADO")) return "nombramiento"
+  return u.toLowerCase()
+}
+
+function extraerAnioMes(fechaStr: string): { anio: number; mes: number } | null {
+  if (!fechaStr) return null
+  const matchDMY = fechaStr.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
+  if (matchDMY) return { anio: parseInt(matchDMY[3]), mes: parseInt(matchDMY[2]) }
+  const matchYMD = fechaStr.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/)
+  if (matchYMD) return { anio: parseInt(matchYMD[1]), mes: parseInt(matchYMD[2]) }
+  const serial = parseFloat(fechaStr)
+  if (!isNaN(serial) && serial > 40000) {
+    const d = new Date((serial - 25569) * 86400 * 1000)
+    return { anio: d.getUTCFullYear(), mes: d.getUTCMonth() + 1 }
+  }
+  return null
+}
+
+const MESES_ES: Record<string, number> = {
+  enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
+  julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
+}
+
+function parsePeriodo(periodoLabel: string): { anio: number; mes: number } | null {
+  if (!periodoLabel) return null
+  const lower = periodoLabel.toLowerCase()
+  const anioMatch = lower.match(/\b(20\d{2})\b/)
+  const anio = anioMatch ? parseInt(anioMatch[1]) : null
+  if (!anio) return null
+  for (const [nombre, num] of Object.entries(MESES_ES)) {
+    if (lower.includes(nombre)) return { anio, mes: num }
+  }
+  return { anio, mes: 0 }
+}
+
+function rowEnPeriodo(row: HistoricoRow, periodoLabel: string): boolean {
+  if (!periodoLabel) return true
+  const periodo = parsePeriodo(periodoLabel)
+  if (!periodo) return true
+  const inicioStr = getCell(row, COL.vigenciaInicio)
+  const finStr    = getCell(row, COL.vigenciaTermino)
+  const inicio = extraerAnioMes(inicioStr)
+  const fin    = extraerAnioMes(finStr)
+  if (!inicio) return false
+  if (periodo.mes === 0) {
+    return periodo.anio >= inicio.anio && periodo.anio <= (fin?.anio ?? inicio.anio)
+  }
+  const periodoNum = periodo.anio * 100 + periodo.mes
+  const inicioNum  = inicio.anio * 100 + inicio.mes
+  const finNum     = fin ? fin.anio * 100 + fin.mes : inicioNum
+  return periodoNum >= inicioNum && periodoNum <= finNum
+}
+
+const OPCIONES_COMPETENCIAS_ADM = [
+  "Toma de Decisiones","Análisis e Interpretación de Información",
+  "Planificación de Actividades","Control y Seguimiento","Negociación","Liderazgo",
+]
+const OPCIONES_COMPETENCIAS_TEC = [
+  "Conocimientos en Prevención Social","Consultoría en Gestión de la No Violencia",
+  "Análisis de Información","Desarrollo de Software","Bases de Datos","Redes y Telecomunicaciones",
+]
+const OPCIONES_COMPETENCIAS_SOC = [
+  "Trabajo en Equipo","Relaciones Interpersonales","Capacidad de Comunicación",
+  "Orientación a Resultados","Adaptabilidad",
+]
+const OPCIONES_VALORES = [
+  "Equidad de Género","Responsabilidad","Transparencia","Eficiencia","Rendición de Cuentas","Integridad",
+]
+const OPCIONES_AREAS_EXP = [
+  "Estrategias de Seguridad","Geo Estadística de Seguridad","Seguridad Pública","Seguridad Ciudadana",
+  "Redes en Seguridad Pública","Administración Pública","Tecnologías de la Información",
 ]
 
+const SECRETARIAS_EXCEPCION = [
+  "Sec. de Finanzas","Sec. de Educacion","Sec. de Salud",
+  "Sec. de Gobierno","Sec. de Obras","Sec. de Desarrollo",
+]
+const UNIDADES_ADMINISTRATIVAS_EXC = [
+  "Dir. Gral. de Administracion y Finanzas",
+  "Dir. Gral. de Profesionalizacion e Innovacion",
+  "Dir. Gral. de Recursos Humanos",
+]
+
+// Hooks
+function useExcelRows(historicos: { sheets: Record<string, HistoricoRow[]> }[]): HistoricoRow[] {
+  return useMemo(() => {
+    if (historicos.length === 0) return []
+    const last = historicos[historicos.length - 1]
+    return Object.values(last.sheets).flat()
+  }, [historicos])
+}
+
+const FALLBACK_TIPOS_ACTIVIDAD: Record<string, { value: string; label: string }[]> = {
+  honorarios: [
+    { value: "profesional", label: "Actividades Profesionales" },
+    { value: "tecnico",     label: "Actividades Técnicas" },
+    { value: "operativo",   label: "Actividades Operativas" },
+    { value: "asesoria",    label: "Actividades de Asesoría" },
+  ],
+  asimilados: [
+    { value: "profesional", label: "Actividades Profesionales" },
+    { value: "tecnico",     label: "Actividades Técnicas" },
+    { value: "asesoria",    label: "Actividades de Asesoría" },
+  ],
+  nombramiento: [
+    { value: "directivo",   label: "Directivo" },
+    { value: "mando_medio", label: "Mando Medio" },
+    { value: "operativo",   label: "Operativo" },
+    { value: "tecnico_esp", label: "Técnico Especializado" },
+  ],
+}
+
+function extraerTiposActividad(
+  rows: HistoricoRow[], regimen: string, programa?: string
+): { value: string; label: string }[] {
+  const regimenNorm = regimen.toLowerCase().trim()
+  const filtered = rows
+    .filter((row) => {
+      const r = getCell(row, COL.regimen)
+      if (!r) return true
+      const rNorm = normalizaRegimen(r)
+      return rNorm === regimenNorm || r.toLowerCase().includes(regimenNorm)
+    })
+    .filter((row) => {
+      if (!programa) return true
+      return getCell(row, COL.programaProyecto) === programa
+    })
+  const seen = new Set<string>()
+  const result: { value: string; label: string }[] = []
+  filtered.forEach((row) => {
+    const label = getCell(row, COL.tipoActividad)
+    if (!label) return
+    const value = label.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
+    if (!seen.has(value)) { seen.add(value); result.push({ value, label }) }
+  })
+  return result
+}
+
+function useTiposActividad(regimen: string, rows: HistoricoRow[]): { value: string; label: string }[] {
+  return useMemo(() => {
+    if (!regimen) return []
+    if (rows.length === 0) return FALLBACK_TIPOS_ACTIVIDAD[regimen] ?? []
+    const fromExcel = extraerTiposActividad(rows, regimen)
+    return fromExcel.length > 0 ? fromExcel : (FALLBACK_TIPOS_ACTIVIDAD[regimen] ?? [])
+  }, [regimen, rows])
+}
+
+function useProgramas(rows: HistoricoRow[]): string[] {
+  return useMemo(() => {
+    if (rows.length === 0) return []
+    const seen = new Set<string>()
+    rows.forEach((row) => { const p = getCell(row, COL.programaProyecto); if (p) seen.add(p) })
+    return Array.from(seen).sort()
+  }, [rows])
+}
+
+function useTiposActividadPorPrograma(
+  programa: string, regimen: string, rows: HistoricoRow[]
+): { value: string; label: string }[] {
+  return useMemo(() => {
+    if (!programa) return []
+    if (rows.length === 0) return FALLBACK_TIPOS_ACTIVIDAD[regimen] ?? []
+    const fromExcel = extraerTiposActividad(rows, regimen, programa)
+    return fromExcel.length > 0 ? fromExcel : extraerTiposActividad(rows, regimen)
+  }, [programa, regimen, rows])
+}
+
+function useRowPrecarga(
+  programa: string, tipoActividad: string, regimen: string, rows: HistoricoRow[]
+): HistoricoRow | null {
+  return useMemo(() => {
+    if (!programa || !tipoActividad) return null
+    return (
+      rows.find((row) => {
+        const p = getCell(row, COL.programaProyecto) === programa
+        const t = getCell(row, COL.tipoActividad)
+          .toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "") === tipoActividad
+        const r = !regimen || normalizaRegimen(getCell(row, COL.regimen)) === regimen
+        return p && t && r
+      }) ?? null
+    )
+  }, [programa, tipoActividad, regimen, rows])
+}
+
+// tipos
 type TipoSolicitud = "" | "prestacion" | "nombramiento"
 type Step = "tipo" | "renovacion" | "formulario"
 
-// ── Dynamic list helper ──
-function DynamicList({ label, items, onChange, max = 5 }: {
-  label: string
-  items: string[]
-  onChange: (items: string[]) => void
-  max?: number
+type FolioExcel = {
+  id:               string
+  folioJustificacion: string
+  folioDictamen:    string
+  secretaria:       string
+  vigenciaInicio:   string
+  vigenciaFin:      string
+  unidadAdscripcion:      string
+  unidadResponsableGasto: string
+  programaProyecto:       string
+  tipoActividad:          string
+  regimen:                string
+  numPrestadores:         string
+  importeBruto:           string
+  objeto:                 string
+  actividades:            string
+  responsabilidades:      string
+  escolaridad:            string
+  compAdm:                string
+  compTec:                string
+  compSoc:                string
+  valores:                string
+  areasExp:               string
+}
+
+
+/** Campo de solo lectura con ícono de candado para renovaciones */
+function ReadonlyField({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label className="text-sm font-medium flex items-center gap-1.5">
+        {label}
+        <Lock className="h-3 w-3 text-muted-foreground" />
+      </Label>
+      <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+        <span className="text-sm text-muted-foreground truncate">{value || "—"}</span>
+      </div>
+      {hint && <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3 shrink-0" />{hint}</p>}
+    </div>
+  )
+}
+
+function DynamicList({ label, items, onChange, max = 10, readonly = false }: {
+  label: string; items: string[]; onChange: (items: string[]) => void; max?: number; readonly?: boolean
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <Label className="text-sm font-medium text-card-foreground">{label}</Label>
+      {label && (
+        <Label className="text-sm font-medium text-card-foreground flex items-center gap-1.5">
+          {label}
+          {readonly && <Lock className="h-3 w-3 text-muted-foreground" />}
+        </Label>
+      )}
       {items.map((item, idx) => (
         <div key={idx} className="flex items-center gap-2">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
-            {idx + 1}
-          </span>
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">{idx + 1}</span>
           <Input
             value={item}
             onChange={(e) => {
-              const copy = [...items]
-              copy[idx] = e.target.value
-              onChange(copy)
+              if (readonly) return
+              const copy = [...items]; copy[idx] = e.target.value; onChange(copy)
             }}
-            placeholder={`${label} ${idx + 1}`}
-            className="bg-background"
+            placeholder={`${label || "Item"} ${idx + 1}`}
+            className={`${readonly ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+            readOnly={readonly}
           />
-          {items.length > 1 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
-              onClick={() => onChange(items.filter((_, i) => i !== idx))}
-            >
+          {!readonly && items.length > 1 && (
+            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+              onClick={() => onChange(items.filter((_, i) => i !== idx))}>
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
         </div>
       ))}
-      {items.length < max && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-fit"
-          onClick={() => onChange([...items, ""])}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Agregar
+      {!readonly && items.length < max && (
+        <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => onChange([...items, ""])}>
+          <Plus className="mr-1 h-4 w-4" />Agregar
         </Button>
       )}
     </div>
   )
 }
 
-// ── Step indicator ──
 function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
   const steps = [
-    { key: "tipo", label: "Tipo de Solicitud" },
+    { key: "tipo",       label: "Tipo de Solicitud" },
     { key: "renovacion", label: "Renovacion" },
     { key: "formulario", label: tipo === "prestacion" ? "Prestacion de Servicios" : "Nombramiento" },
   ]
   const currentIndex = steps.findIndex((s) => s.key === step)
-
   return (
     <div className="flex items-center gap-2">
       {steps.map((s, i) => (
         <div key={s.key} className="flex items-center gap-2">
-          <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${i === currentIndex
-            ? "bg-primary text-primary-foreground"
-            : i < currentIndex
-              ? "bg-secondary text-secondary-foreground"
-              : "bg-muted text-muted-foreground"
-            }`}>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current text-[10px]">
-              {i + 1}
-            </span>
+          <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors
+              ${i === currentIndex ? "bg-primary text-primary-foreground"
+                : i < currentIndex ? "bg-secondary text-secondary-foreground"
+                : "bg-muted text-muted-foreground"}`}>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current text-[10px]">{i + 1}</span>
             <span className="hidden sm:inline">{s.label}</span>
           </div>
-          {i < steps.length - 1 && (
-            <div className={`h-px w-6 ${i < currentIndex ? "bg-secondary" : "bg-border"}`} />
-          )}
+          {i < steps.length - 1 && <div className={`h-px w-6 ${i < currentIndex ? "bg-secondary" : "bg-border"}`} />}
         </div>
       ))}
     </div>
   )
 }
 
-// ══════════════════════════════════════════════════
-// FORMULARIO 1 – PRESTACION DE SERVICIOS
-// ══════════════════════════════════════════════════
+function TabuladorCard({ importe }: { importe: string }) {
+  const coincidencias = useMemo(() => {
+    const val = parseMoney(importe)
+    if (val < 0) return []
+    return RANGOS_TABULADOR.filter((r) => val >= r.min && val <= r.max)
+  }, [importe])
+  return (
+    <Card className="shadow-sm border-secondary/30 border-2">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
+          <ClipboardList className="h-5 w-5 text-secondary" />Tabulador — Nivel y Nombramiento (informativo)
+        </CardTitle>
+        <CardDescription className="flex items-center gap-1.5 text-xs">
+          <Info className="h-3.5 w-3.5" />Los niveles se calculan automaticamente a partir del importe capturado.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {parseMoney(importe) < 0 ? (
+          <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-3">
+            <Info className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Capture un importe para ver coincidencias.</span>
+          </div>
+        ) : coincidencias.length === 0 ? (
+          <div className="flex items-center gap-2 rounded-md bg-destructive/5 border border-destructive/20 px-3 py-3">
+            <AlertCircle className="h-4 w-4 text-destructive" />
+            <span className="text-sm text-destructive">Sin coincidencias para el importe capturado.</span>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {coincidencias.map((c) => (
+              <div key={c.nivel + c.puesto} className="flex items-center gap-3 rounded-lg border border-secondary/20 bg-secondary/5 px-4 py-2.5">
+                <Badge variant="secondary" className="bg-secondary text-secondary-foreground text-xs shrink-0">Nivel {c.nivel}</Badge>
+                <span className="text-sm font-medium text-card-foreground">{c.puesto}</span>
+              </div>
+            ))}
+            {coincidencias.length > 1 && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Info className="h-3 w-3" />Existen traslapes entre rangos (solo informativo).
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function SelectTriggerTruncado({ placeholder, selectedLabel, className = "" }: {
+  placeholder: string; selectedLabel?: string; className?: string
+}) {
+  return (
+    <SelectTrigger className={`bg-background w-full ${className}`}>
+      <span className="block truncate text-sm pr-1">
+        {selectedLabel ?? <span className="text-muted-foreground">{placeholder}</span>}
+      </span>
+    </SelectTrigger>
+  )
+}
+
+function SelectConBusqueda({
+  opciones, value, onValueChange, placeholder, disabled = false, className = "",
+}: {
+  opciones: { value: string; label: string }[]
+  value: string
+  onValueChange: (v: string) => void
+  placeholder: string
+  disabled?: boolean
+  className?: string
+}) {
+  const [busqueda, setBusqueda] = useState("")
+  const filtradas = useMemo(
+    () =>
+      busqueda.trim()
+        ? opciones.filter((o) => norm(o.label).includes(norm(busqueda)))
+        : opciones,
+    [opciones, busqueda]
+  )
+  const selectedLabel = opciones.find((o) => o.value === value)?.label
+
+  return (
+    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+      <SelectTrigger className={`bg-background w-full ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}>
+        <span className="block truncate text-sm pr-1">
+          {selectedLabel ?? <span className="text-muted-foreground">{placeholder}</span>}
+        </span>
+      </SelectTrigger>
+      <SelectContent>
+        {opciones.length > 6 && (
+          <div className="px-2 py-1.5 border-b border-border">
+            <Input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar..."
+              className="h-7 text-xs bg-background"
+              onKeyDown={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
+        {filtradas.length === 0
+          ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin resultados</div>
+          : filtradas.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))
+        }
+      </SelectContent>
+    </Select>
+  )
+}
+
 function FormularioPrestacion({
+<<<<<<< HEAD
+  prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
+  datosRenovacion,
+}: {
+  prefilled: boolean
+  lockVigenciaOnly?: boolean
+  regimenPeriodo?: string
+  excelRows?: HistoricoRow[]
+  esRenovacion?: boolean
+  datosRenovacion?: FolioExcel | null
+}) {
+  const bloqueadoPorRenovacion = esRenovacion && !!datosRenovacion
+
+  const regimenInicial = datosRenovacion
+    ? normalizaRegimen(datosRenovacion.regimen)
+    : regimenPeriodo === "honorarios" ? "honorarios"
+    : regimenPeriodo === "asimilados" ? "asimilados"
+    : prefilled ? "honorarios" : ""
+  const regimenBloqueado = bloqueadoPorRenovacion || regimenPeriodo === "honorarios" || regimenPeriodo === "asimilados"
+  const [regimen, setRegimen] = useState(regimenInicial)
+  const regimenEfectivo = regimenPeriodo || regimen
+
+  const [secretariaInput,      setSecretariaInput]      = useState(
+    datosRenovacion?.secretaria ?? (prefilled ? "Secretaria de Administracion" : "")
+  )
+  const [secretariaConfirmada, setSecretariaConfirmada] = useState(
+    datosRenovacion?.secretaria ?? (prefilled ? "Secretaria de Administracion" : "")
+  )
+  const [showSugerencias,      setShowSugerencias]      = useState(false)
+  const [unidadSeleccionada,   setUnidadSeleccionada]   = useState(
+    datosRenovacion?.unidadAdscripcion ?? ""
+  )
+  const [urgSeleccionada,      setUrgSeleccionada]      = useState(
+    datosRenovacion?.unidadResponsableGasto ?? ""
+  )
+  const [programaSeleccionado, setProgramaSeleccionado] = useState(
+    datosRenovacion?.programaProyecto ?? ""
+  )
+  const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
+    datosRenovacion?.tipoActividad
+      ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
+      : ""
+  )
+
+  const sugerencias = useMemo(() => {
+    if (!secretariaInput) return SECRETARIAS_CATALOGO
+    return SECRETARIAS_CATALOGO.filter((s) => s.toLowerCase().includes(secretariaInput.toLowerCase()))
+  }, [secretariaInput])
+
+  const datosRelacionados = useMemo(
+    () => getDatosSecretaria(secretariaConfirmada, excelRows),
+    [secretariaConfirmada, excelRows]
+  )
+
+  const unidadesDisponibles = datosRelacionados?.unidades ?? []
+  const urgsDisponibles     = datosRelacionados?.urgs     ?? []
+
+  const programasDelExcel       = useProgramas(excelRows)
+  const programasDeLaSecretaria = datosRelacionados?.programas ?? []
+  const programas = programasDelExcel.length > 0 ? programasDelExcel : programasDeLaSecretaria
+
+  const tiposActividadPorPrograma = useTiposActividadPorPrograma(programaSeleccionado, regimenEfectivo, excelRows)
+  const tiposActividadPorRegimen  = useTiposActividad(regimenEfectivo, excelRows)
+  const tiposActividad = programaSeleccionado && tiposActividadPorPrograma.length > 0
+    ? tiposActividadPorPrograma : tiposActividadPorRegimen
+
+  const rowPrecarga = useRowPrecarga(programaSeleccionado, tipoActividadSeleccionado, regimenEfectivo, excelRows)
+
+  const [importeBruto, setImporteBruto] = useState(
+    datosRenovacion?.importeBruto
+      ? parseImporteBruto(datosRenovacion.importeBruto)
+      : prefilled ? "45,000.00" : ""
+  )
+  const [actividades, setActividades] = useState<string[]>(
+    datosRenovacion?.actividades
+      ? splitList(datosRenovacion.actividades)
+      : prefilled ? ["Desarrollo de modulos del sistema institucional"] : [""]
+  )
+  const [responsabilidades, setResponsabilidades] = useState<string[]>(
+    datosRenovacion?.responsabilidades
+      ? splitList(datosRenovacion.responsabilidades)
+      : prefilled ? ["Cumplir con los plazos establecidos"] : [""]
+  )
+  const [objeto, setObjeto] = useState(
+    datosRenovacion?.objeto
+      ?? (prefilled ? "Prestacion de servicios profesionales para el desarrollo e implementacion de sistemas informaticos." : "")
+  )
+  const [escolaridad, setEscolaridad] = useState<string | undefined>(
+    datosRenovacion?.escolaridad ? mapEscolaridad(datosRenovacion.escolaridad) : prefilled ? "licenciatura" : undefined
+  )
+  const [compAdm, setCompAdm] = useState<string | undefined>(datosRenovacion?.compAdm || undefined)
+  const [compTec, setCompTec] = useState<string | undefined>(datosRenovacion?.compTec || undefined)
+  const [compSoc, setCompSoc] = useState<string | undefined>(datosRenovacion?.compSoc || undefined)
+  const [valores, setValores] = useState<string | undefined>(datosRenovacion?.valores || undefined)
+  const [areasExp, setAreasExp] = useState<string | undefined>(datosRenovacion?.areasExp || undefined)
+
+  const fuenteDatos = excelRows.length > 0 && secretariaConfirmada ? "excel" : "catalogo"
+
+  const handleSecretariaConfirm = (valor: string) => {
+    if (bloqueadoPorRenovacion) return
+    setSecretariaInput(valor)
+    setSecretariaConfirmada(valor)
+    setShowSugerencias(false)
+    setProgramaSeleccionado("")
+    setTipoActividadSeleccionado("")
+    const datos = getDatosSecretaria(valor, excelRows)
+    setUnidadSeleccionada(datos?.unidades[0]?.value ?? "")
+    setUrgSeleccionada(datos?.urgs[0]?.value ?? "")
+    if (!regimenBloqueado && datos?.regimen && datos.regimen !== "nombramiento") {
+      setRegimen(datos.regimen)
+    }
+  }
+
+  const handleTipoActividadChange = (val: string) => {
+    if (bloqueadoPorRenovacion) return
+    setTipoActividadSeleccionado(val)
+    const fila = excelRows.find((row) => {
+      const p = !programaSeleccionado || getCell(row, COL.programaProyecto) === programaSeleccionado
+      const t = getCell(row, COL.tipoActividad)
+        .toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "") === val
+      const r = !regimenEfectivo || normalizaRegimen(getCell(row, COL.regimen)) === regimenEfectivo
+      return p && t && r
+    })
+    if (fila) {
+      const objTxt  = getCell(fila, COL.objeto)
+      const actTxt  = getCell(fila, COL.actividades)
+      const respTxt = getCell(fila, COL.responsabilidades)
+      const imp     = getCell(fila, COL.importeBruto)
+      if (objTxt)  setObjeto(objTxt)
+      if (actTxt)  setActividades(splitList(actTxt))
+      if (respTxt) setResponsabilidades(splitList(respTxt))
+      if (imp)     setImporteBruto(parseImporteBruto(imp))
+      const esc  = getCell(fila, COL.escolaridad)
+      const cAdm = getCell(fila, COL.compAdm);  const cTec = getCell(fila, COL.compTec)
+      const cSoc = getCell(fila, COL.compSoc);  const val_ = getCell(fila, COL.valores)
+      const aExp = getCell(fila, COL.areasExp)
+      if (esc)  setEscolaridad(mapEscolaridad(esc))
+      if (cAdm) setCompAdm(cAdm); if (cTec) setCompTec(cTec)
+      if (cSoc) setCompSoc(cSoc); if (val_) setValores(val_); if (aExp) setAreasExp(aExp)
+    }
+  }
+
+  const handleProgramaChange = (val: string) => {
+    if (bloqueadoPorRenovacion) return
+    setProgramaSeleccionado(val)
+    setTipoActividadSeleccionado("")
+    setObjeto(""); setActividades([""]); setResponsabilidades([""])
+  }
+  const handleRegimenChange = (val: string) => {
+    if (bloqueadoPorRenovacion) return
+    setRegimen(val); setTipoActividadSeleccionado("")
+    setObjeto(""); setActividades([""]); setResponsabilidades([""])
+    setImporteBruto(""); setEscolaridad(undefined); setCompAdm(undefined)
+    setCompTec(undefined); setCompSoc(undefined); setValores(undefined); setAreasExp(undefined)
+  }
+
+  const tipoActividadLabel = tipoActividadSeleccionado
+    ? tiposActividad.find((t) => t.value === tipoActividadSeleccionado)?.label : undefined
+  const camposDependientesHabilitados = !bloqueadoPorRenovacion && (esRenovacion || !!secretariaConfirmada)
+=======
   prefilled,
   lockVigenciaOnly = false,
   historicoData = null,
@@ -198,10 +978,21 @@ function FormularioPrestacion({
     setValores(historicoData.valores)
     setAreasExperiencia(historicoData.areasExperiencia)
   }, [historicoData])
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
 
   return (
     <div className="flex flex-col gap-6">
-      {/* I. DATOS GENERALES */}
+      {/* Banner de renovación bloqueada */}
+      {bloqueadoPorRenovacion && (
+        <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
+          <Lock className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-card-foreground">Renovación — datos precargados y bloqueados</span>
+            <span className="text-xs text-muted-foreground">Todos los campos se han cargado del folio anterior. Solo puede modificar la <strong>vigencia</strong>.</span>
+          </div>
+        </div>
+      )}
+
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
@@ -211,16 +1002,281 @@ function FormularioPrestacion({
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div className="grid gap-5 md:grid-cols-2">
+
+            {/* Secretaria */}
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Secretaria</Label>
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Secretaria
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
+                </div>
+              ) : esRenovacion ? (
+                <>
+                  <Input value={prefilled ? "Secretaria de Administracion" : ""} disabled className="bg-muted text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Precargada segun usuario</p>
+                </>
+              ) : (
+                <div className="relative">
+                  <Input value={secretariaInput}
+                    onChange={(e) => {
+                      setSecretariaInput(e.target.value); setSecretariaConfirmada("")
+                      setShowSugerencias(true); setUnidadSeleccionada(""); setUrgSeleccionada("")
+                      setProgramaSeleccionado(""); setTipoActividadSeleccionado("")
+                    }}
+                    onFocus={() => setShowSugerencias(true)}
+                    onBlur={() => setTimeout(() => setShowSugerencias(false), 200)}
+                    placeholder="Escriba la secretaria..." className="bg-background" autoComplete="off"
+                  />
+                  {showSugerencias && sugerencias.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
+                      <div className="max-h-52 overflow-y-auto py-1">
+                        {sugerencias.map((s) => (
+                          <button key={s} type="button" onMouseDown={() => handleSecretariaConfirm(s)}
+                            className={`w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors
+                                ${secretariaConfirmada === s ? "bg-accent/60 font-medium" : ""}`}>
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {secretariaConfirmada && datosRelacionados && (
+                    <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 mt-1">
+                      <CheckCircle2 className="h-3 w-3 shrink-0" />
+                      Datos cargados desde {fuenteDatos === "excel" ? "Excel histórico" : "catálogo base"}
+                    </p>
+                  )}
+                  {secretariaConfirmada && !datosRelacionados && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      <Info className="h-3 w-3 shrink-0" />Secretaria capturada. Complete los campos manualmente.
+                    </p>
+                  )}
+                  {!secretariaConfirmada && secretariaInput && (
+                    <p className="text-xs text-muted-foreground mt-1">Seleccione una opcion de la lista</p>
+                  )}
+                  {!secretariaInput && (
+                    <p className="text-xs text-muted-foreground mt-1">Escriba para ver sugerencias</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Unidad adscripcion */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Unidad Administrativa de Adscripcion
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{unidadSeleccionada || "—"}</span>
+                </div>
+              ) : esRenovacion ? (
+                <SelectConBusqueda
+                  opciones={getDatosSecretaria("Secretaria de Administracion", excelRows)?.unidades ?? []}
+                  value={unidadSeleccionada}
+                  onValueChange={setUnidadSeleccionada}
+                  placeholder="Seleccione unidad"
+                />
+              ) : (
+                <>
+                  <SelectConBusqueda
+                    opciones={unidadesDisponibles}
+                    value={unidadSeleccionada}
+                    onValueChange={setUnidadSeleccionada}
+                    placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaria" : "Seleccione unidad"}
+                    disabled={!camposDependientesHabilitados}
+                  />
+                  {secretariaConfirmada && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3 shrink-0" />
+                      {fuenteDatos === "excel" ? "Desde Excel histórico" : "Catálogo base"} · {unidadesDisponibles.length} opciones
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* URG */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Unidad Responsable del Gasto
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{urgSeleccionada || "—"}</span>
+                </div>
+              ) : esRenovacion ? (
+                <SelectConBusqueda
+                  opciones={getDatosSecretaria("Secretaria de Administracion", excelRows)?.urgs ?? []}
+                  value={urgSeleccionada}
+                  onValueChange={setUrgSeleccionada}
+                  placeholder="Seleccione URG"
+                />
+              ) : (
+                <>
+                  <SelectConBusqueda
+                    opciones={urgsDisponibles}
+                    value={urgSeleccionada}
+                    onValueChange={setUrgSeleccionada}
+                    placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaria" : "Seleccione URG"}
+                    disabled={!camposDependientesHabilitados}
+                  />
+                  {secretariaConfirmada && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3 shrink-0" />
+                      {fuenteDatos === "excel" ? "Desde Excel histórico" : "Catálogo base"} · {urgsDisponibles.length} opciones
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Programa */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Programa o Proyecto
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{programaSeleccionado || "—"}</span>
+                </div>
+              ) : programas.length > 0 ? (
+                <Select value={programaSeleccionado} onValueChange={handleProgramaChange}
+                  disabled={!esRenovacion && !camposDependientesHabilitados}>
+                  <SelectTriggerTruncado
+                    placeholder={!esRenovacion && !camposDependientesHabilitados ? "Ingrese primero la secretaria" : "Seleccione programa"}
+                    selectedLabel={programaSeleccionado || undefined}
+                    className={!esRenovacion && !camposDependientesHabilitados ? "opacity-50 cursor-not-allowed" : ""}
+                  />
+                  <SelectContent>{programas.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                </Select>
+              ) : (
+                <Input value={programaSeleccionado} onChange={(e) => handleProgramaChange(e.target.value)}
+                  placeholder="Nombre del programa" className="bg-background"
+                  disabled={!esRenovacion && !camposDependientesHabilitados} />
+              )}
+              {!bloqueadoPorRenovacion && excelRows.length === 0 && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3 shrink-0" />Cargue un Excel histórico para ver programas disponibles
+                </p>
+              )}
+            </div>
+
+            {/* Régimen */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Regimen de Contratacion
+                {(regimenBloqueado) && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground capitalize">
+                    {regimenEfectivo === "asimilados" ? "Honorarios Asimilados a Salarios" : regimenEfectivo || "—"}
+                  </span>
+                </div>
+              ) : (
+                <Select value={regimenEfectivo || undefined} onValueChange={regimenBloqueado ? undefined : handleRegimenChange}
+                  disabled={regimenBloqueado}>
+                  <SelectTrigger className={`bg-background w-full ${regimenBloqueado ? "opacity-70 cursor-not-allowed" : ""}`}>
+                    <SelectValue placeholder="Seleccione regimen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="honorarios">Honorarios</SelectItem>
+                    <SelectItem value="asimilados">Honorarios Asimilados a Salarios</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              {regimenBloqueado && !bloqueadoPorRenovacion && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3 shrink-0" />Determinado por formulario anterior.
+                </p>
+              )}
+            </div>
+
+            {/* Tipo actividad */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Tipo de Actividades
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{datosRenovacion?.tipoActividad || tipoActividadLabel || "—"}</span>
+                </div>
+              ) : (
+                <>
+                  <Select value={tipoActividadSeleccionado} onValueChange={handleTipoActividadChange}
+                    disabled={!regimenEfectivo}>
+                    <SelectTriggerTruncado
+                      placeholder={!regimenEfectivo ? "Seleccione primero un régimen" : "Segun unidad administrativa"}
+                      selectedLabel={tipoActividadLabel}
+                      className={!regimenEfectivo ? "opacity-60 cursor-not-allowed" : ""}
+                    />
+                    <SelectContent>
+                      {tiposActividad.length === 0
+                        ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones para este régimen</div>
+                        : tiposActividad.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
+                      }
+                    </SelectContent>
+                  </Select>
+                  {regimenEfectivo && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3 shrink-0" />
+                      {excelRows.length > 0 ? "Desde Excel histórico" : "Catálogo base"} · Régimen:{" "}
+                      <span className="font-medium capitalize">
+                        {regimenEfectivo === "asimilados" ? "Honorarios asimilados" : regimenEfectivo}
+                      </span>
+                      {tiposActividad.length > 0 && <span className="ml-1">({tiposActividad.length} opciones)</span>}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Numero prestadores */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Numero de Prestadores de Servicios
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
               <Input
+<<<<<<< HEAD
+                type="number" min={1}
+                defaultValue={datosRenovacion?.numPrestadores ?? (prefilled ? "3" : "")}
+                placeholder="Ej. 5"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+=======
                 value={secretaria || (prefilled ? "Secretaria de Administracion" : "")}
                 disabled
                 className="bg-muted text-muted-foreground"
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
               />
-              <p className="text-xs text-muted-foreground">Precargada segun usuario</p>
             </div>
+
+            {/* Vigencia */}
             <div className="flex flex-col gap-2">
+<<<<<<< HEAD
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Vigencia
+                {bloqueadoPorRenovacion && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-secondary text-secondary ml-1">
+                    Editable
+                  </Badge>
+                )}
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Inicio</span>
+                  <Input type="date" defaultValue={prefilled ? "2026-01-01" : ""} className="bg-background" /></div>
+                <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Termino</span>
+                  <Input type="date" defaultValue={prefilled ? "2026-06-30" : ""} className="bg-background" /></div>
+=======
               <Label className="text-sm font-medium">Unidad Administrativa de Adscripcion</Label>
               <Select value={unidadAdscripcion || undefined} onValueChange={setUnidadAdscripcion}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione unidad" /></SelectTrigger>
@@ -286,21 +1342,39 @@ function FormularioPrestacion({
                   <span className="text-xs text-muted-foreground">Termino</span>
                   <Input type="date" value={vigenciaFin} onChange={(e) => setVigenciaFin(e.target.value)} className="bg-background" />
                 </div>
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
               </div>
+              {bloqueadoPorRenovacion && (
+                <p className="text-xs text-secondary flex items-center gap-1">
+                  <Info className="h-3 w-3 shrink-0" />Único campo modificable en esta renovación.
+                </p>
+              )}
             </div>
+
+            {/* Importe */}
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Importe Bruto</Label>
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Importe Bruto
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                 <Input
                   type="text"
                   value={importeBruto}
+<<<<<<< HEAD
+                  onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(e.target.value) }}
+=======
                   onChange={(e) => setImporteBruto(e.target.value)}
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
                   placeholder="0.00"
-                  className="bg-background pl-7"
+                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  readOnly={bloqueadoPorRenovacion}
                 />
               </div>
             </div>
+
+            {/* Adjunto */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
               <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-border bg-background px-4 py-5 transition-colors hover:border-secondary cursor-pointer">
@@ -314,60 +1388,114 @@ function FormularioPrestacion({
         </CardContent>
       </Card>
 
-      {/* I.1 OBJETO DE LA CONTRATACION */}
+      <TabuladorCard importe={importeBruto} />
+
+      {/* Objeto */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">I.1 Objeto de la Contratacion</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.1 Objeto de la Contratacion
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
+<<<<<<< HEAD
+            value={objeto}
+            onChange={(e) => { if (!bloqueadoPorRenovacion) setObjeto(e.target.value) }}
+=======
             value={objetoContratacion}
             onChange={(e) => setObjetoContratacion(e.target.value)}
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
             placeholder="Describa el objeto de la contratacion de manera detallada..."
-            className="bg-background min-h-28"
+            className={`min-h-28 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : "bg-background"}`}
+            readOnly={bloqueadoPorRenovacion}
           />
+          {rowPrecarga && !bloqueadoPorRenovacion && (
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <Info className="h-3 w-3 shrink-0" />Precargado desde Excel histórico. Puede editarlo.
+            </p>
+          )}
         </CardContent>
       </Card>
 
-      {/* I.2 ACTIVIDADES A REALIZAR */}
+      {/* Actividades */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">I.2 Actividades a Realizar</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.2 Actividades a Realizar
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
         </CardHeader>
         <CardContent>
+<<<<<<< HEAD
+          <DynamicList label="" items={actividades} onChange={setActividades} readonly={bloqueadoPorRenovacion} />
+=======
           <DynamicList
             label=""
             items={actividades}
             onChange={setActividades}
           />
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
         </CardContent>
       </Card>
 
-      {/* I.3 RESPONSABILIDADES */}
+      {/* Responsabilidades */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">I.3 Responsabilidades</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.3 Responsabilidades
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
         </CardHeader>
         <CardContent>
+<<<<<<< HEAD
+          <DynamicList label="" items={responsabilidades} onChange={setResponsabilidades} readonly={bloqueadoPorRenovacion} />
+=======
           <DynamicList
             label=""
             items={responsabilidades}
             onChange={setResponsabilidades}
           />
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
         </CardContent>
       </Card>
 
-      {/* II. PERFIL */}
+      {/* Perfil */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
             <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">II</span>
             Perfil
+            {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div className="grid gap-5 md:grid-cols-2">
+            {/* Escolaridad */}
             <div className="flex flex-col gap-2">
+<<<<<<< HEAD
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Escolaridad Minima
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground capitalize">{escolaridad || "—"}</span>
+                </div>
+              ) : (
+                <Select value={escolaridad} onValueChange={setEscolaridad}>
+                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione escolaridad" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bachillerato">Bachillerato</SelectItem>
+                    <SelectItem value="tecnico">Tecnico Superior</SelectItem>
+                    <SelectItem value="licenciatura">Licenciatura</SelectItem>
+                    <SelectItem value="maestria">Maestria</SelectItem>
+                    <SelectItem value="doctorado">Doctorado</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+=======
               <Label className="text-sm font-medium">Escolaridad Minima</Label>
               <Select value={escolaridadMinima || undefined} onValueChange={setEscolaridadMinima}>
                 <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione" /></SelectTrigger>
@@ -379,26 +1507,137 @@ function FormularioPrestacion({
                   <SelectItem value="doctorado">Doctorado</SelectItem>
                 </SelectContent>
               </Select>
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
             </div>
+
+            {/* Competencias Adm */}
             <div className="flex flex-col gap-2">
+<<<<<<< HEAD
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Competencias Administrativas
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{compAdm || "—"}</span>
+                </div>
+              ) : (
+                <>
+                  <Select value={compAdm} onValueChange={setCompAdm}>
+                    <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione competencia" /></SelectTrigger>
+                    <SelectContent>{OPCIONES_COMPETENCIAS_ADM.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {compAdm && !OPCIONES_COMPETENCIAS_ADM.includes(compAdm) && <p className="text-xs text-muted-foreground">{compAdm}</p>}
+                </>
+              )}
+=======
               <Label className="text-sm font-medium">Competencias Administrativas</Label>
               <Textarea value={competenciasAdministrativas} onChange={(e) => setCompetenciasAdministrativas(e.target.value)} placeholder="Describa competencias administrativas" className="bg-background min-h-16" />
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
             </div>
+
+            {/* Competencias Tec */}
             <div className="flex flex-col gap-2">
+<<<<<<< HEAD
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Competencias Tecnicas
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{compTec || "—"}</span>
+                </div>
+              ) : (
+                <>
+                  <Select value={compTec} onValueChange={setCompTec}>
+                    <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione competencia" /></SelectTrigger>
+                    <SelectContent>{OPCIONES_COMPETENCIAS_TEC.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {compTec && !OPCIONES_COMPETENCIAS_TEC.includes(compTec) && <p className="text-xs text-muted-foreground">{compTec}</p>}
+                </>
+              )}
+=======
               <Label className="text-sm font-medium">Competencias Tecnicas</Label>
               <Textarea value={competenciasTecnicas} onChange={(e) => setCompetenciasTecnicas(e.target.value)} placeholder="Describa competencias tecnicas" className="bg-background min-h-16" />
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
             </div>
+
+            {/* Competencias Soc */}
             <div className="flex flex-col gap-2">
+<<<<<<< HEAD
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Competencias Sociales
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{compSoc || "—"}</span>
+                </div>
+              ) : (
+                <>
+                  <Select value={compSoc} onValueChange={setCompSoc}>
+                    <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione competencia" /></SelectTrigger>
+                    <SelectContent>{OPCIONES_COMPETENCIAS_SOC.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {compSoc && !OPCIONES_COMPETENCIAS_SOC.includes(compSoc) && <p className="text-xs text-muted-foreground">{compSoc}</p>}
+                </>
+              )}
+=======
               <Label className="text-sm font-medium">Competencias Sociales</Label>
               <Textarea value={competenciasSociales} onChange={(e) => setCompetenciasSociales(e.target.value)} placeholder="Describa competencias sociales" className="bg-background min-h-16" />
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
             </div>
+
+            {/* Valores */}
             <div className="flex flex-col gap-2">
+<<<<<<< HEAD
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Valores
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{valores || "—"}</span>
+                </div>
+              ) : (
+                <>
+                  <Select value={valores} onValueChange={setValores}>
+                    <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione valor" /></SelectTrigger>
+                    <SelectContent>{OPCIONES_VALORES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {valores && !OPCIONES_VALORES.includes(valores) && <p className="text-xs text-muted-foreground">{valores}</p>}
+                </>
+              )}
+=======
               <Label className="text-sm font-medium">Valores</Label>
               <Textarea value={valores} onChange={(e) => setValores(e.target.value)} placeholder="Valores requeridos" className="bg-background min-h-16" />
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
             </div>
+
+            {/* Areas exp */}
             <div className="flex flex-col gap-2">
+<<<<<<< HEAD
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Areas de Experiencia
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{areasExp || "—"}</span>
+                </div>
+              ) : (
+                <>
+                  <Select value={areasExp} onValueChange={setAreasExp}>
+                    <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione área" /></SelectTrigger>
+                    <SelectContent>{OPCIONES_AREAS_EXP.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {areasExp && !OPCIONES_AREAS_EXP.includes(areasExp) && <p className="text-xs text-muted-foreground">{areasExp}</p>}
+                </>
+              )}
+=======
               <Label className="text-sm font-medium">Areas de Experiencia</Label>
               <Textarea value={areasExperiencia} onChange={(e) => setAreasExperiencia(e.target.value)} placeholder="Areas de experiencia requeridas" className="bg-background min-h-16" />
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
             </div>
           </div>
         </CardContent>
@@ -407,25 +1646,81 @@ function FormularioPrestacion({
   )
 }
 
-// ══════════════════════════════════════════════════
-// FORMULARIO 2 – NOMBRAMIENTO POR TIEMPO DETERMINADO
-// ══════════════════════════════════════════════════
-function FormularioNombramiento({ prefilled }: { prefilled: boolean }) {
-  const [nivel, setNivel] = useState(prefilled ? "104" : "")
-  const [importeNeto, setImporteNeto] = useState(prefilled ? "28,500.00" : "")
-  const [funciones, setFunciones] = useState(prefilled ? ["Coordinar procesos administrativos", "Supervisar personal operativo"] : [""])
-  const [responsabilidades, setResponsabilidades] = useState(prefilled ? ["Cumplimiento normativo del area", "Reportes trimestrales"] : [""])
-  const [marcoNormativo, setMarcoNormativo] = useState(prefilled ? ["Ley Organica de la Administracion Publica", "Reglamento Interior"] : [""])
+function FormularioNombramiento({
+  prefilled, esRenovacion = false, excelRows = [], datosRenovacion,
+}: {
+  prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
+  datosRenovacion?: FolioExcel | null
+}) {
+  const bloqueadoPorRenovacion = esRenovacion && !!datosRenovacion
 
-  const coincidencias = useMemo(() => {
-    const val = parseMoney(importeNeto)
-    if (val < 0) return []
-    return RANGOS_TABULADOR.filter((r) => val >= r.min && val <= r.max)
-  }, [importeNeto])
+  const [importeNeto, setImporteNeto] = useState(
+    datosRenovacion?.importeBruto
+      ? parseImporteBruto(datosRenovacion.importeBruto)
+      : prefilled ? "28,500.00" : ""
+  )
+  const [funciones, setFunciones] = useState<string[]>(
+    datosRenovacion?.actividades
+      ? splitList(datosRenovacion.actividades)
+      : prefilled ? ["Coordinar procesos administrativos"] : [""]
+  )
+  const [responsabilidades, setResponsabilidades] = useState<string[]>(
+    datosRenovacion?.responsabilidades
+      ? splitList(datosRenovacion.responsabilidades)
+      : prefilled ? ["Cumplimiento normativo del area"] : [""]
+  )
+  const [marcoNormativo, setMarcoNormativo] = useState<string[]>(
+    prefilled ? ["Ley Organica de la Administracion Publica"] : [""]
+  )
+
+  const [secretariaInput,      setSecretariaInput]      = useState(
+    datosRenovacion?.secretaria ?? (prefilled ? "Secretaria de Administracion" : "")
+  )
+  const [secretariaConfirmada, setSecretariaConfirmada] = useState(
+    datosRenovacion?.secretaria ?? (prefilled ? "Secretaria de Administracion" : "")
+  )
+  const [showSugerencias, setShowSugerencias] = useState(false)
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState(
+    datosRenovacion?.unidadAdscripcion ?? ""
+  )
+  const [urgSeleccionada, setUrgSeleccionada] = useState(
+    datosRenovacion?.unidadResponsableGasto ?? ""
+  )
+
+  const sugerencias = useMemo(() => {
+    if (!secretariaInput) return SECRETARIAS_CATALOGO
+    return SECRETARIAS_CATALOGO.filter((s) => s.toLowerCase().includes(secretariaInput.toLowerCase()))
+  }, [secretariaInput])
+
+  const datosRelacionados = useMemo(
+    () => getDatosSecretaria(secretariaConfirmada, excelRows),
+    [secretariaConfirmada, excelRows]
+  )
+  const unidadesDisponibles = datosRelacionados?.unidades ?? []
+  const urgsDisponibles     = datosRelacionados?.urgs     ?? []
+  const fuenteDatos = excelRows.length > 0 && secretariaConfirmada ? "excel" : "catalogo"
+
+  const handleSecretariaConfirm = (valor: string) => {
+    if (bloqueadoPorRenovacion) return
+    setSecretariaInput(valor); setSecretariaConfirmada(valor); setShowSugerencias(false)
+    const datos = getDatosSecretaria(valor, excelRows)
+    setUnidadSeleccionada(datos?.unidades[0]?.value ?? "")
+    setUrgSeleccionada(datos?.urgs[0]?.value ?? "")
+  }
+
+  const camposDependientesHabilitados = !bloqueadoPorRenovacion && (esRenovacion || !!secretariaConfirmada)
 
   return (
     <div className="flex flex-col gap-6">
-      {/* I. DATOS GENERALES */}
+      {bloqueadoPorRenovacion && (
+        <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
+          <Lock className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-card-foreground">Renovación — datos precargados y bloqueados</span>
+            <span className="text-xs text-muted-foreground">Todos los campos se han cargado del folio anterior. Solo puede modificar la <strong>vigencia</strong>.</span>
+          </div>
+        </div>
+      )}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
@@ -435,60 +1730,189 @@ function FormularioNombramiento({ prefilled }: { prefilled: boolean }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div className="grid gap-5 md:grid-cols-2">
+
+            {/* Secretaria */}
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Secretaria</Label>
-              <Input value={prefilled ? "Secretaria de Administracion" : ""} disabled className="bg-muted text-muted-foreground" />
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Secretaria
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
+                </div>
+              ) : esRenovacion ? (
+                <Input value={secretariaInput} disabled className="bg-muted text-muted-foreground" />
+              ) : (
+                <div className="relative">
+                  <Input value={secretariaInput}
+                    onChange={(e) => {
+                      setSecretariaInput(e.target.value); setSecretariaConfirmada("")
+                      setShowSugerencias(true); setUnidadSeleccionada(""); setUrgSeleccionada("")
+                    }}
+                    onFocus={() => setShowSugerencias(true)}
+                    onBlur={() => setTimeout(() => setShowSugerencias(false), 200)}
+                    placeholder="Escriba la secretaria..." className="bg-background" autoComplete="off"
+                  />
+                  {showSugerencias && sugerencias.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
+                      <div className="max-h-52 overflow-y-auto py-1">
+                        {sugerencias.map((s) => (
+                          <button key={s} type="button" onMouseDown={() => handleSecretariaConfirm(s)}
+                            className={`w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors
+                                ${secretariaConfirmada === s ? "bg-accent/60 font-medium" : ""}`}>
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {secretariaConfirmada && datosRelacionados && (
+                    <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 mt-1">
+                      <CheckCircle2 className="h-3 w-3 shrink-0" />
+                      Datos cargados desde {fuenteDatos === "excel" ? "Excel histórico" : "catálogo base"}
+                    </p>
+                  )}
+                  {!secretariaConfirmada && secretariaInput && (
+                    <p className="text-xs text-muted-foreground mt-1">Seleccione una opcion de la lista</p>
+                  )}
+                  {!secretariaInput && (
+                    <p className="text-xs text-muted-foreground mt-1">Escriba para ver sugerencias</p>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* Unidad adscripcion */}
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Unidad Administrativa</Label>
-              <Select defaultValue={prefilled ? "dgpic" : undefined}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dgpic">Dir. Gral. de Profesionalizacion e Innovacion</SelectItem>
-                  <SelectItem value="dgaf">Dir. Gral. de Administracion y Finanzas</SelectItem>
-                  <SelectItem value="dgrh">Dir. Gral. de Recursos Humanos</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Unidad Administrativa de Adscripcion
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{unidadSeleccionada || "—"}</span>
+                </div>
+              ) : (
+                <>
+                  <SelectConBusqueda
+                    opciones={unidadesDisponibles}
+                    value={unidadSeleccionada}
+                    onValueChange={setUnidadSeleccionada}
+                    placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaria" : "Seleccione unidad"}
+                    disabled={!camposDependientesHabilitados}
+                  />
+                  {secretariaConfirmada && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3 shrink-0" />
+                      {fuenteDatos === "excel" ? "Desde Excel histórico" : "Catálogo base"} · {unidadesDisponibles.length} opciones
+                    </p>
+                  )}
+                </>
+              )}
             </div>
+
+            {/* URG */}
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Unidad Responsable del Gasto</Label>
-              <Select defaultValue={prefilled ? "urg-01" : undefined}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione URG" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="urg-01">URG-01 Oficina del Secretario</SelectItem>
-                  <SelectItem value="urg-02">URG-02 Direccion General</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Unidad Responsable del Gasto
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{urgSeleccionada || "—"}</span>
+                </div>
+              ) : (
+                <>
+                  <SelectConBusqueda
+                    opciones={urgsDisponibles}
+                    value={urgSeleccionada}
+                    onValueChange={setUrgSeleccionada}
+                    placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaria" : "Seleccione URG"}
+                    disabled={!camposDependientesHabilitados}
+                  />
+                  {secretariaConfirmada && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3 shrink-0" />
+                      {fuenteDatos === "excel" ? "Desde Excel histórico" : "Catálogo base"} · {urgsDisponibles.length} opciones
+                    </p>
+                  )}
+                </>
+              )}
             </div>
+
+            {/* Programa */}
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Programa o Proyecto</Label>
-              <Input defaultValue={prefilled ? "P-005 Fortalecimiento Institucional" : ""} placeholder="Nombre del programa" className="bg-background" />
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Programa o Proyecto
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Input
+                defaultValue={datosRenovacion?.programaProyecto ?? (prefilled ? "P-005 Fortalecimiento Institucional" : "")}
+                placeholder="Nombre del programa"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+                disabled={!bloqueadoPorRenovacion && !camposDependientesHabilitados}
+              />
             </div>
+
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Denominacion del Nombramiento</Label>
-              <Input defaultValue={prefilled ? "Jefe de Departamento" : ""} placeholder="Ej. Subdirector de Area" className="bg-background" />
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Denominacion del Nombramiento
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Input
+                defaultValue={prefilled ? "Jefe de Departamento" : ""}
+                placeholder="Ej. Subdirector de Area"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+              />
             </div>
+
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Puesto del Jefe Inmediato</Label>
-              <Input defaultValue={prefilled ? "Director de Area" : ""} placeholder="Ej. Director General" className="bg-background" />
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Puesto del Jefe Inmediato
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Input
+                defaultValue={prefilled ? "Director de Area" : ""}
+                placeholder="Ej. Director General"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+              />
             </div>
+
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Numero de Personas a Contratar</Label>
-              <Input type="number" min={1} defaultValue={prefilled ? "2" : ""} placeholder="Ej. 1" className="bg-background" />
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Numero de Personas a Contratar
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Input
+                type="number" min={1}
+                defaultValue={datosRenovacion?.numPrestadores ?? (prefilled ? "2" : "")}
+                placeholder="Ej. 1"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+              />
             </div>
+
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Importe Neto Mensual</Label>
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Importe Neto Mensual
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                 <Input
-                  type="text"
-                  value={importeNeto}
-                  onChange={(e) => setImporteNeto(e.target.value)}
+                  type="text" value={importeNeto}
+                  onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(e.target.value) }}
                   placeholder="0.00"
-                  className="bg-background pl-7"
+                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  readOnly={bloqueadoPorRenovacion}
                 />
               </div>
             </div>
+
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
               <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-border bg-background px-4 py-5 transition-colors hover:border-secondary cursor-pointer">
@@ -502,148 +1926,123 @@ function FormularioNombramiento({ prefilled }: { prefilled: boolean }) {
         </CardContent>
       </Card>
 
-      {/* TABULADOR – NIVEL Y NOMBRAMIENTO (INFORMATIVO) */}
-      <Card className="shadow-sm border-secondary/30 border-2">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
-            <ClipboardList className="h-5 w-5 text-secondary" />
-            Tabulador - Nivel y Nombramiento (informativo)
-          </CardTitle>
-          <CardDescription className="flex items-center gap-1.5 text-xs">
-            <Info className="h-3.5 w-3.5" />
-            Los niveles se calculan automaticamente a partir del Importe Neto Mensual capturado arriba.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-5">
-          {/* Coincidencias informativas */}
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium">Coincidencias por importe</Label>
-            {parseMoney(importeNeto) < 0 ? (
-              <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-3">
-                <Info className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Capture un Importe Neto Mensual para ver coincidencias.</span>
-              </div>
-            ) : coincidencias.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-md bg-destructive/5 border border-destructive/20 px-3 py-3">
-                <AlertCircle className="h-4 w-4 text-destructive" />
-                <span className="text-sm text-destructive">Sin coincidencias para el importe capturado.</span>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {coincidencias.map((c) => (
-                  <div
-                    key={c.nivel + c.puesto}
-                    className="flex items-center gap-3 rounded-lg border border-secondary/20 bg-secondary/5 px-4 py-2.5"
-                  >
-                    <Badge variant="secondary" className="bg-secondary text-secondary-foreground text-xs shrink-0">
-                      Nivel {c.nivel}
-                    </Badge>
-                    <span className="text-sm font-medium text-card-foreground">{c.puesto}</span>
-                  </div>
-                ))}
-                {coincidencias.length > 1 && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Info className="h-3 w-3" />
-                    Existen traslapes entre rangos. Se muestran todas las coincidencias (solo informativo).
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <TabuladorCard importe={importeNeto} />
 
-      {/* Vigencia y clave */}
       <Card className="shadow-sm border-border">
         <CardContent className="pt-6 flex flex-col gap-5">
           <div className="grid gap-5 md:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Vigencia</Label>
+            {/* Vigencia — siempre editable */}
+            <div className="flex flex-col gap-2 md:col-span-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Vigencia
+                {bloqueadoPorRenovacion && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-secondary text-secondary ml-1">
+                    Editable
+                  </Badge>
+                )}
+              </Label>
               <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Inicio</span>
-                  <Input type="date" defaultValue={prefilled ? "2026-03-01" : ""} className="bg-background" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Termino</span>
-                  <Input type="date" defaultValue={prefilled ? "2026-08-31" : ""} className="bg-background" />
-                </div>
+                <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Inicio</span>
+                  <Input type="date" defaultValue={prefilled ? "2026-03-01" : ""} className="bg-background" /></div>
+                <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Termino</span>
+                  <Input type="date" defaultValue={prefilled ? "2026-08-31" : ""} className="bg-background" /></div>
               </div>
+              {bloqueadoPorRenovacion && (
+                <p className="text-xs text-secondary flex items-center gap-1">
+                  <Info className="h-3 w-3 shrink-0" />Único campo modificable en esta renovación.
+                </p>
+              )}
             </div>
+
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Clave Presupuestal</Label>
-              <Input defaultValue={prefilled ? "CP-2026-0045" : ""} placeholder="Ej. CP-2026-0001" className="bg-background" />
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Clave Presupuestal
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Input
+                defaultValue={prefilled ? "CP-2026-0045" : ""}
+                placeholder="Ej. CP-2026-0001"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* I.1 OBJETO */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">I.1 Objeto del Nombramiento</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.1 Objeto del Nombramiento
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
-            defaultValue={prefilled ? "Nombramiento por tiempo determinado para cubrir necesidades de la Direccion General en materia de planeacion y seguimiento de programas institucionales." : ""}
+            defaultValue={prefilled ? "Nombramiento por tiempo determinado para cubrir necesidades de la Direccion General." : ""}
             placeholder="Describa el objeto del nombramiento..."
-            className="bg-background min-h-28"
+            className={`min-h-28 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : "bg-background"}`}
+            readOnly={bloqueadoPorRenovacion}
           />
         </CardContent>
       </Card>
 
-      {/* I.2 FUNCIONES */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">I.2 Funciones Principales</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.2 Funciones Principales
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <DynamicList label="" items={funciones} onChange={setFunciones} />
+          <DynamicList label="" items={funciones} onChange={setFunciones} readonly={bloqueadoPorRenovacion} />
         </CardContent>
       </Card>
 
-      {/* I.3 RESPONSABILIDADES */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">I.3 Responsabilidades</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.3 Responsabilidades
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <DynamicList label="" items={responsabilidades} onChange={setResponsabilidades} />
+          <DynamicList label="" items={responsabilidades} onChange={setResponsabilidades} readonly={bloqueadoPorRenovacion} />
         </CardContent>
       </Card>
 
-      {/* I.4 MARCO NORMATIVO */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">I.4 Marco Normativo</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.4 Marco Normativo
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <DynamicList label="" items={marcoNormativo} onChange={setMarcoNormativo} />
+          <DynamicList label="" items={marcoNormativo} onChange={setMarcoNormativo} readonly={bloqueadoPorRenovacion} />
         </CardContent>
       </Card>
 
-      {/* I.5 CONDICIONES Y RIESGOS */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">I.5 Condiciones y Riesgos</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.5 Condiciones y Riesgos
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div>
             <Label className="text-sm font-medium mb-3 block">Condiciones</Label>
             <div className="overflow-hidden rounded-md border border-border">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="px-4 py-2.5 text-left font-medium text-card-foreground">Condicion</th>
-                    <th className="px-4 py-2.5 text-center font-medium text-card-foreground">Si</th>
-                    <th className="px-4 py-2.5 text-center font-medium text-card-foreground">No</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {["Cambio de domicilio", "Horario especial", "Viajar"].map((cond) => (
-                    <CondicionRow key={cond} label={cond} defaultVal={prefilled ? "no" : ""} />
-                  ))}
-                </tbody>
+                <thead><tr className="bg-muted">
+                  <th className="px-4 py-2.5 text-left font-medium text-card-foreground">Condicion</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Si</th>
+                  <th className="px-4 py-2.5 text-center font-medium">No</th>
+                </tr></thead>
+                <tbody>{["Cambio de domicilio", "Horario especial", "Viajar"].map((c) => (
+                  <CondicionRow key={c} label={c} defaultVal={prefilled ? "no" : ""} readonly={bloqueadoPorRenovacion} />
+                ))}</tbody>
               </table>
             </div>
           </div>
@@ -651,39 +2050,41 @@ function FormularioNombramiento({ prefilled }: { prefilled: boolean }) {
             <Label className="text-sm font-medium mb-3 block">Tabla de Riesgos</Label>
             <div className="overflow-hidden rounded-md border border-border">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="px-4 py-2.5 text-left font-medium text-card-foreground">Riesgo</th>
-                    <th className="px-4 py-2.5 text-center font-medium text-card-foreground">Bajo</th>
-                    <th className="px-4 py-2.5 text-center font-medium text-card-foreground">Medio</th>
-                    <th className="px-4 py-2.5 text-center font-medium text-card-foreground">Alto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {["Lesiones", "Caidas", "Mutilaciones", "Golpes", "Otros"].map((riesgo) => (
-                    <RiesgoRow key={riesgo} label={riesgo} defaultVal={prefilled ? "bajo" : ""} />
-                  ))}
-                </tbody>
+                <thead><tr className="bg-muted">
+                  <th className="px-4 py-2.5 text-left font-medium">Riesgo</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Bajo</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Medio</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Alto</th>
+                </tr></thead>
+                <tbody>{["Lesiones", "Caidas", "Mutilaciones", "Golpes", "Otros"].map((r) => (
+                  <RiesgoRow key={r} label={r} defaultVal={prefilled ? "bajo" : ""} readonly={bloqueadoPorRenovacion} />
+                ))}</tbody>
               </table>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* I.6 RESGUARDO */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">I.6 Resguardo Personalizado de Activos</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.6 Resguardo Personalizado de Activos
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <RadioGroup defaultValue={prefilled ? "no" : undefined} className="flex gap-6">
+          <RadioGroup
+            defaultValue={prefilled ? "no" : undefined}
+            className="flex gap-6"
+            onValueChange={bloqueadoPorRenovacion ? () => {} : undefined}
+          >
             <div className="flex items-center gap-2">
-              <RadioGroupItem value="si" id="resg-si" />
-              <Label htmlFor="resg-si" className="text-sm font-normal cursor-pointer">Si</Label>
+              <RadioGroupItem value="si" id="resg-si" disabled={bloqueadoPorRenovacion} />
+              <Label htmlFor="resg-si" className={`text-sm font-normal ${bloqueadoPorRenovacion ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>Si</Label>
             </div>
             <div className="flex items-center gap-2">
-              <RadioGroupItem value="no" id="resg-no" />
-              <Label htmlFor="resg-no" className="text-sm font-normal cursor-pointer">No</Label>
+              <RadioGroupItem value="no" id="resg-no" disabled={bloqueadoPorRenovacion} />
+              <Label htmlFor="resg-no" className={`text-sm font-normal ${bloqueadoPorRenovacion ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>No</Label>
             </div>
           </RadioGroup>
         </CardContent>
@@ -692,502 +2093,254 @@ function FormularioNombramiento({ prefilled }: { prefilled: boolean }) {
   )
 }
 
-// ── Table row helpers ──
-function CondicionRow({ label, defaultVal }: { label: string; defaultVal: string }) {
+function CondicionRow({ label, defaultVal, readonly = false }: { label: string; defaultVal: string; readonly?: boolean }) {
   const [val, setVal] = useState(defaultVal)
   const id = label.toLowerCase().replace(/\s/g, "-")
   return (
     <tr className="border-t border-border">
       <td className="px-4 py-2.5 text-card-foreground">{label}</td>
       <td className="px-4 py-2.5" colSpan={2}>
-        <RadioGroup value={val} onValueChange={setVal} className="flex justify-center gap-16">
-          <RadioGroupItem value="si" id={`${id}-si`} />
-          <RadioGroupItem value="no" id={`${id}-no`} />
+        <RadioGroup value={val} onValueChange={readonly ? () => {} : setVal} className="flex justify-center gap-16">
+          <RadioGroupItem value="si" id={`${id}-si`} disabled={readonly} />
+          <RadioGroupItem value="no" id={`${id}-no`} disabled={readonly} />
         </RadioGroup>
       </td>
     </tr>
   )
 }
 
-function RiesgoRow({ label, defaultVal }: { label: string; defaultVal: string }) {
+function RiesgoRow({ label, defaultVal, readonly = false }: { label: string; defaultVal: string; readonly?: boolean }) {
   const [val, setVal] = useState(defaultVal)
   const id = label.toLowerCase().replace(/\s/g, "-")
   return (
     <tr className="border-t border-border">
       <td className="px-4 py-2.5 text-card-foreground">{label}</td>
       <td className="px-4 py-2.5" colSpan={3}>
-        <RadioGroup value={val} onValueChange={setVal} className="flex justify-center gap-12">
-          <RadioGroupItem value="bajo" id={`${id}-bajo`} />
-          <RadioGroupItem value="medio" id={`${id}-medio`} />
-          <RadioGroupItem value="alto" id={`${id}-alto`} />
+        <RadioGroup value={val} onValueChange={readonly ? () => {} : setVal} className="flex justify-center gap-12">
+          <RadioGroupItem value="bajo"  id={`${id}-bajo`}  disabled={readonly} />
+          <RadioGroupItem value="medio" id={`${id}-medio`} disabled={readonly} />
+          <RadioGroupItem value="alto"  id={`${id}-alto`}  disabled={readonly} />
         </RadioGroup>
       </td>
     </tr>
   )
 }
 
-// ══════════════════════════════════════════════════
-// EXCEPCION DO FORM
-// ══════════════════════════════════════════════════
-const SECRETARIAS_EXCEPCION = [
-  "Sec. de Finanzas",
-  "Sec. de Educacion",
-  "Sec. de Salud",
-  "Sec. de Gobierno",
-  "Sec. de Obras",
-  "Sec. de Desarrollo",
-]
-
-const UNIDADES_ADMINISTRATIVAS = [
-  "Dir. Gral. de Administracion y Finanzas",
-  "Dir. Gral. de Profesionalizacion e Innovacion",
-  "Dir. Gral. de Recursos Humanos",
-]
+// EXCEPCIONES DO
 
 function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
   const { crearExcepcionDO, crearRegularizacionDO } = useSolicitudes()
-
-  const [subTipo, setSubTipo] = useState<"captura" | "regularizacion">("captura")
-  const [tipoSolicitud, setTipoSolicitud] = useState<"prestacion" | "nombramiento" | "">("")
-  const [tipoAdmin, setTipoAdmin] = useState<TipoAdministracion>("centralizada")
-  const [secretaria, setSecretaria] = useState("")
-  const [unidad, setUnidad] = useState("")
-  const [denominacion, setDenominacion] = useState("")
+  const [subTipo,        setSubTipo]        = useState<"captura" | "regularizacion">("captura")
+  const [tipoSolicitud,  setTipoSolicitud]  = useState<"prestacion" | "nombramiento" | "">("")
+  const [tipoAdmin,      setTipoAdmin]      = useState<TipoAdministracion>("centralizada")
+  const [secretaria,     setSecretaria]     = useState("")
+  const [unidad,         setUnidad]         = useState("")
+  const [denominacion,   setDenominacion]   = useState("")
   const [vigenciaInicio, setVigenciaInicio] = useState("")
-  const [vigenciaFin, setVigenciaFin] = useState("")
-  const [importeBruto, setImporteBruto] = useState("")
-  const [folioManual, setFolioManual] = useState("")
+  const [vigenciaFin,    setVigenciaFin]    = useState("")
+  const [importeBruto,   setImporteBruto]   = useState("")
+  const [folioManual,    setFolioManual]    = useState("")
   const [fechaRecepcion, setFechaRecepcion] = useState("")
   const [folioSolicitud, setFolioSolicitud] = useState("")
-  const [submitted, setSubmitted] = useState(false)
-  const [assignedFolio, setAssignedFolio] = useState("")
-
+  const [submitted,      setSubmitted]      = useState(false)
+  const [assignedFolio,  setAssignedFolio]  = useState("")
   const canSubmit = tipoSolicitud && secretaria && unidad && denominacion &&
     vigenciaInicio && vigenciaFin && importeBruto && fechaRecepcion && folioSolicitud &&
     (subTipo === "captura" ? folioManual : true)
-
   const handleSubmit = () => {
     if (!canSubmit) return
-
     if (subTipo === "regularizacion") {
       const tempFolio = crearRegularizacionDO({
-        folioSolicitud,
-        tipo: tipoSolicitud === "prestacion" ? "Prestacion de Servicios" : "Nombramiento Tiempo Det.",
-        tipoAdministracion: tipoAdmin,
-        secretaria,
-        unidadAdministrativa: unidad,
-        fechaCreacion: fechaRecepcion,
-        fechaRecepcionDO: fechaRecepcion,
-        slaDiasHabiles: 15,
-        denominacion,
-        vigenciaInicio,
-        vigenciaFin,
-        importeBruto: `$${importeBruto}`,
-        esRenovacion: false,
-        folioAnterior: null,
-        esExcepcionDO: true,
-        esRegularizacion: true,
+        folioSolicitud, tipo: tipoSolicitud === "prestacion" ? "Prestacion de Servicios" : "Nombramiento Tiempo Det.",
+        tipoAdministracion: tipoAdmin, secretaria, unidadAdministrativa: unidad,
+        fechaCreacion: fechaRecepcion, fechaRecepcionDO: fechaRecepcion, slaDiasHabiles: 15,
+        denominacion, vigenciaInicio, vigenciaFin, importeBruto: `$${importeBruto}`,
+        esRenovacion: false, folioAnterior: null, esExcepcionDO: true, esRegularizacion: true,
       })
       setAssignedFolio(tempFolio)
     } else {
       crearExcepcionDO({
-        folioSolicitud,
-        folioRecepcion: folioManual,
+        folioSolicitud, folioRecepcion: folioManual,
         tipo: tipoSolicitud === "prestacion" ? "Prestacion de Servicios" : "Nombramiento Tiempo Det.",
-        tipoAdministracion: tipoAdmin,
-        secretaria,
-        unidadAdministrativa: unidad,
-        fechaCreacion: fechaRecepcion,
-        fechaRecepcionDO: fechaRecepcion,
-        slaDiasHabiles: 15,
-        denominacion,
-        vigenciaInicio,
-        vigenciaFin,
-        importeBruto: `$${importeBruto}`,
-        esRenovacion: false,
-        folioAnterior: null,
-        esExcepcionDO: true,
-        folioRecepcionManual: true,
-        folioTemporal: false,
-        folioTemporalOriginal: null,
-        folioOficializadoPor: null,
-        fechaOficializacion: null,
-        esRegularizacion: false,
+        tipoAdministracion: tipoAdmin, secretaria, unidadAdministrativa: unidad,
+        fechaCreacion: fechaRecepcion, fechaRecepcionDO: fechaRecepcion, slaDiasHabiles: 15,
+        denominacion, vigenciaInicio, vigenciaFin, importeBruto: `$${importeBruto}`,
+        esRenovacion: false, folioAnterior: null, esExcepcionDO: true,
+        folioRecepcionManual: true, folioTemporal: false, folioTemporalOriginal: null,
+        folioOficializadoPor: null, fechaOficializacion: null, esRegularizacion: false,
       })
     }
     setSubmitted(true)
   }
-
   if (submitted) {
     return (
-      <div className="flex flex-col gap-6 max-w-4xl">
+      <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
         <Card className={`shadow-sm border-2 ${subTipo === "regularizacion" ? "border-primary/30" : "border-secondary/30"}`}>
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <CheckCircle2 className="h-12 w-12 text-secondary" />
             <p className="text-base font-semibold text-card-foreground text-center">
-              {subTipo === "regularizacion"
-                ? "Regularizacion registrada exitosamente"
-                : "Excepcion DO registrada exitosamente"}
+              {subTipo === "regularizacion" ? "Regularizacion registrada exitosamente" : "Excepcion DO registrada exitosamente"}
             </p>
             {subTipo === "regularizacion" ? (
               <>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-primary/10 text-primary border-0 text-sm px-3 py-1">
-                    Folio temporal: {assignedFolio}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground text-center">
-                  Folio solicitud: {folioSolicitud}
-                </p>
-                <p className="text-xs text-muted-foreground text-center max-w-md">
-                  La solicitud fue ingresada a la Bandeja DO Filtro 1 con un folio temporal.
-                  El revisor de Filtro 1 debera oficializar el folio antes de continuar con la revision.
-                </p>
+                <Badge className="bg-primary/10 text-primary border-0 text-sm px-3 py-1">Folio temporal: {assignedFolio}</Badge>
+                <p className="text-sm text-muted-foreground text-center">Folio solicitud: {folioSolicitud}</p>
+                <p className="text-xs text-muted-foreground text-center max-w-md">La solicitud fue ingresada a la Bandeja DO Filtro 1 con un folio temporal.</p>
               </>
             ) : (
-              <>
-                <p className="text-sm text-muted-foreground text-center">
-                  Folio manual: {folioManual} | Folio solicitud: {folioSolicitud}
-                </p>
-                <p className="text-xs text-muted-foreground text-center">
-                  La solicitud fue ingresada directamente a la Bandeja DO Filtro 1 para su revision.
-                </p>
-              </>
+              <p className="text-sm text-muted-foreground text-center">Folio manual: {folioManual} | Folio solicitud: {folioSolicitud}</p>
             )}
             <div className="flex gap-3">
-              <Button variant="outline" onClick={onBack}>
-                <ArrowLeft className="mr-1.5 h-4 w-4" />
-                Volver
-              </Button>
-              <Button
-                onClick={() => {
-                  setSubmitted(false)
-                  setTipoSolicitud("")
-                  setSecretaria("")
-                  setUnidad("")
-                  setDenominacion("")
-                  setVigenciaInicio("")
-                  setVigenciaFin("")
-                  setImporteBruto("")
-                  setFolioManual("")
-                  setFechaRecepcion("")
-                  setFolioSolicitud("")
-                  setAssignedFolio("")
-                }}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Registrar Otra
-              </Button>
+              <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Volver</Button>
+              <Button onClick={() => {
+                setSubmitted(false); setTipoSolicitud(""); setSecretaria(""); setUnidad("")
+                setDenominacion(""); setVigenciaInicio(""); setVigenciaFin(""); setImporteBruto("")
+                setFolioManual(""); setFechaRecepcion(""); setFolioSolicitud(""); setAssignedFolio("")
+              }} className="bg-primary text-primary-foreground hover:bg-primary/90">Registrar Otra</Button>
             </div>
           </CardContent>
         </Card>
       </div>
     )
   }
-
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
-      {/* Header */}
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
-          <ArrowLeft className="h-4 w-4" />
-          Volver
-        </Button>
+        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5"><ArrowLeft className="h-4 w-4" />Volver</Button>
         <Separator orientation="vertical" className="h-6" />
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">Excepcion DO</h2>
-          <p className="text-sm text-muted-foreground">
-            Captura directa por la Direccion de Organizacion
-          </p>
-        </div>
+        <div><h2 className="text-xl font-semibold text-foreground">Excepcion DO</h2>
+          <p className="text-sm text-muted-foreground">Captura directa por la Direccion de Organizacion</p></div>
       </div>
-
-      {/* Subtype selector */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
-            <ShieldAlert className="h-5 w-5 text-accent-foreground" />
-            Tipo de Excepcion
+            <ShieldAlert className="h-5 w-5 text-accent-foreground" />Tipo de Excepcion
           </CardTitle>
           <CardDescription>Seleccione el tipo de ingreso excepcional</CardDescription>
         </CardHeader>
         <CardContent>
-          <RadioGroup
-            value={subTipo}
-            onValueChange={(v) => setSubTipo(v as "captura" | "regularizacion")}
-            className="flex flex-col gap-3"
-          >
-            <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${subTipo === "captura" ? "border-accent bg-accent/5" : "border-border hover:border-secondary/50"
-              }`}>
+          <RadioGroup value={subTipo} onValueChange={(v) => setSubTipo(v as "captura" | "regularizacion")} className="flex flex-col gap-3">
+            <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${subTipo === "captura" ? "border-accent bg-accent/5" : "border-border hover:border-secondary/50"}`}>
               <RadioGroupItem value="captura" id="sub-captura" className="mt-0.5" />
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-card-foreground">Captura DO</span>
-                <span className="text-xs text-muted-foreground">
-                  Ingreso directo con folio de recepcion y fecha asignados manualmente por la DO.
-                </span>
-              </div>
+              <div className="flex flex-col gap-1"><span className="text-sm font-medium text-card-foreground">Captura DO</span>
+                <span className="text-xs text-muted-foreground">Ingreso directo con folio de recepcion y fecha asignados manualmente por la DO.</span></div>
             </label>
-            <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${subTipo === "regularizacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"
-              }`}>
+            <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${subTipo === "regularizacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
               <RadioGroupItem value="regularizacion" id="sub-regularizacion" className="mt-0.5" />
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-card-foreground">Regularizacion</span>
-                <span className="text-xs text-muted-foreground">
-                  Ingreso con folio temporal generado automaticamente. El revisor de Filtro 1 oficializara el folio.
-                </span>
-              </div>
+              <div className="flex flex-col gap-1"><span className="text-sm font-medium text-card-foreground">Regularizacion</span>
+                <span className="text-xs text-muted-foreground">Ingreso con folio temporal generado automaticamente.</span></div>
             </label>
           </RadioGroup>
         </CardContent>
       </Card>
-
-      {/* Info banner */}
       {subTipo === "captura" ? (
         <Card className="shadow-sm border-accent/30 border-2 bg-accent/[0.05]">
           <CardContent className="flex items-start gap-3 p-4">
             <ShieldAlert className="h-5 w-5 shrink-0 text-accent-foreground mt-0.5" />
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-card-foreground">Captura de Excepcion</span>
-              <span className="text-xs text-muted-foreground">
-                Esta solicitud sera ingresada directamente al flujo de la DO (Filtro 1) sin pasar por la validacion de la UEFA.
-                Requiere folio de recepcion y fecha de recepcion asignados manualmente.
-              </span>
-            </div>
+            <div className="flex flex-col gap-1"><span className="text-sm font-medium text-card-foreground">Captura de Excepcion</span>
+              <span className="text-xs text-muted-foreground">Esta solicitud sera ingresada directamente al flujo de la DO (Filtro 1) sin pasar por la validacion de la UEFA.</span></div>
           </CardContent>
         </Card>
       ) : (
         <Card className="shadow-sm border-primary/30 border-2 bg-primary/[0.03]">
           <CardContent className="flex items-start gap-3 p-4">
             <Clock className="h-5 w-5 shrink-0 text-primary mt-0.5" />
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-card-foreground">Regularizacion</span>
-              <span className="text-xs text-muted-foreground">
-                Esta solicitud sera ingresada con un folio temporal (ej. FE-009-1). El revisor de Filtro 1
-                debera oficializar el folio asignando el folio definitivo y la fecha de recepcion oficial
-                antes de que el expediente avance al siguiente filtro.
-              </span>
-            </div>
+            <div className="flex flex-col gap-1"><span className="text-sm font-medium text-card-foreground">Regularizacion</span>
+              <span className="text-xs text-muted-foreground">Esta solicitud sera ingresada con un folio temporal. El revisor de Filtro 1 debera oficializar el folio.</span></div>
           </CardContent>
         </Card>
       )}
-
-      {/* Folio / Fecha Recepcion */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
             <ClipboardList className="h-5 w-5 text-secondary" />
             {subTipo === "captura" ? "Datos de Recepcion (Manual)" : "Datos de Recepcion"}
           </CardTitle>
-          <CardDescription>
-            {subTipo === "captura"
-              ? "Asigne el folio de recepcion y la fecha de recepcion manualmente"
-              : "El folio de recepcion sera asignado automaticamente como folio temporal"}
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div className="grid gap-5 md:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Folio de Solicitud *</Label>
-              <Input
-                value={folioSolicitud}
-                onChange={(e) => setFolioSolicitud(e.target.value)}
-                placeholder={subTipo === "captura" ? "Ej. SDTF-2026-EX001" : "Ej. SDTF-2026-REG001"}
-                className="bg-background"
-              />
-              <p className="text-xs text-muted-foreground">Identificador unico de la solicitud</p>
-            </div>
+            <div className="flex flex-col gap-2"><Label className="text-sm font-medium">Folio de Solicitud *</Label>
+              <Input value={folioSolicitud} onChange={(e) => setFolioSolicitud(e.target.value)} placeholder="Ej. SDTF-2026-EX001" className="bg-background" /></div>
             {subTipo === "captura" && (
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium">Folio de Recepcion (Manual) *</Label>
-                <Input
-                  value={folioManual}
-                  onChange={(e) => setFolioManual(e.target.value)}
-                  placeholder="Ej. FE-EX001"
-                  className="bg-background"
-                />
-                <p className="text-xs text-muted-foreground">Folio asignado manualmente por DO</p>
-              </div>
+              <div className="flex flex-col gap-2"><Label className="text-sm font-medium">Folio de Recepcion (Manual) *</Label>
+                <Input value={folioManual} onChange={(e) => setFolioManual(e.target.value)} placeholder="Ej. FE-EX001" className="bg-background" /></div>
             )}
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Fecha de Recepcion *</Label>
-              <Input
-                type="date"
-                value={fechaRecepcion}
-                onChange={(e) => setFechaRecepcion(e.target.value)}
-                className="bg-background"
-              />
-              {subTipo === "regularizacion" && (
-                <p className="text-xs text-muted-foreground">Sera ajustada al oficializar el folio</p>
-              )}
-            </div>
+            <div className="flex flex-col gap-2"><Label className="text-sm font-medium">Fecha de Recepcion *</Label>
+              <Input type="date" value={fechaRecepcion} onChange={(e) => setFechaRecepcion(e.target.value)} className="bg-background" /></div>
           </div>
-          {subTipo === "regularizacion" && (
-            <div className="rounded-lg bg-muted/50 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Info className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  El folio temporal se generara automaticamente al registrar (formato: MES-NNN-1)
-                </span>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
-
-      {/* Tipo + Administracion */}
       <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-card-foreground">Tipo de Solicitud</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base font-semibold text-card-foreground">Tipo de Solicitud</CardTitle></CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div className="grid gap-5 md:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Tipo de Solicitud *</Label>
-              <RadioGroup
-                value={tipoSolicitud}
-                onValueChange={(v) => setTipoSolicitud(v as "prestacion" | "nombramiento")}
-                className="flex flex-col gap-2"
-              >
-                <label className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors ${tipoSolicitud === "prestacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"
-                  }`}>
-                  <RadioGroupItem value="prestacion" id="exc-prestacion" />
-                  <span className="text-sm text-card-foreground">Prestacion de Servicios</span>
-                </label>
-                <label className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors ${tipoSolicitud === "nombramiento" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"
-                  }`}>
-                  <RadioGroupItem value="nombramiento" id="exc-nombramiento" />
-                  <span className="text-sm text-card-foreground">Nombramiento por Tiempo Determinado</span>
-                </label>
+              <RadioGroup value={tipoSolicitud} onValueChange={(v) => setTipoSolicitud(v as "prestacion" | "nombramiento")} className="flex flex-col gap-2">
+                <label className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors ${tipoSolicitud === "prestacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
+                  <RadioGroupItem value="prestacion" id="exc-prestacion" /><span className="text-sm text-card-foreground">Prestacion de Servicios</span></label>
+                <label className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors ${tipoSolicitud === "nombramiento" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
+                  <RadioGroupItem value="nombramiento" id="exc-nombramiento" /><span className="text-sm text-card-foreground">Nombramiento por Tiempo Determinado</span></label>
               </RadioGroup>
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">Tipo de Administracion *</Label>
-              <RadioGroup
-                value={tipoAdmin}
-                onValueChange={(v) => setTipoAdmin(v as TipoAdministracion)}
-                className="flex flex-col gap-2"
-              >
-                <label className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors ${tipoAdmin === "centralizada" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"
-                  }`}>
-                  <RadioGroupItem value="centralizada" id="exc-centralizada" />
-                  <div>
-                    <span className="text-sm text-card-foreground">Centralizada</span>
-                    <p className="text-xs text-muted-foreground">Genera Dictamen Tecnico Funcional</p>
-                  </div>
-                </label>
-                <label className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors ${tipoAdmin === "paraestatal" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"
-                  }`}>
-                  <RadioGroupItem value="paraestatal" id="exc-paraestatal" />
-                  <div>
-                    <span className="text-sm text-card-foreground">Paraestatal</span>
-                    <p className="text-xs text-muted-foreground">Genera Opinion Tecnica Funcional</p>
-                  </div>
-                </label>
+              <RadioGroup value={tipoAdmin} onValueChange={(v) => setTipoAdmin(v as TipoAdministracion)} className="flex flex-col gap-2">
+                <label className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors ${tipoAdmin === "centralizada" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
+                  <RadioGroupItem value="centralizada" id="exc-centralizada" /><div><span className="text-sm text-card-foreground">Centralizada</span>
+                  <p className="text-xs text-muted-foreground">Genera Dictamen Tecnico Funcional</p></div></label>
+                <label className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-colors ${tipoAdmin === "paraestatal" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
+                  <RadioGroupItem value="paraestatal" id="exc-paraestatal" /><div><span className="text-sm text-card-foreground">Paraestatal</span>
+                  <p className="text-xs text-muted-foreground">Genera Opinion Tecnica Funcional</p></div></label>
               </RadioGroup>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Datos del Solicitante */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
-            <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">I</span>
-            Datos del Solicitante
+            <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">I</span>Datos del Solicitante
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <div className="grid gap-5 md:grid-cols-2">
+            <div className="flex flex-col gap-2"><Label className="text-sm font-medium">Secretaria *</Label>
+              <Select value={secretaria} onValueChange={setSecretaria}><SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione" /></SelectTrigger>
+                <SelectContent>{SECRETARIAS_EXCEPCION.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+            <div className="flex flex-col gap-2"><Label className="text-sm font-medium">Unidad Administrativa *</Label>
+              <Select value={unidad} onValueChange={setUnidad}><SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione" /></SelectTrigger>
+                <SelectContent>{UNIDADES_ADMINISTRATIVAS_EXC.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select></div>
+            <div className="flex flex-col gap-2"><Label className="text-sm font-medium">Denominacion *</Label>
+              <Input value={denominacion} onChange={(e) => setDenominacion(e.target.value)} placeholder="Ej. Analista de Sistemas" className="bg-background" /></div>
+            <div className="flex flex-col gap-2"><Label className="text-sm font-medium">Importe Bruto *</Label>
+              <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                <Input value={importeBruto} onChange={(e) => setImporteBruto(e.target.value)} placeholder="0.00" className="bg-background pl-7" /></div></div>
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Secretaria *</Label>
-              <Select value={secretaria} onValueChange={setSecretaria}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione" /></SelectTrigger>
-                <SelectContent>
-                  {SECRETARIAS_EXCEPCION.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Unidad Administrativa *</Label>
-              <Select value={unidad} onValueChange={setUnidad}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione" /></SelectTrigger>
-                <SelectContent>
-                  {UNIDADES_ADMINISTRATIVAS.map((u) => (
-                    <SelectItem key={u} value={u}>{u}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Denominacion *</Label>
-              <Input
-                value={denominacion}
-                onChange={(e) => setDenominacion(e.target.value)}
-                placeholder="Ej. Analista de Sistemas"
-                className="bg-background"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Importe Bruto *</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                <Input
-                  value={importeBruto}
-                  onChange={(e) => setImporteBruto(e.target.value)}
-                  placeholder="0.00"
-                  className="bg-background pl-7"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Vigencia *</Label>
+              <Label className="text-sm font-medium">Vigencia</Label>
               <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Inicio</span>
-                  <Input type="date" value={vigenciaInicio} onChange={(e) => setVigenciaInicio(e.target.value)} className="bg-background" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Termino</span>
-                  <Input type="date" value={vigenciaFin} onChange={(e) => setVigenciaFin(e.target.value)} className="bg-background" />
-                </div>
+                <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Inicio</span>
+                  <Input type="date" value={vigenciaInicio} onChange={(e) => setVigenciaInicio(e.target.value)} className="bg-background" /></div>
+                <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Termino</span>
+                  <Input type="date" value={vigenciaFin} onChange={(e) => setVigenciaFin(e.target.value)} className="bg-background" /></div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Document upload placeholder */}
       <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <FileText className="h-4 w-4 text-secondary" />
-            Documentos
-          </CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+          <FileText className="h-4 w-4 text-secondary" />Documentos</CardTitle></CardHeader>
         <CardContent>
           <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-border bg-background px-4 py-5 transition-colors hover:border-secondary cursor-pointer">
-            <div className="flex flex-col items-center gap-1 text-center">
-              <Upload className="h-6 w-6 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Adjuntar documentacion de soporte (PDF, DOC)</p>
-            </div>
+            <div className="flex flex-col items-center gap-1 text-center"><Upload className="h-6 w-6 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Adjuntar documentacion de soporte (PDF, DOC)</p></div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Submit */}
       <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="mr-1.5 h-4 w-4" />
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
-        >
+        <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Cancelar</Button>
+        <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
           {subTipo === "regularizacion" ? <Clock className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
           {subTipo === "regularizacion" ? "Registrar Regularizacion" : "Registrar Excepcion DO"}
         </Button>
@@ -1196,18 +2349,25 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
   )
 }
 
-// ══════════════════════════════════════════════════
-// MAIN PAGE COMPONENT
-// ══════════════════════════════════════════════════
 export function NuevaSolicitudPage() {
-  const [step, setStep] = useState<Step>("tipo")
-  const [tipo, setTipo] = useState<TipoSolicitud>("")
-  const [esRenovacion, setEsRenovacion] = useState<string>("")
-  const [folioSeleccionado, setFolioSeleccionado] = useState<string>("")
+  const [step,                setStep]                = useState<Step>("tipo")
+  const [tipo,                setTipo]                = useState<TipoSolicitud>("")
+  const [esRenovacion,        setEsRenovacion]        = useState<string>("")
+  const [folioSeleccionado,   setFolioSeleccionado]   = useState<string>("")
   const [condicionRenovacion, setCondicionRenovacion] = useState<string>("")
-  const [prefilled, setPrefilled] = useState(false)
-  const [lockVigenciaOnly, setLockVigenciaOnly] = useState(false)
+  const [prefilled,           setPrefilled]           = useState(false)
+  const [lockVigenciaOnly,    setLockVigenciaOnly]    = useState(false)
+  const [datosRenovacion,     setDatosRenovacion]     = useState<FolioExcel | null>(null)
+  const [showModalMismasCondiciones, setShowModalMismasCondiciones] = useState(false)
+  const [enviado,             setEnviado]             = useState(false)
+  const [folioGenerado,       setFolioGenerado]       = useState("")
+  // ── Estado de carga mientras se envía a la API ──────────────────────────────
+  const [enviando,            setEnviando]            = useState(false)
+  const [errorEnvio,          setErrorEnvio]          = useState<string | null>(null)
 
+<<<<<<< HEAD
+  const { } = useSolicitudes()
+=======
   const { historicos: historicosGuardados, getHistoricoById } = useHistoricoStore()
   const [selectedHistoricoId, setSelectedHistoricoId] = useState<string | null>(null)
   const [historicoSheetNames, setHistoricoSheetNames] = useState<string[]>([])
@@ -1278,22 +2438,89 @@ export function NuevaSolicitudPage() {
   }, [selectedHistoricoRow])
 
   // Silent permission check
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
   const { getPermisoActivo, consumirPermiso } = useAutorizaciones()
   const { user } = useAuth()
 
-  // Periodo de aplicacion
-  const [regimenPeriodo, setRegimenPeriodo] = useState<"" | "honorarios" | "asimilados" | "nombramiento">("")
+  const [regimenPeriodo,      setRegimenPeriodo]      = useState<"" | "honorarios" | "asimilados" | "nombramiento">("")
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState("")
+  const { historicos } = useHistoricoStore()
+  const excelRows = useExcelRows(historicos)
+
+  const periodoInfo = useMemo(() => {
+    if (!regimenPeriodo || !periodoSeleccionado) return null
+    const row = regimenPeriodo === "honorarios"
+      ? CAP_3000.find((r) => r.mes === periodoSeleccionado)
+      : regimenPeriodo === "asimilados"
+      ? CAP_1000.find((r) => r.quincena === periodoSeleccionado)
+      : NOMBRAMIENTO_TD.find((r) => r.quincena === periodoSeleccionado)
+    if (!row) return null
+    const limiteDODate = parseDateDMY(row.limiteDO)
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const enTiempo = today <= limiteDODate
+    return { row, limiteDODate, enTiempo }
+  }, [regimenPeriodo, periodoSeleccionado])
+
+  const periodoVencido = periodoSeleccionado ? (periodoInfo ? !periodoInfo.enTiempo : false) : false
+  const puedeAvanzarDeTipo = !!(tipo && regimenPeriodo && periodoSeleccionado && !periodoVencido)
+
+  const foliosReales = useMemo((): FolioExcel[] => {
+    if (excelRows.length === 0) return []
+    return excelRows
+      .filter((row) => {
+        const folio = getCell(row, COL.folioDictamen)
+        if (!folio) return false
+        const reg = normalizaRegimen(getCell(row, COL.regimen))
+        if (tipo === "nombramiento" && reg !== "nombramiento") return false
+        if (tipo === "prestacion"   && reg === "nombramiento") return false
+        if (periodoSeleccionado) return rowEnPeriodo(row, periodoSeleccionado)
+        return true
+      })
+      .reduce<FolioExcel[]>((acc, row) => {
+        const folioDictamen      = getCell(row, COL.folioDictamen)
+        const folioJustificacion = getCell(row, COL.folioJustificacion) || folioDictamen
+        const secretaria         = getCell(row, COL.secretaria)
+        const vigenciaInicio     = getCell(row, COL.vigenciaInicio)
+        const vigenciaFin        = getCell(row, COL.vigenciaTermino)
+        if (acc.find((f) => f.id === folioDictamen)) return acc
+        acc.push({
+          id: folioDictamen, folioJustificacion, folioDictamen, secretaria, vigenciaInicio, vigenciaFin,
+          unidadAdscripcion:      getCell(row, COL.unidadAdscripcion),
+          unidadResponsableGasto: getCell(row, COL.unidadResponsableGasto),
+          programaProyecto:       getCell(row, COL.programaProyecto),
+          tipoActividad:          getCell(row, COL.tipoActividad),
+          regimen:                getCell(row, COL.regimen),
+          numPrestadores:         getCell(row, COL.numPrestadores),
+          importeBruto:           getCell(row, COL.importeBruto),
+          objeto:                 getCell(row, COL.objeto),
+          actividades:            getCell(row, COL.actividades),
+          responsabilidades:      getCell(row, COL.responsabilidades),
+          escolaridad:            getCell(row, COL.escolaridad),
+          compAdm:                getCell(row, COL.compAdm),
+          compTec:                getCell(row, COL.compTec),
+          compSoc:                getCell(row, COL.compSoc),
+          valores:                getCell(row, COL.valores),
+          areasExp:               getCell(row, COL.areasExp),
+        })
+        return acc
+      }, [])
+      .sort((a, b) => a.folioDictamen.localeCompare(b.folioDictamen))
+  }, [excelRows, tipo, periodoSeleccionado])
+
+  const hayFoliosReales = foliosReales.length > 0
 
   const handleContinueToRenovacion = () => {
-    if (tipo) setStep("renovacion")
+    if (puedeAvanzarDeTipo) setStep("renovacion")
   }
 
   const handleContinueToFormulario = () => {
     if (esRenovacion === "si" && folioSeleccionado) {
+      const datos = foliosReales.find((f) => f.id === folioSeleccionado) ?? null
+      setDatosRenovacion(datos)
       setPrefilled(true)
       setLockVigenciaOnly(condicionRenovacion === "mismas")
     } else {
+      setDatosRenovacion(null)
       setPrefilled(false)
       setLockVigenciaOnly(false)
     }
@@ -1305,232 +2532,315 @@ export function NuevaSolicitudPage() {
     else if (step === "renovacion") setStep("tipo")
   }, [step])
 
-  // Silent: check if user has an active permission for current regimen+periodo
   const permisoActivo = regimenPeriodo && periodoSeleccionado && user?.name
-    ? getPermisoActivo(user.name, regimenPeriodo, periodoSeleccionado)
-    : null
+    ? getPermisoActivo(user.name, regimenPeriodo, periodoSeleccionado) : null
+  const folioSeleccionadoData = folioSeleccionado
+    ? foliosReales.find((f) => f.id === folioSeleccionado) : null
 
-  const folio = folioSeleccionado ? MOCK_FOLIOS.find((f) => f.id === folioSeleccionado) : null
+  const handleEnviarAValidacion = useCallback(
+    async (periodoStillValid: boolean, hasPermiso: boolean) => {
+      if (!periodoStillValid && !hasPermiso) return
 
-  return (
-    <div className="flex flex-col gap-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">Nueva Solicitud</h2>
+      setEnviando(true)
+      setErrorEnvio(null)
+
+      try {
+        if (!periodoStillValid && hasPermiso && user?.name && regimenPeriodo && periodoSeleccionado) {
+          consumirPermiso(user.name, regimenPeriodo, periodoSeleccionado)
+        }
+
+        const usuarioId = (user as any)?.id ?? (user as any)?.uuid ?? null
+
+        if (!usuarioId) {
+          setErrorEnvio("No se pudo identificar al usuario. Vuelva a iniciar sesión.")
+          setEnviando(false)
+          return
+        }
+
+        const res = await fetch("/api/solicitudes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            usuarioId,
+            tipo_solicitud: tipo === "prestacion"
+              ? "Prestacion de Servicios"
+              : "Nombramiento Tiempo Det.",
+            periodoId: 1,
+            esExtemporanea: !periodoStillValid && hasPermiso,
+          }),
+        })
+
+        const json = await res.json()
+
+        if (!res.ok || !json.ok) {
+          setErrorEnvio(json.error ?? "Error al registrar la solicitud. Intente de nuevo.")
+          setEnviando(false)
+          return
+        }
+
+        setFolioGenerado(json.folio ?? json.data?.folio_recepcion ?? "")
+        setEnviado(true)
+      } catch (err) {
+        console.error("Error de red al enviar solicitud:", err)
+        setErrorEnvio("Error de conexión. Verifique su red e intente de nuevo.")
+      } finally {
+        setEnviando(false)
+      }
+    },
+    [user, regimenPeriodo, periodoSeleccionado, consumirPermiso, tipo]
+  )
+
+  // ── Pantalla de confirmación de envío exitoso ────────────────────────────────
+  if (enviado) {
+    return (
+      <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
+        <Card className="shadow-sm border-2 border-secondary/30">
+          <CardContent className="flex flex-col items-center gap-5 p-10">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary/10">
+              <CheckCircle2 className="h-9 w-9 text-secondary" />
+            </div>
+            <div className="flex flex-col items-center gap-1 text-center">
+              <p className="text-lg font-semibold text-card-foreground">
+                Solicitud enviada a validación
+              </p>
               <p className="text-sm text-muted-foreground">
-                Registre una nueva solicitud de dictaminacion tecnica funcional
+                La solicitud fue ingresada correctamente al flujo de revisión de la UEFA.
               </p>
             </div>
+            {folioGenerado && (
+              <Badge className="bg-primary/10 text-primary border-0 text-sm px-4 py-1.5">
+                Folio: {folioGenerado}
+              </Badge>
+            )}
+            <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-muted/30 px-6 py-3 text-center">
+              <span className="text-xs text-muted-foreground">Tipo de solicitud</span>
+              <span className="text-sm font-medium text-card-foreground">
+                {tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento por Tiempo Determinado"}
+              </span>
+              {periodoSeleccionado && (
+                <>
+                  <span className="text-xs text-muted-foreground mt-1">Periodo</span>
+                  <span className="text-sm font-medium text-card-foreground">{periodoSeleccionado}</span>
+                </>
+              )}
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEnviado(false)
+                  setFolioGenerado("")
+                  setStep("tipo")
+                  setTipo("")
+                  setEsRenovacion("")
+                  setFolioSeleccionado("")
+                  setCondicionRenovacion("")
+                  setPrefilled(false)
+                  setLockVigenciaOnly(false)
+                  setDatosRenovacion(null)
+                  setRegimenPeriodo("")
+                  setPeriodoSeleccionado("")
+                  setErrorEnvio(null)
+                }}
+              >
+                <FilePlus className="mr-1.5 h-4 w-4" />
+                Nueva Solicitud
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Nueva Solicitud</h2>
+            <p className="text-sm text-muted-foreground">Registre una nueva solicitud de dictaminacion tecnica funcional</p>
           </div>
         </div>
         <StepIndicator step={step} tipo={tipo} />
       </div>
 
-      {/* ── STEP 1: TIPO ── */}
+      {/* TIPO */}
       {step === "tipo" && (
         <>
-          {/* Periodo de aplicacion */}
           <Card className="shadow-sm border-secondary/30 border-2">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
-                <Calendar className="h-5 w-5 text-secondary" />
-                Periodo de aplicacion
+                <Calendar className="h-5 w-5 text-secondary" />Periodo de aplicacion
               </CardTitle>
-              <CardDescription>
-                Seleccione el regimen y periodo para consultar las fechas limite de recepcion
-              </CardDescription>
+              <CardDescription>Seleccione el regimen y periodo para consultar las fechas limite de recepcion</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               <div className="grid gap-5 md:grid-cols-2">
-                {/* Regimen selector */}
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium">Regimen</Label>
-                  <Select
-                    value={regimenPeriodo}
-                    onValueChange={(v) => {
-                      const nuevo = v as "honorarios" | "asimilados" | "nombramiento"
-                      setRegimenPeriodo(nuevo)
-                      setPeriodoSeleccionado("")
-
-                      // Forzar Tipo de Solicitud compatible
-                      if (nuevo === "nombramiento") setTipo("nombramiento")
-                      else setTipo("prestacion")
-                    }}
-                  >
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Seleccione regimen" />
-                    </SelectTrigger>
+                  <Label className="text-sm font-medium">
+                    Régimen de Contratación
+                    <span className="text-destructive ml-0.5">*</span>
+                  </Label>
+                  <Select value={regimenPeriodo} onValueChange={(v) => {
+                    const nuevo = v as "honorarios" | "asimilados" | "nombramiento"
+                    setRegimenPeriodo(nuevo); setPeriodoSeleccionado(""); setFolioSeleccionado("")
+                    if (nuevo === "nombramiento") setTipo("nombramiento")
+                    else setTipo("prestacion")
+                  }}>
+                    <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione regimen" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="honorarios">Honorarios</SelectItem>
                       <SelectItem value="asimilados">Honorarios asimilados a salarios</SelectItem>
                       <SelectItem value="nombramiento">Nombramiento por tiempo determinado</SelectItem>
                     </SelectContent>
                   </Select>
+                  {!regimenPeriodo && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3 shrink-0" />Requerido para continuar
+                    </p>
+                  )}
                 </div>
-
-                {/* Period selector */}
                 {regimenPeriodo === "honorarios" && (
                   <div className="flex flex-col gap-2">
-                    <Label className="text-sm font-medium">Mes de aplicacion</Label>
-                    <Select value={periodoSeleccionado} onValueChange={setPeriodoSeleccionado}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Seleccione mes" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CAP_3000.map((r) => (
-                          <SelectItem key={r.mes} value={r.mes}>{r.mes}</SelectItem>
-                        ))}
-                      </SelectContent>
+                    <Label className="text-sm font-medium">
+                      Mes de aplicacion
+                      <span className="text-destructive ml-0.5">*</span>
+                    </Label>
+                    <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
+                      <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione mes" /></SelectTrigger>
+                      <SelectContent>{CAP_3000.map((r) => <SelectItem key={r.mes} value={r.mes}>{r.mes}</SelectItem>)}</SelectContent>
                     </Select>
+                    {!periodoSeleccionado && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Info className="h-3 w-3 shrink-0" />Requerido para continuar
+                      </p>
+                    )}
                   </div>
                 )}
                 {regimenPeriodo === "asimilados" && (
                   <div className="flex flex-col gap-2">
-                    <Label className="text-sm font-medium">Quincena de aplicacion</Label>
-                    <Select value={periodoSeleccionado} onValueChange={setPeriodoSeleccionado}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Seleccione quincena" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CAP_1000.map((r) => (
-                          <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>
-                        ))}
-                      </SelectContent>
+                    <Label className="text-sm font-medium">
+                      Quincena de aplicacion
+                      <span className="text-destructive ml-0.5">*</span>
+                    </Label>
+                    <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
+                      <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
+                      <SelectContent>{CAP_1000.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
+                    {!periodoSeleccionado && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Info className="h-3 w-3 shrink-0" />Requerido para continuar
+                      </p>
+                    )}
                   </div>
                 )}
-
                 {regimenPeriodo === "nombramiento" && (
                   <div className="flex flex-col gap-2">
-                    <Label className="text-sm font-medium">Quincena de aplicacion</Label>
-                    <Select value={periodoSeleccionado} onValueChange={setPeriodoSeleccionado}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Seleccione quincena" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {NOMBRAMIENTO_TD.map((r) => (
-                          <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>
-                        ))}
-                      </SelectContent>
+                    <Label className="text-sm font-medium">
+                      Quincena de aplicacion
+                      <span className="text-destructive ml-0.5">*</span>
+                    </Label>
+                    <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
+                      <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
+                      <SelectContent>{NOMBRAMIENTO_TD.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
+                    {!periodoSeleccionado && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Info className="h-3 w-3 shrink-0" />Requerido para continuar
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Info panel with limits */}
-              {periodoSeleccionado && (() => {
-                const row =
-                  regimenPeriodo === "honorarios"
-                    ? CAP_3000.find((r) => r.mes === periodoSeleccionado)
-                    : regimenPeriodo === "asimilados"
-                      ? CAP_1000.find((r) => r.quincena === periodoSeleccionado)
-                      : NOMBRAMIENTO_TD.find((r) => r.quincena === periodoSeleccionado)
-                if (!row) return null
-                const limiteDODate = parseDateDMY(row.limiteDO)
-                const today = new Date()
-                today.setHours(0, 0, 0, 0)
-                const enTiempo = today <= limiteDODate
-                return (
-                  <div className={`rounded-lg border-2 p-4 flex flex-col gap-3 ${enTiempo ? "border-secondary/30 bg-secondary/5" : "border-border bg-muted/30"
-                    }`}>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Limite DO (Dictamen)</span>
-                        <span className="text-sm font-semibold text-card-foreground">{row.limiteDO}</span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Limite DGRH (Alta)</span>
-                        <span className="text-sm font-semibold text-card-foreground">{row.limiteDGRH}</span>
-                      </div>
+              {periodoSeleccionado && periodoInfo && (
+                <div className={`rounded-lg border-2 p-4 flex flex-col gap-3 ${periodoInfo.enTiempo ? "border-secondary/30 bg-secondary/5" : "border-destructive/40 bg-destructive/5"}`}>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Limite DO (Dictamen)</span>
+                      <span className="text-sm font-semibold text-card-foreground">{periodoInfo.row.limiteDO}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {enTiempo ? (
-                        <Badge className="bg-secondary/15 text-secondary border-0 gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          En tiempo
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          El periodo seleccionado no esta disponible para registro.
-                        </span>
-                      )}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Limite DGRH (Alta)</span>
+                      <span className="text-sm font-semibold text-card-foreground">{periodoInfo.row.limiteDGRH}</span>
                     </div>
                   </div>
-                )
-              })()}
+                  <div className="flex items-center gap-2">
+                    {periodoInfo.enTiempo ? (
+                      <Badge className="bg-secondary/15 text-secondary border-0 gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" />En tiempo
+                      </Badge>
+                    ) : (
+                      <div className="flex items-start gap-2 w-full">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-semibold text-destructive">Periodo vencido — no se puede registrar</span>
+                          <span className="text-xs text-muted-foreground">
+                            La fecha límite DO ({periodoInfo.row.limiteDO}) ya pasó. No es posible continuar con este periodo.
+                            Seleccione un periodo vigente o solicite una Excepción DO.
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm border-border">
+          <Card className={`shadow-sm border-border ${periodoVencido ? "opacity-50 pointer-events-none" : ""}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
-                <FilePlus className="h-5 w-5 text-secondary" />
-                Seleccione Tipo de Solicitud
+                <FilePlus className="h-5 w-5 text-secondary" />Seleccione Tipo de Solicitud
               </CardTitle>
               <CardDescription>Elija el tipo de justificacion que desea registrar</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <RadioGroup
-                value={tipo}
-                onValueChange={(v) => {
-                  const next = v as TipoSolicitud
-                  const allowPrestacion = regimenPeriodo !== "nombramiento"
-                  const allowNombramiento = regimenPeriodo === "nombramiento"
-
-                  if (next === "prestacion" && !allowPrestacion) return
-                  if (next === "nombramiento" && !allowNombramiento) return
-                  setTipo(next)
-                }}
-                className="flex flex-col gap-3"
-              >
-                <label
-                  htmlFor="tipo-prestacion"
-                  className={`flex cursor-pointer items-start gap-4 rounded-lg border-2 p-4 transition-colors ${tipo === "prestacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"
-                    }`}
-                >
-                  <RadioGroupItem
-                    value="prestacion"
-                    id="tipo-prestacion"
-                    className="mt-0.5"
-                    disabled={regimenPeriodo === "nombramiento"}
-                  />
+              <RadioGroup value={tipo} onValueChange={(v) => {
+                const next = v as TipoSolicitud
+                if (next === "prestacion"   && regimenPeriodo === "nombramiento") return
+                if (next === "nombramiento" && regimenPeriodo !== "nombramiento") return
+                setTipo(next)
+              }} className="flex flex-col gap-3">
+                <label htmlFor="tipo-prestacion" className={`flex cursor-pointer items-start gap-4 rounded-lg border-2 p-4 transition-colors ${tipo === "prestacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
+                  <RadioGroupItem value="prestacion" id="tipo-prestacion" className="mt-0.5" disabled={regimenPeriodo === "nombramiento"} />
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-card-foreground">
-                      Justificacion de Prestacion de Servicios
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Honorarios / Honorarios Asimilados a Salarios
-                    </span>
+                    <span className="text-sm font-semibold text-card-foreground">Justificacion de Prestacion de Servicios</span>
+                    <span className="text-xs text-muted-foreground">Honorarios / Honorarios Asimilados a Salarios</span>
                   </div>
                 </label>
-                <label
-                  htmlFor="tipo-nombramiento"
-                  className={`flex cursor-pointer items-start gap-4 rounded-lg border-2 p-4 transition-colors ${tipo === "nombramiento" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"
-                    }`}
-                >
-                  <RadioGroupItem
-                    value="nombramiento"
-                    id="tipo-nombramiento"
-                    className="mt-0.5"
-                    disabled={regimenPeriodo !== "nombramiento"}
-                  />
+                <label htmlFor="tipo-nombramiento" className={`flex cursor-pointer items-start gap-4 rounded-lg border-2 p-4 transition-colors ${tipo === "nombramiento" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
+                  <RadioGroupItem value="nombramiento" id="tipo-nombramiento" className="mt-0.5" disabled={regimenPeriodo !== "nombramiento"} />
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-card-foreground">
-                      Justificacion para Nombramiento por Tiempo Determinado
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Contratacion temporal con nivel y nombramiento del tabulador
-                    </span>
+                    <span className="text-sm font-semibold text-card-foreground">Justificacion para Nombramiento por Tiempo Determinado</span>
+                    <span className="text-xs text-muted-foreground">Nombramiento por Tiempo Determinado</span>
                   </div>
                 </label>
               </RadioGroup>
+
+              {!puedeAvanzarDeTipo && tipo && (
+                <div className="flex items-center gap-2 rounded-md bg-muted/50 border border-border px-3 py-2.5">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {!regimenPeriodo
+                      ? "Seleccione un régimen de contratación para continuar."
+                      : !periodoSeleccionado
+                      ? "Seleccione un período de aplicación para continuar."
+                      : periodoVencido
+                      ? "El período seleccionado está vencido. No es posible continuar."
+                      : "Complete los campos requeridos para continuar."}
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-end pt-2">
-                <Button onClick={handleContinueToRenovacion} disabled={!tipo} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  Continuar
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                <Button
+                  onClick={handleContinueToRenovacion}
+                  disabled={!puedeAvanzarDeTipo}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
               </div>
             </CardContent>
@@ -1538,124 +2848,233 @@ export function NuevaSolicitudPage() {
         </>
       )}
 
-      {/* ── STEP 2: RENOVACION ── */}
+      {/* RENOVACION */}
       {step === "renovacion" && (
         <Card className="shadow-sm border-border">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base font-semibold text-card-foreground">
-              <FileText className="h-5 w-5 text-secondary" />
-              Renovacion
+              <FileText className="h-5 w-5 text-secondary" />Renovacion
             </CardTitle>
             <CardDescription>Indique si esta solicitud es una renovacion de un dictamen anterior</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Es renovacion? *</Label>
+              <Label className="text-sm font-medium">Renovación de la Dictamen *</Label>
               <RadioGroup value={esRenovacion} onValueChange={setEsRenovacion} className="flex gap-6">
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="si" id="ren-si" />
-                  <Label htmlFor="ren-si" className="text-sm font-normal cursor-pointer">Si</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value="no" id="ren-no" />
-                  <Label htmlFor="ren-no" className="text-sm font-normal cursor-pointer">No</Label>
-                </div>
+                <div className="flex items-center gap-2"><RadioGroupItem value="si" id="ren-si" />
+                  <Label htmlFor="ren-si" className="text-sm font-normal cursor-pointer">Si</Label></div>
+                <div className="flex items-center gap-2"><RadioGroupItem value="no" id="ren-no" />
+                  <Label htmlFor="ren-no" className="text-sm font-normal cursor-pointer">No</Label></div>
               </RadioGroup>
             </div>
-
             {esRenovacion === "si" && (
               <div className="flex flex-col gap-5 rounded-lg border border-border bg-card p-4">
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium">Folio del Dictamen/Opinion Anterior</Label>
-                  <Select value={folioSeleccionado} onValueChange={setFolioSeleccionado}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Seleccione folio anterior" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MOCK_FOLIOS.map((f) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.id} — Emitido: {f.fecha}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm font-medium">
+                    Folio del Dictamen/Opinion Anterior
+                    {hayFoliosReales && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        ({foliosReales.length} encontrados{periodoSeleccionado ? ` · ${periodoSeleccionado}` : ""})
+                      </span>
+                    )}
+                  </Label>
+                  {excelRows.length === 0 ? (
+                    <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-3">
+                      <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Cargue un Excel histórico para ver los dictámenes disponibles.</span>
+                    </div>
+                  ) : !hayFoliosReales ? (
+                    <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-3">
+                      <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        No se encontraron folios de dictamen en el Excel
+                        {periodoSeleccionado ? ` para el periodo "${periodoSeleccionado}"` : ""}.
+                      </span>
+                    </div>
+                  ) : (
+                    <Select value={folioSeleccionado} onValueChange={setFolioSeleccionado}>
+                      <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione folio anterior" /></SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        {foliosReales.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            <span className="font-medium">{f.folioJustificacion}</span>{" / "}
+                            <span className="font-medium">{f.folioDictamen}</span>
+                            {f.secretaria && <span className="text-muted-foreground"> - {f.secretaria}</span>}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
-
-                {folio && (
+                {folioSeleccionadoData && (
                   <>
                     <div className="grid gap-4 md:grid-cols-3">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Fecha de Emision</span>
-                        <span className="text-sm font-medium text-card-foreground">{folio.fecha}</span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Vigencia Anterior</span>
-                        <span className="text-sm font-medium text-card-foreground">{folio.vigencia}</span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Fecha de Vencimiento</span>
-                        <span className="text-sm font-medium text-card-foreground">{folio.vencimiento}</span>
-                      </div>
+                      <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Folio de Justificacion</span>
+                        <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.folioJustificacion}</span></div>
+                      <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Folio de Dictamen/Opinion</span>
+                        <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.folioDictamen}</span></div>
+                      <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Secretaria</span>
+                        <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.secretaria || "—"}</span></div>
+                      <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Vigencia Inicio</span>
+                        <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.vigenciaInicio || "—"}</span></div>
+                      <div className="flex flex-col gap-1"><span className="text-xs text-muted-foreground">Vigencia Termino</span>
+                        <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.vigenciaFin || "—"}</span></div>
                     </div>
                     <Separator />
                     <div className="flex flex-col gap-3">
                       <Label className="text-sm font-medium">Condicion de Renovacion</Label>
-                      <div className="flex flex-col gap-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={condicionRenovacion === "mismas"}
-                            onCheckedChange={() => setCondicionRenovacion("mismas")}
-                          />
-                          <span className="text-sm">Se solicita bajo mismas condiciones tecnicas y funcionales</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-
-                        </label>
-                      </div>
-                      {condicionRenovacion === "mismas" && (
-                        <div className="flex items-center gap-2 rounded-md bg-secondary/10 px-3 py-2">
-                          <AlertCircle className="h-4 w-4 text-secondary" />
-                          <span className="text-xs text-secondary">Se precargaran automaticamente los datos del dictamen anterior</span>
+                      <label
+                        className={`flex items-start gap-3 rounded-lg border-2 p-4 cursor-pointer transition-colors
+                          ${condicionRenovacion === "mismas"
+                            ? "border-secondary bg-secondary/5"
+                            : "border-border hover:border-secondary/40"}`}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (condicionRenovacion === "mismas") {
+                            setCondicionRenovacion("")
+                          } else {
+                            setShowModalMismasCondiciones(true)
+                          }
+                        }}
+                      >
+                        <Checkbox
+                          checked={condicionRenovacion === "mismas"}
+                          className="mt-0.5 shrink-0 pointer-events-none"
+                          readOnly
+                        />
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium text-card-foreground">
+                            Se solicita bajo mismas condiciones técnicas y funcionales
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Marque esta casilla si confirma que no hay cambios respecto al dictamen anterior
+                          </span>
                         </div>
-                      )}
+                        {condicionRenovacion === "mismas" && (
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-secondary ml-auto mt-0.5" />
+                        )}
+                      </label>
                     </div>
+
+                    {/* Modal mismas condiciones */}
+                    {showModalMismasCondiciones && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div
+                          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                          onClick={() => setShowModalMismasCondiciones(false)}
+                        />
+                        <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
+                          <div className="flex items-center gap-3 px-6 py-5 border-b border-border bg-muted/30">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary/15">
+                              <Lock className="h-5 w-5 text-secondary" />
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-base font-semibold text-card-foreground">¿Confirmar mismas condiciones?</span>
+                              <span className="text-xs text-muted-foreground">Esta acción bloqueará los campos del formulario</span>
+                            </div>
+                          </div>
+                          <div className="px-6 py-5 flex flex-col gap-4">
+                            <p className="text-sm text-card-foreground">
+                              a) La persona Titular de la Unidad de Enlace Financiero Administrativo se compromete a que la justificación cuente con las mismas condiciones técnico funcionales.
+                            </p>
+                            <p className="text-sm text-card-foreground">
+                              b) La Dirección General de Desarrollo Organizacional emitirá la dictaminación correspondiente a la presente Justificación.
+                            </p>
+                            <p className="text-sm text-card-foreground">
+                              c) El periodo de vigencia de la Justificación concluirá al día siguiente de la fecha establecida, por lo que la persona Titular deberá solicitar su renovación en las fechas establecidas en el calendario que para tal efecto emita la Secretaría de Administración y Finanzas
+                            </p>
+                            <div className="rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3 flex flex-col gap-1.5">
+                              <span className="text-xs font-semibold text-secondary uppercase tracking-wide">Único campo editable</span>
+                              <span className="text-sm text-card-foreground flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-secondary shrink-0" />
+                                Vigencia de la nueva solicitud
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Si no desea esto presione <strong>Cancelar</strong>
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/20">
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowModalMismasCondiciones(false)}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              className="bg-primary text-primary-foreground hover:bg-primary/90"
+                              onClick={() => {
+                                setCondicionRenovacion("mismas")
+                                setShowModalMismasCondiciones(false)
+                              }}
+                            >
+                              <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                              Sí, confirmar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
             )}
-
+            {esRenovacion === "si" && folioSeleccionado && condicionRenovacion !== "mismas" && (
+              <div className="flex items-center gap-2 rounded-md bg-muted/50 border border-border px-3 py-2.5">
+                <AlertCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
+                  Debe confirmar la condición de renovación para continuar.
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between pt-2">
-              <Button variant="outline" onClick={handleBack}>
-                <ArrowLeft className="mr-1.5 h-4 w-4" />
-                Anterior
-              </Button>
-              <Button
-                onClick={handleContinueToFormulario}
-                disabled={!esRenovacion || (esRenovacion === "si" && !folioSeleccionado)}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Continuar
-                <ArrowRight className="ml-1.5 h-4 w-4" />
+              <Button variant="outline" onClick={handleBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Anterior</Button>
+              <Button onClick={handleContinueToFormulario}
+                disabled={
+                  !esRenovacion ||
+                  (esRenovacion === "si" && hayFoliosReales && !folioSeleccionado) ||
+                  (esRenovacion === "si" && folioSeleccionado && condicionRenovacion !== "mismas")
+                }
+                className="bg-primary text-primary-foreground hover:bg-primary/90">
+                Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* ── STEP 3: FORMULARIO ── */}
+      {/* FORMULARIO */}
       {step === "formulario" && (
         <>
-          {/* Tipo badge */}
           <div className="flex items-center gap-3 flex-wrap">
             <Badge className="bg-primary text-primary-foreground">
               {tipo === "prestacion" ? "Prestacion de Servicios" : "Nombramiento por Tiempo Determinado"}
             </Badge>
-            {prefilled && (
-              <Badge variant="outline" className="border-secondary text-secondary">
-                Renovacion — Datos precargados
+            {prefilled && datosRenovacion && (
+              <Badge variant="outline" className="border-secondary text-secondary gap-1">
+                <Lock className="h-3 w-3" />Renovacion — solo vigencia editable
+              </Badge>
+            )}
+            {prefilled && !datosRenovacion && (
+              <Badge variant="outline" className="border-secondary text-secondary">Renovacion — Datos precargados</Badge>
+            )}
+            {excelRows.length > 0 && (
+              <Badge variant="outline" className="border-border text-muted-foreground text-xs">
+                Excel histórico activo ({excelRows.length} registros)
               </Badge>
             )}
           </div>
+<<<<<<< HEAD
+          {tipo === "prestacion" ? (
+            <FormularioPrestacion
+              prefilled={prefilled}
+              lockVigenciaOnly={lockVigenciaOnly}
+              regimenPeriodo={regimenPeriodo}
+              excelRows={excelRows}
+              esRenovacion={esRenovacion === "si"}
+              datosRenovacion={datosRenovacion}
+            />
+=======
 
           {tipo === "prestacion" && (
             <Card className="shadow-sm border-border">
@@ -1756,54 +3175,57 @@ export function NuevaSolicitudPage() {
 
           {tipo === "prestacion" ? (
             <FormularioPrestacion prefilled={prefilled} lockVigenciaOnly={lockVigenciaOnly} historicoData={historicoFormData} />
+>>>>>>> c341caaf30f0dc28a0ae312ce232acae8333411d
           ) : (
-            <FormularioNombramiento prefilled={prefilled} />
+            <FormularioNombramiento
+              prefilled={prefilled}
+              esRenovacion={esRenovacion === "si"}
+              excelRows={excelRows}
+              datosRenovacion={datosRenovacion}
+            />
           )}
-
-          {/* Action buttons */}
           {(() => {
-            // Check periodo validity
-            const periodoStillValid =
-              regimenPeriodo && periodoSeleccionado
-                ? isPeriodoVigente(regimenPeriodo, periodoSeleccionado).vigente
-                : false
-
-            // Silent: if periodo expired but user has permission, allow as extemporanea
+            const periodoStillValid = regimenPeriodo && periodoSeleccionado
+              ? isPeriodoVigente(regimenPeriodo, periodoSeleccionado).vigente : false
             const hasPermiso = !!permisoActivo
-            const canSend = periodoStillValid || hasPermiso
-
+            const canSend = (periodoStillValid || hasPermiso) && !enviando
             return (
               <div className="flex flex-col gap-3">
-                {!canSend && regimenPeriodo && periodoSeleccionado && (
+                {!canSend && !enviando && regimenPeriodo && periodoSeleccionado && (
                   <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
                     <Info className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
-                    <span className="text-xs text-muted-foreground">
-                      El periodo seleccionado no esta disponible para registro.
-                    </span>
+                    <span className="text-xs text-muted-foreground">El periodo seleccionado no esta disponible para registro.</span>
+                  </div>
+                )}
+                {/* Mensaje de error de la API */}
+                {errorEnvio && (
+                  <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
+                    <span className="text-xs text-destructive">{errorEnvio}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-                  <Button variant="outline" onClick={handleBack}>
-                    <ArrowLeft className="mr-1.5 h-4 w-4" />
-                    Anterior
+                  <Button variant="outline" onClick={handleBack} disabled={enviando}>
+                    <ArrowLeft className="mr-1.5 h-4 w-4" />Anterior
                   </Button>
                   <div className="flex items-center gap-3">
-                    <Button variant="outline">
-                      <Save className="mr-1.5 h-4 w-4" />
-                      Guardar Borrador
+                    <Button variant="outline" disabled={enviando}>
+                      <Save className="mr-1.5 h-4 w-4" />Guardar Borrador
                     </Button>
                     <Button
-                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
                       disabled={!canSend}
-                      onClick={() => {
-                        // When sending with a permission (extemporanea), consume it
-                        if (!periodoStillValid && hasPermiso && user?.name && regimenPeriodo && periodoSeleccionado) {
-                          consumirPermiso(user.name, regimenPeriodo, periodoSeleccionado)
-                        }
-                      }}
+                      onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso)}
                     >
-                      <SendHorizonal className="mr-1.5 h-4 w-4" />
-                      Enviar a Validacion
+                      {enviando ? (
+                        <>
+                          <Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validacion
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>

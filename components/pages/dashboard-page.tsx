@@ -7,9 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   FileText,
-  FileCheck,
+  Briefcase,
+  FileQuestion,
+  UserCheck,
+  FileOutput,
+  Users,
   Clock,
-  XCircle,
   AlertTriangle,
   Eye,
   FileSearch,
@@ -80,20 +83,57 @@ export function DashboardPage({ onNavigate, onOpenReview }: DashboardPageProps) 
         s.estado !== "Emitido" &&
         !s.estado.startsWith("Observado")
     ).length
-    const observados = solicitudes.filter((s) => s.estado.startsWith("Observado")).length
-    const slaEnRiesgo = solicitudes.filter(
-      (s) => s.slaRestante !== null && s.slaRestante <= 5
-    ).length
+    const honorarios = solicitudes.filter((s) => s.tipo === "Prestacion de Servicios").length
+    const honorariosAsimilados = solicitudes.filter((s) => s.tipo === "Honorarios Asimilados").length
+    const nombramiento = solicitudes.filter((s) => s.tipo === "Nombramiento Tiempo Det.").length
+    const prestadores = new Set(solicitudes.map((s) => s.prestador)).size
 
-    return { total, emitidos, enProceso, observados, slaEnRiesgo }
+    return { total, emitidos, enProceso, honorarios, honorariosAsimilados, nombramiento, prestadores }
   }, [solicitudes])
 
   const kpis = [
-    { label: "Solicitudes totales", value: stats.total, icon: FileText, color: "bg-primary" },
-    { label: "Emitidas", value: stats.emitidos, icon: FileCheck, color: "bg-secondary" },
-    { label: "En proceso", value: stats.enProceso, icon: Clock, color: "bg-accent" },
-    { label: "Observadas", value: stats.observados, icon: XCircle, color: "bg-destructive" },
-    { label: "Plazo en riesgo", value: stats.slaEnRiesgo, icon: AlertTriangle, color: "bg-[#c57a2a]" },
+    {
+      label: "Total de solicitudes recibidas",
+      value: stats.total,
+      icon: FileText,
+      color: "bg-[#2d4a2d]",        // verde oscuro — igual que imagen
+    },
+    {
+      label: "Justificaciones por honorarios",
+      value: stats.honorarios,
+      icon: Briefcase,
+      color: "bg-[#4a5c2d]",        // verde oliva
+    },
+    {
+      label: "Justificaciones por honorarios asimilados a salarios",
+      value: stats.honorariosAsimilados,
+      icon: FileQuestion,
+      color: "bg-[#b5883a]",        // dorado/ocre
+    },
+    {
+      label: "Justificaciones por nombramiento por tiempo determinado",
+      value: stats.nombramiento,
+      icon: UserCheck,
+      color: "bg-[#3a5c3a]",        // verde medio
+    },
+    {
+      label: "Justificaciones emitidas",
+      value: stats.emitidos,
+      icon: FileOutput,
+      color: "bg-[#c57a2a]",        // naranja/ámbar
+    },
+    {
+      label: "Numero de prestadores de servicio",
+      value: stats.prestadores,
+      icon: Users,
+      color: "bg-[#3a5c3a]",        // verde
+    },
+    {
+      label: "Justificaciones en proceso",
+      value: stats.enProceso,
+      icon: Clock,
+      color: "bg-[#5a5c4a]",        // verde grisáceo
+    },
   ]
 
   const barData = [
@@ -119,7 +159,7 @@ export function DashboardPage({ onNavigate, onOpenReview }: DashboardPageProps) 
     <div className="flex flex-col gap-6">
       {/* Page Title */}
       <div>
-        <h2 className="text-xl font-semibold text-foreground">Dashboard Ejecutivo</h2>
+        <h2 className="text-xl font-semibold text-foreground">Tablero Informativo</h2>
         <p className="text-sm text-muted-foreground">
           Resumen general del sistema de dictaminacion
         </p>
@@ -129,7 +169,7 @@ export function DashboardPage({ onNavigate, onOpenReview }: DashboardPageProps) 
       <div className="flex flex-wrap items-center gap-3">
         <Select defaultValue="2026">
           <SelectTrigger className="w-32 bg-card">
-            <SelectValue placeholder="Ano" />
+            <SelectValue placeholder="Año" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="2026">2026</SelectItem>
@@ -150,12 +190,12 @@ export function DashboardPage({ onNavigate, onOpenReview }: DashboardPageProps) 
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpis.map((kpi) => (
           <Card key={kpi.label} className="shadow-sm border-border">
             <CardContent className="flex items-center gap-4 p-4">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${kpi.color}`}>
-                <kpi.icon className="h-5 w-5 text-primary-foreground" />
+                <kpi.icon className="h-5 w-5 text-white" />
               </div>
               <div className="flex flex-col">
                 <span className="text-2xl font-bold text-card-foreground">{kpi.value}</span>
@@ -220,7 +260,6 @@ export function DashboardPage({ onNavigate, onOpenReview }: DashboardPageProps) 
 
       {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* Bar Chart */}
         <Card className="shadow-sm border-border lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-card-foreground">
@@ -249,7 +288,6 @@ export function DashboardPage({ onNavigate, onOpenReview }: DashboardPageProps) 
           </CardContent>
         </Card>
 
-        {/* Pie Chart */}
         <Card className="shadow-sm border-border">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-card-foreground">

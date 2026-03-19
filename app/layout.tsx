@@ -11,7 +11,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Sistema de Dictaminacion Tecnica Funcional',
+  title: 'Sistema de Solicitudes de Dictaminación de Justificaciones',
   description: 'Sistema institucional de gestion y dictaminacion tecnica funcional',
   icons: {
     icon: [
