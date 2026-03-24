@@ -1,6 +1,40 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import nodemailer from "nodemailer"
+
+const transporter = nodemailer.createTransport({
+  host:   process.env.SMTP_HOST   ?? "smtp.gmail.com",
+  port:   Number(process.env.SMTP_PORT ?? 587),
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+})
+
+async function enviarCodigoRecuperacion(correo: string, codigo: string) {
+  await transporter.sendMail({
+    from:    process.env.SMTP_FROM ?? process.env.SMTP_USER,
+    to:      correo,
+    subject: "Código de recuperación de contraseña",
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#1e3a5f">Recuperación de contraseña</h2>
+        <p>Use el siguiente código para restablecer su contraseña.
+           Es válido por <strong>10 minutos</strong>.</p>
+        <div style="font-size:36px;font-weight:bold;letter-spacing:12px;
+                    text-align:center;padding:24px;background:#f3f4f6;
+                    border-radius:8px;color:#1e3a5f;margin:24px 0">
+          ${codigo}
+        </div>
+        <p style="color:#6b7280;font-size:13px">
+          Si no solicitó este código, ignore este mensaje.
+        </p>
+      </div>
+    `,
+  })
+}
 
 function err(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status })
@@ -18,28 +52,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    // ── LOGIN ────────────────────────────────────────────────────────────────
     if (action === "login") {
       const { rfc, password } = body
-
-      console.log("=== LOGIN DEBUG ===")
-      console.log("RFC recibido:", rfc)
-      console.log("RFC procesado:", rfc.trim().toUpperCase())
 
       if (!rfc || !password) return err("RFC y contraseña son requeridos")
 
       const usuario = await prisma.usuario.findUnique({
-        where: { rfc: rfc.trim().toUpperCase() },
+        where:   { rfc: rfc.trim().toUpperCase() },
         include: { rol: true, area: true },
       })
-
-      console.log("Usuario encontrado:", usuario ? "SÍ" : "NO")
-      if (usuario) {
-        console.log("Hash en DB:", usuario.password_hash)
-        const pruebaHash = await bcrypt.compare(password, usuario.password_hash)
-        console.log("Contraseña válida:", pruebaHash)
-        console.log("Activo:", usuario.activo)
-      }
 
       if (!usuario)        return err("Credenciales incorrectas", 401)
       if (!usuario.activo) return err("Su cuenta está desactivada. Contacte al administrador.", 403)
@@ -57,13 +78,11 @@ export async function POST(req: NextRequest) {
         mustChangePassword: usuario.must_change_password ?? false,
       })
     }
-
-    // ── CAMBIAR CONTRASEÑA (primer ingreso) ──────────────────────────────────
     if (action === "change-password") {
       const { rfc, nuevaPassword } = body
       if (!rfc || !nuevaPassword) return err("Datos incompletos")
 
-      const hash = await bcrypt.hash(nuevaPassword, 12)
+      const hash    = await bcrypt.hash(nuevaPassword, 12)
       const updated = await prisma.usuario.updateMany({
         where: { rfc: rfc.trim().toUpperCase(), activo: true },
         data:  { password_hash: hash, must_change_password: false },
@@ -73,7 +92,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // ── RECUPERAR · paso 1 ───────────────────────────────────────────────────
     if (action === "recuperar-rfc") {
       const { rfc } = body
       if (!rfc) return err("RFC requerido")
@@ -85,8 +103,9 @@ export async function POST(req: NextRequest) {
 
       if (!usuario) return err("No se encontró ninguna cuenta asociada a ese RFC.", 404)
 
+      // Generar código y guardarlo
       const codigo   = Math.floor(100000 + Math.random() * 900000).toString()
-      const expiraEn = new Date(Date.now() + 10 * 60 * 1000)
+      const expiraEn = new Date(Date.now() + 10 * 60 * 1000) // 10 minutos
 
       await prisma.codigo_recuperacion.upsert({
         where:  { usuario_id: usuario.id },
@@ -94,15 +113,21 @@ export async function POST(req: NextRequest) {
         update: { codigo, expira_en: expiraEn, usado: false },
       })
 
-      console.log(`[DEV] Código para ${rfc}: ${codigo}`)
+      // Enviar correo
+      try {
+        await enviarCodigoRecuperacion(usuario.correo, codigo)
+        console.log(`[mailer] Código enviado a ${maskEmail(usuario.correo)}`)
+      } catch (emailError) {
+        console.error("[mailer] Error al enviar correo:", emailError)
+        return err("No se pudo enviar el correo de verificación. Verifique la configuración SMTP.", 500)
+      }
 
       return NextResponse.json({
-        ok: true,
+        ok:              true,
         correoMascarado: maskEmail(usuario.correo),
       })
     }
 
-    // ── RECUPERAR · paso 2 ───────────────────────────────────────────────────
     if (action === "recuperar-codigo") {
       const { rfc, codigo } = body
       if (!rfc || !codigo) return err("Datos incompletos")
@@ -129,7 +154,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // ── RECUPERAR · paso 3 ───────────────────────────────────────────────────
     if (action === "recuperar-reset") {
       const { rfc, nuevaPassword } = body
       if (!rfc || !nuevaPassword) return err("Datos incompletos")
@@ -141,6 +165,7 @@ export async function POST(req: NextRequest) {
       })
 
       if (updated.count === 0) return err("Usuario no encontrado", 404)
+
 
       const usuario = await prisma.usuario.findFirst({
         where:  { rfc: rfc.trim().toUpperCase() },
