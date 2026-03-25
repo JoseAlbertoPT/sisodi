@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,14 +14,58 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { PageLayout } from "@/components/page-layout"
 import {
   ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle,
-  History, MessageSquare, ClipboardCheck, Eye, Info, MinusCircle,
-  ChevronDown, ChevronRight, Send, Download, Upload, Lock, Stamp,
-  Users, Printer, Shield, Loader2,
+  History, MessageSquare, ClipboardCheck, Info, MinusCircle,
+  ChevronDown, ChevronRight, Send, Download, Lock, Stamp,
+  Users, Shield, Loader2, GraduationCap, Brain, Wrench, Heart, Star, Briefcase,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 
-// tiṕos
+const INICIALES_MES_MAP: Record<string, string> = {
+  "01": "EN", "02": "FE", "03": "MR", "04": "AB",
+  "05": "MY", "06": "JN", "07": "JL", "08": "AG",
+  "09": "SE", "10": "OC", "11": "NO", "12": "DI",
+}
+
+function generarFolioTemporal(id: number, fecha: Date | null | undefined): string {
+  const f      = fecha ?? new Date()
+  const mes    = f.getMonth() + 1
+  const mesStr = String(mes).padStart(2, "0")
+  const ini    = INICIALES_MES_MAP[mesStr] ?? "XX"
+  const num    = String(id).padStart(3, "0")
+  return `${ini}-${num}`
+}
+
+function formatearFolio(folio: string | null | undefined): string {
+  if (!folio) return "---"
+  const match = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
+  if (match) {
+    const num = match[1].padStart(3, "0")
+    const mes = match[2].padStart(2, "0")
+    return `${INICIALES_MES_MAP[mes] ?? "XX"}-${num}`
+  }
+  return folio
+}
+
+function resolverFolioRecepcion(item: any): string {
+  if (item.folio_recepcion) return formatearFolio(item.folio_recepcion)
+  const fechaRaw = item.fecha_envio ?? item.fecha_creacion ?? null
+  return generarFolioTemporal(item.id, fechaRaw ? new Date(fechaRaw) : null)
+}
+
+function resolverFolioDictamen(item: any): string | null {
+  if (!item) return null
+  return (
+    item.folioDictamen        ??
+    item.dictamen?.folio      ??
+    item.folio_dictamen       ??
+    item._raw?.folioDictamen  ??
+    item._raw?.dictamen?.folio ??
+    item._raw?.folio_dictamen ??
+    null
+  )
+}
+
 interface HistorialEntry {
   fecha: string
   usuario: string
@@ -36,6 +80,9 @@ interface SolicitudDetalle {
   folioJustificacion: string
   folioDictamen: string | null
   tipo: string
+  regimen: string
+  tipoActividades: string
+  denominacion: string
   secretaria: string
   unidadAdministrativa: string
   solicitante: string
@@ -67,38 +114,36 @@ interface RevisionDOPageProps {
 }
 
 interface ChecklistItem { key: string; num: number; label: string }
-const CHECKLIST_BASE: ChecklistItem[] = [
-  { key: "c1",  num: 1,  label: "Oficio de solicitud con firma autógrafa del titular" },
-  { key: "c2",  num: 2,  label: "Datos de la Unidad Responsable del Gasto (URG)" },
-  { key: "c3",  num: 3,  label: "Programa o proyecto al que se adscribe" },
-  { key: "c4",  num: 4,  label: "Régimen de contratación especificado" },
-  { key: "c5",  num: 5,  label: "Tipo de actividades indicado" },
-  { key: "c6",  num: 6,  label: "Número de prestadores de servicio" },
-  { key: "c7",  num: 7,  label: "Denominación del puesto/servicio" },
-  { key: "c8",  num: 8,  label: "Vigencia de inicio y término" },
-  { key: "c9",  num: 9,  label: "Importe bruto mensual especificado" },
-  { key: "c10", num: 10, label: "Objeto de la contratación descrito" },
-  { key: "c11", num: 11, label: "Actividades a realizar detalladas" },
+
+const CHECKLIST_16: ChecklistItem[] = [
+  { key: "c1",  num: 1,  label: "Oficio de solicitud adjunto" },
+  { key: "c2",  num: 2,  label: "Secretaria/Subsecretaria/Dependencia correcta" },
+  { key: "c3",  num: 3,  label: "Unidad Administrativa de Adscripcion" },
+  { key: "c4",  num: 4,  label: "Unidad Responsable del Gasto" },
+  { key: "c5",  num: 5,  label: "Programa o Proyecto" },
+  { key: "c6",  num: 6,  label: "Regimen de contratacion correcto" },
+  { key: "c7",  num: 7,  label: "Tipo de Actividad especificado" },
+  { key: "c8",  num: 8,  label: "Numero de justificaciones" },
+  { key: "c9",  num: 9,  label: "Numero de prestadores de servicio" },
+  { key: "c10", num: 10, label: "Vigencia correcta (inicio y termino)" },
+  { key: "c11", num: 11, label: "Importe Bruto conforme al tabulador vigente" },
   { key: "c12", num: 12, label: "Responsabilidades definidas" },
-  { key: "c13", num: 13, label: "Perfil del prestador especificado (escolaridad)" },
-  { key: "c14", num: 14, label: "Competencias administrativas listadas" },
-  { key: "c15", num: 15, label: "Competencias técnicas listadas" },
-  { key: "c16", num: 16, label: "Suficiencia presupuestal acreditada" },
+  { key: "c13", num: 13, label: "Fecha de publicacion en periodico oficial" },
+  { key: "c14", num: 14, label: "Oficio de suficiencia presupuestal adjunto" },
+  { key: "c15", num: 15, label: "Convenio y anexos si aplica recurso federal" },
+  { key: "c16", num: 16, label: "Documentacion completa conforme a lineamientos" },
 ]
 
-const CHECKLIST_NOMBRAMIENTO_EXTRA: ChecklistItem[] = [
-  { key: "c17", num: 17, label: "Nivel y categoría del tabulador indicados" },
-  { key: "c18", num: 18, label: "Marco normativo referenciado" },
-  { key: "c19", num: 19, label: "Condiciones de disponibilidad especificadas" },
+const CHECKLIST_19: ChecklistItem[] = [
+  ...CHECKLIST_16,
+  { key: "c17", num: 17, label: "Denominacion del nombramiento" },
+  { key: "c18", num: 18, label: "Equivalencia conforme al Tabulador (Nivel/Categoria correcta)" },
+  { key: "c19", num: 19, label: "Clave presupuestal valida" },
 ]
 
-function getChecklistItems(tipo: string): ChecklistItem[] {
-  if (tipo === "Nombramiento Tiempo Det.") {
-    return [...CHECKLIST_BASE, ...CHECKLIST_NOMBRAMIENTO_EXTRA]
-  }
-  return CHECKLIST_BASE
+function getChecklistItems(filtro: 1 | 2 | 3): ChecklistItem[] {
+  return filtro === 2 ? CHECKLIST_19 : CHECKLIST_16
 }
-
 
 function formatFecha(v: string | null | undefined): string {
   if (!v) return "—"
@@ -111,10 +156,7 @@ function formatFechaHora(v: string | null | undefined): string {
   if (!v) return "—"
   const d = new Date(v)
   if (isNaN(d.getTime())) return v
-  return d.toLocaleString("es-MX", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  })
+  return d.toLocaleString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
 }
 
 function diasHabilesDesde(fechaStr: string | null): number | null {
@@ -130,6 +172,16 @@ function diasHabilesDesde(fechaStr: string | null): number | null {
     cur.setDate(cur.getDate() + 1)
   }
   return Math.max(0, 15 - dias)
+}
+
+function formatEscolaridad(e: string | null | undefined): string {
+  const v = (e ?? "").toLowerCase().trim()
+  if (v === "bachillerato") return "Bachillerato"
+  if (v === "tecnico")      return "Técnico Superior"
+  if (v === "licenciatura") return "Licenciatura"
+  if (v === "maestria")     return "Maestría"
+  if (v === "doctorado")    return "Doctorado"
+  return e || "—"
 }
 
 function getSlaColor(dias: number | null) {
@@ -148,18 +200,17 @@ function getSlaBackground(dias: number | null) {
 }
 function getSlaLabel(dias: number | null) {
   if (dias === null) return "Sin fecha"
-  if (dias <= 0) return `Vencido`
+  if (dias <= 0) return "Vencido"
   return `${dias} día${dias !== 1 ? "s" : ""}`
 }
 
-
 function mapBDtoDetalle(item: any): SolicitudDetalle {
   const historial: HistorialEntry[] = (item.historial_solicitud ?? []).map((h: any) => ({
-    fecha:         formatFechaHora(h.fecha),
-    usuario:       h.usuario?.nombre ?? "Sistema",
-    accion:        h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? h.comentario ?? "—",
+    fecha:          formatFechaHora(h.fecha),
+    usuario:        h.usuario?.nombre ?? "Sistema",
+    accion:         h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? h.comentario ?? "—",
     estadoAnterior: h.estado_historial_solicitud_estado_anterior_idToestado?.nombre ?? null,
-    estadoNuevo:   h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+    estadoNuevo:    h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
   }))
 
   const observacionesPrevias = (item.historial_solicitud ?? [])
@@ -171,36 +222,43 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
 
   const fechaEnvio = item.fecha_envio ?? item.fecha_recepcion ?? item.fecha_creacion ?? null
 
+  // Resolución robusta — busca en el item y en _raw
+  const folioDictamen = resolverFolioDictamen(item)
+
   return {
-    id:                  item.id,
-    folio:               item.folio_recepcion ?? `SOL-${item.id}`,
-    folioJustificacion:  item.folio_justificacion
-      ?? `JUST-${new Date(item.fecha_creacion ?? Date.now()).getFullYear()}-${String(item.id).padStart(4, "0")}`,
-    folioDictamen:       item.dictamen?.folio ?? item.folio_dictamen ?? null,
-    tipo:                item.tipo_solicitud ?? "—",
-    secretaria:          item.usuario?.area?.nombre ?? "—",
-    unidadAdministrativa: item.usuario?.area?.nombre ?? "—",
-    solicitante:         item.usuario?.nombre ?? "—",
-    correo:              item.usuario?.correo ?? "—",
-    estado:              item.estado?.nombre ?? "—",
-    periodo:             item.periodo ? `${item.periodo.mes}/${item.periodo.anio}` : "—",
-    fechaCreacion:       formatFecha(item.fecha_creacion),
+    id:                   item.id,
+    folio:                resolverFolioRecepcion(item),
+    folioJustificacion:   item.folio_justificacion
+      ?? `SDTF-${new Date(item.fecha_creacion ?? Date.now()).getFullYear()}-${String(item.id).padStart(4, "0")}`,
+    folioDictamen,
+    tipo:                 item.tipo_solicitud ?? "—",
+    denominacion:         item.denominacion ?? item.tipo_solicitud ?? "—",
+    tipoActividades:      item.tipo_actividades ?? item.tipoActividades ?? "—",
+    regimen:              item.regimen ?? "—",
+    secretaria:           item.secretaria ?? item.usuario?.area?.nombre ?? "—",
+    unidadAdministrativa: item.unidad_administrativa ?? item.usuario?.area?.nombre ?? "—",
+    solicitante:          item.usuario?.nombre ?? "—",
+    correo:               item.usuario?.correo ?? "—",
+    estado:               item.estado?.nombre ?? "—",
+    periodo:              item.periodo ? `${item.periodo.mes}/${item.periodo.anio}` : "—",
+    fechaCreacion:        formatFecha(item.fecha_creacion),
     fechaEnvio,
-    esExtemporanea:      item.es_extemporanea ?? false,
-    vigenciaInicio:      formatFecha(fechaEnvio),
-    vigenciaFin:         "—",
-    importeBruto:        "—",
-    esRenovacion:        false,
-    folioAnterior:       null,
-    slaRestante:         diasHabilesDesde(fechaEnvio),
+    esExtemporanea:       item.es_extemporanea ?? false,
+    vigenciaInicio:       formatFecha(item.vigencia_inicio),
+    vigenciaFin:          formatFecha(item.vigencia_fin),
+    importeBruto:         item.importe_bruto != null
+      ? `$${Number(item.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
+      : "—",
+    esRenovacion:         item.es_renovacion ?? false,
+    folioAnterior:        item.folio_anterior ?? null,
+    slaRestante:          diasHabilesDesde(fechaEnvio),
     historial,
     observacionesPrevias,
-    checklistDO:         {},
-    _raw:                item,
+    checklistDO:          {},
+    _raw:                 item,
   }
 }
-
-
+// componentes
 function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) {
   return (
     <div className={`flex items-center gap-2 rounded-lg px-4 py-2.5 ${getSlaBackground(diasRestantes)}`}>
@@ -250,7 +308,11 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-3 cursor-pointer" onClick={() => setOpen(!open)}>
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-          {num && <span className="flex h-6 w-6 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">{num}</span>}
+          {num && (
+            <span className="flex h-6 w-6 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
+              {num}
+            </span>
+          )}
           {icon}{title}
           <span className="ml-auto">
             {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
@@ -275,8 +337,10 @@ function ReadOnlyList({ items }: { items: string[] }) {
   return (
     <ul className="flex flex-col gap-2">
       {items.map((item, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-[10px] font-medium text-secondary">{i + 1}</span>
+        <li key={i} className="flex items-start gap-2 text-sm text-card-foreground">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-[10px] font-medium text-secondary mt-0.5">
+            {i + 1}
+          </span>
           {item}
         </li>
       ))}
@@ -292,104 +356,312 @@ function RadioOption({ value, selected, onChange, label, colorClass }: {
       type="button"
       onClick={onChange}
       className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-all ${
-        selected ? `${colorClass} border-current` : "border-border text-muted-foreground hover:border-foreground/30 hover:text-card-foreground"
+        selected
+          ? `${colorClass} border-current`
+          : "border-border text-muted-foreground hover:border-foreground/30 hover:text-card-foreground"
       }`}
     >
-      {value === "si"      && <CheckCircle2 className="h-3.5 w-3.5" />}
-      {value === "no"      && <XCircle className="h-3.5 w-3.5" />}
-      {value === "noAplica"&& <MinusCircle className="h-3.5 w-3.5" />}
+      {value === "si"       && <CheckCircle2 className="h-3.5 w-3.5" />}
+      {value === "no"       && <XCircle className="h-3.5 w-3.5" />}
+      {value === "noAplica" && <MinusCircle className="h-3.5 w-3.5" />}
       {label}
     </button>
   )
 }
 
-function ExpedienteGenerico({ sol }: { sol: SolicitudDetalle }) {
-  const raw = sol._raw
+function PerfilChips({ value }: { value: string }) {
+  if (!value || value === "—") return <span className="text-sm text-muted-foreground">—</span>
+  const items = value.split(/[•·,;]+/).map(s => s.trim()).filter(Boolean)
+  if (items.length === 0) return <span className="text-sm text-muted-foreground">—</span>
   return (
-    <div className="flex flex-col gap-4">
-      <SectionCard num="I" title="Datos Generales">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Folio de Recepción"        value={sol.folio} />
-          <ReadOnlyField label="Folio de Justificación"    value={sol.folioJustificacion} />
-          <ReadOnlyField label="Tipo de Solicitud"         value={sol.tipo} />
-          <ReadOnlyField label="Secretaría / Área"         value={sol.secretaria} />
-          <ReadOnlyField label="Solicitante"               value={sol.solicitante} />
-          <ReadOnlyField label="Correo"                    value={sol.correo} />
-          <ReadOnlyField label="Período"                   value={sol.periodo} />
-          <ReadOnlyField label="Fecha de Creación"         value={sol.fechaCreacion} />
-          <ReadOnlyField label="Fecha de Recepción DO"     value={sol.vigenciaInicio} />
-          <ReadOnlyField label="Extemporánea"              value={sol.esExtemporanea ? "Sí" : "No"} />
-          {sol.folioDictamen && (
-            <ReadOnlyField label="Folio de Dictamen"       value={sol.folioDictamen} />
-          )}
-        </div>
-      </SectionCard>
-
-      {/* Actividades / Funciones según tipo */}
-      {sol.tipo === "Prestacion de Servicios" && (
-        <>
-          <SectionCard title="I.1 Objeto de la Contratación">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Prestación de servicios profesionales para el desarrollo, implementación y seguimiento de actividades especializadas en el marco del programa institucional correspondiente.
-            </p>
-          </SectionCard>
-          <SectionCard title="I.2 Actividades a Realizar">
-            <ReadOnlyList items={["Coordinar y ejecutar actividades del programa", "Elaborar informes periódicos de avance", "Supervisar el cumplimiento de metas"]} />
-          </SectionCard>
-          <SectionCard title="I.3 Responsabilidades">
-            <ReadOnlyList items={["Cumplir con los plazos establecidos", "Reportar avances semanales al superior jerárquico"]} />
-          </SectionCard>
-        </>
-      )}
-
-      {sol.tipo === "Nombramiento Tiempo Det." && (
-        <>
-          <SectionCard title="I.1 Objeto del Nombramiento">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Nombramiento por tiempo determinado para cubrir necesidades operativas y administrativas del área solicitante, conforme al tabulador autorizado.
-            </p>
-          </SectionCard>
-          <SectionCard title="I.2 Funciones Principales">
-            <ReadOnlyList items={["Coordinar procesos administrativos del área", "Supervisar personal operativo", "Elaborar reportes de gestión"]} />
-          </SectionCard>
-          <SectionCard title="I.3 Marco Normativo">
-            <ReadOnlyList items={["Ley Orgánica de la Administración Pública", "Reglamento Interior de la Secretaría", "Lineamientos de Contratación vigentes"]} />
-          </SectionCard>
-        </>
-      )}
-
-      <SectionCard num="II" title="Perfil Requerido">
-        <div className="flex flex-col gap-3">
-          <ReadOnlyField label="Escolaridad Mínima" value="Licenciatura" />
-          <div>
-            <span className="text-xs text-muted-foreground mb-1 block">Áreas de Experiencia</span>
-            <ReadOnlyList items={["Administración Pública", "Tecnologías de la Información"]} />
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
-        {(raw?.adjunto ?? []).length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {(raw.adjunto as any[]).map((adj: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-                <FileText className="h-8 w-8 text-secondary" />
-                <div>
-                  <p className="text-sm font-medium text-card-foreground">{adj.nombre_archivo}</p>
-                  <p className="text-xs text-muted-foreground">{adj.tipo ?? "PDF"} — {formatFecha(adj.fecha_subida)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Sin documentos adjuntos registrados.</p>
-        )}
-      </SectionCard>
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item, i) => (
+        <span key={i} className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-card-foreground">
+          {item}
+        </span>
+      ))}
     </div>
   )
 }
 
-// destinatario para el panel de emisión
+function PerfilCompetenciaCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary/10 text-secondary">{icon}</span>
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</span>
+      </div>
+      <PerfilChips value={value} />
+    </div>
+  )
+}
+
+function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
+  const raw = sol._raw
+  return (
+    <SectionCard num="I" title="Datos Generales">
+      <div className="grid gap-4 md:grid-cols-2">
+        <ReadOnlyField label="Secretaría"                            value={sol.secretaria} />
+        <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={raw?.unidad_administrativa ?? "—"} />
+        <ReadOnlyField label="Unidad Responsable del Gasto"          value={raw?.unidad_responsable ?? "—"} />
+        <ReadOnlyField label="Programa o Proyecto"                   value={raw?.programa_proyecto ?? "—"} />
+        <ReadOnlyField label="Régimen de Contratación"               value={sol.regimen} />
+        <ReadOnlyField label="Tipo de Actividades"                   value={sol.tipoActividades} />
+        <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
+        <ReadOnlyField label="Denominación"                          value={sol.denominacion} />
+        <ReadOnlyField label="Vigencia Inicio"                       value={sol.vigenciaInicio} />
+        <ReadOnlyField label="Vigencia Término"                      value={sol.vigenciaFin} />
+        <ReadOnlyField label="Importe Bruto"                         value={sol.importeBruto} />
+      </div>
+    </SectionCard>
+  )
+}
+
+function SeccionRenovacion({ sol }: { sol: SolicitudDetalle }) {
+  const folioDictamen =
+    sol.folioDictamen ??
+    resolverFolioDictamen(sol._raw) ??
+    null
+
+  return (
+    <SectionCard title="Renovación">
+      <div className="grid gap-4 md:grid-cols-2">
+        <ReadOnlyField label="¿Es Renovación?" value={sol.esRenovacion ? "SÍ" : "NO"} />
+        <ReadOnlyField
+          label="Folio del Dictamen"
+          value={folioDictamen ? formatearFolio(folioDictamen) : "—"}
+        />
+      </div>
+    </SectionCard>
+  )
+}
+
+function SeccionPerfil({ raw }: { raw: any }) {
+  return (
+    <SectionCard num="II" title="Perfil Requerido">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/15 text-secondary">
+            <GraduationCap className="h-4 w-4" />
+          </span>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Escolaridad Mínima</span>
+            <span className="text-sm font-semibold text-card-foreground">{formatEscolaridad(raw?.escolaridad)}</span>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <PerfilCompetenciaCard icon={<Brain className="h-3.5 w-3.5" />}  label="Competencias Administrativas" value={raw?.comp_adm ?? "—"} />
+          <PerfilCompetenciaCard icon={<Wrench className="h-3.5 w-3.5" />} label="Competencias Técnicas"        value={raw?.comp_tec ?? "—"} />
+          <PerfilCompetenciaCard icon={<Heart className="h-3.5 w-3.5" />}  label="Competencias Sociales"        value={raw?.comp_soc ?? "—"} />
+          <PerfilCompetenciaCard icon={<Star className="h-3.5 w-3.5" />}   label="Valores"                      value={raw?.valores ?? "—"} />
+        </div>
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary/10 text-secondary">
+              <Briefcase className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Áreas de Experiencia</span>
+          </div>
+          <PerfilChips value={raw?.areas_exp ?? "—"} />
+        </div>
+      </div>
+    </SectionCard>
+  )
+}
+
+function SeccionDocumentosAdjuntos({ raw }: { raw: any }) {
+  return (
+    <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
+      {(raw?.adjunto ?? []).length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {(raw.adjunto as any[]).map((adj: any, i: number) => (
+            <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
+              <FileText className="h-8 w-8 text-secondary" />
+              <div>
+                <p className="text-sm font-medium text-card-foreground">{adj.nombre_archivo}</p>
+                <p className="text-xs text-muted-foreground">{adj.tipo ?? "PDF"} — {formatFecha(adj.fecha_subida)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Sin documentos adjuntos registrados.</p>
+      )}
+    </SectionCard>
+  )
+}
+
+function ExpedienteFiltro1({ sol }: { sol: SolicitudDetalle }) {
+  const raw = sol._raw
+  const actividades: string[]       = Array.isArray(raw?.actividades)      ? raw.actividades.filter(Boolean)      : []
+  const responsabilidades: string[] = Array.isArray(raw?.responsabilidades) ? raw.responsabilidades.filter(Boolean) : []
+  return (
+    <div className="flex flex-col gap-4">
+      <SeccionDatosGenerales sol={sol} />
+      <SeccionRenovacion sol={sol} />
+      <SectionCard title="I.1 Objeto de la Contratación">
+        <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+          {raw?.objeto || <span className="text-muted-foreground">—</span>}
+        </p>
+      </SectionCard>
+      <SectionCard title="I.2 Actividades a Realizar">
+        {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
+      </SectionCard>
+      <SectionCard title="I.3 Responsabilidades">
+        {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
+      </SectionCard>
+      <SeccionPerfil raw={raw} />
+      <SeccionDocumentosAdjuntos raw={raw} />
+    </div>
+  )
+}
+
+function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
+  const raw = sol._raw
+  const actividades: string[]        = Array.isArray(raw?.actividades)        ? raw.actividades.filter(Boolean)        : []
+  const responsabilidades: string[]  = Array.isArray(raw?.responsabilidades)   ? raw.responsabilidades.filter(Boolean)   : []
+  const marcoNormativo: string[]     = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
+  const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
+  const resguardoActivos: string[]   = Array.isArray(raw?.resguardo_activos)   ? raw.resguardo_activos.filter(Boolean)   : []
+  return (
+    <div className="flex flex-col gap-4">
+      <SeccionDatosGenerales sol={sol} />
+      <SeccionRenovacion sol={sol} />
+      <SectionCard title="Tabulador — Nivel y Categoría">
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReadOnlyField label="Nivel"        value={raw?.nivel_tabulador ?? "—"} />
+          <ReadOnlyField label="Categoría"    value={raw?.categoria_tabulador ?? "—"} />
+          <ReadOnlyField label="Equivalencia" value={raw?.equivalencia_tabulador ?? "—"} />
+          <ReadOnlyField label="Importe Bruto conforme al Tabulador" value={sol.importeBruto} />
+        </div>
+      </SectionCard>
+      <SectionCard title="I.1 Objeto del Nombramiento">
+        <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+          {raw?.objeto || <span className="text-muted-foreground">—</span>}
+        </p>
+      </SectionCard>
+      <SectionCard title="I.2 Funciones Principales">
+        {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
+      </SectionCard>
+      <SectionCard title="I.3 Responsabilidades">
+        {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
+      </SectionCard>
+      <SectionCard title="I.4 Marco Normativo">
+        {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
+      </SectionCard>
+      <SectionCard title="I.5 Condiciones y Riesgos">
+        {condicionesRiesgos.length > 0 ? <ReadOnlyList items={condicionesRiesgos} /> : <p className="text-sm text-muted-foreground">—</p>}
+      </SectionCard>
+      <SectionCard title="I.6 Resguardo Personalizado de Activos">
+        {resguardoActivos.length > 0 ? <ReadOnlyList items={resguardoActivos} /> : <p className="text-sm text-muted-foreground">—</p>}
+      </SectionCard>
+      <SeccionPerfil raw={raw} />
+      <SeccionDocumentosAdjuntos raw={raw} />
+    </div>
+  )
+}
+
+function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
+  const raw = sol._raw
+  const actividades: string[]       = Array.isArray(raw?.actividades)      ? raw.actividades.filter(Boolean)      : []
+  const responsabilidades: string[] = Array.isArray(raw?.responsabilidades) ? raw.responsabilidades.filter(Boolean) : []
+  return (
+    <div className="flex flex-col gap-4">
+      <SeccionDatosGenerales sol={sol} />
+      <SeccionRenovacion sol={sol} />
+      <SectionCard title="I.1 Objeto de la Contratación">
+        <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+          {raw?.objeto || <span className="text-muted-foreground">—</span>}
+        </p>
+      </SectionCard>
+      <SectionCard title="I.2 Actividades a Realizar">
+        {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
+      </SectionCard>
+      <SectionCard title="I.3 Responsabilidades">
+        {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
+      </SectionCard>
+      <SeccionPerfil raw={raw} />
+      <SeccionDocumentosAdjuntos raw={raw} />
+    </div>
+  )
+}
+
+
+function FolioDictamenCard({
+  folioDictamen,
+  onAsignar,
+}: {
+  folioDictamen: string | null
+  onAsignar: (folio: string) => Promise<void>
+}) {
+  const today = new Date()
+  const [mes,         setMes]         = useState(String(today.getMonth() + 1).padStart(2, "0"))
+  const [anio,        setAnio]        = useState(String(today.getFullYear()))
+  const [consecutivo, setConsecutivo] = useState("1")
+  const [guardando,   setGuardando]   = useState(false)
+
+  const folioPreview = `${String(consecutivo).padStart(2, "0")}/${mes}/${anio}`
+
+  const handleAsignar = async () => {
+    if (!consecutivo || !mes || !anio) return
+    setGuardando(true)
+    await onAsignar(folioPreview)
+    setGuardando(false)
+  }
+
+  if (folioDictamen) {
+    return (
+      <Card className="shadow-sm border-secondary/30 border-2 bg-secondary/[0.03]">
+        <CardContent className="flex items-center gap-3 p-4">
+          <Stamp className="h-5 w-5 text-secondary" />
+          <div>
+            <p className="text-sm font-semibold text-card-foreground">Folio de Dictamen Asignado</p>
+            <p className="text-xs text-muted-foreground font-mono">{formatearFolio(folioDictamen)}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="shadow-sm border-border">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+          <Stamp className="h-4 w-4 text-secondary" />Asignar Folio de Dictamen
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Asigne el número secuencial de dictamen antes de aprobar.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Mes</Label>
+            <Input value={mes} onChange={e => setMes(e.target.value.replace(/\D/g, "").slice(0, 2))} placeholder="03" className="bg-background font-mono" maxLength={2} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Año</Label>
+            <Input value={anio} onChange={e => setAnio(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="2026" className="bg-background font-mono" maxLength={4} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Consecutivo</Label>
+            <Input type="number" min={1} value={consecutivo} onChange={e => setConsecutivo(e.target.value)} className="bg-background font-mono" />
+            <span className="text-[10px] text-muted-foreground">Auto-calculado</span>
+          </div>
+        </div>
+        <div className="rounded-md bg-muted/50 px-3 py-2">
+          <span className="text-xs text-muted-foreground">Folio de dictamen: </span>
+          <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview}</span>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Formato NN/MM/AAAA: número secuencial / mes / año.</p>
+        </div>
+        <Button onClick={handleAsignar} disabled={guardando || !consecutivo || !mes || !anio} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+          {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
+          Asignar Folio de Dictamen
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
 
 const AVAILABLE_DESTINATARIOS = [
   "URG-01 Oficina del Secretario", "URG-02 Dirección General", "URG-03 Coordinación Administrativa",
@@ -397,12 +669,16 @@ const AVAILABLE_DESTINATARIOS = [
   "UEFA Sec. de Gobierno", "UEFA Sec. de Obras", "UEFA Sec. de Desarrollo",
   "Dir. Gral. de Administración y Finanzas", "Dir. Gral. de Profesionalización", "Dir. Gral. de Recursos Humanos",
 ]
+
+// Pagina Principal
 export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPageProps) {
   const { user } = useAuth()
+
   const [solicitud,  setSolicitud]  = useState<SolicitudDetalle | null>(null)
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
   const [guardando,  setGuardando]  = useState(false)
+
   const [activeTab,          setActiveTab]          = useState<ActiveTab>("review")
   const [observacionGeneral, setObservacionGeneral] = useState("")
   const [observacionError,   setObservacionError]   = useState("")
@@ -411,15 +687,13 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   const [showConfirmacion,   setShowConfirmacion]   = useState<string | null>(null)
   const [checklistErrors,    setChecklistErrors]    = useState<Record<string, boolean>>({})
 
-  // Emisión (Filtro 3)
   const today = new Date().toISOString().slice(0, 10)
-  const [fechaDictaminacion,   setFechaDictaminacion]   = useState(today)
-  const [modalidadFirma,       setModalidadFirma]       = useState<"electronica" | "autografa">("electronica")
-  const [selectedDestinatarios,setSelectedDestinatarios]= useState<string[]>([])
-  const [archivoSubido,        setArchivoSubido]        = useState(false)
-  const [autografaDescargado,  setAutografaDescargado]  = useState(false)
+  const [fechaDictaminacion,    setFechaDictaminacion]    = useState(today)
+  const [modalidadFirma,        setModalidadFirma]        = useState<"electronica" | "autografa">("electronica")
+  const [selectedDestinatarios, setSelectedDestinatarios] = useState<string[]>([])
+  const [archivoSubido,         setArchivoSubido]         = useState(false)
+  const [autografaDescargado,   setAutografaDescargado]   = useState(false)
 
-  // Fetch solicitud por ID
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
     try {
@@ -432,15 +706,29 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         const res2  = await fetch(`/api/solicitudes?id=${solicitudId}`)
         const json2 = await res2.json()
         const item2 = json2.ok ? (json2.data ?? []).find((d: any) => String(d.id) === String(solicitudId)) : null
-        if (item2) { setSolicitud(mapBDtoDetalle(item2)); return }
+        if (item2) { setSolicitud(mapBDtoDetalle(item2._raw ?? item2)); return }
         setError("Solicitud no encontrada en este filtro")
         return
       }
-      const mapped = mapBDtoDetalle(item)
+
+      const rawBase = item._raw ?? item
+      const folioDictamenResuelto =
+        resolverFolioDictamen(item) ??
+        resolverFolioDictamen(rawBase)
+
+      const merged = {
+        ...rawBase,
+        folioDictamen: folioDictamenResuelto,
+        dictamen:      rawBase.dictamen ?? item.dictamen ?? null,
+        _raw:          rawBase,
+      }
+
+      const mapped = mapBDtoDetalle(merged)
       setSolicitud(mapped)
+
       if (filtro === 3) {
         const urgDefault = "URG-01 Oficina del Secretario"
-        const uefaMatch = AVAILABLE_DESTINATARIOS.find(d => d.includes(mapped.secretaria.replace("Sec. de ", "")))
+        const uefaMatch  = AVAILABLE_DESTINATARIOS.find(d => d.includes(mapped.secretaria.replace("Sec. de ", "")))
         setSelectedDestinatarios([urgDefault, ...(uefaMatch ? [uefaMatch] : [])])
       }
     } catch { setError("Error de conexión al servidor") }
@@ -448,6 +736,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   }, [solicitudId, filtro])
 
   useEffect(() => { cargar() }, [cargar])
+
   const updateChecklist = useCallback((key: string, valor: ChecklistValor, obs?: string) => {
     setSolicitud(prev => {
       if (!prev) return prev
@@ -458,14 +747,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
           ...prev.checklistDO,
           [key]: {
             valor:       valor !== undefined ? valor : current.valor,
-            observacion: obs !== undefined   ? obs   : current.observacion,
+            observacion: obs   !== undefined ? obs   : current.observacion,
           },
         },
       }
     })
   }, [])
 
-  const checklistItems = useMemo(() => solicitud ? getChecklistItems(solicitud.tipo) : [], [solicitud])
+  const checklistItems = useMemo(() => getChecklistItems(filtro), [filtro])
 
   const checklistStats = useMemo(() => {
     if (!solicitud) return { completed: 0, total: 0, hasNo: false, noCount: 0, allDone: false, noWithoutObs: 0 }
@@ -478,15 +767,19 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     })
     return { completed, total, hasNo: noCount > 0, noCount, allDone: completed === total, noWithoutObs }
   }, [solicitud, checklistItems])
-  const hasFolioDictamen = !!solicitud?.folioDictamen
+
+  const folioDictamenResuelto = useMemo(() => {
+    if (!solicitud) return null
+    return solicitud.folioDictamen ?? resolverFolioDictamen(solicitud._raw) ?? null
+  }, [solicitud])
+
+  const hasFolioDictamen    = !!folioDictamenResuelto
   const canApproveChecklist = checklistStats.allDone && !checklistStats.hasNo
   const canApprove =
     filtro === 3 ? sinObservacion
     : filtro === 2 ? (canApproveChecklist && hasFolioDictamen)
     : canApproveChecklist
-  const canObservar =
-    filtro === 3 ? !sinObservacion
-    : checklistStats.hasNo
+  const canObservar     = filtro === 3 ? !sinObservacion : checklistStats.hasNo
   const observarBlocked = filtro !== 3 && checklistStats.noWithoutObs > 0
 
   const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string) => {
@@ -497,18 +790,20 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          solicitudId:  solicitud.id,
+          solicitudId:   solicitud.id,
           filtro,
           accion,
-          usuarioId:    (user as any)?.id ?? "",
+          usuarioId:     (user as any)?.id ?? "",
           observaciones: observaciones ? [observaciones] : undefined,
         }),
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? `Error al ${accion}`); return }
-
-      // Actualizar estado local
-      setSolicitud(prev => prev ? { ...prev, estado: json.estadoNuevo ?? prev.estado } : prev)
+      setSolicitud(prev => prev ? {
+        ...prev,
+        estado:        json.estadoNuevo ?? prev.estado,
+        folioDictamen: json.folioDictamen ?? prev.folioDictamen,
+      } : prev)
       return json.estadoNuevo as string
     } catch { alert("Error de conexión") }
     finally { setGuardando(false) }
@@ -538,8 +833,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
       if (nuevoEstado) { setObservacionGeneral(""); setShowConfirmacion("Solicitud observada y regresada a URG.") }
       return
     }
-
-    // Validar observaciones del checklist
     const errors: Record<string, boolean> = {}
     let hasErrors = false
     checklistItems.forEach(item => {
@@ -547,7 +840,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
       if (s?.valor === "no" && !s.observacion.trim()) { errors[item.key] = true; hasErrors = true }
     })
     if (hasErrors) { setChecklistErrors(errors); return }
-
     const resumen = checklistItems
       .filter(item => solicitud?.checklistDO[item.key]?.valor === "no")
       .map(item => `${item.num}. ${item.label}: ${solicitud?.checklistDO[item.key]?.observacion}`)
@@ -556,6 +848,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     const nuevoEstado = await patchEstado("observar", obs)
     if (nuevoEstado) { setObservacionGeneral(""); setChecklistErrors({}); setShowConfirmacion("Solicitud observada y regresada a URG.") }
   }
+
   const handleEmitir = () => {
     if (!solicitud) return
     setSolicitud(prev => prev ? { ...prev, estado: "Emitido" } : prev)
@@ -566,11 +859,34 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     )
   }
 
-  const isEmitido  = solicitud?.estado === "Emitido"
-  const isAprobado = solicitud?.estado === "Aprobado"
+  const handleAsignarFolioDictamen = useCallback(async (folio: string) => {
+    if (!solicitud) return
+    setSolicitud(prev => prev ? { ...prev, folioDictamen: folio } : prev)
+    try {
+      const res = await fetch("/api/filtro", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          solicitudId:   solicitud.id,
+          accion:        "asignarFolio",
+          folioDictamen: folio,
+          usuarioId:     (user as any)?.id ?? "",
+          filtro,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) console.warn("[asignarFolio] API error:", json?.error)
+    } catch (err) {
+      console.error("[asignarFolio] Network error:", err)
+    }
+  }, [solicitud, filtro, user])
+
+  const isEmitido      = solicitud?.estado === "Emitido"
+  const isAprobado     = solicitud?.estado === "Aprobado"
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
-  const canEmit = selectedDestinatarios.length > 0 && fechaDictaminacion &&
+  const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
     (modalidadFirma === "electronica" || (autografaDescargado && archivoSubido))
+
   if (loading) return (
     <div className="flex items-center justify-center py-24 gap-3">
       <Loader2 className="h-8 w-8 animate-spin text-secondary" />
@@ -588,12 +904,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     </div>
   )
 
-  // ── RENDER ──
   return (
     <PageLayout noContainer>
     <div className="flex flex-col gap-4 h-full">
 
-      {/* Overlays de confirmación */}
       {showConfirmacion && !isEmitido && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
           <Card className="w-full max-w-md shadow-lg border-secondary/30 border-2">
@@ -601,13 +915,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
               <CheckCircle2 className="h-12 w-12 text-secondary" />
               <p className="text-base font-semibold text-card-foreground text-center">{showConfirmacion}</p>
               {activeTab === "emision" ? (
-                <Button onClick={() => setShowConfirmacion(null)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                  Continuar a Emisión
-                </Button>
+                <Button onClick={() => setShowConfirmacion(null)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">Continuar a Emisión</Button>
               ) : (
-                <Button onClick={() => onBack(filtro)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                  Regresar a bandeja
-                </Button>
+                <Button onClick={() => onBack(filtro)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">Regresar a bandeja</Button>
               )}
             </CardContent>
           </Card>
@@ -622,9 +932,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
               <p className="text-base font-semibold text-card-foreground text-center">{showConfirmacion}</p>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={() => setShowConfirmacion(null)}>Ver Expediente</Button>
-                <Button onClick={() => onBack(filtro)} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  Regresar a bandeja
-                </Button>
+                <Button onClick={() => onBack(filtro)} className="bg-primary text-primary-foreground hover:bg-primary/90">Regresar a bandeja</Button>
               </div>
             </CardContent>
           </Card>
@@ -653,7 +961,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         </div>
       )}
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => onBack(filtro)} className="gap-1.5">
@@ -669,9 +977,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                   <Lock className="h-3 w-3" />Emitido
                 </Badge>
               )}
-              {solicitud.folioDictamen && (
+              {folioDictamenResuelto && (
                 <Badge className="bg-secondary/15 text-secondary border-0 text-xs gap-1">
-                  <Stamp className="h-3 w-3" />Dict. {solicitud.folioDictamen}
+                  <Stamp className="h-3 w-3" />Dict. {formatearFolio(folioDictamenResuelto)}
                 </Badge>
               )}
               {solicitud.esExtemporanea && (
@@ -681,28 +989,33 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
             <p className="text-xs text-muted-foreground">
               {solicitud.folioJustificacion} — {solicitud.tipo} — {solicitud.secretaria}
             </p>
+            {solicitud.denominacion && solicitud.denominacion !== "—" && (
+              <p className="text-xs text-muted-foreground font-medium">{solicitud.denominacion}</p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() =>
-            generateJustificacionPDF({
+          <Button variant="outline" size="sm" className="gap-1.5"
+            onClick={() => generateJustificacionPDF({
               folio: solicitud.folioJustificacion, tipo: solicitud.tipo as any,
               secretaria: solicitud.secretaria, unidadAdministrativa: solicitud.unidadAdministrativa,
-              denominacion: solicitud.tipo, vigenciaInicio: solicitud.vigenciaInicio,
-              vigenciaFin: solicitud.vigenciaFin, importeBruto: solicitud.importeBruto,
-              esRenovacion: solicitud.esRenovacion, fecha: solicitud.fechaCreacion,
-              firmadoDigitalmente: true,
-            })}>
+              denominacion: solicitud.denominacion !== "—" ? solicitud.denominacion : solicitud.tipo,
+              vigenciaInicio: solicitud.vigenciaInicio, vigenciaFin: solicitud.vigenciaFin,
+              importeBruto: solicitud.importeBruto, esRenovacion: solicitud.esRenovacion,
+              folioAnterior: solicitud.folioAnterior ?? undefined,
+              fecha: solicitud.fechaCreacion, firmadoDigitalmente: true,
+            })}
+          >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           {!isEmitido && <SlaIndicatorLarge diasRestantes={solicitud.slaRestante} />}
         </div>
       </div>
 
-      {/*  Vista dividida  */}
+      {/* Vista dividida */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
 
-        {/*  Expediente */}
+        {/* Expediente */}
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
             {solicitud.observacionesPrevias.length > 0 && (
@@ -723,15 +1036,16 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                 </CardContent>
               </Card>
             )}
-            <ExpedienteGenerico sol={solicitud} />
+            {filtro === 1 && <ExpedienteFiltro1 sol={solicitud} />}
+            {filtro === 2 && <ExpedienteFiltro2 sol={solicitud} />}
+            {filtro === 3 && <ExpedienteFiltro3 sol={solicitud} />}
           </div>
         </ScrollArea>
 
-        {/* Panel de revisión */}
+        {/* Panel revisión */}
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
 
-            {/* Tabs */}
             <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
               {!isEmitido && (
                 <button onClick={() => setActiveTab("review")}
@@ -751,12 +1065,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
               </button>
             </div>
 
-            {/* Tabla revision */}
             {activeTab === "review" && !isEmitido && (
               <>
-                {/* Filtro 1/2 Checklist */}
                 {filtro !== 3 && (
                   <>
+                    {filtro === 2 && (
+                      <FolioDictamenCard folioDictamen={folioDictamenResuelto} onAsignar={handleAsignarFolioDictamen} />
+                    )}
+
                     <Card className={`shadow-sm border-2 ${checklistStats.hasNo ? "border-destructive/30 bg-destructive/[0.03]" : checklistStats.allDone ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -775,10 +1091,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                           </Badge>
                         </div>
                         <div className="h-2 w-full rounded-full bg-muted">
-                          <div
-                            className={`h-2 rounded-full transition-all ${checklistStats.hasNo ? "bg-destructive" : checklistStats.allDone ? "bg-secondary" : "bg-primary"}`}
-                            style={{ width: `${checklistStats.total > 0 ? (checklistStats.completed / checklistStats.total) * 100 : 0}%` }}
-                          />
+                          <div className={`h-2 rounded-full transition-all ${checklistStats.hasNo ? "bg-destructive" : checklistStats.allDone ? "bg-secondary" : "bg-primary"}`}
+                            style={{ width: `${checklistStats.total > 0 ? (checklistStats.completed / checklistStats.total) * 100 : 0}%` }} />
                         </div>
                       </CardContent>
                     </Card>
@@ -787,12 +1101,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                       <CardContent className="p-0">
                         <div className="divide-y divide-border">
                           {checklistItems.map(item => {
-                            const s      = solicitud.checklistDO[item.key]
-                            const valor  = s?.valor ?? null
+                            const s       = solicitud.checklistDO[item.key]
+                            const valor   = s?.valor ?? null
                             const itemObs = s?.observacion ?? ""
                             const hasErr  = checklistErrors[item.key]
                             const isExtra = item.num > 16
-
                             return (
                               <div key={item.key}>
                                 {item.num === 17 && (
@@ -812,19 +1125,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                                         {item.label}
                                       </span>
                                       <div className="flex flex-wrap gap-2">
-                                        <RadioOption value="si"       selected={valor === "si"}       onChange={() => updateChecklist(item.key, valor === "si"       ? null : "si")}       label="Sí"       colorClass="text-secondary bg-secondary/10" />
-                                        <RadioOption value="no"       selected={valor === "no"}       onChange={() => updateChecklist(item.key, valor === "no"       ? null : "no")}       label="No"       colorClass="text-destructive bg-destructive/10" />
+                                        <RadioOption value="si"       selected={valor === "si"}       onChange={() => updateChecklist(item.key, valor === "si"       ? null : "si")}       label="Sí"        colorClass="text-secondary bg-secondary/10" />
+                                        <RadioOption value="no"       selected={valor === "no"}       onChange={() => updateChecklist(item.key, valor === "no"       ? null : "no")}       label="No"        colorClass="text-destructive bg-destructive/10" />
                                         <RadioOption value="noAplica" selected={valor === "noAplica"} onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica")} label="No Aplica" colorClass="text-muted-foreground bg-muted" />
                                       </div>
                                       {(valor === "no" || itemObs) && (
                                         <div className="flex flex-col gap-1">
-                                          <Textarea
-                                            value={itemObs}
-                                            onChange={e => updateChecklist(item.key, valor, e.target.value)}
+                                          <Textarea value={itemObs} onChange={e => updateChecklist(item.key, valor, e.target.value)}
                                             placeholder={valor === "no" ? "Obligatorio: describa la observación..." : "Observaciones de este punto..."}
-                                            className={`bg-background min-h-10 text-xs resize-none ${hasErr ? "border-destructive" : ""}`}
-                                            rows={2}
-                                          />
+                                            className={`bg-background min-h-10 text-xs resize-none ${hasErr ? "border-destructive" : ""}`} rows={2} />
                                           {hasErr && <span className="text-[10px] text-destructive font-medium">Debe escribir una observación para los puntos marcados como "No"</span>}
                                         </div>
                                       )}
@@ -838,7 +1147,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                       </CardContent>
                     </Card>
 
-                    {/* Filtro 2 */}
                     {filtro === 2 && canApproveChecklist && !hasFolioDictamen && (
                       <Card className="shadow-sm border-primary/40 border-2 bg-primary/[0.04]">
                         <CardContent className="flex items-start gap-3 p-4">
@@ -851,7 +1159,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                       </Card>
                     )}
 
-                    {/* Observación general Filtro  */}
                     <Card className="shadow-sm border-border">
                       <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -867,7 +1174,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                   </>
                 )}
 
-                {/* Simplificado */}
                 {filtro === 3 && (
                   <Card className={`shadow-sm border-2 ${sinObservacion ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
                     <CardHeader className="pb-3">
@@ -901,7 +1207,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                   </Card>
                 )}
 
-                {/* Avisos */}
                 {canObservar && observarBlocked && (
                   <Card className="shadow-sm border-destructive/40 border-2 bg-destructive/[0.04]">
                     <CardContent className="flex items-start gap-3 p-4">
@@ -925,10 +1230,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                   </Card>
                 )}
 
-                {/* Botones de acción */}
                 <Card className="shadow-sm border-border sticky bottom-0">
                   <CardContent className="flex items-center justify-between p-4">
-                    <Button variant="outline" onClick={handleObservar} disabled={!canObservar || observarBlocked || guardando}
+                    <Button variant="outline" onClick={handleObservar}
+                      disabled={!canObservar || observarBlocked || guardando}
                       className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
                       {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}Observar
                     </Button>
@@ -942,10 +1247,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
               </>
             )}
 
-            {/* Emisión */}
             {activeTab === "emision" && (
               isEmitido ? (
-                /* Vista bloqueada post-emisión */
                 <Card className="shadow-sm border-primary border-2 bg-primary/5">
                   <CardContent className="flex items-center gap-3 p-4">
                     <Lock className="h-6 w-6 text-primary" />
@@ -956,7 +1259,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                   </CardContent>
                 </Card>
               ) : (
-                /* Panel de emisión */
                 <div className="flex flex-col gap-4">
                   <Card className="shadow-sm border-primary/30 border-2 bg-primary/[0.03]">
                     <CardContent className="flex items-center gap-3 p-4">
@@ -967,18 +1269,18 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                       </div>
                     </CardContent>
                   </Card>
-
                   <Card className="shadow-sm border-border">
                     <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-card-foreground">Fecha de Dictaminación</CardTitle></CardHeader>
                     <CardContent>
                       <Input type="date" value={fechaDictaminacion} onChange={e => setFechaDictaminacion(e.target.value)} className="bg-background w-48" />
                     </CardContent>
                   </Card>
-
                   <Card className="shadow-sm border-border">
                     <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-card-foreground">Modalidad de Firma</CardTitle></CardHeader>
                     <CardContent>
-                      <RadioGroup value={modalidadFirma} onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } }} className="flex flex-col gap-3">
+                      <RadioGroup value={modalidadFirma}
+                        onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } }}
+                        className="flex flex-col gap-3">
                         {[
                           { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
                           { value: "autografa",   label: "Firma Autógrafa",   desc: "Descargue, firme y suba el documento" },
@@ -995,7 +1297,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                       </RadioGroup>
                     </CardContent>
                   </Card>
-
                   <Card className="shadow-sm border-border">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1013,10 +1314,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                           </label>
                         ))}
                       </div>
-                      {selectedDestinatarios.length === 0 && <p className="text-xs text-destructive mt-2 font-medium">Debe seleccionar al menos un destinatario</p>}
+                      {selectedDestinatarios.length === 0 && (
+                        <p className="text-xs text-destructive mt-2 font-medium">Debe seleccionar al menos un destinatario</p>
+                      )}
                     </CardContent>
                   </Card>
-
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-end p-4">
                       <Button onClick={handleEmitir} disabled={!canEmit}
@@ -1029,7 +1331,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
               )
             )}
 
-            {/*  Historial */}
             {activeTab === "historial" && (
               <Card className="shadow-sm border-border">
                 <CardHeader className="pb-3">

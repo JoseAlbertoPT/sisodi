@@ -1,27 +1,40 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+const ESTADOS_EXCLUIDOS_UEFA = ["En Captura", "Borrador"]
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const estadoNombre = searchParams.get("estado") ?? "En Captura"
     const usuarioId    = searchParams.get("usuarioId")
 
+    let where: any = {}
 
-    const estado = await prisma.estado.findFirst({
-      where: { nombre: estadoNombre },
-    })
-    if (!estado) {
-      return NextResponse.json({ ok: true, data: [] })
+    if (estadoNombre !== "todos") {
+      const estado = await prisma.estado.findFirst({
+        where: { nombre: { equals: estadoNombre, mode: "insensitive" } },
+      })
+      if (!estado) return NextResponse.json({ ok: true, data: [] })
+      where.estado_id = estado.id
+    } else {
+      const estadosExcluidos = await prisma.estado.findMany({
+        where: { nombre: { in: ESTADOS_EXCLUIDOS_UEFA, mode: "insensitive" } },
+        select: { id: true },
+      })
+      if (estadosExcluidos.length > 0) {
+        where.NOT = { estado_id: { in: estadosExcluidos.map((e) => e.id) } }
+      }
     }
 
-    const where: any = { estado_id: estado.id }
     if (usuarioId) where.usuario_id = usuarioId
+
     const solicitudes = await prisma.solicitud.findMany({
       where,
       include: {
-        estado:  true,
-        periodo: true,
+        estado:   true,
+        periodo:  true,
+        dictamen: true,
         usuario: {
           select: {
             id:     true,
@@ -34,16 +47,31 @@ export async function GET(req: NextRequest) {
         },
         historial_solicitud: {
           orderBy: { fecha: "desc" },
-          take: 1,
           include: {
-            estado_historial_solicitud_estado_nuevo_idToestado: true,
+            estado_historial_solicitud_estado_nuevo_idToestado:    true,
+            estado_historial_solicitud_estado_anterior_idToestado: true,
+            usuario: { select: { id: true, nombre: true, correo: true } },
           },
         },
       },
       orderBy: { fecha_creacion: "desc" },
     })
 
-    return NextResponse.json({ ok: true, data: solicitudes })
+    const enriched = solicitudes.map((sol) => {
+      const folioDictamen =
+        sol.dictamen?.folio ??
+        (sol as any).folio_dictamen ??
+        (sol as any).folio_anterior ??
+        null
+
+      return {
+        ...sol,
+        folioDictamen,
+        _raw: { ...sol, folioDictamen },
+      }
+    })
+
+    return NextResponse.json({ ok: true, data: enriched })
   } catch (error: any) {
     console.error("[GET /api/validacion]", error)
     return NextResponse.json(
@@ -65,11 +93,19 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
+    const idNum = Number(solicitudId)
+    if (isNaN(idNum)) {
+      return NextResponse.json(
+        { ok: false, error: "solicitudId debe ser un número válido" },
+        { status: 400 }
+      )
+    }
 
     const solicitud = await prisma.solicitud.findUnique({
-      where: { id: solicitudId },
+      where:   { id: idNum },
       include: { estado: true },
     })
+
     if (!solicitud) {
       return NextResponse.json(
         { ok: false, error: "Solicitud no encontrada" },
@@ -77,9 +113,8 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-
     let estadoNuevo = await prisma.estado.findFirst({
-      where: { nombre: nuevoEstado },
+      where: { nombre: { equals: nuevoEstado, mode: "insensitive" } },
     })
     if (!estadoNuevo) {
       estadoNuevo = await prisma.estado.create({
@@ -87,29 +122,28 @@ export async function PATCH(req: NextRequest) {
       })
     }
 
-
     const solicitudActualizada = await prisma.solicitud.update({
-      where: { id: solicitudId },
-      data:  { estado_id: estadoNuevo.id },
+      where:   { id: idNum },
+      data:    {
+        estado_id: estadoNuevo.id,
+        ...(nuevoEstado === "Enviada a Validacion (UEFA)" && {
+          fecha_envio: new Date(),
+        }),
+      },
       include: { estado: true, periodo: true },
     })
 
-
     await prisma.historial_solicitud.create({
       data: {
-        solicitud_id:       solicitudId,
+        solicitud_id:       idNum,
         usuario_id:         usuarioId,
         estado_anterior_id: solicitud.estado_id,
         estado_nuevo_id:    estadoNuevo.id,
         comentario:         comentario ?? null,
-
       },
     })
 
-    return NextResponse.json({
-      ok:   true,
-      data: solicitudActualizada,
-    })
+    return NextResponse.json({ ok: true, data: solicitudActualizada })
   } catch (error: any) {
     console.error("[PATCH /api/validacion]", error)
     return NextResponse.json(
