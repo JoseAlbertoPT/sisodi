@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+const ESTADOS_EXCLUIDOS_UEFA = ["En Captura", "Borrador"]
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -10,12 +12,19 @@ export async function GET(req: NextRequest) {
     let where: any = {}
 
     if (estadoNombre !== "todos") {
-      // Búsqueda insensible a mayúsculas/acentos
       const estado = await prisma.estado.findFirst({
         where: { nombre: { equals: estadoNombre, mode: "insensitive" } },
       })
       if (!estado) return NextResponse.json({ ok: true, data: [] })
       where.estado_id = estado.id
+    } else {
+      const estadosExcluidos = await prisma.estado.findMany({
+        where: { nombre: { in: ESTADOS_EXCLUIDOS_UEFA, mode: "insensitive" } },
+        select: { id: true },
+      })
+      if (estadosExcluidos.length > 0) {
+        where.NOT = { estado_id: { in: estadosExcluidos.map((e) => e.id) } }
+      }
     }
 
     if (usuarioId) where.usuario_id = usuarioId
@@ -25,7 +34,7 @@ export async function GET(req: NextRequest) {
       include: {
         estado:   true,
         periodo:  true,
-        dictamen: true, // CLAVE: siempre incluir para resolver folioDictamen
+        dictamen: true,
         usuario: {
           select: {
             id:     true,
@@ -48,8 +57,6 @@ export async function GET(req: NextRequest) {
       orderBy: { fecha_creacion: "desc" },
     })
 
-    // Enriquecer con folioDictamen resuelto desde todas las fuentes,
-    // incluyendo folio_anterior para renovaciones
     const enriched = solicitudes.map((sol) => {
       const folioDictamen =
         sol.dictamen?.folio ??
@@ -86,7 +93,6 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    // Normalizar a número — el cliente puede enviar string o number
     const idNum = Number(solicitudId)
     if (isNaN(idNum)) {
       return NextResponse.json(
@@ -107,7 +113,6 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    // Buscar con mode insensitive para evitar duplicados por capitalización
     let estadoNuevo = await prisma.estado.findFirst({
       where: { nombre: { equals: nuevoEstado, mode: "insensitive" } },
     })
@@ -119,7 +124,12 @@ export async function PATCH(req: NextRequest) {
 
     const solicitudActualizada = await prisma.solicitud.update({
       where:   { id: idNum },
-      data:    { estado_id: estadoNuevo.id },
+      data:    {
+        estado_id: estadoNuevo.id,
+        ...(nuevoEstado === "Enviada a Validacion (UEFA)" && {
+          fecha_envio: new Date(),
+        }),
+      },
       include: { estado: true, periodo: true },
     })
 

@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
     )
   }
 }
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -60,45 +61,60 @@ export async function POST(req: NextRequest) {
       nivel_tabulador, categoria_tabulador,
       objeto, actividades, responsabilidades,
       escolaridad, comp_adm, comp_tec, comp_soc, valores, areas_exp,
+      estado_nombre,
     } = body
 
     if (!usuarioId)      return NextResponse.json({ ok: false, error: "usuarioId es requerido" }, { status: 400 })
     if (!tipo_solicitud) return NextResponse.json({ ok: false, error: "tipo_solicitud es requerido" }, { status: 400 })
 
-    const estadoInicial = await prisma.estado.findFirst({ where: { nombre: "En Captura" } })
-    if (!estadoInicial)  return NextResponse.json({ ok: false, error: "Estado 'En Captura' no existe" }, { status: 500 })
+    // Intenta usar el estado solicitado; si "Borrador" no existe en BD usa "En Captura" como fallback
+    const estadoNombre = estado_nombre ?? "En Captura"
+    let estadoInicial = await prisma.estado.findFirst({
+      where: { nombre: { equals: estadoNombre, mode: "insensitive" } },
+    })
+    if (!estadoInicial && estadoNombre === "Borrador") {
+      estadoInicial = await prisma.estado.findFirst({
+        where: { nombre: { equals: "En Captura", mode: "insensitive" } },
+      })
+    }
+    if (!estadoInicial) {
+      return NextResponse.json(
+        { ok: false, error: `Estado '${estadoNombre}' no existe en la base de datos` },
+        { status: 500 }
+      )
+    }
 
     const nueva = await prisma.solicitud.create({
       data: {
-        usuario_id:           usuarioId,
-        estado_id:            estadoInicial.id,
+        usuario_id:            usuarioId,
+        estado_id:             estadoInicial.id,
         tipo_solicitud,
-        periodo_id:           periodoId ?? null,
-        es_extemporanea:      esExtemporanea ?? false,
-        secretaria:           secretaria ?? null,
+        periodo_id:            periodoId ?? null,
+        es_extemporanea:       esExtemporanea ?? false,
+        secretaria:            secretaria ?? null,
         unidad_administrativa: unidad_administrativa ?? null,
-        unidad_responsable:   unidad_responsable ?? null,
-        programa_proyecto:    programa_proyecto ?? null,
-        regimen:              regimen ?? null,
-        tipo_actividades:     tipo_actividades ?? null,
-        numero_prestadores:   numero_prestadores ?? null,
-        denominacion:         denominacion ?? null,
-        vigencia_inicio:      vigencia_inicio ? new Date(vigencia_inicio) : null,
-        vigencia_fin:         vigencia_fin    ? new Date(vigencia_fin)    : null,
-        importe_bruto:        importe_bruto ?? null,
-        es_renovacion:        es_renovacion ?? false,
-        folio_anterior:       folio_anterior ?? null,
-        nivel_tabulador:      nivel_tabulador ?? null,
-        categoria_tabulador:  categoria_tabulador ?? null,
-        objeto:               objeto ?? null,
-        actividades:          actividades ?? [],
-        responsabilidades:    responsabilidades ?? [],
-        escolaridad:          escolaridad ?? null,
-        comp_adm:             comp_adm ?? null,
-        comp_tec:             comp_tec ?? null,
-        comp_soc:             comp_soc ?? null,
-        valores:              valores ?? null,
-        areas_exp:            areas_exp ?? null,
+        unidad_responsable:    unidad_responsable ?? null,
+        programa_proyecto:     programa_proyecto ?? null,
+        regimen:               regimen ?? null,
+        tipo_actividades:      tipo_actividades ?? null,
+        numero_prestadores:    numero_prestadores ?? null,
+        denominacion:          denominacion ?? null,
+        vigencia_inicio:       vigencia_inicio ? new Date(vigencia_inicio) : null,
+        vigencia_fin:          vigencia_fin    ? new Date(vigencia_fin)    : null,
+        importe_bruto:         importe_bruto ?? null,
+        es_renovacion:         es_renovacion ?? false,
+        folio_anterior:        folio_anterior ?? null,
+        nivel_tabulador:       nivel_tabulador ?? null,
+        categoria_tabulador:   categoria_tabulador ?? null,
+        objeto:                objeto ?? null,
+        actividades:           actividades ?? [],
+        responsabilidades:     responsabilidades ?? [],
+        escolaridad:           escolaridad ?? null,
+        comp_adm:              comp_adm ?? null,
+        comp_tec:              comp_tec ?? null,
+        comp_soc:              comp_soc ?? null,
+        valores:               valores ?? null,
+        areas_exp:             areas_exp ?? null,
       },
       include: {
         estado: true, periodo: true,
@@ -117,7 +133,9 @@ export async function POST(req: NextRequest) {
         solicitud_id:    nueva.id,
         estado_nuevo_id: estadoInicial.id,
         usuario_id:      usuarioId,
-        comentario:      "Solicitud creada y enviada a validación UEFA",
+        comentario:      estadoNombre === "Borrador"
+          ? "Borrador guardado por la URG"
+          : "Solicitud creada y enviada a validación UEFA",
       },
     })
 
@@ -137,22 +155,36 @@ export async function PATCH(req: NextRequest) {
 
     const data: any = {}
     const map: Record<string, string> = {
-      secretaria: "secretaria", unidad_administrativa: "unidad_administrativa",
-      unidad_responsable: "unidad_responsable", programa_proyecto: "programa_proyecto",
-      regimen: "regimen", tipo_actividades: "tipo_actividades",
-      numero_prestadores: "numero_prestadores", denominacion: "denominacion",
-      importe_bruto: "importe_bruto", es_renovacion: "es_renovacion",
-      folio_anterior: "folio_anterior", nivel_tabulador: "nivel_tabulador",
-      categoria_tabulador: "categoria_tabulador", objeto: "objeto",
-      actividades: "actividades", responsabilidades: "responsabilidades",
-      escolaridad: "escolaridad", comp_adm: "comp_adm", comp_tec: "comp_tec",
-      comp_soc: "comp_soc", valores: "valores", areas_exp: "areas_exp",
+      secretaria:            "secretaria",
+      unidad_administrativa: "unidad_administrativa",
+      unidad_responsable:    "unidad_responsable",
+      programa_proyecto:     "programa_proyecto",
+      regimen:               "regimen",
+      tipo_actividades:      "tipo_actividades",
+      numero_prestadores:    "numero_prestadores",
+      denominacion:          "denominacion",
+      importe_bruto:         "importe_bruto",
+      es_renovacion:         "es_renovacion",
+      folio_anterior:        "folio_anterior",
+      nivel_tabulador:       "nivel_tabulador",
+      categoria_tabulador:   "categoria_tabulador",
+      objeto:                "objeto",
+      actividades:           "actividades",
+      responsabilidades:     "responsabilidades",
+      escolaridad:           "escolaridad",
+      comp_adm:              "comp_adm",
+      comp_tec:              "comp_tec",
+      comp_soc:              "comp_soc",
+      valores:               "valores",
+      areas_exp:             "areas_exp",
     }
     for (const [k, v] of Object.entries(map)) {
       if (campos[k] !== undefined) data[v] = campos[k]
     }
-    if (campos.vigencia_inicio !== undefined) data.vigencia_inicio = campos.vigencia_inicio ? new Date(campos.vigencia_inicio) : null
-    if (campos.vigencia_fin    !== undefined) data.vigencia_fin    = campos.vigencia_fin    ? new Date(campos.vigencia_fin)    : null
+    if (campos.vigencia_inicio !== undefined)
+      data.vigencia_inicio = campos.vigencia_inicio ? new Date(campos.vigencia_inicio) : null
+    if (campos.vigencia_fin !== undefined)
+      data.vigencia_fin = campos.vigencia_fin ? new Date(campos.vigencia_fin) : null
 
     const updated = await prisma.solicitud.update({
       where: { id: solicitudId },

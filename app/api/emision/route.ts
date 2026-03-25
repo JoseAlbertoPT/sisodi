@@ -15,8 +15,6 @@ function generarFolioTemporal(id: number, fecha: Date | null | undefined): strin
   return `${ini}-${num}`
 }
 
-// Resolver folio dictamen desde TODAS las fuentes posibles,
-// incluyendo folio_anterior para renovaciones
 function resolverFolioDictamen(sol: any): string | null {
   return (
     sol.dictamen?.folio       ??
@@ -38,7 +36,7 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // Buscar estado Emitido con mode insensitive para consistencia
+
     const estadoEmitido = await prisma.estado.findFirst({
       where: { nombre: { equals: "Emitido", mode: "insensitive" } },
     })
@@ -52,7 +50,7 @@ export async function GET(req: NextRequest) {
       include: {
         estado:   true,
         periodo:  true,
-        dictamen: true, // CLAVE: siempre incluir
+        dictamen: true,
         usuario: {
           select: {
             id:     true,
@@ -115,10 +113,8 @@ export async function GET(req: NextRequest) {
           fechaParaFolio ? new Date(fechaParaFolio) : null
         )
 
-      // Resolver folio dictamen desde todas las fuentes
       const folioDictamen = resolverFolioDictamen(sol) ?? "—"
 
-      // Secretaria: buscar en campo directo primero, luego en usuario.area
       const secretaria =
         (sol as any).secretaria ??
         sol.usuario?.area?.nombre ??

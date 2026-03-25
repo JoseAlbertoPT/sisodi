@@ -70,7 +70,7 @@ interface UefaSolicitud {
   _raw?: any
 }
 
-// ── Utilidades de formato ──────────────────────────────────────────────────────
+
 
 const INICIALES_MES_MAP: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
@@ -78,25 +78,15 @@ const INICIALES_MES_MAP: Record<string, string> = {
   "09": "SE", "10": "OC", "11": "NO", "12": "DI",
 }
 
-/**
- * Normaliza cualquier variante de folio a formato legible sin prefijo de mes.
- *  "NN/MM/AAAA"   → "NNN"        (folio recepción legacy)
- *  "INI-NNN-AAAA" → "NNN-AAAA"  (dictamen, ej: MR-005-2026 → 005-2026)
- *  "INI-NNN"      → "NNN"       (temporal, ej: MR-043 → 043)
- *  cualquier otro → tal cual
- */
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio || folio === "—") return "—"
 
-  // "NN/MM/AAAA" → "NNN"
   const matchLegacy = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
   if (matchLegacy) return matchLegacy[1].padStart(3, "0")
 
-  // "INI-NNN-AAAA" → "NNN-AAAA"  (ej: MR-005-2026 → 005-2026)
   const matchDictamen = folio.match(/^[A-Z]{2,3}-(\d+)-(\d{4})$/)
   if (matchDictamen) return `${matchDictamen[1].padStart(3, "0")}-${matchDictamen[2]}`
 
-  // "INI-NNN" → "NNN"  (ej: MR-043 → 043)
   const matchTemporal = folio.match(/^[A-Z]{2,3}-(\d+)$/)
   if (matchTemporal) return matchTemporal[1].padStart(3, "0")
 
@@ -165,7 +155,6 @@ function resolverFolioDictamen(item: any): string | null {
   )
 }
 
-// ── Mapper BD → UefaSolicitud ─────────────────────────────────────────────────
 function mapBDtoSolicitud(item: any): UefaSolicitud {
   const historial: HistorialEntry[] = (item.historial_solicitud ?? []).map((h: any) => ({
     fecha:   formatFechaHora(h.fecha),
@@ -176,7 +165,6 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
   const folioDictamenRaw = resolverFolioDictamen(item)
   const numeroDictamen   = folioDictamenRaw ? formatearFolio(folioDictamenRaw) : undefined
 
-  // Resolver destinatarios desde historial (comentario de emisión)
   const emisorEntry = [...(item.historial_solicitud ?? [])].find((h: any) => {
     const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
     return nombre.toLowerCase().includes("emitido")
@@ -187,7 +175,6 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     if (match) destinatarios = match[1].split("|").map((d: string) => d.trim()).filter(Boolean)
   }
 
-  // Resolver firmadoPor desde historial
   const revisorEntry = (item.historial_solicitud ?? []).find((h: any) => {
     const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
     return nombre.toLowerCase().includes("filtro 2")
@@ -245,7 +232,7 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
   }
 }
 
-// ── Modal Ver Dictamen ─────────────────────────────────────────────────────────
+// modal para ver en dictamen
 function DictamenModal({
   solicitud,
   onClose,
@@ -425,8 +412,6 @@ function DictamenModal({
   )
 }
 
-// ── Componentes UI ────────────────────────────────────────────────────────────
-
 function UefaEstadoBadge({ estado }: { estado: string }) {
   const tab = getTabForEstado(estado)
   const n   = norm(estado)
@@ -599,8 +584,6 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
   )
 }
 
-// ── Modales ───────────────────────────────────────────────────────────────────
-
 function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel, confirmVariant = "default", icon }: {
   open: boolean; onClose: () => void; onConfirm: () => void
   title: string; description: string; confirmLabel: string
@@ -687,8 +670,6 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
     </Dialog>
   )
 }
-
-// ── Vista de Detalle ──────────────────────────────────────────────────────────
 
 function DetalleView({ solicitud, onBack, onAprobar, onObservar, guardando }: {
   solicitud: UefaSolicitud; onBack: () => void
@@ -881,8 +862,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, guardando }: {
   )
 }
 
-// ── Página principal ──────────────────────────────────────────────────────────
-
+// pagina principla
 export function ValidacionUefaPage() {
   const { user } = useAuth()
 
@@ -899,7 +879,7 @@ export function ValidacionUefaPage() {
   const cargarSolicitudes = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const res  = await fetch("/api/solicitudes?estado=todos")
+        const res  = await fetch("/api/validacion?estado=todos")
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar solicitudes"); return }
       setSolicitudes((json.data ?? []).map(mapBDtoSolicitud))
@@ -1029,7 +1009,7 @@ export function ValidacionUefaPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Modal Ver Dictamen desde la tabla */}
+      { }
       {dictamenViewSol && (
         <DictamenModal solicitud={dictamenViewSol} onClose={() => setDictamenViewId(null)} />
       )}
@@ -1160,7 +1140,7 @@ export function ValidacionUefaPage() {
                             )}
                             {solTab === "Emitidas" && (
                               <>
-                                {/* ── BOTÓN VER DICTAMEN FUNCIONAL ── */}
+                                { }
                                 <Button
                                   variant="ghost" size="sm"
                                   onClick={() => setDictamenViewId(sol.id)}

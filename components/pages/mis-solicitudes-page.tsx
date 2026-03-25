@@ -25,8 +25,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth-context"
-
-// ── Types ──────────────────────────────────────────────────────────────────────
 type UrgTab =
   | "Borradores"
   | "Enviadas a UEFA"
@@ -75,11 +73,26 @@ interface UrgSolicitud {
   estado: UrgEstado
   denominacion: string
   unidadAdministrativa: string
+  unidadResponsable: string
+  programaProyecto: string
+  tipoActividades: string
+  numeroPrestadores: string
   vigenciaInicio: string
   vigenciaFin: string
   importeBruto: string
   esRenovacion: boolean
   folioAnterior?: string
+  objeto: string
+  actividades: string
+  responsabilidades: string
+  escolaridad: string
+  compAdm: string
+  compTec: string
+  compSoc: string
+  valores: string
+  areasExp: string
+  nivelTabulador: string
+  categoriaTabulador: string
   historial: HistorialEntry[]
   bitacora: BitacoraEntry[]
   observacionMotivo?: string
@@ -88,8 +101,53 @@ interface UrgSolicitud {
   regimen: RegimenPeriodo
   periodoAplicacion: string
 }
+function getFolioSegunEstado(sol: UrgSolicitud, activeTab: UrgTab): React.ReactNode {
+  const efectivaTab: UrgTab =
+    activeTab === "Todas" ? getTab(sol.estado) : activeTab
 
-// ── Tab classifier ─────────────────────────────────────────────────────────────
+  switch (efectivaTab) {
+    case "Borradores": {
+      const base = sol.folioJustificacion ?? sol.folio
+      return (
+        <span>
+          <span className="font-semibold">{base}</span>
+          <span className="ml-1.5 text-[11px] text-muted-foreground italic">(borrador)</span>
+        </span>
+      )
+    }
+
+    case "Enviadas a UEFA": {
+      if (sol.folioJustificacion) {
+        return <span className="font-semibold">{sol.folioJustificacion}</span>
+      }
+      const anio = new Date().getFullYear()
+      const num = sol.folio.split("-").pop()?.padStart(4, "0") ?? "0000"
+      return <span className="font-semibold">JUST-{anio}-{num}</span>
+    }
+
+    case "Observadas/Devueltas":
+    case "En proceso DO":
+    case "Emitidas": {
+      if (sol.folioRecepcion) {
+        return <span className="font-semibold">{sol.folioRecepcion}</span>
+      }
+      const num = sol.folioJustificacion?.split("-").pop() ?? sol.folio.split("-").pop() ?? "000"
+      return <span className="font-semibold">MR-{num}</span>
+    }
+
+    default:
+      return <span className="font-medium">{sol.folioJustificacion ?? sol.folio}</span>
+  }
+}
+
+function getFolioHeader(tab: UrgTab): string {
+  if (tab === "En proceso DO" || tab === "Emitidas") return "Folio de Recepción"
+  if (tab === "Observadas/Devueltas") return "Folio de Recepción"
+  if (tab === "Todas") return "Folio"
+  if (tab === "Enviadas a UEFA") return "Folio de Justificación"
+  return "Folio"
+}
+
 function getTab(estado: UrgEstado): UrgTab {
   const n = (estado ?? "").toLowerCase()
   if (n === "borrador" || n === "en captura") return "Borradores"
@@ -103,13 +161,9 @@ function getTab(estado: UrgEstado): UrgTab {
   return "Todas"
 }
 
-// ── Badge ──────────────────────────────────────────────────────────────────────
 function estadoBadge(estado: UrgEstado) {
   const n = (estado ?? "").toLowerCase()
-
-  let bg    = "bg-muted"
-  let text  = "text-muted-foreground"
-  let label = estado ?? "—"
+  let bg = "bg-muted", text = "text-muted-foreground", label = estado ?? "—"
 
   if (n === "borrador" || n === "en captura") {
     bg = "bg-muted"; text = "text-muted-foreground"; label = "Borrador"
@@ -136,46 +190,10 @@ function estadoBadge(estado: UrgEstado) {
   }
 
   return (
-    <Badge className={`${bg} ${text} hover:${bg} border-0 text-xs`}>
-      {label}
-    </Badge>
+    <Badge className={`${bg} ${text} hover:${bg} border-0 text-xs`}>{label}</Badge>
   )
 }
 
-// ── Folio a mostrar según tab ──────────────────────────────────────────────────
-// Regla:
-//   Borradores       → folio_justificacion  (o id si aún no tiene)
-//   Enviadas a UEFA  → folio_justificacion  (igual que en validacion-uefa-page)
-//   Observadas       → folio_justificacion  (aún no tienen folio_recepcion DO)
-//   En proceso DO    → folio_recepcion      (ya están en DO, tienen folio_recepcion)
-//   Emitidas         → folio_recepcion
-//   Todas            → según estado individual
-function getFolioDisplay(sol: UrgSolicitud, tab: UrgTab): React.ReactNode {
-  const usaJustificacion = (t: UrgTab) =>
-    t === "Borradores" || t === "Enviadas a UEFA" || t === "Observadas/Devueltas"
-
-  const efectivaTab = tab === "Todas" ? getTab(sol.estado) : tab
-
-  if (usaJustificacion(efectivaTab)) {
-    return sol.folioJustificacion
-      ? sol.folioJustificacion
-      : <span className="text-muted-foreground italic">{sol.folio} (sin folio)</span>
-  }
-
-  // En proceso DO / Emitidas → folio_recepcion
-  return sol.folioRecepcion
-    ? sol.folioRecepcion
-    : <span className="text-muted-foreground italic">—</span>
-}
-
-// ── Header de la columna Folio ─────────────────────────────────────────────────
-function getFolioHeader(tab: UrgTab): string {
-  if (tab === "En proceso DO" || tab === "Emitidas") return "Folio de Recepción"
-  if (tab === "Todas") return "Folio"
-  return "Folio de Justificación"
-}
-
-// ── API mapper ─────────────────────────────────────────────────────────────────
 function mapApiItem(item: any): UrgSolicitud {
   const lastObservacion = [...(item.historial ?? [])]
     .reverse()
@@ -184,10 +202,10 @@ function mapApiItem(item: any): UrgSolicitud {
   const bitacoraAdjuntos: BitacoraEntry = {
     seccion: "Documentos Adjuntos",
     eventos: (item.adjuntos ?? []).map((a: any) => ({
-      fecha:       a.fecha_subida
+      fecha: a.fecha_subida
         ? new Date(a.fecha_subida).toISOString().replace("T", " ").slice(0, 16)
         : "",
-      usuario:     "Sistema",
+      usuario: "Sistema",
       descripcion: `Archivo cargado: ${a.nombre_archivo}`,
     })),
   }
@@ -195,10 +213,10 @@ function mapApiItem(item: any): UrgSolicitud {
   const bitacoraHistorial: BitacoraEntry = {
     seccion: "Historial de cambios",
     eventos: (item.historial ?? []).map((h: any) => ({
-      fecha:       h.fecha
+      fecha: h.fecha
         ? new Date(h.fecha).toISOString().replace("T", " ").slice(0, 16)
         : "",
-      usuario:     h.usuario,
+      usuario: h.usuario,
       descripcion: h.accion + (h.comentario ? `: ${h.comentario}` : ""),
     })),
   }
@@ -222,50 +240,56 @@ function mapApiItem(item: any): UrgSolicitud {
   const regimen = (item.regimen ?? "honorarios") as RegimenPeriodo
 
   const rawEstado = item.estado?.nombre ?? ""
-
   const estadosValidos: UrgEstado[] = [
-    "Borrador",
-    "En Captura",
-    "Enviada a Validacion (UEFA)",
-    "Enviada a Validacion",
-    "Observada por UEFA",
-    "Observado por UEFA",
+    "Borrador", "En Captura",
+    "Enviada a Validacion (UEFA)", "Enviada a Validacion",
+    "Observada por UEFA", "Observado por UEFA",
     "Devuelta por DO",
-    "Observado DO Filtro 1",
-    "Observado DO Filtro 2",
-    "Observado DO Filtro 3",
-    "En revision DO Filtro 1",
-    "En revision DO Filtro 2",
-    "En revision DO Filtro 3",
-    "En proceso DO",
-    "Aprobado",
-    "Emitido",
+    "Observado DO Filtro 1", "Observado DO Filtro 2", "Observado DO Filtro 3",
+    "En revision DO Filtro 1", "En revision DO Filtro 2", "En revision DO Filtro 3",
+    "En proceso DO", "Aprobado", "Emitido",
   ]
-
   const estado: UrgEstado = estadosValidos.includes(rawEstado as UrgEstado)
     ? (rawEstado as UrgEstado)
     : "Borrador"
 
   return {
     id:                   String(item.id),
-    folio:                item.folio_justificacion ?? `SOL-${item.id}`,
+    folio:                item.folio_justificacion ?? `SOL-${new Date().getFullYear()}-${String(item.id).padStart(4, "0")}`,
     folioJustificacion:   item.folio_justificacion ?? null,
     folioRecepcion:       item.folio_recepcion     ?? undefined,
-    tipo:                 item.tipo_solicitud as UrgSolicitud["tipo"],
-    secretaria:           item.secretaria          ?? "",
+    tipo:                 item.tipo_solicitud       as UrgSolicitud["tipo"],
+    secretaria:           item.secretaria           ?? "",
     fecha:                fmt(item.fecha_creacion),
     estado,
-    denominacion:         item.denominacion        ?? "",
+    denominacion:         item.denominacion         ?? "",
     unidadAdministrativa: item.unidad_administrativa ?? "",
+    unidadResponsable:    item.unidad_responsable   ?? "",
+    programaProyecto:     item.programa_proyecto    ?? "",
+    tipoActividades:      item.tipo_actividades     ?? "",
+    numeroPrestadores:    item.numero_prestadores != null
+      ? String(item.numero_prestadores)
+      : "",
     vigenciaInicio:       fmt(item.vigencia_inicio),
     vigenciaFin:          fmt(item.vigencia_fin),
     importeBruto,
-    esRenovacion:         item.es_renovacion       ?? false,
-    folioAnterior:        item.folio_anterior       ?? undefined,
+    esRenovacion:         item.es_renovacion        ?? false,
+    folioAnterior:        item.folio_anterior        ?? undefined,
+    objeto:               item.objeto               ?? "",
+    actividades:          item.actividades           ?? "",
+    responsabilidades:    item.responsabilidades     ?? "",
+    escolaridad:          item.escolaridad           ?? "",
+    compAdm:              item.comp_adm              ?? "",
+    compTec:              item.comp_tec              ?? "",
+    compSoc:              item.comp_soc              ?? "",
+    valores:              item.valores               ?? "",
+    areasExp:             item.areas_exp             ?? "",
+    nivelTabulador:       item.nivel_tabulador       ?? "",
+    categoriaTabulador:   item.categoria_tabulador   ?? "",
     regimen,
     periodoAplicacion,
     observacionMotivo:    lastObservacion,
-    numeroDictamen:       item.dictamen?.folio      ?? undefined,
+    numeroDictamen:       item.dictamen?.folio        ?? undefined,
     fechaDictamen:        item.dictamen?.fecha_emision
       ? fmt(item.dictamen.fecha_emision)
       : undefined,
@@ -280,7 +304,6 @@ function mapApiItem(item: any): UrgSolicitud {
   }
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
 function SectionCard({
   num, title, icon, children, defaultOpen = true,
 }: {
@@ -320,18 +343,14 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ReadOnlyList({ items }: { items: string[] }) {
+function ReadOnlyTextarea({ label, value }: { label: string; value: string }) {
   return (
-    <ul className="flex flex-col gap-2">
-      {items.map((item, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-[10px] font-medium text-secondary">
-            {i + 1}
-          </span>
-          {item}
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col gap-1 col-span-2">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {value
+        ? <p className="text-sm text-card-foreground whitespace-pre-line leading-relaxed border border-border rounded-md px-3 py-2 bg-muted/30">{value}</p>
+        : <span className="text-sm text-muted-foreground italic">—</span>}
+    </div>
   )
 }
 
@@ -365,26 +384,62 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
     <div className="flex flex-col gap-4">
       <SectionCard num="I" title="Datos Generales">
         <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Secretaria"                            value={solicitud.secretaria} />
-          <ReadOnlyField label="Unidad Administrativa de Adscripcion" value={solicitud.unidadAdministrativa} />
-          <ReadOnlyField label="Denominacion"                          value={solicitud.denominacion} />
-          <ReadOnlyField label="Vigencia Inicio"                       value={solicitud.vigenciaInicio} />
-          <ReadOnlyField label="Vigencia Termino"                      value={solicitud.vigenciaFin} />
-          <ReadOnlyField label="Importe Bruto"                         value={solicitud.importeBruto} />
+          <ReadOnlyField label="Secretaría"                              value={solicitud.secretaria} />
+          <ReadOnlyField label="Unidad Administrativa de Adscripción"   value={solicitud.unidadAdministrativa} />
+          <ReadOnlyField label="Unidad Responsable del Gasto"           value={solicitud.unidadResponsable} />
+          <ReadOnlyField label="Régimen de Contratación"                value={solicitud.regimen} />
+          <ReadOnlyField label="Número de Prestadores de Servicios"     value={solicitud.numeroPrestadores} />
+          <ReadOnlyField label="Programa o Proyecto"                    value={solicitud.programaProyecto} />
+          <ReadOnlyField label="Tipo de Actividades"                    value={solicitud.tipoActividades} />
+          <ReadOnlyField label="Denominación"                           value={solicitud.denominacion} />
+          <ReadOnlyField label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
+          <ReadOnlyField label="Vigencia Término"                       value={solicitud.vigenciaFin} />
+          <ReadOnlyField label="Importe Bruto"                          value={solicitud.importeBruto} />
         </div>
       </SectionCard>
-      <SectionCard title="Renovacion" defaultOpen={solicitud.esRenovacion}>
+
+      <SectionCard title="Renovación" defaultOpen={solicitud.esRenovacion}>
         {solicitud.esRenovacion ? (
-          <div className="flex flex-col gap-3">
-            <ReadOnlyField label="Es Renovacion"               value="Si" />
-            <ReadOnlyField label="Folio del Dictamen Anterior"  value={solicitud.folioAnterior || "N/A"} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <ReadOnlyField label="Es Renovación"              value="Sí" />
+            <ReadOnlyField label="Folio del Dictamen Anterior" value={solicitud.folioAnterior || "N/A"} />
           </div>
         ) : (
-          <ReadOnlyField label="Es Renovacion" value="No" />
+          <ReadOnlyField label="Es Renovación" value="No" />
         )}
       </SectionCard>
+
+      <SectionCard title="I.1 Objeto de la Contratación">
+        <div className="grid gap-4">
+          <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="I.2 Actividades a Realizar">
+        <div className="grid gap-4">
+          <ReadOnlyTextarea label="Actividades" value={solicitud.actividades} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="I.3 Responsabilidades">
+        <div className="grid gap-4">
+          <ReadOnlyTextarea label="Responsabilidades" value={solicitud.responsabilidades} />
+        </div>
+      </SectionCard>
+
+      <SectionCard num="II" title="Perfil">
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReadOnlyField label="Escolaridad Mínima"          value={solicitud.escolaridad} />
+          <ReadOnlyField label="Competencias Administrativas" value={solicitud.compAdm} />
+          <ReadOnlyField label="Competencias Técnicas"        value={solicitud.compTec} />
+          <ReadOnlyField label="Competencias Sociales"        value={solicitud.compSoc} />
+          <ReadOnlyField label="Valores"                      value={solicitud.valores} />
+          <ReadOnlyField label="Áreas de Experiencia"         value={solicitud.areasExp} />
+        </div>
+      </SectionCard>
+
       <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
-        <p className="text-sm text-muted-foreground">Sin documentos adjuntos registrados.</p>
+        <AdjuntosSection bitacora={solicitud.bitacora} />
       </SectionCard>
     </div>
   )
@@ -395,32 +450,86 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
     <div className="flex flex-col gap-4">
       <SectionCard num="I" title="Datos Generales">
         <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Secretaria"            value={solicitud.secretaria} />
+          <ReadOnlyField label="Secretaría"            value={solicitud.secretaria} />
           <ReadOnlyField label="Unidad Administrativa" value={solicitud.unidadAdministrativa} />
-          <ReadOnlyField label="Denominacion"          value={solicitud.denominacion} />
+          <ReadOnlyField label="Denominación"          value={solicitud.denominacion} />
+          <ReadOnlyField label="Nivel de Tabulador"    value={solicitud.nivelTabulador} />
+          <ReadOnlyField label="Categoría Tabulador"   value={solicitud.categoriaTabulador} />
           <ReadOnlyField label="Importe Neto Mensual"  value={solicitud.importeBruto} />
           <ReadOnlyField label="Vigencia Inicio"       value={solicitud.vigenciaInicio} />
-          <ReadOnlyField label="Vigencia Termino"      value={solicitud.vigenciaFin} />
+          <ReadOnlyField label="Vigencia Término"      value={solicitud.vigenciaFin} />
         </div>
       </SectionCard>
-      <SectionCard title="Renovacion" defaultOpen={solicitud.esRenovacion}>
+
+      <SectionCard title="Renovación" defaultOpen={solicitud.esRenovacion}>
         {solicitud.esRenovacion ? (
-          <div className="flex flex-col gap-3">
-            <ReadOnlyField label="Es Renovacion"               value="Si" />
-            <ReadOnlyField label="Folio del Dictamen Anterior"  value={solicitud.folioAnterior || "N/A"} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <ReadOnlyField label="Es Renovación"              value="Sí" />
+            <ReadOnlyField label="Folio del Dictamen Anterior" value={solicitud.folioAnterior || "N/A"} />
           </div>
         ) : (
-          <ReadOnlyField label="Es Renovacion" value="No" />
+          <ReadOnlyField label="Es Renovación" value="No" />
         )}
       </SectionCard>
+
+      <SectionCard title="I.1 Objeto de la Contratación">
+        <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
+      </SectionCard>
+
+      <SectionCard title="I.2 Actividades a Realizar">
+        <ReadOnlyTextarea label="Actividades" value={solicitud.actividades} />
+      </SectionCard>
+
+      <SectionCard title="I.3 Responsabilidades">
+        <ReadOnlyTextarea label="Responsabilidades" value={solicitud.responsabilidades} />
+      </SectionCard>
+
+      <SectionCard num="II" title="Perfil">
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReadOnlyField label="Escolaridad Mínima"          value={solicitud.escolaridad} />
+          <ReadOnlyField label="Competencias Administrativas" value={solicitud.compAdm} />
+          <ReadOnlyField label="Competencias Técnicas"        value={solicitud.compTec} />
+          <ReadOnlyField label="Competencias Sociales"        value={solicitud.compSoc} />
+          <ReadOnlyField label="Valores"                      value={solicitud.valores} />
+          <ReadOnlyField label="Áreas de Experiencia"         value={solicitud.areasExp} />
+        </div>
+      </SectionCard>
+
       <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
-        <p className="text-sm text-muted-foreground">Sin documentos adjuntos registrados.</p>
+        <AdjuntosSection bitacora={solicitud.bitacora} />
       </SectionCard>
     </div>
   )
 }
 
-// ── Detail view ────────────────────────────────────────────────────────────────
+function AdjuntosSection({ bitacora }: { bitacora: BitacoraEntry[] }) {
+  const adjuntosSection = bitacora.find((b) =>
+    b.seccion.toLowerCase().includes("adjunto")
+  )
+  if (!adjuntosSection || adjuntosSection.eventos.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground italic">
+        Sin documentos adjuntos registrados.
+      </p>
+    )
+  }
+  return (
+    <ul className="flex flex-col gap-2">
+      {adjuntosSection.eventos.map((ev, i) => (
+        <li key={i} className="flex items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+          <FileText className="h-4 w-4 text-secondary shrink-0" />
+          <div className="flex flex-col">
+            <span className="text-sm text-card-foreground">
+              {ev.descripcion.replace("Archivo cargado: ", "")}
+            </span>
+            <span className="text-[10px] text-muted-foreground">{ev.fecha}</span>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function DetalleView({
   sol, onBack, onUpdatePeriodo,
 }: {
@@ -458,7 +567,7 @@ function DetalleView({
         : NOMBRAMIENTO_TD.map((r) => r.quincena)
 
   const handleDemoAction = (label: string) =>
-    toast({ title: "Demo", description: `Accion "${label}" solo disponible en produccion.` })
+    toast({ title: "Demo", description: `Acción "${label}" solo disponible en producción.` })
 
   const handleUpdatePeriodo = () => {
     if (onUpdatePeriodo && newPeriodo !== sol.periodoAplicacion) {
@@ -468,12 +577,10 @@ function DetalleView({
     }
   }
 
-  // Folio a mostrar en el header del detalle
   const folioHeader = sol.folioJustificacion || sol.folioRecepcion || sol.folio
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Top bar */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack}
@@ -500,7 +607,7 @@ function DetalleView({
               fecha:                sol.fecha,
               firmadoDigitalmente:  !canEdit,
             })}>
-            <Download className="h-4 w-4" />Justificacion (PDF)
+            <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           {canEdit && (
             <>
@@ -514,8 +621,8 @@ function DetalleView({
                   className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
                   disabled={!canSend}
                   onClick={() => handleDemoAction("Enviar a Validacion")}
-                  title={!canSend ? "Periodo fuera de tiempo o regimen incompatible" : ""}>
-                  <FileCheck className="h-4 w-4" />Enviar a Validacion
+                  title={!canSend ? "Periodo fuera de tiempo o régimen incompatible" : ""}>
+                  <FileCheck className="h-4 w-4" />Enviar a Validación
                 </Button>
               )}
             </>
@@ -540,13 +647,12 @@ function DetalleView({
         </div>
       </div>
 
-      {/* Banners de observaciones */}
       {sol.observacionMotivo && n.includes("observad") && n.includes("uefa") && (
         <Card className="border-2 border-amber-400/40 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-medium text-amber-700">Observacion de UEFA</span>
+              <span className="text-sm font-medium text-amber-700">Observación de UEFA</span>
               <p className="text-sm text-card-foreground mt-1">{sol.observacionMotivo}</p>
             </div>
           </CardContent>
@@ -560,7 +666,7 @@ function DetalleView({
           <CardContent className="flex items-start gap-3 py-4">
             <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-medium text-red-700">Observacion / Devolucion DO</span>
+              <span className="text-sm font-medium text-red-700">Observación / Devolución DO</span>
               <p className="text-sm text-card-foreground mt-1">{sol.observacionMotivo}</p>
             </div>
           </CardContent>
@@ -589,7 +695,7 @@ function DetalleView({
             ) : (
               <div className="flex items-end gap-3 rounded-lg border border-border bg-muted/50 p-3">
                 <div className="flex flex-col gap-1.5 flex-1 max-w-xs">
-                  <span className="text-xs font-medium text-muted-foreground">Regimen: {regimenLabel}</span>
+                  <span className="text-xs font-medium text-muted-foreground">Régimen: {regimenLabel}</span>
                   <Select value={newPeriodo} onValueChange={setNewPeriodo}>
                     <SelectTrigger className="bg-card">
                       <SelectValue placeholder="Selecciona periodo" />
@@ -626,9 +732,9 @@ function DetalleView({
           <CardContent className="flex items-start gap-3 py-4">
             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-medium text-amber-700">Regimen incompatible</span>
+              <span className="text-sm font-medium text-amber-700">Régimen incompatible</span>
               <p className="text-sm text-card-foreground mt-1">
-                El regimen <strong>{regimenLabel}</strong> no corresponde al tipo <strong>{sol.tipo}</strong>.
+                El régimen <strong>{regimenLabel}</strong> no corresponde al tipo <strong>{sol.tipo}</strong>.
               </p>
             </div>
           </CardContent>
@@ -663,7 +769,6 @@ function DetalleView({
         </Card>
       )}
 
-      {/* Layout principal */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {sol.tipo === "Prestacion de Servicios"
@@ -684,7 +789,7 @@ function DetalleView({
           <Card className="shadow-sm border-border">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                <Info className="h-4 w-4 text-secondary" />Bitacora de Captura
+                <Info className="h-4 w-4 text-secondary" />Bitácora de Captura
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -711,20 +816,17 @@ function DetalleView({
   )
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// MAIN PAGE
-// ══════════════════════════════════════════════════════════════════════════════
 export function MisSolicitudesPage() {
   const { user } = useAuth()
 
-  const [data, setData]         = useState<UrgSolicitud[]>([])
-  const [tabCounts, setTabCounts] = useState<Record<UrgTab, number>>({
+  const [data, setData]             = useState<UrgSolicitud[]>([])
+  const [tabCounts, setTabCounts]   = useState<Record<UrgTab, number>>({
     Borradores: 0, "Enviadas a UEFA": 0, "Observadas/Devueltas": 0,
     "En proceso DO": 0, Emitidas: 0, Todas: 0,
   })
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<UrgTab>("Todas")
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+  const [activeTab, setActiveTab]   = useState<UrgTab>("Todas")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -786,15 +888,13 @@ export function MisSolicitudesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <div>
         <h2 className="text-xl font-semibold text-foreground">Bandeja URG — Mis Solicitudes</h2>
         <p className="text-sm text-muted-foreground">
-          Solicitudes capturadas por mi area, con seguimiento de validacion (UEFA) y dictaminacion (DO).
+          Solicitudes capturadas por mi área, con seguimiento de validación (UEFA) y dictaminación (DO).
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="flex flex-wrap gap-2">
         {TABS.map((tab) => {
           const isActive = activeTab === tab
@@ -821,18 +921,16 @@ export function MisSolicitudesPage() {
         })}
       </div>
 
-      {/* Search */}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar por folio, tipo, secretaria..."
+          placeholder="Buscar por folio, tipo, secretaría..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10 bg-card"
         />
       </div>
 
-      {/* Table */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">
@@ -861,7 +959,7 @@ export function MisSolicitudesPage() {
                     Fecha de Creación
                   </th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
-                    Fecha de Recepción DO
+                    Fecha de Recepción
                   </th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
                     Estatus
@@ -872,7 +970,6 @@ export function MisSolicitudesPage() {
                 </tr>
               </thead>
               <tbody>
-                {/* Skeleton */}
                 {loading && data.length === 0 &&
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={`skel-${i}`} className="border-b border-border/50">
@@ -891,7 +988,6 @@ export function MisSolicitudesPage() {
                   const isDO   = n.includes("devuelta por do") ||
                     (n.includes("observad") && n.includes("filtro"))
 
-                  // Fecha de recepción DO: fecha en que entró al primer filtro
                   const fechaRecepcionDO = sol.folioRecepcion
                     ? sol.historial
                         .find((h) => h.accion.toLowerCase().includes("filtro 1"))
@@ -901,21 +997,16 @@ export function MisSolicitudesPage() {
                   return (
                     <tr key={sol.id}
                       className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                      {/* Folio */}
                       <td className="px-4 py-3 font-medium text-card-foreground">
-                        {getFolioDisplay(sol, activeTab)}
+                        {getFolioSegunEstado(sol, activeTab)}
                       </td>
-                      {/* Régimen */}
                       <td className="px-4 py-3 text-muted-foreground text-xs">{sol.tipo}</td>
-                      {/* Fecha creación */}
                       <td className="px-4 py-3 text-muted-foreground text-xs">{sol.fecha}</td>
-                      {/* Fecha recepción DO */}
                       <td className="px-4 py-3 text-muted-foreground text-xs">
                         {fechaRecepcionDO !== "—"
                           ? fechaRecepcionDO
                           : <span className="italic text-muted-foreground/60">—</span>}
                       </td>
-                      {/* Estatus */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           {estadoBadge(sol.estado)}
@@ -931,7 +1022,6 @@ export function MisSolicitudesPage() {
                           )}
                         </div>
                       </td>
-                      {/* Acciones */}
                       <td className="px-4 py-3">
                         <Button variant="ghost" size="sm"
                           onClick={() => setSelectedId(sol.id)}

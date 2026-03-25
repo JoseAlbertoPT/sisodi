@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
       "Borradores": [
         "Borrador",
         "En Captura",
+
       ],
       "Enviadas a UEFA": [
         "Enviada a Validacion (UEFA)",
@@ -122,6 +123,7 @@ export async function GET(req: NextRequest) {
       es_extemporanea:       s.es_extemporanea,
       fecha_creacion:        s.fecha_creacion,
       fecha_envio:           s.fecha_envio,
+
       fecha_emision:         s.fecha_emision,
       estado:   { id: s.estado.id, nombre: s.estado.nombre },
       periodo:  {
@@ -154,7 +156,6 @@ export async function GET(req: NextRequest) {
         : null,
     }))
 
-    // ── Tab counts ────────────────────────────
     const counts = await prisma.solicitud.groupBy({
       by: ["estado_id"],
       where: { usuario_id: usuarioId },

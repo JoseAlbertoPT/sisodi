@@ -11,11 +11,10 @@ import {
   Search, Download, Eye, FileCheck, Stamp, Printer,
   Loader2, AlertTriangle, RefreshCw,
 } from "lucide-react"
-
-// ── Tipos ──────────────────────────────────────────────────────────────────────
+// tipos
 interface DictamenEmitido {
   id:             string
-  folioDictamen:  string
+  folioDictamen:  string | null
   folioRecepcion: string | null
   fechaEmision:   string | null
   tipoFirma:      string | null
@@ -38,40 +37,25 @@ interface DictamenEmitido {
   tipoDoc: "dictamen" | "opinion"
 }
 
-// ── Utilidades de formato ──────────────────────────────────────────────────────
 const INICIALES_MES_MAP: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
   "05": "MY", "06": "JN", "07": "JL", "08": "AG",
   "09": "SE", "10": "OC", "11": "NO", "12": "DI",
 }
 
-/**
- * Normaliza cualquier variante de folio a formato legible sin prefijo de mes.
- *
- *  "NN/MM/AAAA"   → "NNN"        (folio recepción legacy)
- *  "INI-NNN-AAAA" → "NNN-AAAA"  (dictamen, ej: MR-005-2026 → 005-2026)
- *  "INI-NNN"      → "NNN"       (temporal, ej: MR-043 → 043)
- *  cualquier otro → tal cual
- */
+
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio || folio === "—") return "—"
 
-  // "NN/MM/AAAA" → "NNN"
+
   const matchLegacy = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
   if (matchLegacy) {
     return matchLegacy[1].padStart(3, "0")
   }
 
-  // "INI-NNN-AAAA" → "NNN-AAAA"  (ej: MR-005-2026 → 005-2026)
   const matchDictamen = folio.match(/^[A-Z]{2,3}-(\d+)-(\d{4})$/)
   if (matchDictamen) {
     return `${matchDictamen[1].padStart(3, "0")}-${matchDictamen[2]}`
-  }
-
-  // "INI-NNN" → "NNN"  (ej: MR-043 → 043)
-  const matchTemporal = folio.match(/^[A-Z]{2,3}-(\d+)$/)
-  if (matchTemporal) {
-    return matchTemporal[1].padStart(3, "0")
   }
 
   return folio
@@ -96,7 +80,7 @@ const MESES = [
   { value: "11", label: "Noviembre" },  { value: "12", label: "Diciembre" },
 ]
 
-// ── Mapper API → DictamenEmitido ───────────────────────────────────────────────
+// ── Mapper API
 function mapearDictamen(raw: any): DictamenEmitido {
   const esParaestatal = (raw.tipoSolicitudRaw ?? raw.tipoSolicitud ?? raw.tipo ?? "")
     .toLowerCase()
@@ -104,7 +88,7 @@ function mapearDictamen(raw: any): DictamenEmitido {
 
   return {
     id:             String(raw.id),
-    folioDictamen:  raw.folioDictamen ?? "—",
+    folioDictamen:  raw.folioDictamen ??  null ,
     folioRecepcion: raw.folioRecepcion ?? null,
     fechaEmision:   raw.fechaEmision   ?? null,
     tipoFirma:      raw.tipoFirma      ?? null,
@@ -124,7 +108,7 @@ function mapearDictamen(raw: any): DictamenEmitido {
   }
 }
 
-// ── Modal de vista del dictamen ────────────────────────────────────────────────
+// Modal de vista Dictamen
 function DictamenViewModal({
   dictamen,
   onClose,
@@ -308,8 +292,7 @@ function DictamenViewModal({
     </div>
   )
 }
-
-// ── Página principal ───────────────────────────────────────────────────────────
+// pagina Principal
 export function DictamenesPage() {
   const [dictamenes, setDictamenes] = useState<DictamenEmitido[]>([])
   const [loading,    setLoading]    = useState(true)
@@ -408,7 +391,7 @@ export function DictamenesPage() {
         </Card>
       )}
 
-      {/* Tarjetas resumen */}
+      { }
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { label: "Total emitidos",    value: dictamenes.length,  icon: <FileCheck className="h-5 w-5 text-primary" />,       bg: "bg-primary/10" },
@@ -514,12 +497,12 @@ export function DictamenesPage() {
                   ) : filtered.map((d) => (
                     <tr key={d.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
 
-                      {/* Núm. Dictamen: MR-005-2026 → 005-2026 */}
+                      {  }
                       <td className="px-3 py-3 font-medium text-card-foreground font-mono text-xs">
                         {formatearFolio(d.folioDictamen)}
                       </td>
 
-                      {/* Folio Recepción: MR-043 → 043 */}
+                      { }
                       <td className="px-3 py-3 font-medium text-card-foreground font-mono text-xs">
                         {formatearFolio(d.folioRecepcion)}
                       </td>

@@ -52,13 +52,12 @@ function resolverFolioRecepcion(item: any): string {
   return generarFolioTemporal(item.id, fechaRaw ? new Date(fechaRaw) : null)
 }
 
-// ── resolverFolioDictamen: busca en TODAS las fuentes posibles ─────────────────
 function resolverFolioDictamen(item: any): string | null {
   if (!item) return null
   return (
-    item.folioDictamen        ??   // propagado por la API /api/filtro
-    item.dictamen?.folio      ??   // relación Prisma directa
-    item.folio_dictamen       ??   // campo snake_case en solicitud
+    item.folioDictamen        ??
+    item.dictamen?.folio      ??
+    item.folio_dictamen       ??
     item._raw?.folioDictamen  ??
     item._raw?.dictamen?.folio ??
     item._raw?.folio_dictamen ??
@@ -204,8 +203,6 @@ function getSlaLabel(dias: number | null) {
   return `${dias} día${dias !== 1 ? "s" : ""}`
 }
 
-// ── mapBDtoDetalle ─────────────────────────────────────────────────────────────
-// Resuelve folioDictamen desde TODAS las fuentes antes de crear el objeto
 function mapBDtoDetalle(item: any): SolicitudDetalle {
   const historial: HistorialEntry[] = (item.historial_solicitud ?? []).map((h: any) => ({
     fecha:          formatFechaHora(h.fecha),
@@ -260,9 +257,7 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
     _raw:                 item,
   }
 }
-
-// ── Componentes UI ─────────────────────────────────────────────────────────────
-
+// componentes
 function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) {
   return (
     <div className={`flex items-center gap-2 rounded-lg px-4 py-2.5 ${getSlaBackground(diasRestantes)}`}>
@@ -400,7 +395,6 @@ function PerfilCompetenciaCard({ icon, label, value }: { icon: React.ReactNode; 
   )
 }
 
-// ── SeccionDatosGenerales ──────────────────────────────────────────────────────
 function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
   const raw = sol._raw
   return (
@@ -422,8 +416,6 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
   )
 }
 
-// ── SeccionRenovacion ──────────────────────────────────────────────────────────
-// CLAVE: resuelve el folio desde el objeto mapeado Y desde _raw como respaldo
 function SeccionRenovacion({ sol }: { sol: SolicitudDetalle }) {
   const folioDictamen =
     sol.folioDictamen ??
@@ -593,7 +585,6 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
   )
 }
 
-// ── FolioDictamenCard ──────────────────────────────────────────────────────────
 
 function FolioDictamenCard({
   folioDictamen,
@@ -678,8 +669,7 @@ const AVAILABLE_DESTINATARIOS = [
   "Dir. Gral. de Administración y Finanzas", "Dir. Gral. de Profesionalización", "Dir. Gral. de Recursos Humanos",
 ]
 
-// ── Página principal ───────────────────────────────────────────────────────────
-
+// Pagina Principal
 export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPageProps) {
   const { user } = useAuth()
 
@@ -720,7 +710,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         return
       }
 
-      // ── Merge robusto: propagar folioDictamen al nivel raíz ──────────────
       const rawBase = item._raw ?? item
       const folioDictamenResuelto =
         resolverFolioDictamen(item) ??
@@ -778,7 +767,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     return { completed, total, hasNo: noCount > 0, noCount, allDone: completed === total, noWithoutObs }
   }, [solicitud, checklistItems])
 
-  // ── folioDictamen con doble resolución ────────────────────────────────────
   const folioDictamenResuelto = useMemo(() => {
     if (!solicitud) return null
     return solicitud.folioDictamen ?? resolverFolioDictamen(solicitud._raw) ?? null
