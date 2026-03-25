@@ -9,6 +9,7 @@ interface User {
   rfc: string
   rol: string
   area: string | null
+  secretariaTexto: string | null
   mustChangePassword: boolean
 }
 interface AuthContextType {

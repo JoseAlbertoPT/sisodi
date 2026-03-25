@@ -11,6 +11,7 @@ import {
   Search, Download, Eye, FileCheck, Stamp, Printer,
   Loader2, AlertTriangle, RefreshCw,
 } from "lucide-react"
+import { PageLayout } from "@/components/page-layout"
 // tipos
 interface DictamenEmitido {
   id:             string
@@ -367,14 +368,13 @@ export function DictamenesPage() {
   const totalElectronica = dictamenes.filter((d) => d.tipoFirma === "electronica").length
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageLayout
+      title="Dictámenes Emitidos"
+      description="Registro de dictámenes y opiniones técnicas emitidos"
+    >
       {viewing && <DictamenViewModal dictamen={viewing} onClose={() => setViewing(null)} />}
 
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">Dictámenes Emitidos</h2>
-          <p className="text-sm text-muted-foreground">Registro de dictámenes y opiniones técnicas emitidos</p>
-        </div>
+      <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={cargar} disabled={loading} className="gap-1.5">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Actualizar
@@ -391,7 +391,7 @@ export function DictamenesPage() {
         </Card>
       )}
 
-      { }
+      {/* Summary */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { label: "Total emitidos",    value: dictamenes.length,  icon: <FileCheck className="h-5 w-5 text-primary" />,       bg: "bg-primary/10" },
@@ -590,6 +590,6 @@ export function DictamenesPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageLayout>
   )
 }

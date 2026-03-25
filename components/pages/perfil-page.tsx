@@ -6,18 +6,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { UserCircle } from "lucide-react"
+import { PageLayout } from "@/components/page-layout"
 
 export function PerfilPage() {
   const { user } = useAuth()
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">Mi Perfil</h2>
-        <p className="text-sm text-muted-foreground">
-          Informacion de su cuenta de usuario
-        </p>
-      </div>
+    <PageLayout
+      title="Mi Perfil"
+      description="Informacion de su cuenta de usuario"
+    >
 
       <Card className="shadow-sm border-border max-w-2xl">
         <CardHeader className="pb-4">
@@ -69,6 +67,6 @@ export function PerfilPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageLayout>
   )
 }

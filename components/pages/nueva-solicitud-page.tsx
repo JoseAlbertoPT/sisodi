@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { PageLayout } from "@/components/page-layout"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -1787,6 +1788,73 @@ function FormularioNombramiento({
           <DynamicList label="" items={marcoNormativo} onChange={setMarcoNormativo} readonly={bloqueadoPorRenovacion} />
         </CardContent>
       </Card>
+
+      <Card className="shadow-sm border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.5 Condiciones y Riesgos
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
+          <div>
+            <Label className="text-sm font-medium mb-3 block">Condiciones</Label>
+            <div className="overflow-hidden rounded-md border border-border">
+              <table className="w-full text-sm">
+                <thead><tr className="bg-secondary text-secondary-foreground">
+                  <th className="px-4 py-2.5 text-left font-medium text-card-foreground">Condicion</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Si</th>
+                  <th className="px-4 py-2.5 text-center font-medium">No</th>
+                </tr></thead>
+                <tbody>{["Cambio de domicilio", "Horario especial", "Viajar"].map((c) => (
+                  <CondicionRow key={c} label={c} defaultVal={prefilled ? "no" : ""} readonly={bloqueadoPorRenovacion} />
+                ))}</tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <Label className="text-sm font-medium mb-3 block">Tabla de Riesgos</Label>
+            <div className="overflow-hidden rounded-md border border-border">
+              <table className="w-full text-sm">
+                <thead><tr className="bg-secondary text-secondary-foreground">
+                  <th className="px-4 py-2.5 text-left font-medium">Riesgo</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Bajo</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Medio</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Alto</th>
+                </tr></thead>
+                <tbody>{["Lesiones", "Caidas", "Mutilaciones", "Golpes", "Otros"].map((r) => (
+                  <RiesgoRow key={r} label={r} defaultVal={prefilled ? "bajo" : ""} readonly={bloqueadoPorRenovacion} />
+                ))}</tbody>
+              </table>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-sm border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            I.6 Resguardo Personalizado de Activos
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup
+            defaultValue={prefilled ? "no" : undefined}
+            className="flex gap-6"
+            onValueChange={bloqueadoPorRenovacion ? () => {} : undefined}
+          >
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="si" id="resg-si" disabled={bloqueadoPorRenovacion} />
+              <Label htmlFor="resg-si" className={`text-sm font-normal ${bloqueadoPorRenovacion ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>Si</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="no" id="resg-no" disabled={bloqueadoPorRenovacion} />
+              <Label htmlFor="resg-no" className={`text-sm font-normal ${bloqueadoPorRenovacion ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>No</Label>
+            </div>
+          </RadioGroup>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -1964,6 +2032,41 @@ function buildSolicitudPayload({
   }
 }
 
+/* ---------- helper row components for Condiciones y Riesgos tables ---------- */
+
+function CondicionRow({ label, defaultVal, readonly }: { label: string; defaultVal: "" | "no"; readonly: boolean }) {
+  const name = `cond-${label.toLowerCase().replace(/\s+/g, "-")}`
+  return (
+    <tr className="border-t border-border">
+      <td className="px-4 py-2.5 text-card-foreground">{label}</td>
+      <td className="px-4 py-2.5 text-center">
+        <input type="radio" name={name} value="si" defaultChecked={defaultVal === "no" ? false : undefined} disabled={readonly} />
+      </td>
+      <td className="px-4 py-2.5 text-center">
+        <input type="radio" name={name} value="no" defaultChecked={defaultVal === "no"} disabled={readonly} />
+      </td>
+    </tr>
+  )
+}
+
+function RiesgoRow({ label, defaultVal, readonly }: { label: string; defaultVal: "" | "bajo"; readonly: boolean }) {
+  const name = `riesgo-${label.toLowerCase().replace(/\s+/g, "-")}`
+  return (
+    <tr className="border-t border-border">
+      <td className="px-4 py-2.5 text-card-foreground">{label}</td>
+      <td className="px-4 py-2.5 text-center">
+        <input type="radio" name={name} value="bajo" defaultChecked={defaultVal === "bajo"} disabled={readonly} />
+      </td>
+      <td className="px-4 py-2.5 text-center">
+        <input type="radio" name={name} value="medio" defaultChecked={false} disabled={readonly} />
+      </td>
+      <td className="px-4 py-2.5 text-center">
+        <input type="radio" name={name} value="alto" defaultChecked={false} disabled={readonly} />
+      </td>
+    </tr>
+  )
+}
+
 export function NuevaSolicitudPage() {
   const [step,                setStep]                = useState<Step>("tipo")
   const [tipo,                setTipo]                = useState<TipoSolicitud>("")
@@ -2016,12 +2119,28 @@ export function NuevaSolicitudPage() {
   const periodoVencido = periodoSeleccionado ? (periodoInfo ? !periodoInfo.enTiempo : false) : false
   const puedeAvanzarDeTipo = !!(tipo && regimenPeriodo && periodoSeleccionado && !periodoVencido)
 
+  // Normaliza texto quitando acentos y pasando a minúsculas
+  const norm = (s: string) =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
+
+  // Secretaría raíz del usuario logueado (primer segmento del path)
+  const userSecretariaRaiz = useMemo(() => {
+    const texto = user?.secretariaTexto ?? user?.area ?? null
+    if (!texto) return null
+    return norm(texto.split(" > ")[0])
+  }, [user])
+
   const foliosReales = useMemo((): FolioExcel[] => {
     if (excelRows.length === 0) return []
     return excelRows
       .filter((row) => {
         const folio = getCell(row, COL.folioDictamen)
         if (!folio) return false
+        // Filtrar por secretaría del usuario
+        if (userSecretariaRaiz) {
+          const secRow = norm(getCell(row, COL.secretaria) ?? "")
+          if (!secRow.includes(userSecretariaRaiz) && !userSecretariaRaiz.includes(secRow)) return false
+        }
         const reg = normalizaRegimen(getCell(row, COL.regimen))
         if (tipo === "nombramiento" && reg !== "nombramiento") return false
         if (tipo === "prestacion"   && reg === "nombramiento") return false
@@ -2084,8 +2203,8 @@ export function NuevaSolicitudPage() {
     else if (step === "renovacion") setStep("tipo")
   }, [step])
 
-  const permisoActivo = regimenPeriodo && periodoSeleccionado && user?.name
-    ? getPermisoActivo(user.name, regimenPeriodo, periodoSeleccionado) : null
+  const permisoActivo = regimenPeriodo && periodoSeleccionado && user?.nombre
+    ? getPermisoActivo(user.nombre, regimenPeriodo, periodoSeleccionado) : null
 
   const folioSeleccionadoData = folioSeleccionado
     ? foliosReales.find((f) => f.id === folioSeleccionado) : null
@@ -2147,8 +2266,8 @@ export function NuevaSolicitudPage() {
       setErrorEnvio(null)
 
       try {
-        if (!periodoStillValid && hasPermiso && user?.name && regimenPeriodo && periodoSeleccionado) {
-          consumirPermiso(user.name, regimenPeriodo, periodoSeleccionado)
+        if (!periodoStillValid && hasPermiso && user?.nombre && regimenPeriodo && periodoSeleccionado) {
+          consumirPermiso(user.nombre, regimenPeriodo, periodoSeleccionado)
         }
 
         const usuarioId = (user as any)?.id ?? (user as any)?.uuid ?? null
@@ -2308,16 +2427,11 @@ export function NuevaSolicitudPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground">Nueva Solicitud</h2>
-            <p className="text-sm text-muted-foreground">
-              Registre una nueva solicitud de dictaminacion tecnica funcional
-            </p>
-          </div>
-        </div>
+    <PageLayout
+      title="Nueva Solicitud"
+      description="Registre una nueva solicitud de dictaminacion tecnica funcional"
+    >
+      <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <StepIndicator step={step} tipo={tipo} />
       </div>
 
@@ -2717,6 +2831,6 @@ export function NuevaSolicitudPage() {
           })()}
         </>
       )}
-    </div>
+    </PageLayout>
   )
 }

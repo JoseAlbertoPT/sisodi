@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import { FilterTabs } from "@/components/ui/filter-tabs"
+import { PageLayout } from "@/components/page-layout"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -990,7 +992,7 @@ export function ValidacionUefaPage() {
   const dictamenViewSol    = dictamenViewId !== null ? solicitudes.find(s => s.id === dictamenViewId) ?? null : null
 
   if (selectedSolicitud) return (
-    <div className="flex flex-col gap-6">
+    <PageLayout noContainer>
       <DetalleView
         solicitud={selectedSolicitud}
         onBack={() => setSelectedId(null)}
@@ -1004,12 +1006,11 @@ export function ValidacionUefaPage() {
         onConfirm={handleObservarConfirm}
         folio={solicitudes.find(s => s.id === observarTargetId)?.folioJustificacion ?? ""}
       />
-    </div>
+    </PageLayout>
   )
 
   return (
-    <div className="flex flex-col gap-6">
-      { }
+    <PageLayout>
       {dictamenViewSol && (
         <DictamenModal solicitud={dictamenViewSol} onClose={() => setDictamenViewId(null)} />
       )}
@@ -1035,29 +1036,11 @@ export function ValidacionUefaPage() {
         </Card>
       )}
 
-      {/* Tabs */}
-      <div className="flex flex-wrap items-center gap-2">
-        {tabDefs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab.key
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground border border-border hover:bg-muted hover:text-card-foreground"
-            }`}
-          >
-            {tab.label}
-            <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold ${
-              activeTab === tab.key
-                ? "bg-primary-foreground/20 text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            }`}>
-              {tabCounts[tab.key] ?? 0}
-            </span>
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as UefaTab)}
+        items={tabDefs.map((tab) => ({ value: tab.key, label: tab.label, count: tabCounts[tab.key] ?? 0 }))}
+      />
 
       {/* Tabla */}
       <Card className="shadow-sm border-border">
@@ -1077,14 +1060,14 @@ export function ValidacionUefaPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Folio de Justificación</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Tipo</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Folio Dictamen</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Fecha de Creación</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Fecha de Recepción</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Estado actual</th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Acciones</th>
+                  <tr className="bg-secondary text-secondary-foreground">
+                    <th className="px-4 py-3 text-left font-semibold">Folio de Justificación</th>
+                    <th className="px-4 py-3 text-left font-semibold">Tipo</th>
+                    <th className="px-4 py-3 text-left font-semibold">Folio Dictamen</th>
+                    <th className="px-4 py-3 text-left font-semibold">Fecha de Creación</th>
+                    <th className="px-4 py-3 text-left font-semibold">Fecha de Recepción</th>
+                    <th className="px-4 py-3 text-left font-semibold">Estado</th>
+                    <th className="px-4 py-3 text-left font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1194,6 +1177,6 @@ export function ValidacionUefaPage() {
         onConfirm={handleObservarConfirm}
         folio={solicitudes.find(s => s.id === observarTargetId)?.folioJustificacion ?? ""}
       />
-    </div>
+    </PageLayout>
   )
 }

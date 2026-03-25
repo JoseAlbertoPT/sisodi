@@ -78,16 +78,11 @@ export function AppShell() {
         currentPage={currentPage}
         onNavigate={setCurrentPage}
         collapsed={sidebarCollapsed}
+        onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <AppHeader
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-          sidebarCollapsed={sidebarCollapsed}
-        />
-        <main className="flex-1 overflow-y-auto p-6">
-          {renderPage()}
-        </main>
-      </div>
+      <main className="flex flex-1 flex-col overflow-y-auto p-6">
+        {renderPage()}
+      </main>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { AuthProvider } from '@/lib/auth-context'
 import { SolicitudesProvider } from '@/lib/solicitudes-store'
 import { AutorizacionesProvider } from '@/lib/autorizaciones-store'
 import { HistoricoStoreProvider } from '@/lib/historico-store'
+import { CalendarioProvider } from '@/lib/calendario-store'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -44,7 +45,9 @@ export default function RootLayout({
           <SolicitudesProvider>
             <AutorizacionesProvider>
               <HistoricoStoreProvider>
-                {children}
+                <CalendarioProvider>
+                  {children}
+                </CalendarioProvider>
               </HistoricoStoreProvider>
             </AutorizacionesProvider>
           </SolicitudesProvider>

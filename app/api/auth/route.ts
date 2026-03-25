@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         rfc:                usuario.rfc,
         rol:                usuario.rol.nombre,
         area:               usuario.area?.nombre ?? null,
+        secretariaTexto:    usuario.secretaria_texto ?? null,
         mustChangePassword: usuario.must_change_password ?? false,
       })
     }

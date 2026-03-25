@@ -94,12 +94,17 @@ model historial_solicitud {
 }
 
 model menu {
-  id       Int        @id @default(autoincrement())
-  nombre   String     @db.VarChar(150)
-  ruta     String?    @db.VarChar(200)
-  orden    Int?       @default(0)
-  activo   Boolean?   @default(true)
-  rol_menu rol_menu[]
+  id        Int        @id @default(autoincrement())
+  nombre    String     @db.VarChar(150)
+  ruta      String?    @db.VarChar(200)
+  icono     String?    @db.VarChar(50)
+  key       String?    @db.VarChar(50)
+  parent_id Int?
+  orden     Int?       @default(0)
+  activo    Boolean?   @default(true)
+  parent    menu?      @relation("menu_hierarchy", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children  menu[]     @relation("menu_hierarchy")
+  rol_menu  rol_menu[]
 }
 
 model periodo {
@@ -204,12 +209,15 @@ model usuario {
   must_change_password Boolean?              @default(false)
   rol_id               Int
   area_id              Int?
+  secretaria_id        String?               @db.Uuid
+  secretaria_texto     String?               @db.VarChar(512)
   activo               Boolean?              @default(true)
   fecha_creacion       DateTime?             @default(now()) @db.Timestamp(6)
   historial_solicitud  historial_solicitud[]
   solicitud            solicitud[]
   area                 area?                 @relation(fields: [area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   rol                  rol                   @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  organo_centralizado  organo_centralizado?  @relation(fields: [secretaria_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   codigo_recuperacion  codigo_recuperacion?
 
   @@index([rol_id], map: "idx_usuario_rol")
@@ -224,4 +232,49 @@ model codigo_recuperacion {
   usado      Boolean?  @default(false)
   created_at DateTime? @default(now()) @db.Timestamp(6)
   usuario    usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model historico {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre_archivo  String   @db.VarChar(512)
+  subido_en       DateTime @default(now()) @db.Timestamp(6)
+  sheet_names     String[]
+  sheets          Json     @default("{}")
+}
+
+model calendario {
+  id          Int    @id @default(autoincrement())
+  ejercicio   Int
+  regimen     String @db.VarChar(20)
+  periodo     String @db.VarChar(50)
+  limite_do   String @db.VarChar(20)
+  limite_dgrh String @db.VarChar(20)
+
+  @@unique([ejercicio, regimen, periodo])
+}
+
+model organo_centralizado {
+  id        String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre    String                @db.VarChar(512)
+  orden     Int                   @default(0)
+  tipo      String?               @db.VarChar(64)
+  parent_id String?               @db.Uuid
+  parent    organo_centralizado?  @relation("organo_centralizado_hierarchy", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  children  organo_centralizado[] @relation("organo_centralizado_hierarchy")
+  usuarios  usuario[]
+}
+
+model categoria_paraestatal {
+  id      Int                  @id @default(autoincrement())
+  nombre  String               @db.VarChar(255)
+  orden   Int                  @default(0)
+  organos organo_paraestatal[]
+}
+
+model organo_paraestatal {
+  id           Int                   @id @default(autoincrement())
+  nombre       String                @db.VarChar(512)
+  orden        Int                   @default(0)
+  categoria_id Int
+  categoria    categoria_paraestatal @relation(fields: [categoria_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }

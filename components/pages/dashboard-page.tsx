@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { PageLayout } from "@/components/page-layout"
 import {
   FileText,
   Briefcase,
@@ -156,14 +157,10 @@ export function DashboardPage({ onNavigate, onOpenReview }: DashboardPageProps) 
     .sort((a, b) => (a.slaRestante ?? 99) - (b.slaRestante ?? 99))
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page Title */}
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">Tablero Informativo</h2>
-        <p className="text-sm text-muted-foreground">
-          Resumen general del sistema de dictaminacion
-        </p>
-      </div>
+    <PageLayout
+      title="Tablero Informativo"
+      description="Resumen general del sistema de dictaminacion"
+    >
 
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3">
@@ -205,58 +202,6 @@ export function DashboardPage({ onNavigate, onOpenReview }: DashboardPageProps) 
           </Card>
         ))}
       </div>
-
-      {/* SLA en riesgo alert */}
-      {slaRiesgo.length > 0 && (
-        <Card className="shadow-sm border-destructive/30 border-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold text-destructive">
-              <AlertTriangle className="h-4 w-4" />
-              Solicitudes con Plazo en Riesgo ({slaRiesgo.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Folio Recepcion</th>
-                    <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Secretaria</th>
-                    <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Estado</th>
-                    <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Días Restantes</th>
-                    <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Accion</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {slaRiesgo.map((sol) => {
-                    const filtroMatch = sol.estado.match(/Filtro (\d)/)
-                    const filtroNum = filtroMatch ? (parseInt(filtroMatch[1]) as 1 | 2 | 3) : 1
-                    return (
-                      <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                        <td className="px-3 py-2 font-medium text-card-foreground">{sol.folioRecepcion}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{sol.secretaria}</td>
-                        <td className="px-3 py-2"><EstadoBadge estado={sol.estado} /></td>
-                        <td className="px-3 py-2"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
-                        <td className="px-3 py-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onOpenReview(sol.id, filtroNum)}
-                            className="text-secondary hover:text-primary gap-1"
-                          >
-                            <FileSearch className="h-4 w-4" />
-                            Revisar
-                          </Button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -331,59 +276,6 @@ export function DashboardPage({ onNavigate, onOpenReview }: DashboardPageProps) 
         </Card>
       </div>
 
-      {/* Summary Table */}
-      <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-card-foreground">
-              Solicitudes Recientes
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onNavigate("mis-solicitudes")}
-              className="text-xs text-secondary hover:text-primary"
-            >
-              Ver todas
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Folio</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Folio DO</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Secretaria</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Tipo</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Estado</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">SLA</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Accion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentSolicitudes.map((sol) => (
-                  <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-card-foreground">{sol.folioSolicitud}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{sol.folioRecepcion || "---"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{sol.secretaria}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{sol.tipo}</td>
-                    <td className="px-4 py-3"><EstadoBadge estado={sol.estado} /></td>
-                    <td className="px-4 py-3"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
-                    <td className="px-4 py-3">
-                      <Button variant="ghost" size="sm" className="text-secondary hover:text-primary gap-1.5">
-                        <Eye className="h-4 w-4" />
-                        Ver
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </PageLayout>
   )
 }

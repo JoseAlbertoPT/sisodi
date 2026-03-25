@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { PageLayout } from "@/components/page-layout"
 import {
   ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle,
   History, MessageSquare, ClipboardCheck, Info, MinusCircle,
@@ -904,6 +905,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   )
 
   return (
+    <PageLayout noContainer>
     <div className="flex flex-col gap-4 h-full">
 
       {showConfirmacion && !isEmitido && (
@@ -1347,5 +1349,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         </ScrollArea>
       </div>
     </div>
+    </PageLayout>
   )
 }

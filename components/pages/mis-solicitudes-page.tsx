@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
+import { FilterTabs } from "@/components/ui/filter-tabs"
+import { PageLayout } from "@/components/page-layout"
 import {
   Search, Eye, Edit3, Download, FileCheck,
   ChevronDown, ChevronRight, Info, History, FileText,
@@ -163,7 +165,7 @@ function getTab(estado: UrgEstado): UrgTab {
 
 function estadoBadge(estado: UrgEstado) {
   const n = (estado ?? "").toLowerCase()
-  let bg = "bg-muted", text = "text-muted-foreground", label = estado ?? "—"
+  let bg = "bg-muted", text = "text-muted-foreground", label: string = estado ?? "—"
 
   if (n === "borrador" || n === "en captura") {
     bg = "bg-muted"; text = "text-muted-foreground"; label = "Borrador"
@@ -874,7 +876,7 @@ export function MisSolicitudesPage() {
 
   if (selectedSolicitud) {
     return (
-      <div className="flex flex-col gap-6">
+      <PageLayout noContainer>
         <DetalleView
           sol={selectedSolicitud}
           onBack={() => setSelectedId(null)}
@@ -882,44 +884,21 @@ export function MisSolicitudesPage() {
             setData((prev) => prev.map((s) => s.id === id ? { ...s, periodoAplicacion: periodo } : s))
           }
         />
-      </div>
+      </PageLayout>
     )
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">Bandeja URG — Mis Solicitudes</h2>
-        <p className="text-sm text-muted-foreground">
-          Solicitudes capturadas por mi área, con seguimiento de validación (UEFA) y dictaminación (DO).
-        </p>
-      </div>
+    <PageLayout
+      title="Bandeja URG - Mis Solicitudes"
+      description="Solicitudes capturadas por mi área, con seguimiento de validación (UEFA) y dictaminación (DO)."
+    >
 
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-secondary text-secondary-foreground shadow-sm"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              {tab}
-              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
-                isActive
-                  ? "bg-secondary-foreground/20 text-secondary-foreground"
-                  : "bg-background text-muted-foreground"
-              }`}>
-                {tabCounts[tab]}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <FilterTabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as UrgTab)}
+        items={TABS.map((tab) => ({ value: tab, label: tab, count: tabCounts[tab] }))}
+      />
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -948,23 +927,23 @@ export function MisSolicitudesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                <tr className="bg-secondary text-secondary-foreground">
+                  <th className="px-4 py-3 text-left font-semibold">
                     {getFolioHeader(activeTab)}
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                  <th className="px-4 py-3 text-left font-semibold">
                     Régimen de Contratación
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                  <th className="px-4 py-3 text-left font-semibold">
                     Fecha de Creación
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                  <th className="px-4 py-3 text-left font-semibold">
                     Fecha de Recepción
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                  <th className="px-4 py-3 text-left font-semibold">
                     Estatus
                   </th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                  <th className="px-4 py-3 text-left font-semibold">
                     Acciones
                   </th>
                 </tr>
@@ -1045,6 +1024,6 @@ export function MisSolicitudesPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageLayout>
   )
 }
