@@ -7,14 +7,15 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
+  FileText, History, Download,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
-
 
 interface FiltroSolicitud {
   id: string
@@ -23,6 +24,7 @@ interface FiltroSolicitud {
   folioDictamen: string | null
   folioTemporal: boolean
   tipo: string
+  denominacion: string
   secretaria: string
   estado: string
   esRegularizacion: boolean
@@ -37,16 +39,12 @@ interface FiltroSolicitud {
   isNuevaEnFiltro: Record<number, boolean>
   _raw?: any
 }
-
 type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "todas"
-
-
 const FILTRO_LABELS: Record<number, string> = {
   1: "Filtro 1",
   2: "Filtro 2",
   3: "Filtro 3 (Dirección General)",
 }
-
 const MESES = [
   { value: "01", label: "Enero" }, { value: "02", label: "Febrero" },
   { value: "03", label: "Marzo" }, { value: "04", label: "Abril" },
@@ -56,52 +54,82 @@ const MESES = [
   { value: "11", label: "Noviembre" }, { value: "12", label: "Diciembre" },
 ]
 
+const INICIALES_MES_MAP: Record<string, string> = {
+  "01": "EN", "02": "FE", "03": "MR", "04": "AB",
+  "05": "MY", "06": "JN", "07": "JL", "08": "AG",
+  "09": "SE", "10": "OC", "11": "NO", "12": "DI",
+}
+function formatearFolio(folio: string | null | undefined): string {
+  if (!folio) return "---"
+  const match = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
+  if (match) {
+    const num = match[1].padStart(3, "0")
+    const mes = match[2].padStart(2, "0")
+    return `${INICIALES_MES_MAP[mes] ?? "XX"}-${num}`
+  }
+  return folio
+}
+function formatFecha(v: string | null | undefined) {
+  if (!v) return "—"
+  const d = new Date(v)
+  if (isNaN(d.getTime())) return v
+  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })
+}
+function formatRegimen(raw: string | null | undefined): string {
+  const r = (raw ?? "").toLowerCase().trim()
+  if (r.includes("asimilado")) return "Honorarios Asimilados a Salarios"
+  if (r.includes("honorario")) return "Honorarios"
+  if (r.includes("nombramiento") || r.includes("tiempo determinado"))
+    return "Nombramiento por Tiempo Determinado"
+  return raw || "—"
+}
+function formatEscolaridad(raw: string | null | undefined): string {
+  const e = (raw ?? "").toLowerCase().trim()
+  if (e === "bachillerato") return "Bachillerato"
+  if (e === "tecnico")      return "Técnico Superior"
+  if (e === "licenciatura") return "Licenciatura"
+  if (e === "maestria")     return "Maestría"
+  if (e === "doctorado")    return "Doctorado"
+  return raw || "—"
+}
 function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   const estadoEnRevision = `En revision DO Filtro ${filtro}`
   const estadoObservado  = `Observado DO Filtro ${filtro}`
-
   if (s.estado === estadoObservado) return "observadas"
-
   if (s.estado === estadoEnRevision) {
     if (s.reingresoCount > 0 && !s.openedInFiltro[filtro]) return "correcciones"
-    if (s.isNuevaEnFiltro[filtro] && !s.openedInFiltro[filtro])  return "nuevas"
+    if (s.isNuevaEnFiltro[filtro] && !s.openedInFiltro[filtro]) return "nuevas"
     if (s.openedInFiltro[filtro]) return "revision"
     return "nuevas"
   }
-
   return "todas"
 }
-
 function getSlaColor(dias: number | null) {
   if (dias === null) return "text-muted-foreground"
-  if (dias <= 0) return "text-destructive"
-  if (dias <= 5) return "text-orange-600"
+  if (dias <= 0)  return "text-destructive"
+  if (dias <= 5)  return "text-orange-600"
   if (dias <= 10) return "text-yellow-600"
   return "text-emerald-600"
 }
-
 function getSlaBackground(dias: number | null) {
   if (dias === null) return "bg-muted"
-  if (dias <= 0) return "bg-destructive/10"
-  if (dias <= 5) return "bg-orange-500/10"
+  if (dias <= 0)  return "bg-destructive/10"
+  if (dias <= 5)  return "bg-orange-500/10"
   if (dias <= 10) return "bg-yellow-500/10"
   return "bg-emerald-500/10"
 }
-
 function getSlaLabel(dias: number | null) {
   if (dias === null) return "Sin fecha"
   if (dias <= 0) return `Vencido ${Math.abs(dias)}d`
   return `${dias} día${dias !== 1 ? "s" : ""}`
 }
-
 const TAB_CONFIG: Record<TabKey, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
-  nuevas:       { label: "Nuevas",       icon: <CircleDot className="h-3.5 w-3.5" />,   activeBg: "bg-secondary/10",   activeText: "text-secondary" },
-  correcciones: { label: "Correcciones", icon: <RotateCcw className="h-3.5 w-3.5" />,   activeBg: "bg-accent/10",      activeText: "text-accent-foreground" },
-  revision:     { label: "En revisión",  icon: <Eye className="h-3.5 w-3.5" />,          activeBg: "bg-primary/10",     activeText: "text-primary" },
-  observadas:   { label: "Observadas",   icon: <AlertTriangle className="h-3.5 w-3.5" />,activeBg: "bg-destructive/10", activeText: "text-destructive" },
-  todas:        { label: "Todas",        icon: <ListFilter className="h-3.5 w-3.5" />,   activeBg: "bg-muted",          activeText: "text-card-foreground" },
+  nuevas:       { label: "Nuevas",       icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+  correcciones: { label: "Correcciones", icon: <RotateCcw className="h-3.5 w-3.5" />,    activeBg: "bg-accent/10",      activeText: "text-accent-foreground" },
+  revision:     { label: "En revisión",  icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
+  observadas:   { label: "Observadas",   icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
+  todas:        { label: "Todas",        icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
 }
-
 
 function SlaIndicator({ diasRestantes }: { diasRestantes: number | null }) {
   return (
@@ -109,6 +137,130 @@ function SlaIndicator({ diasRestantes }: { diasRestantes: number | null }) {
       <Clock className="h-3 w-3" />
       {getSlaLabel(diasRestantes)}
     </span>
+  )
+}
+
+function SectionCard({ num, title, icon, children, defaultOpen = true }: {
+  num?: string; title: string; icon?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <Card className="shadow-sm border-border">
+      <CardHeader className="pb-3 cursor-pointer" onClick={() => setOpen(!open)}>
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+          {num && (
+            <span className="flex h-6 w-6 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
+              {num}
+            </span>
+          )}
+          {icon}{title}
+          <span className="ml-auto">
+            {open
+              ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+          </span>
+        </CardTitle>
+      </CardHeader>
+      {open && <CardContent>{children}</CardContent>}
+    </Card>
+  )
+}
+
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      {label && <span className="text-xs text-muted-foreground">{label}</span>}
+      <span className="text-sm font-medium text-card-foreground">{value || "—"}</span>
+    </div>
+  )
+}
+
+function ListaItems({ items }: { items: string[] }) {
+  const validItems = (items ?? []).filter(Boolean)
+  if (validItems.length === 0) return <span className="text-sm text-muted-foreground">—</span>
+  return (
+    <ul className="flex flex-col gap-2">
+      {validItems.map((item, i) => (
+        <li key={i} className="flex gap-2 text-sm text-card-foreground">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary mt-0.5">
+            {i + 1}
+          </span>
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function ExpedienteCompleto({ raw }: { raw: any }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <SectionCard num="I" title="Datos Generales">
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReadOnlyField label="Secretaría"                            value={raw?.secretaria ?? "—"} />
+          <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={raw?.unidad_administrativa ?? "—"} />
+          <ReadOnlyField label="Unidad Responsable del Gasto"          value={raw?.unidad_responsable ?? "—"} />
+          <ReadOnlyField label="Programa o Proyecto"                   value={raw?.programa_proyecto ?? "—"} />
+          <ReadOnlyField label="Denominación"                          value={raw?.denominacion ?? raw?.tipo_solicitud ?? "—"} />
+          <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(raw?.regimen)} />
+          <ReadOnlyField label="Tipo de Actividades"                   value={raw?.tipo_actividades ?? "—"} />
+          <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
+          <ReadOnlyField label="Vigencia Inicio"                       value={formatFecha(raw?.vigencia_inicio)} />
+          <ReadOnlyField label="Vigencia Término"                      value={formatFecha(raw?.vigencia_fin)} />
+          <ReadOnlyField label="Importe Bruto"                         value={raw?.importe_bruto != null ? `$${Number(raw.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"} />
+          <ReadOnlyField label="Extemporánea"                          value={raw?.es_extemporanea ? "Sí" : "No"} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Renovación">
+        <div className="flex flex-col gap-3">
+       <ReadOnlyField label="¿Es Renovación?" value={raw?.es_renovacion ? "SÍ" : "NO"} />
+       <ReadOnlyField label="Folio del Dictamen"  value={raw?.folio_dictamen ?? raw?.dictamen?.folio ?? "—"}
+
+          />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="I.1 Objeto de la Contratación">
+        <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+          {raw?.objeto || <span className="text-muted-foreground">—</span>}
+        </p>
+      </SectionCard>
+
+      <SectionCard title="I.2 Actividades a Realizar">
+        <ListaItems items={Array.isArray(raw?.actividades) ? raw.actividades : []} />
+      </SectionCard>
+
+      <SectionCard title="I.3 Responsabilidades">
+        <ListaItems items={Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : []} />
+      </SectionCard>
+
+      <SectionCard num="II" title="Perfil">
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(raw?.escolaridad)} />
+          <ReadOnlyField label="Competencias Administrativas"  value={raw?.comp_adm ?? "—"} />
+          <ReadOnlyField label="Competencias Técnicas"         value={raw?.comp_tec ?? "—"} />
+          <ReadOnlyField label="Competencias Socioemocionales" value={raw?.comp_soc ?? "—"} />
+          <ReadOnlyField label="Valores"                       value={raw?.valores ?? "—"} />
+          <ReadOnlyField label="Áreas de Experiencia"          value={raw?.areas_exp ?? "—"} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
+        {raw?.adjunto?.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {(raw.adjunto as any[]).map((adj, i) => (
+              <li key={i} className="flex items-center gap-2 text-sm text-card-foreground">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                {adj.nombre_archivo}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
+        )}
+      </SectionCard>
+    </div>
   )
 }
 
@@ -196,35 +348,6 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
   )
 }
 
-function SectionCard({ title, icon, children, defaultOpen = true }: {
-  title: string; icon?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean
-}) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <Card className="shadow-sm border-border">
-      <CardHeader className="pb-3 cursor-pointer" onClick={() => setOpen(!open)}>
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-          {icon}{title}
-          <span className="ml-auto">
-            {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-          </span>
-        </CardTitle>
-      </CardHeader>
-      {open && <CardContent>{children}</CardContent>}
-    </Card>
-  )
-}
-
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-card-foreground">{value || "—"}</span>
-    </div>
-  )
-}
-
-
 function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardando }: {
   solicitud: FiltroSolicitud
   filtro: 1 | 2 | 3
@@ -235,12 +358,16 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
 }) {
   const [showAprobarModal,  setShowAprobarModal]  = useState(false)
   const [showObservarModal, setShowObservarModal] = useState(false)
+  const [activePanel,       setActivePanel]       = useState<"revision" | "historial">("revision")
+
   const raw = solicitud._raw
 
   const labelAprobar =
     filtro === 1 ? "Aprobar → Filtro 2"
     : filtro === 2 ? "Aprobar → Filtro 3"
     : "Aprobar → Emitir"
+
+  const folioFormateado = formatearFolio(solicitud.folioRecepcion)
 
   const historial: Array<{ fecha: string; usuario: string; accion: string }> =
     (raw?.historial_solicitud ?? []).map((h: any) => ({
@@ -249,18 +376,43 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
       accion:  h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? h.comentario ?? "—",
     }))
 
+  const observacionesUefa: string = raw?.observaciones_uefa ?? raw?.observacion_uefa ?? ""
+
+  const ultimaObsDo: string | null = (() => {
+    const entrada = (raw?.historial_solicitud ?? []).find((h: any) => {
+      const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
+      return nombre.toLowerCase().includes("observad") && nombre.toLowerCase().includes("filtro")
+    })
+    return entrada?.comentario ?? null
+  })()
+
+  const denominacion = raw?.denominacion ?? raw?.tipo_solicitud ?? solicitud.denominacion ?? solicitud.tipo ?? "—"
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
+      {/* Barra superior */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 text-muted-foreground hover:text-card-foreground">
+          <Button
+            variant="ghost" size="sm" onClick={onBack}
+            className="gap-1.5 text-muted-foreground hover:text-card-foreground"
+          >
             <ArrowLeft className="h-4 w-4" />Volver a bandeja
           </Button>
-          <span className="text-sm font-semibold text-card-foreground">{solicitud.folioRecepcion}</span>
+          <Separator orientation="vertical" className="h-6" />
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-card-foreground">{folioFormateado}</span>
+            {denominacion !== "—" && (
+              <span className="text-xs text-muted-foreground">{denominacion}</span>
+            )}
+          </div>
           <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>
+          <SlaIndicator diasRestantes={solicitud.slaRestante} />
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Download className="h-4 w-4" />Justificación (PDF)
+          </Button>
           <Button
             onClick={() => setShowAprobarModal(true)}
             disabled={guardando}
@@ -271,8 +423,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
             {labelAprobar}
           </Button>
           <Button
-            variant="outline"
-            size="sm"
+            variant="outline" size="sm"
             onClick={() => setShowObservarModal(true)}
             disabled={guardando}
             className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
@@ -282,90 +433,179 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
         </div>
       </div>
 
-      {/* Alertas de contexto */}
+      {/* Banners */}
       {solicitud.reingresoCount > 0 && (
         <Card className="border-2 border-accent/30 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <Info className="h-5 w-5 text-accent-foreground" />
+          <CardContent className="flex items-start gap-3 py-4">
+            <Info className="h-5 w-5 text-accent-foreground shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-medium text-accent-foreground">
+              <span className="text-sm font-semibold text-accent-foreground">
                 Reingreso #{solicitud.reingresoCount}
               </span>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Solicitud corregida y reenviada por la URG.
-                {solicitud.lastObservedStage && ` Última observación: Filtro ${solicitud.lastObservedStage}.`}
+                {solicitud.lastObservedStage && ` Última observación desde: Filtro ${solicitud.lastObservedStage}.`}
               </p>
+              {ultimaObsDo && (
+                <p className="text-sm text-card-foreground mt-2 border-l-2 border-accent/40 pl-3 italic">
+                  "{ultimaObsDo}"
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Contenido */}
+      {observacionesUefa && (
+        <Card className="border-2 border-orange-500/30 shadow-sm">
+          <CardContent className="flex items-start gap-3 py-4">
+            <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
+            <div>
+              <span className="text-sm font-semibold text-orange-600">Observaciones UEFA</span>
+              <p className="text-sm text-card-foreground mt-1">{observacionesUefa}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Layout principal */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 flex flex-col gap-4">
-          <SectionCard title="Datos Generales" icon={<Info className="h-4 w-4 text-secondary" />}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <ReadOnlyField label="Secretaría"   value={solicitud.secretaria ?? "—"} />
-              <ReadOnlyField label="Unidad Responsable del Gasto"    value={solicitud.tipo} />
-              <ReadOnlyField label="Regimen de Contratacion "    value={solicitud.secretaria} />
-              <ReadOnlyField label="Numero de Prestadores de Servicio"          value={raw?.usuario?.nombre ?? "—"} />
-              <ReadOnlyField label="Vigenvia Inicio"               value={raw?.usuario?.correo ?? "—"} />
-              <ReadOnlyField label="Importe Bruto"              value={solicitud.periodo ?? "—"} />
-              <ReadOnlyField label="Unidad Administrativa de Adscripcion"   value={solicitud.fechaRecepcionDO ?? "—"} />
-               <ReadOnlyField label="Programa o Proyecto"   value={solicitud.fechaRecepcionDO ?? "—"} />
-               <ReadOnlyField label="Tipo de Actividades"   value={solicitud.fechaRecepcionDO ?? "—"} />
-               <ReadOnlyField label="Denominacion"   value={solicitud.fechaRecepcionDO ?? "—"} />
-               <ReadOnlyField label="Vigencia Termino"   value={solicitud.fechaRecepcionDO ?? "—"} />
-              <ReadOnlyField label="Extemporánea"         value={solicitud.esRegularizacion ? "Sí" : "No"} />
-            </div>
-          </SectionCard>
+          <ExpedienteCompleto raw={raw} />
           {filtro >= 2 && solicitud.folioDictamen && (
             <SectionCard title="Dictamen previo" icon={<FileSearch className="h-4 w-4 text-secondary" />}>
-              <ReadOnlyField label="Folio Dictamen" value={solicitud.folioDictamen} />
+              <ReadOnlyField label="Folio Dictamen" value={formatearFolio(solicitud.folioDictamen)} />
             </SectionCard>
           )}
         </div>
 
-        {/* Historial */}
-        <div className="lg:col-span-1">
-          <Card className="shadow-sm border-border sticky top-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">
-                <Clock className="h-4 w-4 text-secondary" />Historial
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {historial.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Sin historial registrado.</p>
-              ) : (
-                <div className="flex flex-col gap-0">
-                  {[...historial].reverse().map((e, i) => (
-                    <div key={i} className="flex gap-3">
-                      <div className="flex flex-col items-center">
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-secondary bg-card">
-                          <div className="h-2 w-2 rounded-full bg-secondary" />
-                        </div>
-                        {i < historial.length - 1 && <div className="w-px flex-1 bg-border" />}
-                      </div>
-                      <div className="flex flex-col gap-0.5 pb-4">
-                        <span className="text-xs font-medium text-card-foreground">{e.accion}</span>
-                        <span className="text-[10px] text-muted-foreground">{e.fecha} — {e.usuario}</span>
-                      </div>
-                    </div>
-                  ))}
+        <div className="lg:col-span-1 flex flex-col gap-4">
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              onClick={() => setActivePanel("revision")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
+                activePanel === "revision"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <FileSearch className="h-4 w-4" />Revisión
+            </button>
+            <button
+              onClick={() => setActivePanel("historial")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
+                activePanel === "historial"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <History className="h-4 w-4" />Historial
+            </button>
+          </div>
+
+          {activePanel === "revision" && (
+            <Card className="shadow-sm border-border">
+              <CardContent className="pt-4 flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Folio de Recepción</span>
+                  <span className="text-sm font-semibold text-card-foreground">{folioFormateado}</span>
+                  {solicitud.folioTemporal && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive w-fit mt-1">
+                      Folio temporal
+                    </span>
+                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Denominación</span>
+                  <span className="text-sm font-medium text-card-foreground">{denominacion}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Régimen de Contratación</span>
+                  <span className="text-sm font-medium text-card-foreground">{formatRegimen(raw?.regimen)}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Estado actual</span>
+                  <Badge className="bg-primary/15 text-primary border-0 text-xs w-fit">{solicitud.estado}</Badge>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Plazo de Atención</span>
+                  <SlaIndicator diasRestantes={solicitud.slaRestante} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Fecha de Recepción DO</span>
+                  <span className="text-sm font-medium text-card-foreground">
+                    {solicitud.fechaRecepcionDO
+                      ? new Date(solicitud.fechaRecepcionDO).toLocaleDateString("es-MX")
+                      : "—"}
+                  </span>
+                </div>
+                {solicitud.reingresoCount > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">Reingresos</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-1 text-xs font-medium text-accent-foreground w-fit">
+                      <RotateCcw className="h-3 w-3" />#{solicitud.reingresoCount}
+                    </span>
+                  </div>
+                )}
+                {solicitud.lastObservedStage && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">Última observación desde</span>
+                    <span className="text-sm font-medium text-card-foreground">
+                      Filtro {solicitud.lastObservedStage}
+                      {solicitud.lastObservedDate && ` — ${solicitud.lastObservedDate}`}
+                    </span>
+                  </div>
+                )}
+                {solicitud.esRegularizacion && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary w-fit">
+                    Regularización / Extemporánea
+                  </span>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activePanel === "historial" && (
+            <Card className="shadow-sm border-border sticky top-4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-secondary" />Historial de la solicitud
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {historial.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Sin historial registrado.</p>
+                ) : (
+                  <div className="flex flex-col gap-0">
+                    {[...historial].reverse().map((e, i) => (
+                      <div key={i} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-secondary bg-card">
+                            <div className="h-2 w-2 rounded-full bg-secondary" />
+                          </div>
+                          {i < historial.length - 1 && <div className="w-px flex-1 bg-border" />}
+                        </div>
+                        <div className="flex flex-col gap-0.5 pb-4">
+                          <span className="text-xs font-medium text-card-foreground">{e.accion}</span>
+                          <span className="text-[10px] text-muted-foreground">{e.fecha} — {e.usuario}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
+      {/* Modales */}
       <ConfirmModal
         open={showAprobarModal}
         onClose={() => setShowAprobarModal(false)}
         onConfirm={() => { setShowAprobarModal(false); onAprobar(solicitud.id) }}
         title={`¿${labelAprobar}?`}
-        description={`La solicitud ${solicitud.folioRecepcion} avanzará al siguiente paso del proceso.`}
+        description={`La solicitud ${folioFormateado} avanzará al siguiente paso del proceso.`}
         confirmLabel="Sí, aprobar"
         icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
@@ -373,13 +613,13 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
         open={showObservarModal}
         onClose={() => setShowObservarModal(false)}
         onConfirm={(obs) => { setShowObservarModal(false); onObservar(solicitud.id, obs) }}
-        folio={solicitud.folioRecepcion ?? solicitud.id}
+        folio={folioFormateado}
       />
     </div>
   )
 }
-// pagina principal
 
+// ── Bandeja principal ──
 interface BandejaFiltroPageProps {
   filtro: 1 | 2 | 3
   onOpenReview?: (solicitudId: string, filtro: 1 | 2 | 3) => void
@@ -388,24 +628,22 @@ interface BandejaFiltroPageProps {
 export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPageProps) {
   const { user } = useAuth()
 
-  const [solicitudes,     setSolicitudes]     = useState<FiltroSolicitud[]>([])
-  const [loading,         setLoading]         = useState(true)
-  const [error,           setError]           = useState<string | null>(null)
-  const [guardando,       setGuardando]       = useState(false)
-  const [activeTab,       setActiveTab]       = useState<TabKey>("todas")
-  const [selectedId,      setSelectedId]      = useState<string | null>(null)
-  const [observarTarget,  setObservarTarget]  = useState<string | null>(null)
-  const [aprobarTarget,   setAprobarTarget]   = useState<string | null>(null)
+  const [solicitudes,    setSolicitudes]    = useState<FiltroSolicitud[]>([])
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState<string | null>(null)
+  const [guardando,      setGuardando]      = useState(false)
+  const [activeTab,      setActiveTab]      = useState<TabKey>("todas")
+  const [selectedId,     setSelectedId]     = useState<string | null>(null)
+  const [observarTarget, setObservarTarget] = useState<string | null>(null)
+  const [aprobarTarget,  setAprobarTarget]  = useState<string | null>(null)
 
-  // Filtros de columna
-  const [searchTerm,        setSearchTerm]        = useState("")
-  const [filterAnio,        setFilterAnio]        = useState("2026")
-  const [filterMes,         setFilterMes]         = useState("todos")
-  const [filterSecretaria,  setFilterSecretaria]  = useState("todas")
-  const [filterTipo,        setFilterTipo]        = useState("todos")
-  const [filterSla,         setFilterSla]         = useState("todos")
+  const [searchTerm,       setSearchTerm]       = useState("")
+  const [filterAnio,       setFilterAnio]       = useState("2026")
+  const [filterMes,        setFilterMes]        = useState("todos")
+  const [filterSecretaria, setFilterSecretaria] = useState("todas")
+  const [filterTipo,       setFilterTipo]       = useState("todos")
+  const [filterSla,        setFilterSla]        = useState("todos")
 
-  //  Cargar de la API
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
     try {
@@ -419,7 +657,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
 
   useEffect(() => { cargar() }, [cargar])
 
-  // Aprobar
   const handleAprobar = useCallback(async (id: string) => {
     setGuardando(true)
     try {
@@ -436,16 +673,13 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? "Error al aprobar"); return }
       setSolicitudes(prev =>
-        prev.map(s =>
-          s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s
-        )
+        prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
       )
       setSelectedId(null)
     } catch { alert("Error de conexión al aprobar") }
     finally { setGuardando(false); setAprobarTarget(null) }
   }, [filtro, user])
 
-  //  Observar
   const handleObservar = useCallback(async (id: string, obs: string) => {
     setGuardando(true)
     try {
@@ -463,18 +697,13 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? "Error al observar"); return }
       setSolicitudes(prev =>
-        prev.map(s =>
-          s.id === id
-            ? { ...s, estado: json.estadoNuevo ?? s.estado, reingresoCount: s.reingresoCount }
-            : s
-        )
+        prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
       )
       setSelectedId(null); setObservarTarget(null)
     } catch { alert("Error de conexión al observar") }
     finally { setGuardando(false) }
   }, [filtro, user])
 
-  // Clasificar
   const tabCounts = useMemo(() => {
     const c: Record<TabKey, number> = { nuevas: 0, correcciones: 0, revision: 0, observadas: 0, todas: 0 }
     c.todas = solicitudes.length
@@ -485,7 +714,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
     return c
   }, [solicitudes, filtro])
 
-  // Filtrar
   const filtered = useMemo(() =>
     solicitudes
       .filter(s => activeTab === "todas" || classifySolicitud(s, filtro) === activeTab)
@@ -494,13 +722,16 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         const t = searchTerm.toLowerCase()
         return (
           (s.folioRecepcion?.toLowerCase().includes(t) ?? false) ||
+          formatearFolio(s.folioRecepcion).toLowerCase().includes(t) ||
           (s.folioDictamen?.toLowerCase().includes(t) ?? false) ||
+          formatearFolio(s.folioDictamen).toLowerCase().includes(t) ||
           s.secretaria.toLowerCase().includes(t) ||
-          s.tipo.toLowerCase().includes(t)
+          s.tipo.toLowerCase().includes(t) ||
+          (s.denominacion ?? "").toLowerCase().includes(t)
         )
       })
       .filter(s => {
-        if (filterAnio !== "todos" && s.fechaRecepcionDO) return s.fechaRecepcionDO.startsWith(filterAnio)
+        if (filterAnio !== "todos " && s.fechaRecepcionDO) return s.fechaRecepcionDO.startsWith(filterAnio)
         return true
       })
       .filter(s => {
@@ -510,7 +741,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       .filter(s => filterSecretaria === "todas" || s.secretaria === filterSecretaria)
       .filter(s => filterTipo === "todos" || s.tipo === filterTipo)
       .filter(s => {
-        if (filterSla === "todos") return true
+        if (filterSla === "todos")   return true
         if (filterSla === "vencido") return (s.slaRestante ?? 1) <= 0
         if (filterSla === "critico") return (s.slaRestante ?? 99) >= 1 && (s.slaRestante ?? 99) <= 5
         if (filterSla === "medio")   return (s.slaRestante ?? 99) >= 6 && (s.slaRestante ?? 99) <= 10
@@ -519,6 +750,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       }),
     [solicitudes, activeTab, filtro, searchTerm, filterAnio, filterMes, filterSecretaria, filterTipo, filterSla]
   )
+
   const secretariasUnicas = useMemo(() =>
     [...new Set(solicitudes.map(s => s.secretaria))].filter(Boolean).sort(),
     [solicitudes]
@@ -530,7 +762,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
 
   const selectedSolicitud = selectedId ? solicitudes.find(s => s.id === selectedId) ?? null : null
 
-  //  Vista detalle
   if (selectedSolicitud) return (
     <DetalleView
       solicitud={selectedSolicitud}
@@ -542,7 +773,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
     />
   )
 
-  //  Vista bandeja
   return (
     <div className="flex flex-col gap-6">
       {/* Encabezado */}
@@ -561,7 +791,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         </Button>
       </div>
 
-      {/* Error */}
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="flex items-center gap-3 py-3">
@@ -575,10 +804,11 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       {/* Tarjetas resumen */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: "Total en bandeja", value: solicitudes.length, icon: <Filter className="h-5 w-5 text-secondary" />, bg: "bg-secondary/10" },
-          { label: "Nuevas",           value: tabCounts.nuevas,   icon: <CircleDot className="h-5 w-5 text-secondary" />, bg: "bg-secondary/10" },
-          { label: "Correcciones",     value: tabCounts.correcciones, icon: <RotateCcw className="h-5 w-5 text-accent-foreground" />, bg: "bg-accent/10" },
-          { label: "SLA en riesgo",    value: solicitudes.filter(s => s.slaRestante !== null && s.slaRestante <= 5).length, icon: <AlertTriangle className="h-5 w-5 text-destructive" />, bg: "bg-destructive/10" },
+          { label: "Total en bandeja", value: solicitudes.length,         icon: <Filter className="h-5 w-5 text-secondary" />,          bg: "bg-secondary/10" },
+          { label: "Nuevas",           value: tabCounts.nuevas,           icon: <CircleDot className="h-5 w-5 text-secondary" />,        bg: "bg-secondary/10" },
+          { label: "Correcciones",     value: tabCounts.correcciones,     icon: <RotateCcw className="h-5 w-5 text-accent-foreground" />, bg: "bg-accent/10" },
+          { label: "SLA en riesgo",    value: solicitudes.filter(s => s.slaRestante !== null && s.slaRestante <= 5).length,
+                                                                           icon: <AlertTriangle className="h-5 w-5 text-destructive" />,  bg: "bg-destructive/10" },
         ].map((c, i) => (
           <Card key={i} className="shadow-sm border-border">
             <CardContent className="flex items-center gap-3 p-4">
@@ -595,8 +825,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       {/* Tabs */}
       <div className="flex items-center gap-1 rounded-xl bg-muted/50 p-1.5 border border-border flex-wrap">
         {(Object.keys(TAB_CONFIG) as TabKey[]).map((tabKey) => {
-          const config  = TAB_CONFIG[tabKey]
-          const count   = tabCounts[tabKey]
+          const config   = TAB_CONFIG[tabKey]
+          const count    = tabCounts[tabKey]
           const isActive = activeTab === tabKey
           return (
             <button
@@ -618,12 +848,12 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         })}
       </div>
 
-      {/* Filtros */}
+      {/* filtros  */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por folio, secretaría o tipo..."
+            placeholder="Buscar por folio, denominacion, secretaría..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="pl-10 bg-card"
@@ -670,12 +900,14 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         </Select>
       </div>
 
-      {/* Tabla */}
+      {/* ── TABLA ── */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm font-semibold text-card-foreground">
             <span>
-              {loading ? "Cargando..." : `${filtered.length} solicitud${filtered.length !== 1 ? "es" : ""} en ${FILTRO_LABELS[filtro]}`}
+              {loading
+                ? "Cargando..."
+                : `${filtered.length} solicitud${filtered.length !== 1 ? "es" : ""} en ${FILTRO_LABELS[filtro]}`}
             </span>
           </CardTitle>
         </CardHeader>
@@ -692,19 +924,20 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                   <tr className="border-b border-border">
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Estatus</th>
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Recepción</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Tipo</th>
+                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Régimen de Contratación</th>
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Secretaría</th>
                     {filtro >= 2 && <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Dictamen</th>}
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Fecha Recepción</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Última obs.</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Plazo</th>
+                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Fecha de Recepción</th>
+                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Fecha de Corrección</th>
+                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Ult. Observo</th>
+                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">SLA</th>
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={filtro >= 2 ? 9 : 8} className="px-4 py-12 text-center text-muted-foreground">
+                      <td colSpan={filtro >= 2 ? 10 : 9} className="px-4 py-12 text-center text-muted-foreground">
                         <div className="flex flex-col items-center gap-2">
                           <Filter className="h-8 w-8 text-muted-foreground/40" />
                           <span>No hay solicitudes en esta clasificación</span>
@@ -716,6 +949,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                     const config = TAB_CONFIG[tab]
                     return (
                       <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+                        {/* Estatus */}
                         <td className="px-3 py-3">
                           <div className="flex flex-col gap-1">
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${config.activeBg} ${config.activeText}`}>
@@ -728,9 +962,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             )}
                           </div>
                         </td>
+                        {/* Folio Recepción */}
                         <td className="px-3 py-3 font-medium text-card-foreground">
                           <div className="flex flex-col gap-1">
-                            <span>{sol.folioRecepcion || "---"}</span>
+                            <span>{formatearFolio(sol.folioRecepcion)}</span>
                             {sol.folioTemporal && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive w-fit">
                                 Folio temporal
@@ -743,22 +978,30 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-muted-foreground text-xs">{sol.tipo}</td>
+                        {/* Régimen de Contratación — CORREGIDO */}
+                        <td className="px-3 py-3 text-muted-foreground text-xs max-w-[180px]">
+                          <span className="line-clamp-2">{formatRegimen(sol._raw?.regimen)}</span>
+                        </td>
+                        {/* Secretaría */}
                         <td className="px-3 py-3 text-muted-foreground text-xs">{sol.secretaria}</td>
+                        {/* Folio Dictamen (filtro >= 2) */}
                         {filtro >= 2 && (
                           <td className="px-3 py-3">
                             {sol.folioDictamen
-                              ? <span className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-medium text-secondary">{sol.folioDictamen}</span>
+                              ? <span className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-medium text-secondary">
+                                  {formatearFolio(sol.folioDictamen)}
+                                </span>
                               : <span className="text-xs text-muted-foreground">---</span>
                             }
                           </td>
                         )}
+                        {/* Fecha de Recepción */}
                         <td className="px-3 py-3 text-xs text-muted-foreground">
                           {sol.fechaRecepcionDO
                             ? new Date(sol.fechaRecepcionDO).toLocaleDateString("es-MX")
-                            : "---"
-                          }
+                            : "---"}
                         </td>
+                        {/* Fecha de Corrección */}
                         <td className="px-3 py-3">
                           {sol.lastObservedStage ? (
                             <div className="flex flex-col gap-0.5">
@@ -769,7 +1012,17 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             <span className="text-xs text-muted-foreground">---</span>
                           )}
                         </td>
+                        {/* Ult. Observo */}
+                        <td className="px-3 py-3">
+                          {sol.lastObservedEstado ? (
+                            <span className="text-xs text-muted-foreground">{sol.lastObservedEstado}</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">---</span>
+                          )}
+                        </td>
+                        {/* SLA */}
                         <td className="px-3 py-3"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
+                        {/* Acción */}
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-1.5">
                             <Button
@@ -807,13 +1060,13 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         </CardContent>
       </Card>
 
-      {/* Modales globales (acciones desde tabla) */}
+      {/* Modales globales */}
       <ConfirmModal
         open={!!aprobarTarget}
         onClose={() => setAprobarTarget(null)}
         onConfirm={() => { if (aprobarTarget) handleAprobar(aprobarTarget) }}
-        title={`¿Aprobar y avanzar al siguiente filtro?`}
-        description={`La solicitud ${solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion ?? ""} avanzará al siguiente paso.`}
+        title="¿Aprobar y avanzar al siguiente filtro?"
+        description={`La solicitud ${formatearFolio(solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion)} avanzará al siguiente paso.`}
         confirmLabel="Sí, aprobar"
         icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
@@ -821,7 +1074,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         open={!!observarTarget}
         onClose={() => setObservarTarget(null)}
         onConfirm={(obs) => { if (observarTarget) handleObservar(observarTarget, obs) }}
-        folio={solicitudes.find(s => s.id === observarTarget)?.folioRecepcion ?? ""}
+        folio={formatearFolio(solicitudes.find(s => s.id === observarTarget)?.folioRecepcion)}
       />
     </div>
   )
