@@ -12,7 +12,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const { nombre, correo, rfc, password, rolNombre, areaNombre, activo } = await req.json()
+    const { nombre, correo, rfc, password, rolNombre, areaNombre, activo, secretariaId, secretariaTexto } = await req.json()
 
     const usuarioActual = await prisma.usuario.findUnique({ where: { id } })
     if (!usuarioActual) return err("Usuario no encontrado", 404)
@@ -48,13 +48,20 @@ export async function PATCH(
       if (dup) return err("Ya existe un usuario con ese RFC", 409)
     }
 
-    const data: any = {
+    const data: Record<string, unknown> = {
       ...(nombre !== undefined && { nombre: nombre.trim() }),
       ...(correo !== undefined && { correo: correo.trim().toLowerCase() }),
       ...(rfc    !== undefined && { rfc: rfc ? rfc.trim().toUpperCase() : null }),
       ...(activo !== undefined && { activo }),
       rol_id,
       area_id,
+    }
+
+    if (secretariaId !== undefined) {
+      data.secretaria_id = secretariaId || null
+    }
+    if (secretariaTexto !== undefined) {
+      data.secretaria_texto = secretariaTexto || null
     }
 
     if (password) {
@@ -68,13 +75,14 @@ export async function PATCH(
     })
 
     return NextResponse.json({
-      id:         actualizado.id,
-      nombre:     actualizado.nombre,
-      correo:     actualizado.correo,
-      rfc:        actualizado.rfc ?? null,
-      rol:        actualizado.rol.nombre,
-      secretaria: actualizado.area?.nombre ?? "Sin área",
-      estatus:    actualizado.activo ? "Activo" : "Inactivo",
+      id:           actualizado.id,
+      nombre:       actualizado.nombre,
+      correo:       actualizado.correo,
+      rfc:          actualizado.rfc ?? null,
+      rol:          actualizado.rol.nombre,
+      secretaria:   actualizado.secretaria_texto ?? actualizado.area?.nombre ?? "Sin área",
+      secretariaId: actualizado.secretaria_id ?? null,
+      estatus:      actualizado.activo ? "Activo" : "Inactivo",
     })
 
   } catch (e) {

@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { FilterTabs } from "@/components/ui/filter-tabs"
+import { PageLayout } from "@/components/page-layout"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
@@ -544,7 +546,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
 
   //  Vista bandeja
   return (
-    <div className="flex flex-col gap-6">
+    <PageLayout>
       {/* Encabezado */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
@@ -592,31 +594,16 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         ))}
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 rounded-xl bg-muted/50 p-1.5 border border-border flex-wrap">
-        {(Object.keys(TAB_CONFIG) as TabKey[]).map((tabKey) => {
-          const config  = TAB_CONFIG[tabKey]
-          const count   = tabCounts[tabKey]
-          const isActive = activeTab === tabKey
-          return (
-            <button
-              key={tabKey}
-              onClick={() => setActiveTab(tabKey)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                isActive
-                  ? `${config.activeBg} ${config.activeText} shadow-sm`
-                  : "text-muted-foreground hover:text-card-foreground hover:bg-muted"
-              }`}
-            >
-              {config.icon}
-              <span>{config.label}</span>
-              <span className={`ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
-                isActive ? `${config.activeText} bg-background` : "bg-muted text-muted-foreground"
-              }`}>{count}</span>
-            </button>
-          )
-        })}
-      </div>
+      <FilterTabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as TabKey)}
+        items={(Object.keys(TAB_CONFIG) as TabKey[]).map((tabKey) => ({
+          value: tabKey,
+          label: TAB_CONFIG[tabKey].label,
+          count: tabCounts[tabKey],
+          icon: TAB_CONFIG[tabKey].icon,
+        }))}
+      />
 
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3">
@@ -689,16 +676,16 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Estatus</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Recepción</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Tipo</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Secretaría</th>
-                    {filtro >= 2 && <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Dictamen</th>}
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Fecha Recepción</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Última obs.</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Plazo</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Acción</th>
+                  <tr className="bg-secondary text-secondary-foreground">
+                    <th className="px-3 py-3 text-left font-semibold">Estatus</th>
+                    <th className="px-3 py-3 text-left font-semibold">Folio Recepción</th>
+                    <th className="px-3 py-3 text-left font-semibold">Tipo</th>
+                    <th className="px-3 py-3 text-left font-semibold">Secretaría</th>
+                    {filtro >= 2 && <th className="px-3 py-3 text-left font-semibold">Folio Dictamen</th>}
+                    <th className="px-3 py-3 text-left font-semibold">Fecha Recepción</th>
+                    <th className="px-3 py-3 text-left font-semibold">Última obs.</th>
+                    <th className="px-3 py-3 text-left font-semibold">Plazo</th>
+                    <th className="px-3 py-3 text-left font-semibold">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -823,6 +810,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         onConfirm={(obs) => { if (observarTarget) handleObservar(observarTarget, obs) }}
         folio={solicitudes.find(s => s.id === observarTarget)?.folioRecepcion ?? ""}
       />
-    </div>
+    </PageLayout>
   )
 }

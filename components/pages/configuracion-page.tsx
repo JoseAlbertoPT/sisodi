@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { FileSpreadsheet, Trash2, Settings } from "lucide-react"
+import { FileSpreadsheet, Trash2, Settings, Building2, Landmark } from "lucide-react"
 import { useHistoricoStore } from "@/lib/historico-store"
+import { PageLayout } from "@/components/page-layout"
+import { CatalogoCentralizadaTab } from "@/components/catalogo-centralizada-tab"
+import { CatalogoParaestatalTab } from "@/components/catalogo-paraestatal-tab"
 
 export function ConfiguracionPage() {
   const { historicos, loading, error, uploadHistorico, removeHistorico } = useHistoricoStore()
@@ -55,22 +58,24 @@ export function ConfiguracionPage() {
   )
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <Settings className="h-5 w-5 text-secondary" />
-          Configuracion
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Parametros y cargas de datos del sistema (historico de justificaciones, etc.).
-        </p>
-      </div>
+    <PageLayout
+      title={<span className="flex items-center gap-2"><Settings className="h-5 w-5 text-secondary" />Configuracion</span>}
+      description="Parametros y cargas de datos del sistema (historico de justificaciones, etc.)."
+    >
 
       <Tabs defaultValue="historico" className="w-full">
         <TabsList className="bg-muted">
           <TabsTrigger value="historico" className="gap-1.5">
             <FileSpreadsheet className="h-4 w-4" />
             Historico Excel
+          </TabsTrigger>
+          <TabsTrigger value="centralizada" className="gap-1.5">
+            <Building2 className="h-4 w-4" />
+            Centralizada
+          </TabsTrigger>
+          <TabsTrigger value="paraestatal" className="gap-1.5">
+            <Landmark className="h-4 w-4" />
+            Paraestatal
           </TabsTrigger>
         </TabsList>
 
@@ -162,7 +167,15 @@ export function ConfiguracionPage() {
             </Card>
           )}
         </TabsContent>
+
+        <TabsContent value="centralizada" className="mt-6">
+          <CatalogoCentralizadaTab />
+        </TabsContent>
+
+        <TabsContent value="paraestatal" className="mt-6">
+          <CatalogoParaestatalTab />
+        </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   )
 }

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Search, Download, Eye, FileCheck, Stamp, Printer } from "lucide-react"
+import { PageLayout } from "@/components/page-layout"
 import { useSolicitudes, type Solicitud } from "@/lib/solicitudes-store"
 
 const SECRETARIAS = [
@@ -192,17 +193,13 @@ export function DictamenesPage() {
   }, [emitidos, searchTerm, filterAnio, filterMes, filterSecretaria, filterTipo])
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageLayout
+      title="Dictamenes Emitidos"
+      description="Registro de dictamenes y opiniones tecnicas emitidos"
+    >
       {viewingSolicitud && (
         <DictamenViewModal solicitud={viewingSolicitud} onClose={() => setViewingSolicitud(null)} />
       )}
-
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">Dictamenes Emitidos</h2>
-        <p className="text-sm text-muted-foreground">
-          Registro de dictamenes y opiniones tecnicas emitidos
-        </p>
-      </div>
 
       {/* Summary */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -318,16 +315,16 @@ export function DictamenesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Num. Dictamen</th>
-                  <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Recepcion</th>
-                  <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Secretaria</th>
-                  <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Tipo</th>
-                  <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Tipo Solicitud</th>
-                  <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Fecha Dict.</th>
-                  <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Modalidad</th>
-                  <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Destinatarios</th>
-                  <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Acciones</th>
+                <tr className="bg-secondary text-secondary-foreground">
+                  <th className="px-3 py-3 text-left font-semibold">Num. Dictamen</th>
+                  <th className="px-3 py-3 text-left font-semibold">Folio Recepcion</th>
+                  <th className="px-3 py-3 text-left font-semibold">Secretaria</th>
+                  <th className="px-3 py-3 text-left font-semibold">Tipo</th>
+                  <th className="px-3 py-3 text-left font-semibold">Tipo Solicitud</th>
+                  <th className="px-3 py-3 text-left font-semibold">Fecha Dict.</th>
+                  <th className="px-3 py-3 text-left font-semibold">Modalidad</th>
+                  <th className="px-3 py-3 text-left font-semibold">Destinatarios</th>
+                  <th className="px-3 py-3 text-left font-semibold">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -390,6 +387,6 @@ export function DictamenesPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageLayout>
   )
 }

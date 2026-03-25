@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { PageLayout } from "@/components/page-layout"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -1833,7 +1834,7 @@ function FormularioNombramiento({
             <Label className="text-sm font-medium mb-3 block">Condiciones</Label>
             <div className="overflow-hidden rounded-md border border-border">
               <table className="w-full text-sm">
-                <thead><tr className="bg-muted">
+                <thead><tr className="bg-secondary text-secondary-foreground">
                   <th className="px-4 py-2.5 text-left font-medium text-card-foreground">Condicion</th>
                   <th className="px-4 py-2.5 text-center font-medium">Si</th>
                   <th className="px-4 py-2.5 text-center font-medium">No</th>
@@ -1848,7 +1849,7 @@ function FormularioNombramiento({
             <Label className="text-sm font-medium mb-3 block">Tabla de Riesgos</Label>
             <div className="overflow-hidden rounded-md border border-border">
               <table className="w-full text-sm">
-                <thead><tr className="bg-muted">
+                <thead><tr className="bg-secondary text-secondary-foreground">
                   <th className="px-4 py-2.5 text-left font-medium">Riesgo</th>
                   <th className="px-4 py-2.5 text-center font-medium">Bajo</th>
                   <th className="px-4 py-2.5 text-center font-medium">Medio</th>
@@ -2189,12 +2190,28 @@ export function NuevaSolicitudPage() {
   const periodoVencido = periodoSeleccionado ? (periodoInfo ? !periodoInfo.enTiempo : false) : false
   const puedeAvanzarDeTipo = !!(tipo && regimenPeriodo && periodoSeleccionado && !periodoVencido)
 
+  // Normaliza texto quitando acentos y pasando a minúsculas
+  const norm = (s: string) =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
+
+  // Secretaría raíz del usuario logueado (primer segmento del path)
+  const userSecretariaRaiz = useMemo(() => {
+    const texto = user?.secretariaTexto ?? user?.area ?? null
+    if (!texto) return null
+    return norm(texto.split(" > ")[0])
+  }, [user])
+
   const foliosReales = useMemo((): FolioExcel[] => {
     if (excelRows.length === 0) return []
     return excelRows
       .filter((row) => {
         const folio = getCell(row, COL.folioDictamen)
         if (!folio) return false
+        // Filtrar por secretaría del usuario
+        if (userSecretariaRaiz) {
+          const secRow = norm(getCell(row, COL.secretaria) ?? "")
+          if (!secRow.includes(userSecretariaRaiz) && !userSecretariaRaiz.includes(secRow)) return false
+        }
         const reg = normalizaRegimen(getCell(row, COL.regimen))
         if (tipo === "nombramiento" && reg !== "nombramiento") return false
         if (tipo === "prestacion"   && reg === "nombramiento") return false
@@ -2379,14 +2396,11 @@ export function NuevaSolicitudPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground">Nueva Solicitud</h2>
-            <p className="text-sm text-muted-foreground">Registre una nueva solicitud de dictaminacion tecnica funcional</p>
-          </div>
-        </div>
+    <PageLayout
+      title="Nueva Solicitud"
+      description="Registre una nueva solicitud de dictaminacion tecnica funcional"
+    >
+      <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <StepIndicator step={step} tipo={tipo} />
       </div>
 
@@ -2856,6 +2870,6 @@ export function NuevaSolicitudPage() {
           })()}
         </>
       )}
-    </div>
+    </PageLayout>
   )
 }

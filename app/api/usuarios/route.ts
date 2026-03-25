@@ -15,13 +15,14 @@ export async function GET() {
 
     return NextResponse.json(
       usuarios.map((u) => ({
-        id:        u.id,
-        nombre:    u.nombre,
-        correo:    u.correo,
-        rfc:       u.rfc ?? null,
-        rol:       u.rol.nombre,
-        secretaria: u.area?.nombre ?? "Sin área",
-        estatus:   u.activo ? "Activo" : "Inactivo",
+        id:              u.id,
+        nombre:          u.nombre,
+        correo:          u.correo,
+        rfc:             u.rfc ?? null,
+        rol:             u.rol.nombre,
+        secretaria:      u.secretaria_texto ?? u.area?.nombre ?? "Sin área",
+        secretariaId:    u.secretaria_id ?? null,
+        estatus:         u.activo ? "Activo" : "Inactivo",
       }))
     )
   } catch (e) {
@@ -32,13 +33,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { nombre, correo, rfc, password, rolNombre, areaNombre } = await req.json()
+    const { nombre, correo, rfc, password, rolNombre, areaNombre, secretariaId, secretariaTexto } = await req.json()
 
     if (!nombre?.trim())   return err("El nombre es requerido")
     if (!correo?.trim())   return err("El correo es requerido")
     if (!password?.trim()) return err("La contraseña es requerida")
     if (!rolNombre?.trim()) return err("El rol es requerido")
-
 
     const rol = await prisma.rol.findFirst({ where: { nombre: rolNombre } })
     if (!rol) return err(`Rol "${rolNombre}" no encontrado`, 404)
@@ -46,7 +46,6 @@ export async function POST(req: NextRequest) {
     const area = areaNombre
       ? await prisma.area.findFirst({ where: { nombre: areaNombre } })
       : null
-
 
     const existe = await prisma.usuario.findFirst({
       where: {
@@ -66,26 +65,29 @@ export async function POST(req: NextRequest) {
 
     const nuevo = await prisma.usuario.create({
       data: {
-        nombre:       nombre.trim(),
-        correo:       correo.trim().toLowerCase(),
-        rfc:          rfc ? rfc.trim().toUpperCase() : null,
-        password_hash: hash,
-        rol_id:       rol.id,
-        area_id:      area?.id ?? null,
-        activo:       true,
+        nombre:           nombre.trim(),
+        correo:           correo.trim().toLowerCase(),
+        rfc:              rfc ? rfc.trim().toUpperCase() : null,
+        password_hash:    hash,
+        rol_id:           rol.id,
+        area_id:          area?.id ?? null,
+        secretaria_id:    secretariaId || null,
+        secretaria_texto: secretariaTexto || null,
+        activo:           true,
         must_change_password: false,
       },
       include: { rol: true, area: true },
     })
 
     return NextResponse.json({
-      id:        nuevo.id,
-      nombre:    nuevo.nombre,
-      correo:    nuevo.correo,
-      rfc:       nuevo.rfc ?? null,
-      rol:       nuevo.rol.nombre,
-      secretaria: nuevo.area?.nombre ?? "Sin área",
-      estatus:   "Activo",
+      id:           nuevo.id,
+      nombre:       nuevo.nombre,
+      correo:       nuevo.correo,
+      rfc:          nuevo.rfc ?? null,
+      rol:          nuevo.rol.nombre,
+      secretaria:   nuevo.secretaria_texto ?? nuevo.area?.nombre ?? "Sin área",
+      secretariaId: nuevo.secretaria_id ?? null,
+      estatus:      "Activo",
     }, { status: 201 })
 
   } catch (e) {

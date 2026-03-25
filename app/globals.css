@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #F3F2EE;
+  --background: #ffffff;
   --foreground: #283c2a;
   --card: #ffffff;
   --card-foreground: #283c2a;
@@ -37,6 +37,10 @@
   --sidebar-accent-foreground: #F3F2EE;
   --sidebar-border: #344636;
   --sidebar-ring: #c69c6d;
+  --sidebar-bg-light: #F3F2EE;
+  --sidebar-dropdown: #832B56;
+  --title: #C69C6D;
+  --subtitle: #6E795A;
   --warning: #832b56;
   --warning-foreground: #F3F2EE;
 }
@@ -80,6 +84,10 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-bg-light: var(--sidebar-bg-light);
+  --color-sidebar-dropdown: var(--sidebar-dropdown);
+  --color-title: var(--title);
+  --color-subtitle: var(--subtitle);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
 }
