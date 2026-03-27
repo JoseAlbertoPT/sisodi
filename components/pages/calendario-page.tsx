@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/select"
 
 type TabRecepcion = "honorarios" | "asimilados" | "nombramiento"
-
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",

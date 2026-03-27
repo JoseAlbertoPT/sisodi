@@ -235,11 +235,14 @@ model codigo_recuperacion {
 }
 
 model historico {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre_archivo  String   @db.VarChar(512)
-  subido_en       DateTime @default(now()) @db.Timestamp(6)
-  sheet_names     String[]
-  sheets          Json     @default("{}")
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre_archivo   String   @db.VarChar(512)
+  subido_en        DateTime @default(now()) @db.Timestamp(6)
+  sheet_names      String[]
+  sheets           Json     @default("{}")
+  nombre_archivo2  String?  @db.VarChar(512)
+  sheet_names2     String[]
+  sheets2          Json?
 }
 
 model calendario {

@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
         archivoPdf:     sol.dictamen?.archivo_pdf ?? null,
         secretaria,
         tipoSolicitud:  sol.tipo_solicitud ?? "—",
-        denominacion:   (sol as any).denominacion ?? sol.tipo_solicitud ?? null,
+        denominacion:   (sol as any).denominacion || sol.tipo_solicitud || null,
         importeBruto:
           sol.importe_bruto != null
             ? `$${Number(sol.importe_bruto).toLocaleString("es-MX", {

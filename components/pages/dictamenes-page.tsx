@@ -123,7 +123,6 @@ function DictamenViewModal({
       : "OPINIÓN TÉCNICA FUNCIONAL"
 
   const folioRecepcionFormateado = formatearFolio(dictamen.folioRecepcion)
-  const folioDictamenFormateado  = formatearFolio(dictamen.folioDictamen)
 
   const handlePrint = () => {
     const pw = window.open("", "_blank")
@@ -149,7 +148,7 @@ function DictamenViewModal({
         <p>DIRECCIÓN DE ORGANIZACIÓN</p>
         <h1>${titulo}</h1>
       </div>
-      <p><strong>Número:</strong> ${folioDictamenFormateado}</p>
+      <p><strong>Número:</strong> ${dictamen.folioDictamen ?? "—"}</p>
       <p><strong>Folio Recepción:</strong> ${folioRecepcionFormateado}</p>
       <p><strong>Fecha:</strong> ${dictamen.fechaEmision ? new Date(dictamen.fechaEmision).toLocaleDateString("es-MX") : "—"}</p>
       <p><strong>Modalidad:</strong> ${dictamen.tipoFirma === "electronica" ? "Firma Electrónica" : "Firma Autógrafa"}</p>
@@ -183,7 +182,7 @@ function DictamenViewModal({
               {titulo}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Número: {folioDictamenFormateado} | Folio Recepción: {folioRecepcionFormateado}
+              Número: {dictamen.folioDictamen ?? "—"} | Folio Recepción: {folioRecepcionFormateado}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -207,7 +206,7 @@ function DictamenViewModal({
               <div>
                 <span className="text-xs text-muted-foreground block">Número</span>
                 <span className="text-sm font-semibold text-card-foreground font-mono">
-                  {folioDictamenFormateado}
+                  {dictamen.folioDictamen ?? "—"}
                 </span>
               </div>
               <div>
@@ -497,9 +496,8 @@ export function DictamenesPage() {
                   ) : filtered.map((d) => (
                     <tr key={d.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
 
-                      {  }
                       <td className="px-3 py-3 font-medium text-card-foreground font-mono text-xs">
-                        {formatearFolio(d.folioDictamen)}
+                        {d.folioDictamen ?? "—"}
                       </td>
 
                       { }

@@ -16,7 +16,6 @@ export async function GET(req: NextRequest) {
   if (!rolNombre) {
     return NextResponse.json({ error: "Falta parámetro 'rol'" }, { status: 400 })
   }
-
   const rol = await prisma.rol.findUnique({ where: { nombre: rolNombre } })
   if (!rol) {
     return NextResponse.json({ error: "Rol no encontrado" }, { status: 404 })
@@ -39,6 +38,7 @@ export async function GET(req: NextRequest) {
   for (const m of allMenus) {
     if (menuIds.has(m.id) && m.parent_id && !menuIds.has(m.parent_id)) {
       menuIds.add(m.parent_id)
+
     }
   }
 

@@ -29,28 +29,30 @@ import {
 import { useAuth } from "@/lib/auth-context"
 type UrgTab =
   | "Borradores"
-  | "Enviadas a UEFA"
+  | "En Validacion"
   | "Observadas/Devueltas"
-  | "En proceso DO"
+  | "En Proceso"
   | "Emitidas"
   | "Todas"
 
 type UrgEstado =
   | "Borrador"
   | "En Captura"
+  | "En Validacion Justificaciones"
   | "Enviada a Validacion (UEFA)"
   | "Enviada a Validacion"
+  | "Observado por Validacion"
   | "Observada por UEFA"
   | "Observado por UEFA"
-  | "Devuelta por DO"
-  | "Observado DO Filtro 1"
-  | "Observado DO Filtro 2"
-  | "Observado DO Filtro 3"
-  | "En revision DO Filtro 1"
-  | "En revision DO Filtro 2"
-  | "En revision DO Filtro 3"
+  | "En Revision Revisor"
+  | "Observado por Revisor"
+  | "Pendiente Firma Justificacion"
+  | "En Validacion Final"
+  | "Observado por Validacion Final"
+  | "En Revision Emisor"
+  | "Observado por Emisor"
+  | "Pendiente Firma Dictamen"
   | "En proceso DO"
-  | "Aprobado"
   | "Emitido"
 
 interface HistorialEntry {
@@ -102,6 +104,7 @@ interface UrgSolicitud {
   fechaDictamen?: string
   regimen: RegimenPeriodo
   periodoAplicacion: string
+  fechaRecepcion?: string
 }
 function getFolioSegunEstado(sol: UrgSolicitud, activeTab: UrgTab): React.ReactNode {
   const efectivaTab: UrgTab =
@@ -118,7 +121,7 @@ function getFolioSegunEstado(sol: UrgSolicitud, activeTab: UrgTab): React.ReactN
       )
     }
 
-    case "Enviadas a UEFA": {
+    case "En Validacion": {
       if (sol.folioJustificacion) {
         return <span className="font-semibold">{sol.folioJustificacion}</span>
       }
@@ -128,7 +131,7 @@ function getFolioSegunEstado(sol: UrgSolicitud, activeTab: UrgTab): React.ReactN
     }
 
     case "Observadas/Devueltas":
-    case "En proceso DO":
+    case "En Proceso":
     case "Emitidas": {
       if (sol.folioRecepcion) {
         return <span className="font-semibold">{sol.folioRecepcion}</span>
@@ -143,22 +146,24 @@ function getFolioSegunEstado(sol: UrgSolicitud, activeTab: UrgTab): React.ReactN
 }
 
 function getFolioHeader(tab: UrgTab): string {
-  if (tab === "En proceso DO" || tab === "Emitidas") return "Folio de Recepción"
+  if (tab === "En Proceso" || tab === "Emitidas") return "Folio de Recepción"
   if (tab === "Observadas/Devueltas") return "Folio de Recepción"
   if (tab === "Todas") return "Folio"
-  if (tab === "Enviadas a UEFA") return "Folio de Justificación"
+  if (tab === "En Validacion") return "Folio de Justificación"
   return "Folio"
 }
 
 function getTab(estado: UrgEstado): UrgTab {
   const n = (estado ?? "").toLowerCase()
   if (n === "borrador" || n === "en captura") return "Borradores"
-  if (n.includes("enviada a validacion") || (n.includes("observad") && n.includes("uefa")))
-    return "Enviadas a UEFA"
-  if (n.includes("devuelta por do") || (n.includes("observad") && n.includes("filtro")))
+  if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion"))
+    return "En Validacion"
+  if (n.includes("observado por validacion") || n.includes("observado por revisor") ||
+      n.includes("observado por emisor") || n.includes("observad") && n.includes("uefa"))
     return "Observadas/Devueltas"
-  if (n.includes("en revision do") || n === "en proceso do" || n === "aprobado")
-    return "En proceso DO"
+  if (n.includes("en revision") || n.includes("en validacion final") ||
+      n.includes("pendiente firma") || n === "en proceso do")
+    return "En Proceso"
   if (n === "emitido") return "Emitidas"
   return "Todas"
 }
@@ -169,24 +174,28 @@ function estadoBadge(estado: UrgEstado) {
 
   if (n === "borrador" || n === "en captura") {
     bg = "bg-muted"; text = "text-muted-foreground"; label = "Borrador"
-  } else if (n.includes("enviada a validacion")) {
-    bg = "bg-blue-100"; text = "text-blue-800"; label = "Enviada a UEFA"
-  } else if (n.includes("observad") && n.includes("uefa")) {
-    bg = "bg-amber-100"; text = "text-amber-800"; label = "Observada por UEFA"
-  } else if (n.includes("devuelta por do")) {
-    bg = "bg-red-100"; text = "text-red-800"; label = "Devuelta por DO"
-  } else if (n.includes("observad") && n.includes("filtro")) {
-    bg = "bg-red-100"; text = "text-red-800"
-    const num = n.includes("1") ? "1" : n.includes("2") ? "2" : "3"
-    label = `Observada Filtro ${num}`
-  } else if (n.includes("en revision do filtro")) {
-    bg = "bg-indigo-100"; text = "text-indigo-800"
-    const num = n.includes("1") ? "1" : n.includes("2") ? "2" : "3"
-    label = `En revisión Filtro ${num}`
+  } else if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion")) {
+    bg = "bg-blue-100"; text = "text-blue-800"; label = "En Validacion"
+  } else if (n.includes("observado por validacion") && !n.includes("final")) {
+    bg = "bg-amber-100"; text = "text-amber-800"; label = "Observada por Validacion"
+  } else if (n.includes("observado por revisor")) {
+    bg = "bg-red-100"; text = "text-red-800"; label = "Devuelta por Revisor"
+  } else if (n.includes("observado por validacion final")) {
+    bg = "bg-red-100"; text = "text-red-800"; label = "Devuelta por Validacion Final"
+  } else if (n.includes("observado por emisor")) {
+    bg = "bg-red-100"; text = "text-red-800"; label = "Devuelta por Emisor"
+  } else if (n.includes("en revision revisor")) {
+    bg = "bg-indigo-100"; text = "text-indigo-800"; label = "En Revisión (Revisor)"
+  } else if (n.includes("pendiente firma justificacion")) {
+    bg = "bg-yellow-100"; text = "text-yellow-800"; label = "Pendiente Firma"
+  } else if (n.includes("en validacion final")) {
+    bg = "bg-indigo-100"; text = "text-indigo-800"; label = "En Validación Final"
+  } else if (n.includes("en revision emisor")) {
+    bg = "bg-indigo-100"; text = "text-indigo-800"; label = "En Revisión (Emisor)"
+  } else if (n.includes("pendiente firma dictamen")) {
+    bg = "bg-violet-100"; text = "text-violet-800"; label = "Pendiente Firma Dictamen"
   } else if (n === "en proceso do") {
-    bg = "bg-indigo-100"; text = "text-indigo-800"; label = "En proceso DO"
-  } else if (n === "aprobado") {
-    bg = "bg-violet-100"; text = "text-violet-800"; label = "Aprobado"
+    bg = "bg-indigo-100"; text = "text-indigo-800"; label = "En Proceso"
   } else if (n === "emitido") {
     bg = "bg-emerald-100"; text = "text-emerald-800"; label = "Emitido"
   }
@@ -244,12 +253,15 @@ function mapApiItem(item: any): UrgSolicitud {
   const rawEstado = item.estado?.nombre ?? ""
   const estadosValidos: UrgEstado[] = [
     "Borrador", "En Captura",
+    "En Validacion Justificaciones",
     "Enviada a Validacion (UEFA)", "Enviada a Validacion",
-    "Observada por UEFA", "Observado por UEFA",
-    "Devuelta por DO",
-    "Observado DO Filtro 1", "Observado DO Filtro 2", "Observado DO Filtro 3",
-    "En revision DO Filtro 1", "En revision DO Filtro 2", "En revision DO Filtro 3",
-    "En proceso DO", "Aprobado", "Emitido",
+    "Observado por Validacion", "Observada por UEFA", "Observado por UEFA",
+    "En Revision Revisor", "Observado por Revisor",
+    "Pendiente Firma Justificacion",
+    "En Validacion Final", "Observado por Validacion Final",
+    "En Revision Emisor", "Observado por Emisor",
+    "Pendiente Firma Dictamen",
+    "En proceso DO", "Emitido",
   ]
   const estado: UrgEstado = estadosValidos.includes(rawEstado as UrgEstado)
     ? (rawEstado as UrgEstado)
@@ -263,8 +275,9 @@ function mapApiItem(item: any): UrgSolicitud {
     tipo:                 item.tipo_solicitud       as UrgSolicitud["tipo"],
     secretaria:           item.secretaria           ?? "",
     fecha:                fmt(item.fecha_creacion),
+    fechaRecepcion:       item.fecha_envio ? fmt(item.fecha_envio) : undefined,
     estado,
-    denominacion:         item.denominacion         ?? "",
+    denominacion:         item.denominacion         || "",
     unidadAdministrativa: item.unidad_administrativa ?? "",
     unidadResponsable:    item.unidad_responsable   ?? "",
     programaProyecto:     item.programa_proyecto    ?? "",
@@ -341,6 +354,27 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
     <div className="flex flex-col gap-1">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-sm font-medium text-card-foreground">{value || "—"}</span>
+    </div>
+  )
+}
+
+function PerfilListField({ label, value }: { label: string; value: string }) {
+  const items = value ? value.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean) : []
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {items.length === 0 ? (
+        <span className="text-sm font-medium text-card-foreground">—</span>
+      ) : (
+        <ul className="flex flex-col gap-0.5">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2 text-sm text-card-foreground">
+              <span className="shrink-0 text-muted-foreground">•</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -431,12 +465,12 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
 
       <SectionCard num="II" title="Perfil">
         <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Escolaridad Mínima"          value={solicitud.escolaridad} />
-          <ReadOnlyField label="Competencias Administrativas" value={solicitud.compAdm} />
-          <ReadOnlyField label="Competencias Técnicas"        value={solicitud.compTec} />
-          <ReadOnlyField label="Competencias Sociales"        value={solicitud.compSoc} />
-          <ReadOnlyField label="Valores"                      value={solicitud.valores} />
-          <ReadOnlyField label="Áreas de Experiencia"         value={solicitud.areasExp} />
+          <ReadOnlyField   label="Escolaridad Mínima"          value={solicitud.escolaridad} />
+          <PerfilListField label="Competencias Administrativas" value={solicitud.compAdm} />
+          <PerfilListField label="Competencias Técnicas"        value={solicitud.compTec} />
+          <PerfilListField label="Competencias Sociales"        value={solicitud.compSoc} />
+          <PerfilListField label="Valores"                      value={solicitud.valores} />
+          <PerfilListField label="Áreas de Experiencia"         value={solicitud.areasExp} />
         </div>
       </SectionCard>
 
@@ -488,12 +522,12 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
 
       <SectionCard num="II" title="Perfil">
         <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Escolaridad Mínima"          value={solicitud.escolaridad} />
-          <ReadOnlyField label="Competencias Administrativas" value={solicitud.compAdm} />
-          <ReadOnlyField label="Competencias Técnicas"        value={solicitud.compTec} />
-          <ReadOnlyField label="Competencias Sociales"        value={solicitud.compSoc} />
-          <ReadOnlyField label="Valores"                      value={solicitud.valores} />
-          <ReadOnlyField label="Áreas de Experiencia"         value={solicitud.areasExp} />
+          <ReadOnlyField   label="Escolaridad Mínima"          value={solicitud.escolaridad} />
+          <PerfilListField label="Competencias Administrativas" value={solicitud.compAdm} />
+          <PerfilListField label="Competencias Técnicas"        value={solicitud.compTec} />
+          <PerfilListField label="Competencias Sociales"        value={solicitud.compSoc} />
+          <PerfilListField label="Valores"                      value={solicitud.valores} />
+          <PerfilListField label="Áreas de Experiencia"         value={solicitud.areasExp} />
         </div>
       </SectionCard>
 
@@ -543,8 +577,10 @@ function DetalleView({
 
   const n         = (sol.estado ?? "").toLowerCase()
   const canEdit   = n === "borrador" || n === "en captura"
-    || n.includes("devuelta por do")
-    || (n.includes("observad") && n.includes("filtro"))
+    || n.includes("observado por validacion")
+    || n.includes("observado por revisor")
+    || n.includes("observado por emisor")
+    || (n.includes("observad") && n.includes("uefa"))
   const isEmitido  = n === "emitido"
   const isReadOnly = !canEdit && !isEmitido
 
@@ -649,12 +685,12 @@ function DetalleView({
         </div>
       </div>
 
-      {sol.observacionMotivo && n.includes("observad") && n.includes("uefa") && (
+      {sol.observacionMotivo && (n.includes("observado por validacion") && !n.includes("final")) && (
         <Card className="border-2 border-amber-400/40 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-medium text-amber-700">Observación de UEFA</span>
+              <span className="text-sm font-medium text-amber-700">Observación de Validación de Justificaciones</span>
               <p className="text-sm text-card-foreground mt-1">{sol.observacionMotivo}</p>
             </div>
           </CardContent>
@@ -662,13 +698,19 @@ function DetalleView({
       )}
 
       {sol.observacionMotivo && (
-        n.includes("devuelta por do") || (n.includes("observad") && n.includes("filtro"))
+        n.includes("observado por revisor") ||
+        n.includes("observado por validacion final") ||
+        n.includes("observado por emisor")
       ) && (
         <Card className="border-2 border-red-400/40 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
             <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-medium text-red-700">Observación / Devolución DO</span>
+              <span className="text-sm font-medium text-red-700">
+                {n.includes("revisor") ? "Devolución del Revisor"
+                  : n.includes("emisor") ? "Devolución del Emisor"
+                  : "Devolución de Validación Final"}
+              </span>
               <p className="text-sm text-card-foreground mt-1">{sol.observacionMotivo}</p>
             </div>
           </CardContent>
@@ -823,8 +865,8 @@ export function MisSolicitudesPage() {
 
   const [data, setData]             = useState<UrgSolicitud[]>([])
   const [tabCounts, setTabCounts]   = useState<Record<UrgTab, number>>({
-    Borradores: 0, "Enviadas a UEFA": 0, "Observadas/Devueltas": 0,
-    "En proceso DO": 0, Emitidas: 0, Todas: 0,
+    Borradores: 0, "En Validacion": 0, "Observadas/Devueltas": 0,
+    "En Proceso": 0, Emitidas: 0, Todas: 0,
   })
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
@@ -833,8 +875,8 @@ export function MisSolicitudesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const TABS: UrgTab[] = [
-    "Borradores", "Enviadas a UEFA", "Observadas/Devueltas",
-    "En proceso DO", "Emitidas", "Todas",
+    "Borradores", "En Validacion", "Observadas/Devueltas",
+    "En Proceso", "Emitidas", "Todas",
   ]
 
   const fetchData = useCallback(async (tab: UrgTab, search: string) => {
@@ -851,8 +893,8 @@ export function MisSolicitudesPage() {
       const json = await res.json()
       setData((json.items ?? []).map(mapApiItem))
       setTabCounts(json.tabCounts ?? {
-        Borradores: 0, "Enviadas a UEFA": 0, "Observadas/Devueltas": 0,
-        "En proceso DO": 0, Emitidas: 0, Todas: 0,
+        Borradores: 0, "En Validacion": 0, "Observadas/Devueltas": 0,
+        "En Proceso": 0, Emitidas: 0, Todas: 0,
       })
     } catch (err: any) {
       setError(err.message ?? "Error desconocido")
@@ -891,7 +933,7 @@ export function MisSolicitudesPage() {
   return (
     <PageLayout
       title="Bandeja URG - Mis Solicitudes"
-      description="Solicitudes capturadas por mi área, con seguimiento de validación (UEFA) y dictaminación (DO)."
+      description="Solicitudes capturadas por mi área, con seguimiento de validación de justificaciones y emisión de dictamen."
     >
 
       <FilterTabs
@@ -932,7 +974,7 @@ export function MisSolicitudesPage() {
                     {getFolioHeader(activeTab)}
                   </th>
                   <th className="px-4 py-3 text-left font-semibold">
-                    Régimen de Contratación
+                    Tipo / Denominación
                   </th>
                   <th className="px-4 py-3 text-left font-semibold">
                     Fecha de Creación
@@ -963,15 +1005,10 @@ export function MisSolicitudesPage() {
 
                 {filtered.map((sol) => {
                   const n      = (sol.estado ?? "").toLowerCase()
-                  const isUefa = n.includes("observad") && n.includes("uefa")
-                  const isDO   = n.includes("devuelta por do") ||
-                    (n.includes("observad") && n.includes("filtro"))
-
-                  const fechaRecepcionDO = sol.folioRecepcion
-                    ? sol.historial
-                        .find((h) => h.accion.toLowerCase().includes("filtro 1"))
-                        ?.fecha.split(" ")[0] ?? "—"
-                    : "—"
+                  const isUefa = n.includes("observado por validacion") && !n.includes("final")
+                  const isDO   = n.includes("observado por revisor") ||
+                    n.includes("observado por validacion final") ||
+                    n.includes("observado por emisor")
 
                   return (
                     <tr key={sol.id}
@@ -979,11 +1016,16 @@ export function MisSolicitudesPage() {
                       <td className="px-4 py-3 font-medium text-card-foreground">
                         {getFolioSegunEstado(sol, activeTab)}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{sol.tipo}</td>
+                      <td className="px-4 py-3 text-xs">
+                        <span className="text-muted-foreground">{sol.tipo}</span>
+                        {sol.denominacion && (
+                          <span className="block text-card-foreground font-medium mt-0.5">{sol.denominacion}</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">{sol.fecha}</td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
-                        {fechaRecepcionDO !== "—"
-                          ? fechaRecepcionDO
+                        {sol.fechaRecepcion
+                          ? sol.fechaRecepcion
                           : <span className="italic text-muted-foreground/60">—</span>}
                       </td>
                       <td className="px-4 py-3">
@@ -991,12 +1033,12 @@ export function MisSolicitudesPage() {
                           {estadoBadge(sol.estado)}
                           {isUefa && (
                             <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-0 text-[10px] px-1.5">
-                              UEFA
+                              Validacion
                             </Badge>
                           )}
                           {isDO && (
                             <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-0 text-[10px] px-1.5">
-                              DO
+                              Revisor/Emisor
                             </Badge>
                           )}
                         </div>

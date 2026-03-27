@@ -8,15 +8,18 @@ export interface HistoricoRecord {
   subidoEn: string
   sheetNames: string[]
   sheets: Record<string, HistoricoRow[]>
+  nombreArchivo2: string | null
+  sheetNames2: string[] | null
+  sheets2: Record<string, HistoricoRow[]> | null
 }
 
-export async function uploadHistorico(file: File): Promise<HistoricoRecord> {
+export async function uploadHistorico(file: File, file2?: File | null): Promise<HistoricoRecord> {
   const form = new FormData()
   form.append("file", file)
-  const res = await fetch("/api/historico", {
-    method: "POST",
-    body: form,
-  })
+  if (file2 && file2.size > 0) {
+    form.append("file2", file2)
+  }
+  const res = await fetch("/api/historico", { method: "POST", body: form })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.error ?? "Error al guardar historico")

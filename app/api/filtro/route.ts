@@ -8,10 +8,14 @@ const INICIALES_MES: Record<number, string> = {
 }
 
 function estadoEnRevision(filtro: number) {
-  return `En revision DO Filtro ${filtro}`
+  if (filtro === 1) return "En Revision Revisor"
+  if (filtro === 2) return "En Validacion Final"
+  return "En Revision Emisor"
 }
 function estadoObservado(filtro: number) {
-  return `Observado DO Filtro ${filtro}`
+  if (filtro === 1) return "Observado por Revisor"
+  if (filtro === 2) return "Observado por Validacion Final"
+  return "Observado por Emisor"
 }
 
 function generarFolioTemporal(id: number, fecha: Date | null | undefined): string {
@@ -70,7 +74,7 @@ export async function GET(req: NextRequest) {
     const estadosNombres = [
       estadoEnRevision(filtro),
       estadoObservado(filtro),
-      ...(filtro === 3 ? ["Aprobado"] : []),
+      ...(filtro === 3 ? ["Pendiente Firma Dictamen"] : []),
     ]
 
     // ── FIX CRÍTICO: búsqueda insensible a mayúsculas/acentos ────────────────
@@ -139,10 +143,16 @@ export async function GET(req: NextRequest) {
       const lastObservedEstado =
         lastObservacion?.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? null
 
-      const lastObservedStageMatch = lastObservedEstado?.match(/filtro\s+(\d)/i)
-      const lastObservedStage      = lastObservedStageMatch
-        ? parseInt(lastObservedStageMatch[1], 10)
-        : null
+      const lastObservedStage = (() => {
+        if (!lastObservedEstado) return null
+        const n = lastObservedEstado.toLowerCase()
+        if (n.includes("revisor")) return 1
+        if (n.includes("validacion final")) return 2
+        if (n.includes("emisor")) return 3
+        // legacy pattern
+        const m = lastObservedEstado.match(/filtro\s+(\d)/i)
+        return m ? parseInt(m[1], 10) : null
+      })()
 
       const lastObservedDate = lastObservacion?.fecha
         ? new Date(lastObservacion.fecha).toLocaleDateString("es-MX", {
@@ -167,10 +177,12 @@ export async function GET(req: NextRequest) {
       const fueObservadaEnEsteFiltro = historial.some((h) => {
         const nombre =
           h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
-        return (
-          nombre.toLowerCase().includes("observad") &&
-          nombre.toLowerCase().includes(`filtro ${filtro}`)
-        )
+        const n = nombre.toLowerCase()
+        if (!n.includes("observad")) return false
+        if (filtro === 1) return n.includes("revisor") || n.includes("filtro 1")
+        if (filtro === 2) return n.includes("validacion final") || n.includes("filtro 2")
+        if (filtro === 3) return n.includes("emisor") || n.includes("filtro 3")
+        return false
       })
 
       const isNuevaEnFiltro = !fueObservadaEnEsteFiltro && !openedInFiltro
@@ -213,7 +225,7 @@ export async function GET(req: NextRequest) {
         folioDictamen,
         folioTemporal:    !sol.folio_recepcion,
         tipo:             sol.tipo_solicitud,
-        denominacion:     (sol as any).denominacion ?? sol.tipo_solicitud ?? "—",
+        denominacion:     (sol as any).denominacion || sol.tipo_solicitud || "—",
         secretaria:       sol.usuario?.area?.nombre ?? "—",
         estado:           sol.estado.nombre,
         esRegularizacion: (sol as any).es_extemporanea ?? false,
@@ -343,9 +355,9 @@ export async function PATCH(req: NextRequest) {
 
     let nombreEstadoNuevo: string
     if (accion === "aprobar") {
-      if (filtro === 1)      nombreEstadoNuevo = estadoEnRevision(2)
+      if (filtro === 1)      nombreEstadoNuevo = "Pendiente Firma Justificacion"
       else if (filtro === 2) nombreEstadoNuevo = estadoEnRevision(3)
-      else                   nombreEstadoNuevo = "Aprobado"
+      else                   nombreEstadoNuevo = "Pendiente Firma Dictamen"
     } else {
       nombreEstadoNuevo = estadoObservado(filtro)
     }
@@ -397,7 +409,7 @@ export async function PATCH(req: NextRequest) {
       },
     })
 
-    // ── AUTO-EMISIÓN cuando Filtro 3 aprueba ──────────────────────────────────
+    // ── AUTO-EMISIÓN cuando Emisor (filtro 3) aprueba ────────────────────────
     if (accion === "aprobar" && filtro === 3 && !solicitud.dictamen) {
       try {
         const esParaestatal =

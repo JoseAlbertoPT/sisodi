@@ -18,21 +18,30 @@ export async function GET(req: NextRequest) {
       "Borradores": [
         "Borrador",
         "En Captura",
-
       ],
-      "Enviadas a UEFA": [
+      "En Validacion": [
+        "En Validacion Justificaciones",
         "Enviada a Validacion (UEFA)",
         "Enviada a Validacion",
+        "Observado por Validacion",
         "Observada por UEFA",
         "Observado por UEFA",
+        "Pendiente Firma Justificacion",
       ],
       "Observadas/Devueltas": [
+        "Observado por Revisor",
+        "Observado por Validacion Final",
+        "Observado por Emisor",
         "Devuelta por DO",
         "Observado DO Filtro 1",
         "Observado DO Filtro 2",
         "Observado DO Filtro 3",
       ],
-      "En proceso DO": [
+      "En Proceso": [
+        "En Revision Revisor",
+        "En Validacion Final",
+        "En Revision Emisor",
+        "Pendiente Firma Dictamen",
         "En revision DO Filtro 1",
         "En revision DO Filtro 2",
         "En revision DO Filtro 3",
@@ -166,9 +175,9 @@ export async function GET(req: NextRequest) {
 
     const tabCountMap: Record<string, number> = {
       Borradores:             0,
-      "Enviadas a UEFA":      0,
+      "En Validacion":        0,
       "Observadas/Devueltas": 0,
-      "En proceso DO":        0,
+      "En Proceso":           0,
       Emitidas:               0,
       Todas:                  0,
     }
@@ -183,21 +192,30 @@ export async function GET(req: NextRequest) {
       if (n === "borrador" || n === "en captura") {
         tabCountMap["Borradores"] += cnt
       } else if (
-        n.includes("enviada a validacion") ||
-        (n.includes("observad") && n.includes("uefa"))
+        n.includes("en validacion justificaciones") ||
+        n.includes("enviada a validacion")          ||
+        n.includes("pendiente firma justificacion") ||
+        (n.includes("observad") && (n.includes("uefa") || n === "observado por validacion"))
       ) {
-        tabCountMap["Enviadas a UEFA"] += cnt
+        tabCountMap["En Validacion"] += cnt
       } else if (
-        n.includes("devuelta por do") ||
+        n.includes("observado por revisor")          ||
+        n.includes("observado por validacion final") ||
+        n.includes("observado por emisor")           ||
+        n.includes("devuelta por do")                ||
         (n.includes("observad") && n.includes("filtro"))
       ) {
         tabCountMap["Observadas/Devueltas"] += cnt
       } else if (
-        n.includes("en revision do") ||
-        n === "en proceso do"        ||
+        n.includes("en revision revisor")  ||
+        n.includes("en validacion final")  ||
+        n.includes("en revision emisor")   ||
+        n.includes("pendiente firma dictamen") ||
+        n.includes("en revision do")       ||
+        n === "en proceso do"              ||
         n === "aprobado"
       ) {
-        tabCountMap["En proceso DO"] += cnt
+        tabCountMap["En Proceso"] += cnt
       } else if (n === "emitido") {
         tabCountMap["Emitidas"] += cnt
       }

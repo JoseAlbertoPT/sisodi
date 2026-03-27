@@ -7,6 +7,9 @@ function toResponse(h: {
   subido_en: Date
   sheet_names: string[]
   sheets: unknown
+  nombre_archivo2?: string | null
+  sheet_names2?: string[] | null
+  sheets2?: unknown
 }) {
   return {
     id: h.id,
@@ -14,6 +17,9 @@ function toResponse(h: {
     subidoEn: h.subido_en.toISOString(),
     sheetNames: h.sheet_names,
     sheets: h.sheets as Record<string, Record<string, string | undefined>[]>,
+    nombreArchivo2: h.nombre_archivo2 ?? null,
+    sheetNames2: h.sheet_names2 ?? null,
+    sheets2: (h.sheets2 ?? null) as Record<string, Record<string, string | undefined>[]> | null,
   }
 }
 

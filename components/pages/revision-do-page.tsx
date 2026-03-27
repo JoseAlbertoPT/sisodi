@@ -232,7 +232,7 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
       ?? `SDTF-${new Date(item.fecha_creacion ?? Date.now()).getFullYear()}-${String(item.id).padStart(4, "0")}`,
     folioDictamen,
     tipo:                 item.tipo_solicitud ?? "—",
-    denominacion:         item.denominacion ?? item.tipo_solicitud ?? "—",
+    denominacion:         item.denominacion || item.tipo_solicitud || "—",
     tipoActividades:      item.tipo_actividades ?? item.tipoActividades ?? "—",
     regimen:              item.regimen ?? "—",
     secretaria:           item.secretaria ?? item.usuario?.area?.nombre ?? "—",
@@ -369,29 +369,27 @@ function RadioOption({ value, selected, onChange, label, colorClass }: {
   )
 }
 
-function PerfilChips({ value }: { value: string }) {
+function PerfilList({ value }: { value: string }) {
   if (!value || value === "—") return <span className="text-sm text-muted-foreground">—</span>
-  const items = value.split(/[•·,;]+/).map(s => s.trim()).filter(Boolean)
+  const items = value.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean)
   if (items.length === 0) return <span className="text-sm text-muted-foreground">—</span>
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <ul className="flex flex-col gap-1">
       {items.map((item, i) => (
-        <span key={i} className="inline-flex items-center rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-medium text-card-foreground">
-          {item}
-        </span>
+        <li key={i} className="flex gap-2 text-sm text-card-foreground">
+          <span className="shrink-0 text-muted-foreground">•</span>
+          <span>{item}</span>
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }
 
-function PerfilCompetenciaCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function PerfilListField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
-      <div className="flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary/10 text-secondary">{icon}</span>
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</span>
-      </div>
-      <PerfilChips value={value} />
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <PerfilList value={value} />
     </div>
   )
 }
@@ -439,31 +437,13 @@ function SeccionRenovacion({ sol }: { sol: SolicitudDetalle }) {
 function SeccionPerfil({ raw }: { raw: any }) {
   return (
     <SectionCard num="II" title="Perfil Requerido">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3 rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/15 text-secondary">
-            <GraduationCap className="h-4 w-4" />
-          </span>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Escolaridad Mínima</span>
-            <span className="text-sm font-semibold text-card-foreground">{formatEscolaridad(raw?.escolaridad)}</span>
-          </div>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <PerfilCompetenciaCard icon={<Brain className="h-3.5 w-3.5" />}  label="Competencias Administrativas" value={raw?.comp_adm ?? "—"} />
-          <PerfilCompetenciaCard icon={<Wrench className="h-3.5 w-3.5" />} label="Competencias Técnicas"        value={raw?.comp_tec ?? "—"} />
-          <PerfilCompetenciaCard icon={<Heart className="h-3.5 w-3.5" />}  label="Competencias Sociales"        value={raw?.comp_soc ?? "—"} />
-          <PerfilCompetenciaCard icon={<Star className="h-3.5 w-3.5" />}   label="Valores"                      value={raw?.valores ?? "—"} />
-        </div>
-        <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary/10 text-secondary">
-              <Briefcase className="h-3.5 w-3.5" />
-            </span>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Áreas de Experiencia</span>
-          </div>
-          <PerfilChips value={raw?.areas_exp ?? "—"} />
-        </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <ReadOnlyField   label="Escolaridad Mínima"          value={formatEscolaridad(raw?.escolaridad)} />
+        <PerfilListField label="Competencias Administrativas" value={raw?.comp_adm ?? "—"} />
+        <PerfilListField label="Competencias Técnicas"        value={raw?.comp_tec ?? "—"} />
+        <PerfilListField label="Competencias Sociales"        value={raw?.comp_soc ?? "—"} />
+        <PerfilListField label="Valores"                      value={raw?.valores ?? "—"} />
+        <PerfilListField label="Áreas de Experiencia"         value={raw?.areas_exp ?? "—"} />
       </div>
     </SectionCard>
   )
@@ -528,12 +508,16 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
       <SeccionDatosGenerales sol={sol} />
       <SeccionRenovacion sol={sol} />
       <SectionCard title="Tabulador — Nivel y Categoría">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Nivel"        value={raw?.nivel_tabulador ?? "—"} />
-          <ReadOnlyField label="Categoría"    value={raw?.categoria_tabulador ?? "—"} />
-          <ReadOnlyField label="Equivalencia" value={raw?.equivalencia_tabulador ?? "—"} />
-          <ReadOnlyField label="Importe Bruto conforme al Tabulador" value={sol.importeBruto} />
-        </div>
+        {(() => {
+          const nivel     = raw?._raw?.nivel_tabulador     ?? raw?.nivel_tabulador
+          const categoria = raw?._raw?.categoria_tabulador ?? raw?.categoria_tabulador
+          return (
+            <div className="grid gap-4 md:grid-cols-2">
+              <ReadOnlyField label="Nivel"     value={nivel ?? "—"} />
+              <ReadOnlyField label="Categoría" value={categoria ?? "—"} />
+            </div>
+          )
+        })()}
       </SectionCard>
       <SectionCard title="I.1 Objeto del Nombramiento">
         <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
@@ -812,7 +796,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   const handleAprobar = async () => {
     if (filtro === 3) { setShowEmitConfirm(true); return }
     const nuevoEstado = await patchEstado("aprobar")
-    if (nuevoEstado) setShowConfirmacion(`Solicitud aprobada y enviada a Filtro ${filtro + 1}.`)
+    if (nuevoEstado) {
+      const siguiente = filtro === 1 ? "Pendiente Firma Justificacion" : "Validación Final"
+      setShowConfirmacion(`Solicitud aprobada. Siguiente paso: ${siguiente}.`)
+    }
   }
 
   const handleConfirmEmit = async () => {
@@ -821,7 +808,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     if (nuevoEstado) {
       setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
       setActiveTab("emision")
-      setShowConfirmacion("Solicitud aprobada por la Dirección General. Proceda a la emisión del dictamen.")
+      setShowConfirmacion("Solicitud aprobada por el Emisor. Proceda a la firma y emisión del dictamen.")
     }
   }
 
@@ -882,7 +869,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   }, [solicitud, filtro, user])
 
   const isEmitido      = solicitud?.estado === "Emitido"
-  const isAprobado     = solicitud?.estado === "Aprobado"
+  const isAprobado     = solicitud?.estado === "Pendiente Firma Dictamen"
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
     (modalidadFirma === "electronica" || (autografaDescargado && archivoSubido))
@@ -1078,7 +1065,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
                             <ClipboardCheck className="h-4 w-4 text-secondary" />
-                            <span className="text-sm font-semibold text-card-foreground">Checklist Normativo — Filtro {filtro}</span>
+                            <span className="text-sm font-semibold text-card-foreground">Checklist Normativo — {filtro === 1 ? "Revisor" : filtro === 2 ? "Validación Final" : "Emisor"}</span>
                           </div>
                           <Badge variant="outline" className="text-xs font-mono">{checklistStats.total} items</Badge>
                         </div>
@@ -1152,7 +1139,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                         <CardContent className="flex items-start gap-3 p-4">
                           <Stamp className="h-5 w-5 shrink-0 text-primary mt-0.5" />
                           <div>
-                            <span className="text-sm font-medium text-primary">Folio de dictamen requerido</span>
+                            <span className="text-sm font-medium text-primary">Folio de Dictamen requerido</span>
                             <p className="text-xs text-muted-foreground">Debe asignarse el folio de dictamen antes de aprobar.</p>
                           </div>
                         </CardContent>
@@ -1240,7 +1227,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                     <Button onClick={handleAprobar} disabled={!canApprove || guardando}
                       className={`gap-1.5 ${canApprove ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
                       {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                      {filtro < 3 ? `Aprobar → Filtro ${filtro + 1}` : "Aprobar (DG)"}
+                      {filtro === 1 ? "Aprobar → Pendiente Firma" : filtro === 2 ? "Aprobar → Emisor" : "Aprobar (Emisor)"}
                     </Button>
                   </CardContent>
                 </Card>

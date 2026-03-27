@@ -122,13 +122,23 @@ export async function PATCH(req: NextRequest) {
       })
     }
 
+    // Al pasar a Revisor (filtro 1) generar folio_recepcion con formato MES-NNNN
+    let folioRecepcionNuevo: string | undefined
+    if (nuevoEstado === "En Revision Revisor" && !solicitud.folio_recepcion) {
+      const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
+      const now = new Date()
+      const mesCode  = MONTH_CODES[now.getMonth()]
+      folioRecepcionNuevo = `${mesCode}-${String(idNum).padStart(4, "0")}`
+    }
+
     const solicitudActualizada = await prisma.solicitud.update({
       where:   { id: idNum },
       data:    {
         estado_id: estadoNuevo.id,
-        ...(nuevoEstado === "Enviada a Validacion (UEFA)" && {
+        ...((nuevoEstado === "En Validacion Justificaciones" || nuevoEstado === "Enviada a Validacion (UEFA)") && {
           fecha_envio: new Date(),
         }),
+        ...(folioRecepcionNuevo && { folio_recepcion: folioRecepcionNuevo }),
       },
       include: { estado: true, periodo: true },
     })

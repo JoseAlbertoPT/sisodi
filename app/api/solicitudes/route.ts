@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
       where.estado_id = estado.id
     }
     if (usuarioId) where.usuario_id = usuarioId
-
     const solicitudes = await prisma.solicitud.findMany({
       where,
       include: {
@@ -67,7 +66,6 @@ export async function POST(req: NextRequest) {
     if (!usuarioId)      return NextResponse.json({ ok: false, error: "usuarioId es requerido" }, { status: 400 })
     if (!tipo_solicitud) return NextResponse.json({ ok: false, error: "tipo_solicitud es requerido" }, { status: 400 })
 
-    // Intenta usar el estado solicitado; si "Borrador" no existe en BD usa "En Captura" como fallback
     const estadoNombre = estado_nombre ?? "En Captura"
     let estadoInicial = await prisma.estado.findFirst({
       where: { nombre: { equals: estadoNombre, mode: "insensitive" } },
@@ -116,6 +114,21 @@ export async function POST(req: NextRequest) {
         valores:               valores ?? null,
         areas_exp:             areas_exp ?? null,
       },
+    })
+
+    // Generate folios based on state
+    const fechaCreacion = nueva.fecha_creacion ?? new Date()
+    const year          = fechaCreacion.getFullYear()
+    const idPadded      = String(nueva.id).padStart(4, "0")
+    const esBorrador    = estadoNombre === "Borrador"
+
+    const folioJustificacion = esBorrador ? null : `JUST-${year}-${idPadded}`
+
+    const nuevaConFolio = await prisma.solicitud.update({
+      where: { id: nueva.id },
+      data: {
+        folio_justificacion: folioJustificacion,
+      },
       include: {
         estado: true, periodo: true,
         usuario: {
@@ -139,7 +152,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ ok: true, data: nueva, folio: nueva.folio_recepcion ?? null }, { status: 201 })
+    return NextResponse.json({ ok: true, data: nuevaConFolio, folio: folioJustificacion }, { status: 201 })
   } catch (error: any) {
     console.error("[POST /api/solicitudes]", error)
     return NextResponse.json({ ok: false, error: error?.message ?? "Error al crear solicitud" }, { status: 500 })

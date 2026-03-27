@@ -5,16 +5,16 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 // ── Status definitions ──
 export const ESTADOS = [
   "Borrador",
-  "Enviado a Validacion (UEFA)",
-  "Observado por UEFA",
-  "Enviado a DO (Recepcion)",
-  "En revision DO Filtro 1",
-  "Observado DO Filtro 1",
-  "En revision DO Filtro 2",
-  "Observado DO Filtro 2",
-  "En revision DO Filtro 3",
-  "Observado DO Filtro 3",
-  "Aprobado",
+  "En Validacion Justificaciones",
+  "Observado por Validacion",
+  "En Revision Revisor",
+  "Observado por Revisor",
+  "Pendiente Firma Justificacion",
+  "En Validacion Final",
+  "Observado por Validacion Final",
+  "En Revision Emisor",
+  "Observado por Emisor",
+  "Pendiente Firma Dictamen",
   "Emitido",
 ] as const
 
@@ -48,21 +48,21 @@ export function getEstadoVariant(estado: Estado) {
   switch (estado) {
     case "Borrador":
       return { bg: "bg-muted", text: "text-muted-foreground" }
-    case "Enviado a Validacion (UEFA)":
+    case "En Validacion Justificaciones":
       return { bg: "bg-primary/10", text: "text-primary" }
-    case "Observado por UEFA":
+    case "Observado por Validacion":
       return { bg: "bg-[#c57a2a]/10", text: "text-[#c57a2a]" }
-    case "Enviado a DO (Recepcion)":
-      return { bg: "bg-accent/10", text: "text-accent-foreground" }
-    case "En revision DO Filtro 1":
-    case "En revision DO Filtro 2":
-    case "En revision DO Filtro 3":
+    case "En Revision Revisor":
+    case "En Validacion Final":
+    case "En Revision Emisor":
       return { bg: "bg-secondary/10", text: "text-secondary" }
-    case "Observado DO Filtro 1":
-    case "Observado DO Filtro 2":
-    case "Observado DO Filtro 3":
+    case "Observado por Revisor":
+    case "Observado por Validacion Final":
+    case "Observado por Emisor":
       return { bg: "bg-destructive/10", text: "text-destructive" }
-    case "Aprobado":
+    case "Pendiente Firma Justificacion":
+      return { bg: "bg-accent/10", text: "text-accent-foreground" }
+    case "Pendiente Firma Dictamen":
       return { bg: "bg-secondary/20", text: "text-secondary" }
     case "Emitido":
       return { bg: "bg-primary", text: "text-primary-foreground" }
@@ -231,16 +231,16 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "centralizada",
       secretaria: "Sec. de Finanzas",
       unidadAdministrativa: "Dir. Gral. de Administracion y Finanzas",
-      estado: "En revision DO Filtro 1",
+      estado: "En Revision Revisor",
       fechaCreacion: "2026-02-10",
       fechaRecepcionDO: "2026-02-12",
       slaRestante: 9,
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-02-10 09:00", usuario: "Juan Perez", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-02-10 10:30", usuario: "Juan Perez", accion: "Enviada a validacion UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
-        { fecha: "2026-02-11 11:00", usuario: "UEFA Validador", accion: "Validacion aprobada por UEFA", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Enviado a DO (Recepcion)" },
-        { fecha: "2026-02-12 08:30", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-001 asignado", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En revision DO Filtro 1" },
+        { fecha: "2026-02-10 10:30", usuario: "Juan Perez", accion: "Enviada a validacion UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
+        { fecha: "2026-02-11 11:00", usuario: "UEFA Validador", accion: "Validacion aprobada por UEFA", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-12 08:30", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-001 asignado", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
       ],
       observaciones: [],
       observacionesPorSeccion: [],
@@ -282,17 +282,17 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "centralizada",
       secretaria: "Sec. de Educacion",
       unidadAdministrativa: "Dir. Gral. de Profesionalizacion",
-      estado: "En revision DO Filtro 2",
+      estado: "En Validacion Final",
       fechaCreacion: "2026-02-08",
       fechaRecepcionDO: "2026-02-10",
       slaRestante: 6,
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-02-08 09:00", usuario: "Maria Lopez", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-02-08 14:00", usuario: "Maria Lopez", accion: "Enviada a validacion UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
-        { fecha: "2026-02-09 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Enviado a DO (Recepcion)" },
-        { fecha: "2026-02-10 09:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-002 asignado", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En revision DO Filtro 1" },
-        { fecha: "2026-02-13 15:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En revision DO Filtro 2" },
+        { fecha: "2026-02-08 14:00", usuario: "Maria Lopez", accion: "Enviada a validacion UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
+        { fecha: "2026-02-09 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-10 09:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-002 asignado", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-13 15:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
       ],
       observaciones: [],
       observacionesPorSeccion: [],
@@ -334,18 +334,18 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "centralizada",
       secretaria: "Sec. de Salud",
       unidadAdministrativa: "Dir. Gral. de Recursos Humanos",
-      estado: "En revision DO Filtro 3",
+      estado: "En Revision Emisor",
       fechaCreacion: "2026-02-05",
       fechaRecepcionDO: "2026-02-07",
       slaRestante: 3,
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-02-05 09:00", usuario: "Carlos Garcia", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-02-05 11:00", usuario: "Carlos Garcia", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
-        { fecha: "2026-02-06 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Enviado a DO (Recepcion)" },
-        { fecha: "2026-02-07 08:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-003", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En revision DO Filtro 1" },
-        { fecha: "2026-02-10 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En revision DO Filtro 2" },
-        { fecha: "2026-02-14 11:00", usuario: "Revisor Filtro 2", accion: "Aprobada en Filtro 2", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "En revision DO Filtro 3" },
+        { fecha: "2026-02-05 11:00", usuario: "Carlos Garcia", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
+        { fecha: "2026-02-06 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-07 08:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-003", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-10 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
+        { fecha: "2026-02-14 11:00", usuario: "Revisor Filtro 2", accion: "Aprobada en Filtro 2", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "En Revision Emisor" },
       ],
       observaciones: [],
       observacionesPorSeccion: [],
@@ -387,17 +387,17 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "centralizada",
       secretaria: "Sec. de Gobierno",
       unidadAdministrativa: "Dir. Gral. de Profesionalizacion",
-      estado: "Observado DO Filtro 1",
+      estado: "Observado por Revisor",
       fechaCreacion: "2026-02-04",
       fechaRecepcionDO: "2026-02-06",
       slaRestante: 2,
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-02-04 10:00", usuario: "Ana Martinez", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-02-04 15:00", usuario: "Ana Martinez", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
-        { fecha: "2026-02-05 09:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Enviado a DO (Recepcion)" },
-        { fecha: "2026-02-06 08:30", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-004", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En revision DO Filtro 1" },
-        { fecha: "2026-02-11 10:00", usuario: "Revisor Filtro 1", accion: "Observada - Falta oficio de suficiencia presupuestal", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "Observado DO Filtro 1" },
+        { fecha: "2026-02-04 15:00", usuario: "Ana Martinez", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
+        { fecha: "2026-02-05 09:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-06 08:30", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-004", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-11 10:00", usuario: "Revisor Filtro 1", accion: "Observada - Falta oficio de suficiencia presupuestal", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "Observado por Revisor" },
       ],
       observaciones: ["Falta oficio de suficiencia presupuestal firmado"],
       observacionesPorSeccion: [
@@ -441,16 +441,16 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "centralizada",
       secretaria: "Sec. de Obras",
       unidadAdministrativa: "Dir. Gral. de Administracion y Finanzas",
-      estado: "En revision DO Filtro 1",
+      estado: "En Revision Revisor",
       fechaCreacion: "2026-02-12",
       fechaRecepcionDO: "2026-02-14",
       slaRestante: 12,
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-02-12 09:00", usuario: "Roberto Silva", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-02-12 16:00", usuario: "Roberto Silva", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
-        { fecha: "2026-02-13 11:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Enviado a DO (Recepcion)" },
-        { fecha: "2026-02-14 09:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-005", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En revision DO Filtro 1" },
+        { fecha: "2026-02-12 16:00", usuario: "Roberto Silva", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
+        { fecha: "2026-02-13 11:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-14 09:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-005", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
       ],
       observaciones: [],
       observacionesPorSeccion: [],
@@ -492,19 +492,19 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "centralizada",
       secretaria: "Sec. de Finanzas",
       unidadAdministrativa: "Dir. Gral. de Recursos Humanos",
-      estado: "Aprobado",
+      estado: "Pendiente Firma Dictamen",
       fechaCreacion: "2026-02-01",
       fechaRecepcionDO: "2026-02-03",
       slaRestante: null,
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-02-01 09:00", usuario: "Luis Torres", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-02-01 14:00", usuario: "Luis Torres", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
-        { fecha: "2026-02-02 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Enviado a DO (Recepcion)" },
-        { fecha: "2026-02-03 08:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-006", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En revision DO Filtro 1" },
-        { fecha: "2026-02-05 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En revision DO Filtro 2" },
-        { fecha: "2026-02-10 10:00", usuario: "Revisor Filtro 2", accion: "Aprobada en Filtro 2", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "En revision DO Filtro 3" },
-        { fecha: "2026-02-14 16:00", usuario: "Director General", accion: "Aprobada en Filtro 3 (DG)", estadoAnterior: "En revision DO Filtro 3", estadoNuevo: "Aprobado" },
+        { fecha: "2026-02-01 14:00", usuario: "Luis Torres", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
+        { fecha: "2026-02-02 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-03 08:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-006", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-05 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
+        { fecha: "2026-02-10 10:00", usuario: "Revisor Filtro 2", accion: "Aprobada en Filtro 2", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "En Revision Emisor" },
+        { fecha: "2026-02-14 16:00", usuario: "Director General", accion: "Aprobada en Filtro 3 (DG)", estadoAnterior: "En revision DO Filtro 3", estadoNuevo: "Pendiente Firma Dictamen" },
       ],
       observaciones: [],
       observacionesPorSeccion: [],
@@ -553,12 +553,12 @@ function createSeedData(): Solicitud[] {
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-01-28 09:00", usuario: "Patricia Ruiz", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-01-28 11:00", usuario: "Patricia Ruiz", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
-        { fecha: "2026-01-29 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Enviado a DO (Recepcion)" },
-        { fecha: "2026-01-30 08:00", usuario: "DO Recepcion", accion: "Recibida en DO", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En revision DO Filtro 1" },
-        { fecha: "2026-02-03 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En revision DO Filtro 2" },
-        { fecha: "2026-02-06 10:00", usuario: "Revisor Filtro 2", accion: "Aprobada", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "En revision DO Filtro 3" },
-        { fecha: "2026-02-10 15:00", usuario: "Director General", accion: "Aprobada en DG", estadoAnterior: "En revision DO Filtro 3", estadoNuevo: "Aprobado" },
+        { fecha: "2026-01-28 11:00", usuario: "Patricia Ruiz", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
+        { fecha: "2026-01-29 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-01-30 08:00", usuario: "DO Recepcion", accion: "Recibida en DO", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-03 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
+        { fecha: "2026-02-06 10:00", usuario: "Revisor Filtro 2", accion: "Aprobada", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "En Revision Emisor" },
+        { fecha: "2026-02-10 15:00", usuario: "Director General", accion: "Aprobada en DG", estadoAnterior: "En revision DO Filtro 3", estadoNuevo: "Pendiente Firma Dictamen" },
         { fecha: "2026-02-12 10:00", usuario: "Sistema", accion: "Dictamen emitido", estadoAnterior: "Aprobado", estadoNuevo: "Emitido" },
       ],
       observaciones: [],
@@ -613,14 +613,14 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "paraestatal",
       secretaria: "Sec. de Educacion",
       unidadAdministrativa: "Dir. Gral. de Administracion y Finanzas",
-      estado: "Enviado a Validacion (UEFA)",
+      estado: "En Validacion Justificaciones",
       fechaCreacion: "2026-02-18",
       fechaRecepcionDO: null,
       slaRestante: null,
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-02-18 09:00", usuario: "Elena Morales", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-02-18 15:00", usuario: "Elena Morales", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
+        { fecha: "2026-02-18 15:00", usuario: "Elena Morales", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
       ],
       observaciones: [],
       observacionesPorSeccion: [],
@@ -662,15 +662,15 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "centralizada",
       secretaria: "Sec. de Desarrollo",
       unidadAdministrativa: "Dir. Gral. de Recursos Humanos",
-      estado: "Observado por UEFA",
+      estado: "Observado por Validacion",
       fechaCreacion: "2026-02-15",
       fechaRecepcionDO: null,
       slaRestante: null,
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-02-15 09:00", usuario: "Miguel Hernandez", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-02-15 11:00", usuario: "Miguel Hernandez", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
-        { fecha: "2026-02-17 14:00", usuario: "UEFA Validador", accion: "Observada - Vigencia no coincide con presupuesto", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Observado por UEFA" },
+        { fecha: "2026-02-15 11:00", usuario: "Miguel Hernandez", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
+        { fecha: "2026-02-17 14:00", usuario: "UEFA Validador", accion: "Observada - Vigencia no coincide con presupuesto", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Observado por Validacion" },
       ],
       observaciones: ["Vigencia no coincide con periodo presupuestal"],
       observacionesPorSeccion: [],
@@ -760,18 +760,18 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "paraestatal",
       secretaria: "Sec. de Gobierno",
       unidadAdministrativa: "Dir. Gral. de Administracion y Finanzas",
-      estado: "Observado DO Filtro 2",
+      estado: "Observado por Validacion Final",
       fechaCreacion: "2026-02-03",
       fechaRecepcionDO: "2026-02-05",
       slaRestante: 1,
       slaDiasHabiles: 15,
       historial: [
         { fecha: "2026-02-03 09:00", usuario: "Diego Ramirez", accion: "Solicitud creada", estadoAnterior: null, estadoNuevo: "Borrador" },
-        { fecha: "2026-02-03 14:00", usuario: "Diego Ramirez", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "Enviado a Validacion (UEFA)" },
-        { fecha: "2026-02-04 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "Enviado a DO (Recepcion)" },
-        { fecha: "2026-02-05 08:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-008", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En revision DO Filtro 1" },
-        { fecha: "2026-02-07 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En revision DO Filtro 2" },
-        { fecha: "2026-02-14 11:00", usuario: "Revisor Filtro 2", accion: "Observada - Importe excede tabulador autorizado", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "Observado DO Filtro 2" },
+        { fecha: "2026-02-03 14:00", usuario: "Diego Ramirez", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
+        { fecha: "2026-02-04 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-05 08:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-008", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
+        { fecha: "2026-02-07 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
+        { fecha: "2026-02-14 11:00", usuario: "Revisor Filtro 2", accion: "Observada - Importe excede tabulador autorizado", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "Observado por Validacion Final" },
       ],
       observaciones: ["Importe excede tabulador autorizado para el nivel indicado"],
       observacionesPorSeccion: [
@@ -815,14 +815,14 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "centralizada",
       secretaria: "Sec. de Desarrollo",
       unidadAdministrativa: "Dir. Gral. de Recursos Humanos",
-      estado: "En revision DO Filtro 1",
+      estado: "En Revision Revisor",
       fechaCreacion: "2026-02-19",
       fechaRecepcionDO: "2026-02-19",
       slaRestante: 14,
       slaDiasHabiles: 15,
       historial: [
-        { fecha: "2026-02-19 10:00", usuario: "DO Recepcion", accion: "Creado como Regularizacion (folio temporal: FE-009-1)", estadoAnterior: null, estadoNuevo: "En revision DO Filtro 1", visibilidadDO: true },
-        { fecha: "2026-02-19 10:00", usuario: "DO Recepcion", accion: "Solicitud ingresada por regularizacion extemporanea", estadoAnterior: null, estadoNuevo: "En revision DO Filtro 1" },
+        { fecha: "2026-02-19 10:00", usuario: "DO Recepcion", accion: "Creado como Regularizacion (folio temporal: FE-009-1)", estadoAnterior: null, estadoNuevo: "En Revision Revisor", visibilidadDO: true },
+        { fecha: "2026-02-19 10:00", usuario: "DO Recepcion", accion: "Solicitud ingresada por regularizacion extemporanea", estadoAnterior: null, estadoNuevo: "En Revision Revisor" },
       ],
       observaciones: [],
       observacionesPorSeccion: [],
@@ -1076,7 +1076,7 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
           usuario: "URG Solicitante",
           accion: `Correccion enviada - Reingreso #${s.reingresoCount + 1}`,
           estadoAnterior: s.estado,
-          estadoNuevo: "En revision DO Filtro 1",
+          estadoNuevo: "En Revision Revisor",
         }
         return {
           ...s,
@@ -1270,21 +1270,21 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     const newSol: Solicitud = {
       ...data,
       id: newId,
-      estado: "En revision DO Filtro 1",
+      estado: "En Revision Revisor",
       historial: [
         {
           fecha: now,
           usuario: "DO Recepcion",
           accion: "Capturada por DO como Excepcion",
           estadoAnterior: null,
-          estadoNuevo: "En revision DO Filtro 1",
+          estadoNuevo: "En Revision Revisor",
         },
         {
           fecha: now,
           usuario: "DO Recepcion",
           accion: `Folio manual asignado: ${data.folioRecepcion}`,
           estadoAnterior: "En revision DO Filtro 1",
-          estadoNuevo: "En revision DO Filtro 1",
+          estadoNuevo: "En Revision Revisor",
         },
       ],
       observaciones: [],
@@ -1322,14 +1322,14 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
       id: newId,
       folioRecepcion: tempFolio,
       folioRecepcionManual: false,
-      estado: "En revision DO Filtro 1",
+      estado: "En Revision Revisor",
       historial: [
         {
           fecha: now,
           usuario: "DO Recepcion",
           accion: `Creado como Regularizacion (folio temporal: ${tempFolio})`,
           estadoAnterior: null,
-          estadoNuevo: "En revision DO Filtro 1",
+          estadoNuevo: "En Revision Revisor",
           visibilidadDO: true,
         },
         {
@@ -1337,7 +1337,7 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
           usuario: "DO Recepcion",
           accion: "Solicitud ingresada por regularizacion extemporanea",
           estadoAnterior: null,
-          estadoNuevo: "En revision DO Filtro 1",
+          estadoNuevo: "En Revision Revisor",
         },
       ],
       observaciones: [],
@@ -1456,7 +1456,7 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
             ? "Re-enviada a validación UEFA"
             : `Enviada a validación UEFA - Folio de Justificación: ${justFolio}`,
           estadoAnterior: s.estado,
-          estadoNuevo: "Enviado a Validacion (UEFA)",
+          estadoNuevo: "En Validacion Justificaciones",
         }
         return {
           ...s,

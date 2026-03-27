@@ -43,9 +43,9 @@ interface FiltroSolicitud {
 }
 type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "todas"
 const FILTRO_LABELS: Record<number, string> = {
-  1: "Filtro 1",
-  2: "Filtro 2",
-  3: "Filtro 3 (Dirección General)",
+  1: "Revisor",
+  2: "Validación Final",
+  3: "Emisor",
 }
 const MESES = [
   { value: "01", label: "Enero" }, { value: "02", label: "Febrero" },
@@ -94,11 +94,22 @@ function formatEscolaridad(raw: string | null | undefined): string {
   if (e === "doctorado")    return "Doctorado"
   return raw || "—"
 }
+function getEstadoEnRevision(filtro: number) {
+  if (filtro === 1) return "En Revision Revisor"
+  if (filtro === 2) return "En Validacion Final"
+  return "En Revision Emisor"
+}
+function getEstadoObservado(filtro: number) {
+  if (filtro === 1) return "Observado por Revisor"
+  if (filtro === 2) return "Observado por Validacion Final"
+  return "Observado por Emisor"
+}
 function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
-  const estadoEnRevision = `En revision DO Filtro ${filtro}`
-  const estadoObservado  = `Observado DO Filtro ${filtro}`
+  const estadoEnRevision = getEstadoEnRevision(filtro)
+  const estadoObservado  = getEstadoObservado(filtro)
+  const estadoExtra      = filtro === 3 ? "Pendiente Firma Dictamen" : null
   if (s.estado === estadoObservado) return "observadas"
-  if (s.estado === estadoEnRevision) {
+  if (s.estado === estadoEnRevision || s.estado === estadoExtra) {
     if (s.reingresoCount > 0 && !s.openedInFiltro[filtro]) return "correcciones"
     if (s.isNuevaEnFiltro[filtro] && !s.openedInFiltro[filtro]) return "nuevas"
     if (s.openedInFiltro[filtro]) return "revision"
@@ -177,6 +188,32 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   )
 }
 
+function parseListField(text: string | null | undefined): string[] {
+  if (!text || text === "—") return []
+  return text.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean)
+}
+
+function PerfilListField({ label, value }: { label: string; value: string | null | undefined }) {
+  const items = parseListField(value)
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {items.length === 0 ? (
+        <span className="text-sm font-medium text-card-foreground">—</span>
+      ) : (
+        <ul className="flex flex-col gap-0.5">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2 text-sm text-card-foreground">
+              <span className="shrink-0 text-muted-foreground">•</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function ListaItems({ items }: { items: string[] }) {
   const validItems = (items ?? []).filter(Boolean)
   if (validItems.length === 0) return <span className="text-sm text-muted-foreground">—</span>
@@ -203,7 +240,7 @@ function ExpedienteCompleto({ raw }: { raw: any }) {
           <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={raw?.unidad_administrativa ?? "—"} />
           <ReadOnlyField label="Unidad Responsable del Gasto"          value={raw?.unidad_responsable ?? "—"} />
           <ReadOnlyField label="Programa o Proyecto"                   value={raw?.programa_proyecto ?? "—"} />
-          <ReadOnlyField label="Denominación"                          value={raw?.denominacion ?? raw?.tipo_solicitud ?? "—"} />
+          <ReadOnlyField label="Denominación"                          value={raw?.denominacion || raw?.tipo_solicitud || "—"} />
           <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(raw?.regimen)} />
           <ReadOnlyField label="Tipo de Actividades"                   value={raw?.tipo_actividades ?? "—"} />
           <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
@@ -214,7 +251,7 @@ function ExpedienteCompleto({ raw }: { raw: any }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Renovación">
+      <SectionCard title="Renovacion">
         <div className="flex flex-col gap-3">
        <ReadOnlyField label="¿Es Renovación?" value={raw?.es_renovacion ? "SÍ" : "NO"} />
        <ReadOnlyField label="Folio del Dictamen"  value={raw?.folio_dictamen ?? raw?.dictamen?.folio ?? "—"}
@@ -240,11 +277,11 @@ function ExpedienteCompleto({ raw }: { raw: any }) {
       <SectionCard num="II" title="Perfil">
         <div className="grid gap-4 md:grid-cols-2">
           <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(raw?.escolaridad)} />
-          <ReadOnlyField label="Competencias Administrativas"  value={raw?.comp_adm ?? "—"} />
-          <ReadOnlyField label="Competencias Técnicas"         value={raw?.comp_tec ?? "—"} />
-          <ReadOnlyField label="Competencias Socioemocionales" value={raw?.comp_soc ?? "—"} />
-          <ReadOnlyField label="Valores"                       value={raw?.valores ?? "—"} />
-          <ReadOnlyField label="Áreas de Experiencia"          value={raw?.areas_exp ?? "—"} />
+          <PerfilListField label="Competencias Administrativas"  value={raw?.comp_adm} />
+          <PerfilListField label="Competencias Técnicas"         value={raw?.comp_tec} />
+          <PerfilListField label="Competencias Socioemocionales" value={raw?.comp_soc} />
+          <PerfilListField label="Valores"                       value={raw?.valores} />
+          <PerfilListField label="Áreas de Experiencia"          value={raw?.areas_exp} />
         </div>
       </SectionCard>
 
@@ -259,7 +296,7 @@ function ExpedienteCompleto({ raw }: { raw: any }) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
+          <p className="text-sm text-muted-foreground">Sin Documentos  Adjuntos.</p>
         )}
       </SectionCard>
     </div>
@@ -327,9 +364,9 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
           </DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">Escriba las observaciones que se enviarán a la URG.</p>
+          <p className="text-sm text-muted-foreground">Escriba las Observaciones que se Enviarán a la URG.</p>
           <Textarea
-            placeholder="Describa las observaciones..."
+            placeholder="Describa las Observaciones..."
             value={obs}
             onChange={e => setObs(e.target.value)}
             className="min-h-[120px] bg-card"
@@ -365,8 +402,8 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
   const raw = solicitud._raw
 
   const labelAprobar =
-    filtro === 1 ? "Aprobar → Filtro 2"
-    : filtro === 2 ? "Aprobar → Filtro 3"
+    filtro === 1 ? "Aprobar → Pendiente Firma"
+    : filtro === 2 ? "Aprobar → Emisor"
     : "Aprobar → Emitir"
 
   const folioFormateado = formatearFolio(solicitud.folioRecepcion)
@@ -388,7 +425,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
     return entrada?.comentario ?? null
   })()
 
-  const denominacion = raw?.denominacion ?? raw?.tipo_solicitud ?? solicitud.denominacion ?? solicitud.tipo ?? "—"
+  const denominacion = raw?.denominacion || raw?.tipo_solicitud || solicitud.denominacion || solicitud.tipo || "—"
 
   return (
     <div className="flex flex-col gap-4">

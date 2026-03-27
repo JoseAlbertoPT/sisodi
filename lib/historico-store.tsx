@@ -10,6 +10,10 @@ export interface HistoricoRecord {
   subidoEn: string
   sheetNames: string[]
   sheets: Record<string, HistoricoRow[]>
+  // ── Segundo archivo (opcional) ─────────────────────────────────────────────
+  nombreArchivo2: string | null
+  sheetNames2: string[] | null
+  sheets2: Record<string, HistoricoRow[]> | null
 }
 
 interface HistoricoStoreValue {
@@ -17,7 +21,7 @@ interface HistoricoStoreValue {
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
-  uploadHistorico: (file: File) => Promise<HistoricoRecord>
+  uploadHistorico: (file: File, file2?: File | null) => Promise<HistoricoRecord>
   getHistoricoById: (id: string) => HistoricoRecord | undefined
   removeHistorico: (id: string) => Promise<void>
 }
@@ -43,13 +47,11 @@ export function HistoricoStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  useEffect(() => {
-    refetch()
-  }, [refetch])
+  useEffect(() => { refetch() }, [refetch])
 
   const uploadHistorico = useCallback(
-    async (file: File): Promise<HistoricoRecord> => {
-      const record = await historicoApi.uploadHistorico(file)
+    async (file: File, file2?: File | null): Promise<HistoricoRecord> => {
+      const record = await historicoApi.uploadHistorico(file, file2)
       await refetch()
       return record
     },
@@ -57,7 +59,7 @@ export function HistoricoStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const getHistoricoById = useCallback(
-    (id: string): HistoricoRecord | undefined => historicos.find((h) => h.id === id),
+    (id: string) => historicos.find((h) => h.id === id),
     [historicos]
   )
 
@@ -70,15 +72,7 @@ export function HistoricoStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo<HistoricoStoreValue>(
-    () => ({
-      historicos,
-      loading,
-      error,
-      refetch,
-      uploadHistorico,
-      getHistoricoById,
-      removeHistorico,
-    }),
+    () => ({ historicos, loading, error, refetch, uploadHistorico, getHistoricoById, removeHistorico }),
     [historicos, loading, error, refetch, uploadHistorico, getHistoricoById, removeHistorico]
   )
 

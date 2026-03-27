@@ -11,7 +11,6 @@ interface TreeNode {
   children: TreeNode[]
   acciones: { code: string; label: string }[]
 }
-
 export async function GET() {
   // Get all active menus
   const allMenus = await prisma.menu.findMany({

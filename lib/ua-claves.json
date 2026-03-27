@@ -1,0 +1,997 @@
+[
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "CLAVE REPORTE PLAZAS": "1 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Privada de la Persona Titular del Poder Ejecutivo Estatal",
+    "CLAVE REPORTE PLAZAS": "1 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Coordinación de Asesores de la Gubernatura",
+    "CLAVE REPORTE PLAZAS": "1 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Particular de la Jefatura",
+    "CLAVE REPORTE PLAZAS": "1 01 9 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Residencias Oficiales",
+    "CLAVE REPORTE PLAZAS": "1 01 10 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Relaciones Públicas",
+    "CLAVE REPORTE PLAZAS": "1 01 11 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Logística y Eventos",
+    "CLAVE REPORTE PLAZAS": "1 01 12 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Análisis Estratégico",
+    "CLAVE REPORTE PLAZAS": "1 01 13 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Coordinación y Vinculación Política",
+    "CLAVE REPORTE PLAZAS": "1 01 14 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Jefatura de la Oficina de la Gubernatura del Estado",
+    "CLAVE REPORTE PLAZAS": "1 01 21 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Jefatura de la Oficina de la Gubernatura del Estado",
+    "CLAVE REPORTE PLAZAS": "1 01 22 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Representación del Poder Ejecutivo de Morelos en la CDMX",
+    "CLAVE REPORTE PLAZAS": "1 02 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Relaciones Internacionales",
+    "CLAVE REPORTE PLAZAS": "1 02 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Migrantes",
+    "CLAVE REPORTE PLAZAS": "1 02 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Coordinación de Comunicación Social",
+    "CLAVE REPORTE PLAZAS": "1 03 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Imagen y Material Audiovisual",
+    "CLAVE REPORTE PLAZAS": "1 03 15 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Comunicación",
+    "CLAVE REPORTE PLAZAS": "1 03 16 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Redes Sociales",
+    "CLAVE REPORTE PLAZAS": "1 03 17 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Coordinación de la Agencia de Transformación Digital",
+    "CLAVE REPORTE PLAZAS": "1 04 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Gobierno Digital",
+    "CLAVE REPORTE PLAZAS": "1 04 18 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Gobernanza y Operación Tecnológica",
+    "CLAVE REPORTE PLAZAS": "1 04 19 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Gobernanza y Observatorio de Datos",
+    "CLAVE REPORTE PLAZAS": "1 04 20 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Jefatura de la Oficina de la Gubernatura del Estado",
+    "UA DE CLAVES ADMINISTRATIVAS": "Hábitat Morelos",
+    "CLAVE REPORTE PLAZAS": "1 40 23 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Gobierno",
+    "CLAVE REPORTE PLAZAS": "2 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subsecretaría de Gobierno",
+    "CLAVE REPORTE PLAZAS": "2 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Atención a Municipios",
+    "CLAVE REPORTE PLAZAS": "2 01 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Registro Civil",
+    "CLAVE REPORTE PLAZAS": "2 01 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Asuntos Religiosos",
+    "CLAVE REPORTE PLAZAS": "2 01 9 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Derechos Humanos",
+    "CLAVE REPORTE PLAZAS": "2 01 10 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General Jurídica",
+    "CLAVE REPORTE PLAZAS": "2 01 12 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Vinculación Operativa y de Gestión",
+    "CLAVE REPORTE PLAZAS": "2 01 13 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Gobierno",
+    "CLAVE REPORTE PLAZAS": "2 02 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Atención Ciudadana",
+    "CLAVE REPORTE PLAZAS": "2 02 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Instituto Estatal de Documentación de Morelos",
+    "CLAVE REPORTE PLAZAS": "2 40 14 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Ejecutiva del Sistema de Protección Integral de Niñas, Niños y Adolescentes del Estado de Morelos",
+    "CLAVE REPORTE PLAZAS": "2 40 15 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Comisión de Búsqueda de Personas del Estado de Morelos",
+    "CLAVE REPORTE PLAZAS": "2 40 16 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Comisión Ejecutiva para Prevenir y Erradicar la Violencia contra las Mujeres del Poder Ejecutivo del Estado de Morelos",
+    "CLAVE REPORTE PLAZAS": "2 40 17 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Administración y Finanzas",
+    "CLAVE REPORTE PLAZAS": "3 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Gestión Administrativa",
+    "CLAVE REPORTE PLAZAS": "3 01 9 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Coordinación Técnica",
+    "CLAVE REPORTE PLAZAS": "3 02 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Sistemas y Armonización Contable",
+    "CLAVE REPORTE PLAZAS": "3 02 10 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subsecretaría de Administración",
+    "CLAVE REPORTE PLAZAS": "3 03 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Recursos Humanos",
+    "CLAVE REPORTE PLAZAS": "3 03 11 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Contrataciones de Bienes y Servicios",
+    "CLAVE REPORTE PLAZAS": "3 03 12 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Patrimonio",
+    "CLAVE REPORTE PLAZAS": "3 03 13 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Desarrollo Organizacional",
+    "CLAVE REPORTE PLAZAS": "3 03 14 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Servicios",
+    "CLAVE REPORTE PLAZAS": "3 03 15 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subsecretaría de Ingresos",
+    "CLAVE REPORTE PLAZAS": "3 04 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Recaudación",
+    "CLAVE REPORTE PLAZAS": "3 04 16 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Auditoría Fiscal",
+    "CLAVE REPORTE PLAZAS": "3 04 17 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Coordinación Hacendaria",
+    "CLAVE REPORTE PLAZAS": "3 04 18 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subsecretaría de Egresos",
+    "CLAVE REPORTE PLAZAS": "3 05 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Presupuesto y Gasto Público",
+    "CLAVE REPORTE PLAZAS": "3 05 19 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Contabilidad Gubernamental",
+    "CLAVE REPORTE PLAZAS": "3 05 20 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Inversión",
+    "CLAVE REPORTE PLAZAS": "3 05 21 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Coordinación de Programas Federales",
+    "CLAVE REPORTE PLAZAS": "3 05 22 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Tesorería General",
+    "CLAVE REPORTE PLAZAS": "3 06 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Caja y Control Financiero",
+    "CLAVE REPORTE PLAZAS": "3 06 23 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Procuraduría Fiscal",
+    "CLAVE REPORTE PLAZAS": "3 07 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subprocuraduría de Consultoría y Normativa",
+    "CLAVE REPORTE PLAZAS": "3 07 24 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subprocuraduría de lo Contencioso",
+    "CLAVE REPORTE PLAZAS": "3 07 25 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subprocuraduría de Recursos y Procedimientos Administrativos",
+    "CLAVE REPORTE PLAZAS": "3 07 26 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Planeación",
+    "CLAVE REPORTE PLAZAS": "3 08 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Planeación Participativa e Información Estratégica",
+    "CLAVE REPORTE PLAZAS": "3 08 27 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Seguimiento y Evaluación",
+    "CLAVE REPORTE PLAZAS": "3 08 28 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Inteligencia Patrimonial y Económica del Estado de Morelos",
+    "CLAVE REPORTE PLAZAS": "3 40 29 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Administración y Finanzas",
+    "UA DE CLAVES ADMINISTRATIVAS": "Fondo Estatal para la Promoción y Desarrollo de Eventos Vinculados con la Cultura y el Turismo",
+    "CLAVE REPORTE PLAZAS": "3 40 30 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Desarrollo Económico y del Trabajo",
+    "CLAVE REPORTE PLAZAS": "4 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Técnica",
+    "CLAVE REPORTE PLAZAS": "4 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de Desarrollo Económico y del Trabajo",
+    "CLAVE REPORTE PLAZAS": "4 01 13 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Secretaría de Desarrollo Económico y del Trabajo",
+    "CLAVE REPORTE PLAZAS": "4 01 14 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subsecretaría de Desarrollo Económico",
+    "CLAVE REPORTE PLAZAS": "4 02 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de \"Orgullo Morelos\"",
+    "CLAVE REPORTE PLAZAS": "4 02 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Macroeconomía y Fomento a la Exportación",
+    "CLAVE REPORTE PLAZAS": "4 02 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de MIPyMES",
+    "CLAVE REPORTE PLAZAS": "4 02 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de la Economía y el Emprendimiento para el Bienestar",
+    "CLAVE REPORTE PLAZAS": "4 02 9 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subsecretaría del Trabajo y Previsión Social",
+    "CLAVE REPORTE PLAZAS": "4 03 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Inspección del Trabajo",
+    "CLAVE REPORTE PLAZAS": "4 03 10 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General del Servicio Nacional de Empleo Morelos",
+    "CLAVE REPORTE PLAZAS": "4 03 11 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Procuraduría Estatal de la Defensa del Trabajo",
+    "CLAVE REPORTE PLAZAS": "4 03 12 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subsecretaría de Inversiones Estratégicas",
+    "CLAVE REPORTE PLAZAS": "4 04 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Junta Local de Conciliación y Arbitraje del Estado de Morelos",
+    "CLAVE REPORTE PLAZAS": "4 40 15 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Económico y del Trabajo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Tribunal Estatal de Conciliación y Arbitraje del Estado de Morelos",
+    "CLAVE REPORTE PLAZAS": "4 40 16 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Agropecuario",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Desarrollo Agropecuario",
+    "CLAVE REPORTE PLAZAS": "5 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Agropecuario",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Agricultura y Agroecología",
+    "CLAVE REPORTE PLAZAS": "5 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Agropecuario",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Ganadería y Acuacultura",
+    "CLAVE REPORTE PLAZAS": "5 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Agropecuario",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Impulso Agropecuario",
+    "CLAVE REPORTE PLAZAS": "5 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Agropecuario",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Planeación y Apoyo Técnico",
+    "CLAVE REPORTE PLAZAS": "5 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Agropecuario",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Innovación y Competitividad",
+    "CLAVE REPORTE PLAZAS": "5 01 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Agropecuario",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de Desarrollo Agropecuario",
+    "CLAVE REPORTE PLAZAS": "5 01 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Desarrollo Agropecuario",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Secretaría de Desarrollo Agropecuario",
+    "CLAVE REPORTE PLAZAS": "5 01 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Infraestructura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Infraestructura",
+    "CLAVE REPORTE PLAZAS": "6 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Infraestructura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Obras Públicas",
+    "CLAVE REPORTE PLAZAS": "6 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Infraestructura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Caminos y Puentes",
+    "CLAVE REPORTE PLAZAS": "6 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Infraestructura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Obra Educativa",
+    "CLAVE REPORTE PLAZAS": "6 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Infraestructura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Proyectos",
+    "CLAVE REPORTE PLAZAS": "6 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Infraestructura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Licitaciones y Contratación de Obra Pública",
+    "CLAVE REPORTE PLAZAS": "6 01 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Infraestructura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de Infraestructura",
+    "CLAVE REPORTE PLAZAS": "6 01 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Infraestructura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Secretaría de Infraestructura",
+    "CLAVE REPORTE PLAZAS": "6 01 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Educación",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina del Secretario",
+    "CLAVE REPORTE PLAZAS": "7 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Educación",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Técnica",
+    "CLAVE REPORTE PLAZAS": "7 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Educación",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Educación Media Superior y Superior",
+    "CLAVE REPORTE PLAZAS": "7 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Educación",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Vinculación y Enlace",
+    "CLAVE REPORTE PLAZAS": "7 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Educación",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Proyectos de Inversión",
+    "CLAVE REPORTE PLAZAS": "7 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Educación",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de Educación",
+    "CLAVE REPORTE PLAZAS": "7 01 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Educación",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Secretaría de Educación",
+    "CLAVE REPORTE PLAZAS": "7 01 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Educación",
+    "UA DE CLAVES ADMINISTRATIVAS": "Coordinación Estatal del Subsistema de Preparatoria Abierta",
+    "CLAVE REPORTE PLAZAS": "7 40 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Salud",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Salud",
+    "CLAVE REPORTE PLAZAS": "8 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Salud",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Técnica",
+    "CLAVE REPORTE PLAZAS": "8 01 2 1 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Salud",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Proyectos y Políticas Públicas en Salud",
+    "CLAVE REPORTE PLAZAS": "8 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Salud",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Coordinación y Supervisión",
+    "CLAVE REPORTE PLAZAS": "8 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Salud",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Vinculación y Participación Social",
+    "CLAVE REPORTE PLAZAS": "8 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Salud",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de Salud",
+    "CLAVE REPORTE PLAZAS": "8 01 6 0 1 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Salud",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Secretaría de Salud",
+    "CLAVE REPORTE PLAZAS": "8 01 7 0 2 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría Anticorrupción y Buen Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de la Contraloría",
+    "CLAVE REPORTE PLAZAS": "10 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría Anticorrupción y Buen Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Técnica",
+    "CLAVE REPORTE PLAZAS": "10 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría Anticorrupción y Buen Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Responsabilidades",
+    "CLAVE REPORTE PLAZAS": "10 01 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría Anticorrupción y Buen Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de Contraloría",
+    "CLAVE REPORTE PLAZAS": "10 01 10 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría Anticorrupción y Buen Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Fiscalización y Combate a la Corrupción",
+    "CLAVE REPORTE PLAZAS": "10 02 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría Anticorrupción y Buen Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Auditoría Gubernamental",
+    "CLAVE REPORTE PLAZAS": "10 02 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría Anticorrupción y Buen Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Mejora Gubernamental y Contraloría Social",
+    "CLAVE REPORTE PLAZAS": "10 02 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría Anticorrupción y Buen Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Quejas, Denuncias e Investigaciones",
+    "CLAVE REPORTE PLAZAS": "10 02 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría Anticorrupción y Buen Gobierno",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Órganos de Vigilancia",
+    "CLAVE REPORTE PLAZAS": "10 03 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Turismo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Turismo",
+    "CLAVE REPORTE PLAZAS": "11 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Turismo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Técnica",
+    "CLAVE REPORTE PLAZAS": "11 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Turismo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Desarrollo de Productos Turísticos",
+    "CLAVE REPORTE PLAZAS": "11 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Turismo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Competitividad y Servicios Turísticos",
+    "CLAVE REPORTE PLAZAS": "11 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Turismo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de la Comisión de Filmaciones",
+    "CLAVE REPORTE PLAZAS": "11 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Turismo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Turismo Comunitario",
+    "CLAVE REPORTE PLAZAS": "11 01 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Turismo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de Turismo",
+    "CLAVE REPORTE PLAZAS": "11 01 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Turismo",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Secretaría de Turismo",
+    "CLAVE REPORTE PLAZAS": "11 01 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Cultura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Cultura",
+    "CLAVE REPORTE PLAZAS": "12 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Cultura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Técnica",
+    "CLAVE REPORTE PLAZAS": "12 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Cultura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Museos y Exposiciones",
+    "CLAVE REPORTE PLAZAS": "12 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Cultura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Desarrollo Cultural Comunitario",
+    "CLAVE REPORTE PLAZAS": "12 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Cultura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Publicaciones y Fomento a la Lectura",
+    "CLAVE REPORTE PLAZAS": "12 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Cultura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Fomento a las Artes",
+    "CLAVE REPORTE PLAZAS": "12 01 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Cultura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Formación de las Artes y la Cultura",
+    "CLAVE REPORTE PLAZAS": "12 01 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Cultura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de Cultura",
+    "CLAVE REPORTE PLAZAS": "12 01 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Cultura",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Secretaría de Cultura",
+    "CLAVE REPORTE PLAZAS": "12 01 9 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Bienestar",
+    "CLAVE REPORTE PLAZAS": "13 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Construcción de Paz",
+    "CLAVE REPORTE PLAZAS": "13 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Programas, Proyectos Especiales y Coordinación Interinstitucional",
+    "CLAVE REPORTE PLAZAS": "13 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Comunidades de Atención Prioritaria e Inclusión",
+    "CLAVE REPORTE PLAZAS": "13 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de Bienestar",
+    "CLAVE REPORTE PLAZAS": "13 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Secretaría de Bienestar",
+    "CLAVE REPORTE PLAZAS": "13 01 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Comisión Estatal de Evaluación del Desarrollo Social",
+    "CLAVE REPORTE PLAZAS": "13 40 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Instituto Morelense de las Personas Adolescentes y Jóvenes",
+    "CLAVE REPORTE PLAZAS": "13 40 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Instituto de los Pueblos y Comunidades Indígenas y Afromexicanas de Morelos",
+    "CLAVE REPORTE PLAZAS": "13 40 9 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Bienestar",
+    "UA DE CLAVES ADMINISTRATIVAS": "Fondo Estatal para la Administración y Operación del recinto Deportivo \"Agustín Coruco Díaz\"",
+    "CLAVE REPORTE PLAZAS": "13 40 10 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Secretaría de Desarrollo Sustentable",
+    "CLAVE REPORTE PLAZAS": "14 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Ordenamiento Territorial",
+    "CLAVE REPORTE PLAZAS": "14 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Gestión Ambiental",
+    "CLAVE REPORTE PLAZAS": "14 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Educación Ambiental y Vinculación Estratégica",
+    "CLAVE REPORTE PLAZAS": "14 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Áreas Naturales Protegidas",
+    "CLAVE REPORTE PLAZAS": "14 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Mejoramiento Ecosistémico y Cambio Climático",
+    "CLAVE REPORTE PLAZAS": "14 01 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Consultoría, Asuntos Jurídicos y Normatividad",
+    "CLAVE REPORTE PLAZAS": "14 01 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Proyectos y Gestión Administrativa",
+    "CLAVE REPORTE PLAZAS": "14 01 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Procuraduría de Protección al Ambiente del Estado de Morelos",
+    "CLAVE REPORTE PLAZAS": "14 40 9 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretarío de Desarrollo Sustentable",
+    "UA DE CLAVES ADMINISTRATIVAS": "Comisión Estatal de Biodiversidad",
+    "CLAVE REPORTE PLAZAS": "14 40 10 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de las Mujeres",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Personal Titular de la Secretaría de las Mujeres",
+    "CLAVE REPORTE PLAZAS": "15 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de las Mujeres",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Técnica",
+    "CLAVE REPORTE PLAZAS": "15 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de las Mujeres",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Programas y Desarrollo Integral de las Mujeres",
+    "CLAVE REPORTE PLAZAS": "15 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de las Mujeres",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Jurídico de la Secretaría de las Mujeres",
+    "CLAVE REPORTE PLAZAS": "15 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de las Mujeres",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Secretaría de las Mujeres",
+    "CLAVE REPORTE PLAZAS": "15 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina del Secretario",
+    "CLAVE REPORTE PLAZAS": "16 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General del Centro Estatal de Análisis de Información sobre Seguridad Pública",
+    "CLAVE REPORTE PLAZAS": "16 01 15 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General del C5",
+    "CLAVE REPORTE PLAZAS": "16 01 16 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de la Ayudantía de la Gobernadora",
+    "CLAVE REPORTE PLAZAS": "16 01 17 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Seguridad Privada",
+    "CLAVE REPORTE PLAZAS": "16 01 18 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General Jurídica",
+    "CLAVE REPORTE PLAZAS": "16 01 19 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de la Policía Industrial, Bancaria y Auxiliar",
+    "CLAVE REPORTE PLAZAS": "16 01 20 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de la Academia Estatal de Estudios Superiores en Seguridad",
+    "CLAVE REPORTE PLAZAS": "16 01 21 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Asuntos Internos",
+    "CLAVE REPORTE PLAZAS": "16 01 22 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Inteligencia Policial",
+    "CLAVE REPORTE PLAZAS": "16 01 23 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Subsecretaría Operativa de Seguridad Pública",
+    "CLAVE REPORTE PLAZAS": "16 02 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Logística Operativa",
+    "CLAVE REPORTE PLAZAS": "16 02 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de la Policía Preventiva Estatal",
+    "CLAVE REPORTE PLAZAS": "16 02 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Unidades Especiales",
+    "CLAVE REPORTE PLAZAS": "16 02 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Coordinación del Sistema Penitenciario",
+    "CLAVE REPORTE PLAZAS": "16 03 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Reinserción Social",
+    "CLAVE REPORTE PLAZAS": "16 03 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Centros Penitenciarios",
+    "CLAVE REPORTE PLAZAS": "16 03 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Ejecución de Medidas para Adolescentes",
+    "CLAVE REPORTE PLAZAS": "16 03 9 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General Operativa Penitenciaria",
+    "CLAVE REPORTE PLAZAS": "16 03 10 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Coordinación de Desarrollo y Fortalecimiento Institucional",
+    "CLAVE REPORTE PLAZAS": "16 04 11 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Prestación de Servicios de Personal Operativo",
+    "CLAVE REPORTE PLAZAS": "16 04 12 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Desarrollo y Logística Operativa",
+    "CLAVE REPORTE PLAZAS": "16 04 13 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Control de Gasto Operativo",
+    "CLAVE REPORTE PLAZAS": "16 04 14 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Centro Estatal de Prevención Social de la Violencia y la Delincuencia con Participación Ciudadana",
+    "CLAVE REPORTE PLAZAS": "16 40 24 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Secretaría de Seguridad y Protección Ciudadana",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretariado Ejecutivo del Sistema Estatal de Seguridad Pública",
+    "CLAVE REPORTE PLAZAS": "16 40 25 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Consejería Jurídica",
+    "UA DE CLAVES ADMINISTRATIVAS": "Oficina de la Persona Titular de la Consejería Jurídica",
+    "CLAVE REPORTE PLAZAS": "17 01 1 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Consejería Jurídica",
+    "UA DE CLAVES ADMINISTRATIVAS": "Coordinación Ejecutiva",
+    "CLAVE REPORTE PLAZAS": "17 01 2 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Consejería Jurídica",
+    "UA DE CLAVES ADMINISTRATIVAS": "Secretaría Ejecutiva",
+    "CLAVE REPORTE PLAZAS": "17 01 3 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Consejería Jurídica",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Asuntos Burocráticos",
+    "CLAVE REPORTE PLAZAS": "17 01 4 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Consejería Jurídica",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Asuntos Contenciosos",
+    "CLAVE REPORTE PLAZAS": "17 01 5 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Consejería Jurídica",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Consultoría de Asuntos Administrativos",
+    "CLAVE REPORTE PLAZAS": "17 01 6 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Consejería Jurídica",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Asuntos Constitucionales y Amparo",
+    "CLAVE REPORTE PLAZAS": "17 01 7 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Consejería Jurídica",
+    "UA DE CLAVES ADMINISTRATIVAS": "Dirección General de Legislación",
+    "CLAVE REPORTE PLAZAS": "17 01 8 0 0 0 0"
+  },
+  {
+    "SECRETARÍA": "Consejería Jurídica",
+    "UA DE CLAVES ADMINISTRATIVAS": "Unidad de Enlace Financiero Administrativo de la Consejería Jurídica",
+    "CLAVE REPORTE PLAZAS": "17 01 9 0 0 0 0"
+  }
+]
