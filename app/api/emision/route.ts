@@ -75,28 +75,15 @@ export async function GET(req: NextRequest) {
     const data = solicitudes.map((sol) => {
       const historial = sol.historial_solicitud
 
-      const revisor = historial.find((h) => {
-        const nombre =
-          h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
-        return nombre.toLowerCase().includes("filtro 2")
-      })
-      const validador = historial.find((h) => {
-        const nombre =
-          h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
-        return (
-          nombre.toLowerCase().includes("filtro 3") ||
-          nombre.toLowerCase().includes("aprobado")
-        )
-      })
-      const emisor = historial.find((h) => {
+      const emisorH = historial.find((h) => {
         const nombre =
           h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
         return nombre.toLowerCase().includes("emitido")
       })
 
       let destinatarios: string[] = []
-      if (emisor?.comentario) {
-        const match = emisor.comentario.match(/Destinatarios:\s*(.+)/i)
+      if (emisorH?.comentario) {
+        const match = emisorH.comentario.match(/Destinatarios:\s*(.+)/i)
         if (match) {
           destinatarios = match[1]
             .split("|")
@@ -149,9 +136,9 @@ export async function GET(req: NextRequest) {
           sol.periodo ? `${sol.periodo.mes}/${sol.periodo.anio}` : null,
         destinatarios,
         firmadoPor: {
-          reviso: revisor?.usuario?.nombre   ?? "—",
-          valido: validador?.usuario?.nombre ?? "—",
-          emitio: emisor?.usuario?.nombre    ?? "—",
+          reviso: "Revisor",
+          valido: "Validación Final",
+          emitio: "Emisor",
         },
         tipoSolicitudRaw: sol.tipo_solicitud,
       }

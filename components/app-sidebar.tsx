@@ -374,6 +374,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
                 isGroupExpanded={isGroupExpanded}
               />
             )}
+
           </div>
         </nav>
 

@@ -95,20 +95,28 @@ export async function GET(req: NextRequest) {
 
     const estadoIds = estados.map((e) => e.id)
 
+    const revisorId = searchParams.get("revisorId")
+    const whereClause: any = { estado_id: { in: estadoIds } }
+    if (filtro === 1 && revisorId) {
+      whereClause.revisor_asignado_id = revisorId
+    }
+
     const solicitudes = await prisma.solicitud.findMany({
-      where: { estado_id: { in: estadoIds } },
+      where: whereClause,
       include: {
-        estado:   true,
-        periodo:  true,
-        dictamen: true, // CRÍTICO: incluir siempre para resolver folioDictamen
+        estado:           true,
+        periodo:          true,
+        dictamen:         true,
+        revisor_asignado: { select: { id: true, nombre: true, correo: true } },
         usuario: {
           select: {
-            id:     true,
-            nombre: true,
-            correo: true,
-            rfc:    true,
-            area:   { select: { id: true, nombre: true } },
-            rol:    { select: { id: true, nombre: true } },
+            id:            true,
+            nombre:        true,
+            correo:        true,
+            rfc:           true,
+            secretaria_id: true,
+            area:          { select: { id: true, nombre: true } },
+            rol:           { select: { id: true, nombre: true } },
           },
         },
         historial_solicitud: {
@@ -227,6 +235,7 @@ export async function GET(req: NextRequest) {
         tipo:             sol.tipo_solicitud,
         denominacion:     (sol as any).denominacion || sol.tipo_solicitud || "—",
         secretaria:       sol.usuario?.area?.nombre ?? "—",
+        secretariaId:     sol.usuario?.secretaria_id ?? null,
         estado:           sol.estado.nombre,
         esRegularizacion: (sol as any).es_extemporanea ?? false,
         fechaRecepcionDO,
@@ -236,8 +245,9 @@ export async function GET(req: NextRequest) {
         lastObservedDate,
         lastObservedEstado,
         slaRestante,
-        openedInFiltro:  { [filtro]: openedInFiltro }  as Record<number, boolean>,
-        isNuevaEnFiltro: { [filtro]: isNuevaEnFiltro } as Record<number, boolean>,
+        openedInFiltro:   { [filtro]: openedInFiltro }  as Record<number, boolean>,
+        isNuevaEnFiltro:  { [filtro]: isNuevaEnFiltro } as Record<number, boolean>,
+        revisorAsignado:  (sol as any).revisor_asignado ?? null,
         _raw: rawEnriquecido,
       }
     })
@@ -255,7 +265,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { solicitudId, accion, filtro, usuarioId, observaciones, folioDictamen } = body
+    const { solicitudId, accion, filtro, usuarioId, observaciones, folioDictamen, revisorId } = body
 
     if (!solicitudId || !accion || !usuarioId) {
       return NextResponse.json(
@@ -343,7 +353,15 @@ export async function PATCH(req: NextRequest) {
 
     const solicitud = await prisma.solicitud.findUnique({
       where:   { id: idNum },
-      include: { estado: true, dictamen: true },
+      include: {
+        estado: true,
+        dictamen: true,
+        historial_solicitud: {
+          include: {
+            estado_historial_solicitud_estado_nuevo_idToestado: true,
+          },
+        },
+      },
     })
 
     if (!solicitud) {
@@ -353,11 +371,31 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
+    // Detectar si la solicitud ya pasó por Filtro 1
+    const yaEsperoPorFiltro1 = solicitud.historial_solicitud.some((h) => {
+      const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
+      return nombre.toLowerCase().includes("en revision revisor")
+    })
+
     let nombreEstadoNuevo: string
     if (accion === "aprobar") {
-      if (filtro === 1)      nombreEstadoNuevo = "Pendiente Firma Justificacion"
-      else if (filtro === 2) nombreEstadoNuevo = estadoEnRevision(3)
-      else                   nombreEstadoNuevo = "Pendiente Firma Dictamen"
+      if (filtro === 1) {
+        // Filtro 1 (Revisión) aprueba → regresa a Filtro 2 (Validación Final)
+        nombreEstadoNuevo = estadoEnRevision(2)
+      } else if (filtro === 2) {
+        // Filtro 2: 1ra vez → asigna revisor → Filtro 1; 2da vez (ya pasó Filtro 1) → Filtro 3
+        nombreEstadoNuevo = yaEsperoPorFiltro1 ? estadoEnRevision(3) : estadoEnRevision(1)
+      } else {
+        // Filtro 3: depende del estado actual
+        const estadoActual = solicitud.estado.nombre.toLowerCase()
+        if (estadoActual.includes("pendiente firma dictamen")) {
+          // Filtro 3 firma → genera dictamen → Emitido (manejado abajo)
+          nombreEstadoNuevo = "Emitido"
+        } else {
+          // Filtro 3 aprueba → va a UEFA para firma de justificación
+          nombreEstadoNuevo = "Pendiente Firma Justificacion"
+        }
+      }
     } else {
       nombreEstadoNuevo = estadoObservado(filtro)
     }
@@ -382,9 +420,15 @@ export async function PATCH(req: NextRequest) {
           : String(observaciones)
         : null
 
+    // Si Filtro 2 aprueba por primera vez (→ Revisor), guardar revisor asignado
+    const asignarRevisor = filtro === 2 && nombreEstadoNuevo === estadoEnRevision(1) && revisorId
+
     const solicitudActualizada = await prisma.solicitud.update({
       where: { id: idNum },
-      data:  { estado_id: estadoNuevo.id },
+      data:  {
+        estado_id: estadoNuevo.id,
+        ...(asignarRevisor ? { revisor_asignado_id: revisorId } : {}),
+      },
       include: {
         estado:  true,
         periodo: true,
@@ -409,8 +453,8 @@ export async function PATCH(req: NextRequest) {
       },
     })
 
-    // ── AUTO-EMISIÓN cuando Emisor (filtro 3) aprueba ────────────────────────
-    if (accion === "aprobar" && filtro === 3 && !solicitud.dictamen) {
+    // ── EMISIÓN cuando Filtro 3 firma (estado era "Pendiente Firma Dictamen") ──
+    if (accion === "aprobar" && filtro === 3 && nombreEstadoNuevo === "Emitido" && !solicitud.dictamen) {
       try {
         const esParaestatal =
           (solicitud.tipo_solicitud ?? "").toLowerCase().includes("paraestatal")

@@ -9,10 +9,11 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const tab      = searchParams.get("tab")      ?? "Todas"
-    const search   = searchParams.get("search")   ?? ""
-    const page     = Math.max(1, Number(searchParams.get("page")     ?? 1))
-    const pageSize = Math.max(1, Number(searchParams.get("pageSize") ?? 50))
+    const tab        = searchParams.get("tab")        ?? "Todas"
+    const search     = searchParams.get("search")     ?? ""
+    const secretaria = searchParams.get("secretaria") ?? ""
+    const page       = Math.max(1, Number(searchParams.get("page")     ?? 1))
+    const pageSize   = Math.max(1, Number(searchParams.get("pageSize") ?? 50))
 
     const tabToEstados: Record<string, string[]> = {
       "Borradores": [
@@ -29,19 +30,26 @@ export async function GET(req: NextRequest) {
         "Pendiente Firma Justificacion",
       ],
       "Observadas/Devueltas": [
+        // Solo "Observado por Revisor" requiere acción del Capturista
         "Observado por Revisor",
-        "Observado por Validacion Final",
-        "Observado por Emisor",
         "Devuelta por DO",
         "Observado DO Filtro 1",
         "Observado DO Filtro 2",
         "Observado DO Filtro 3",
+        // Legado
+        "Observado por Validacion Final",
       ],
       "En Proceso": [
+        // Flujo nuevo (12 pasos)
+        "Pendiente DO",       // UEFA aprobó, DO asignará al Revisor
         "En Revision Revisor",
-        "En Validacion Final",
+        "Aprobado por Revisor", // DO tiene para aprobar/enviar a Emisor
+        "Observado por DO",     // DO devolvió al Revisor, sin acción del Capturista
         "En Revision Emisor",
+        "Observado por Emisor", // Emisor devolvió al Revisor, sin acción del Capturista
         "Pendiente Firma Dictamen",
+        // Flujo legado
+        "En Validacion Final",
         "En revision DO Filtro 1",
         "En revision DO Filtro 2",
         "En revision DO Filtro 3",
@@ -60,6 +68,9 @@ export async function GET(req: NextRequest) {
       usuario_id: usuarioId,
       ...(estadoNames.length > 0 && {
         estado: { nombre: { in: estadoNames } },
+      }),
+      ...(secretaria && {
+        secretaria: { contains: secretaria.split(" > ")[0], mode: "insensitive" },
       }),
       ...(search && {
         OR: [
@@ -199,18 +210,22 @@ export async function GET(req: NextRequest) {
       ) {
         tabCountMap["En Validacion"] += cnt
       } else if (
-        n.includes("observado por revisor")          ||
-        n.includes("observado por validacion final") ||
-        n.includes("observado por emisor")           ||
-        n.includes("devuelta por do")                ||
+        // Solo estados que requieren acción del Capturista
+        n === "observado por revisor"          ||
+        n.includes("devuelta por do")          ||
+        n.includes("observado por validacion final") || // legado
         (n.includes("observad") && n.includes("filtro"))
       ) {
         tabCountMap["Observadas/Devueltas"] += cnt
       } else if (
+        n === "pendiente do"             ||
         n.includes("en revision revisor")  ||
-        n.includes("en validacion final")  ||
-        n.includes("en revision emisor")   ||
+        n === "aprobado por revisor"     ||
+        n === "observado por do"         ||
+        n.includes("en revision emisor") ||
+        n === "observado por emisor"     ||
         n.includes("pendiente firma dictamen") ||
+        n.includes("en validacion final")  ||
         n.includes("en revision do")       ||
         n === "en proceso do"              ||
         n === "aprobado"

@@ -18,7 +18,6 @@ export function ConfiguracionPage() {
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-
   const handleFileUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
@@ -42,7 +41,6 @@ export function ConfiguracionPage() {
     },
     [uploadHistorico]
   )
-
   const handleRemove = useCallback(
     async (id: string) => {
       setDeletingId(id)
@@ -56,13 +54,11 @@ export function ConfiguracionPage() {
     },
     [removeHistorico]
   )
-
   return (
     <PageLayout
       title={<span className="flex items-center gap-2"><Settings className="h-5 w-5 text-secondary" />Configuracion</span>}
       description="Parametros y cargas de datos del sistema (historico de justificaciones, etc.)."
     >
-
       <Tabs defaultValue="historico" className="w-full">
         <TabsList className="bg-muted">
           <TabsTrigger value="historico" className="gap-1.5">
@@ -78,7 +74,6 @@ export function ConfiguracionPage() {
             Paraestatal
           </TabsTrigger>
         </TabsList>
-
         <TabsContent value="historico" className="mt-6">
           <Card className="shadow-sm border-border">
             <CardHeader className="pb-3">
@@ -86,18 +81,20 @@ export function ConfiguracionPage() {
                 Subir Excel de justificaciones
               </CardTitle>
               <CardDescription>
-                Cargue el archivo de justificaciones (ej. Justificaciones 2025-2026.xlsx) con sus hojas (SSyPC, AGROPECUARIO, EDUCACION, etc.). Los datos se guardan para poder usarlos al llenar una nueva solicitud.
+                Cargue el archivo de justificaciones . Los datos se guardan para poder usarlos al llenar una nueva solicitud.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium">Archivo .xlsx</Label>
+                <Label className="text-sm
+                font-medium">Archivo .xlsx</Label>
                 <div className="flex items-center gap-3 flex-wrap">
                   <Input
                     type="file"
                     accept=".xlsx"
                     onChange={handleFileUpload}
                     disabled={uploading}
+
                     className="bg-background cursor-pointer file:cursor-pointer max-w-xs"
                   />
                   {uploading && <span className="text-sm text-muted-foreground">Subiendo...</span>}
@@ -120,7 +117,6 @@ export function ConfiguracionPage() {
               )}
             </CardContent>
           </Card>
-
           {loading && historicos.length === 0 && (
             <p className="text-sm text-muted-foreground">Cargando historicos...</p>
           )}
@@ -131,7 +127,7 @@ export function ConfiguracionPage() {
                   Historicos guardados
                 </CardTitle>
                 <CardDescription>
-                  Archivos cargados en el backend (Postgres). Puede usarlos en Nueva Solicitud.
+                  Archivos cargados en el Backend (Postgres). Puede usarlos en Nueva Solicitud.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -140,7 +136,7 @@ export function ConfiguracionPage() {
                     <li
                       key={h.id}
                       className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-                    >
+                      >
                       <div className="flex flex-col gap-0.5 min-w-0">
                         <span className="text-sm font-medium text-card-foreground truncate">
                           {h.nombreArchivo}
@@ -157,7 +153,7 @@ export function ConfiguracionPage() {
                         onClick={() => void handleRemove(h.id)}
                         disabled={deletingId === h.id}
                         title="Eliminar"
-                      >
+                        >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </li>
@@ -167,11 +163,9 @@ export function ConfiguracionPage() {
             </Card>
           )}
         </TabsContent>
-
         <TabsContent value="centralizada" className="mt-6">
           <CatalogoCentralizadaTab />
         </TabsContent>
-
         <TabsContent value="paraestatal" className="mt-6">
           <CatalogoParaestatalTab />
         </TabsContent>

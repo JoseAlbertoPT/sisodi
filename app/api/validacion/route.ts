@@ -37,12 +37,13 @@ export async function GET(req: NextRequest) {
         dictamen: true,
         usuario: {
           select: {
-            id:     true,
-            nombre: true,
-            correo: true,
-            rfc:    true,
-            area:   { select: { id: true, nombre: true } },
-            rol:    { select: { id: true, nombre: true } },
+            id:           true,
+            nombre:       true,
+            correo:       true,
+            rfc:          true,
+            secretaria_id: true,
+            area:         { select: { id: true, nombre: true } },
+            rol:          { select: { id: true, nombre: true } },
           },
         },
         historial_solicitud: {
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { solicitudId, nuevoEstado, usuarioId, comentario } = body
+    const { solicitudId, nuevoEstado, usuarioId, comentario, revisorId } = body
 
     if (!solicitudId || !nuevoEstado || !usuarioId) {
       return NextResponse.json(
@@ -139,6 +140,7 @@ export async function PATCH(req: NextRequest) {
           fecha_envio: new Date(),
         }),
         ...(folioRecepcionNuevo && { folio_recepcion: folioRecepcionNuevo }),
+        ...(revisorId && { revisor_asignado_id: revisorId }),
       },
       include: { estado: true, periodo: true },
     })

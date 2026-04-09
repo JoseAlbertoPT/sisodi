@@ -13,18 +13,22 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import {
+
   FilePlus, Upload, ArrowLeft, ArrowRight, Plus, Trash2,
   FileText, ClipboardList, Save, SendHorizonal, AlertCircle, Info,
-  ShieldAlert, CheckCircle2, Clock, Calendar, Lock,
+  ShieldAlert, CheckCircle2, Clock, Calendar, Lock, X, Search, Loader2,
+
 } from "lucide-react"
 import { useSolicitudes, type TipoAdministracion } from "@/lib/solicitudes-store"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { useAuth } from "@/lib/auth-context"
-import { CAP_3000, CAP_1000, NOMBRAMIENTO_TD, parseDateDMY, isPeriodoVigente } from "@/lib/calendario-recepcion-mock"
+import { parseDateDMY, isPeriodoVigente, type PeriodoCap3000, type PeriodoCap1000 } from "@/lib/calendario-recepcion-mock"
+import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
 import { useHistoricoStore } from "@/lib/historico-store"
 import type { HistoricoRow } from "@/lib/parse-excel-historico"
 import { RANGOS_TABULADOR } from "@/lib/tabulador"
 import { filtrarSecretarias, getUAsForSecretaria, getClaveForUA } from "@/lib/ua-claves-catalog"
+import { fetchCentralizadaTree, type OrganoCentralizadoNode } from "@/lib/catalogo-api"
 
 export type FormularioData = {
   secretaria:            string
@@ -35,14 +39,17 @@ export type FormularioData = {
   tipoActividades:       string
   numeroPrestadores:     string
   denominacion:          string
+  puestoJefeInmediato:   string
   vigenciaInicio:        string
   vigenciaFin:           string
   importeBruto:          string
+  tipoImporte:           string
   nivelTabulador:        string
   categoriaTabulador:    string
   objeto:                string
   actividades:           string[]
   responsabilidades:     string[]
+  marcoNormativo:        string[]
   escolaridad:           string
   compAdm:               string
   compTec:               string
@@ -50,7 +57,6 @@ export type FormularioData = {
   valores:               string
   areasExp:              string
 }
-
 
 // Columnas de Excel
 const COL = {
@@ -78,8 +84,6 @@ const COL = {
   folioDictamen:          "FOLIO DE DICTAMEN/OPINIÓN",
 } as const
 
-
-// Catálogos
 const SECRETARIAS_CATALOGO = [
   "Secretaria de Administracion",
   "Secretaria de Finanzas",
@@ -165,7 +169,7 @@ const DATOS_FALLBACK: Record<string, DatosSecretaria> = {
   },
   "Secretaria de Obras Publicas": {
     unidades: [
-      { value: "Dir. de Obras y Proyectos",        label: "Dir. de Obras y Proyectos" },
+      { value: "Dir. de Obras y Proyectos ",        label: "Dir. de Obras y Proyectos" },
       { value: "Dir. de Control y Calidad",        label: "Dir. de Control y Calidad" },
       { value: "Dir. de Licitaciones y Contratos", label: "Dir. de Licitaciones y Contratos" },
     ],
@@ -178,7 +182,7 @@ const DATOS_FALLBACK: Record<string, DatosSecretaria> = {
   },
   "Secretaria de Desarrollo Social": {
     unidades: [
-      { value: "Dir. de Desarrollo Social",                  label: "Dir. de Desarrollo Social" },
+      { value: "Dir. de Desarrollo Social ",                  label: "Dir. de Desarrollo Social" },
       { value: "Dir. de Programas y Proyectos Comunitarios", label: "Dir. de Programas y Proyectos Comunitarios" },
     ],
     urgs: [
@@ -203,8 +207,6 @@ const DATOS_FALLBACK: Record<string, DatosSecretaria> = {
   },
 }
 
-// ─── HELPERS ────────────────────────────────────────────────────────────────
-
 function norm(str: string): string {
   return str
     .toLowerCase()
@@ -212,6 +214,10 @@ function norm(str: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
     .trim()
+}
+
+function fmtClave(c: string): string {
+  return c.replace(/\./g, " ").trim()
 }
 
 function getCell(row: HistoricoRow, colTarget: string): string {
@@ -245,7 +251,6 @@ function detectarClaves(
   }
   return resultado
 }
-
 function getFallback(secretaria: string): DatosSecretaria | null {
   if (DATOS_FALLBACK[secretaria]) return DATOS_FALLBACK[secretaria]
   const key = Object.keys(DATOS_FALLBACK).find(
@@ -255,10 +260,8 @@ function getFallback(secretaria: string): DatosSecretaria | null {
   )
   return key ? DATOS_FALLBACK[key] : null
 }
-
 function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecretaria | null {
   if (!secretaria) return null
-
   if (rows.length > 0) {
     const claves = detectarClaves(rows, {
       secretaria:             COL.secretaria,
@@ -267,15 +270,12 @@ function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecr
       programaProyecto:       COL.programaProyecto,
       regimen:                COL.regimen,
     })
-
     const secNorm = norm(secretaria)
     let filas = rows.filter((row) => {
       const val = norm(getCell(row, claves.secretaria))
       return val.includes(secNorm) || secNorm.includes(val.split(" ")[1] ?? "___")
     })
-
     if (filas.length === 0) filas = rows
-
     const unidadesMap = new Map<string, string>()
     filas.forEach((row) => {
       const u = getCell(row, claves.unidadAdscripcion)
@@ -284,7 +284,6 @@ function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecr
     const unidades = Array.from(unidadesMap.keys())
       .sort()
       .map((u) => ({ value: u, label: u }))
-
     const urgsMap = new Map<string, string>()
     filas.forEach((row) => {
       const urg = getCell(row, claves.unidadResponsableGasto)
@@ -293,13 +292,11 @@ function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecr
     const urgs = Array.from(urgsMap.keys())
       .sort()
       .map((u) => ({ value: u, label: u }))
-
     const programasSet = new Set<string>()
     filas.forEach((row) => {
       const p = getCell(row, claves.programaProyecto)
       if (p) programasSet.add(p)
     })
-
     const regimenCount: Record<string, number> = {}
     filas.forEach((row) => {
       const r = normalizaRegimen(getCell(row, claves.regimen))
@@ -307,7 +304,6 @@ function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecr
     })
     const regimenFrecuente =
       Object.entries(regimenCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "honorarios"
-
     if (unidades.length > 0 || urgs.length > 0) {
       const fb = getFallback(secretaria)
       return {
@@ -319,9 +315,8 @@ function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecr
     }
   }
 
-  return getFallback(secretaria)
+return getFallback(secretaria)
 }
-
 function parseImporteBruto(raw: string): string {
   if (!raw) return ""
   let clean = raw.replace(/[$\s]/g, "")
@@ -339,28 +334,31 @@ function parseImporteBruto(raw: string): string {
   }
   const n = parseFloat(clean)
   if (Number.isNaN(n)) return ""
-  return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return n.toLocaleString("es-Mx", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-
 function parseMoney(str: string): number {
   if (!str) return -1
   const clean = str.replace(/[$,\s]/g, "")
   const n = parseFloat(clean)
   return isNaN(n) ? -1 : n
 }
-
 function getVigenciaMin(): string {
   const now = new Date()
   const y = now.getFullYear()
   const m = now.getMonth() + 1
   return `${y}-${String(m).padStart(2, "0")}-01`
 }
-
 function esFechaPasada(dateStr: string): boolean {
   if (!dateStr) return false
   return dateStr < getVigenciaMin()
 }
 
+function esFinDeSemana(dateStr: string): boolean {
+  if (!dateStr) return false
+  const [y, m, d] = dateStr.split("-").map(Number)
+  const day = new Date(y, m - 1, d).getDay()
+  return day === 0 || day === 6
+}
 function esFolioValido(folio: string): boolean {
   if (!folio || folio.trim() === "") return false
   const s = folio.trim()
@@ -374,12 +372,11 @@ function OficioUpload({ vigenciaInicio }: { vigenciaInicio: string }) {
   const [archivo, setArchivo] = useState<File | null>(null)
   const [error,   setError]   = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
   const handleFile = (file: File) => {
     setError(null)
     const ext = file.name.split(".").pop()?.toLowerCase()
     if (!["pdf", "doc", "docx"].includes(ext ?? "")) {
-      setError("Solo se aceptan archivos PDF o DOC."); return
+      setError("Solo son ACEPTABLES ARCHIVOS PDF o DOC."); return
     }
     if (file.size > 10 * 1024 * 1024) {
       setError("El archivo supera el límite de 10 MB."); return
@@ -394,25 +391,25 @@ function OficioUpload({ vigenciaInicio }: { vigenciaInicio: string }) {
     }
     if (!mesActual && !mesVigencia) {
       const mesLabel = now.toLocaleDateString("es-MX", { month: "long", year: "numeric" })
-      setError(`El archivo debe ser del mes actual (${mesLabel})${vigenciaInicio ? " o del mes de la vigencia" : ""}.`)
+      setError(`El Archivo de ser del MES  (${mesLabel})${vigenciaInicio ? " o del MES de la VIGENCIA" : ""}.`)
       return
     }
     setArchivo(file)
   }
 
-  return (
-    <div className="flex flex-col gap-1.5">
-      <input ref={inputRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
+        return (
+        <div className="flex flex-col gap-1.5">
+        <input ref={inputRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-      <div
+        <div
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f) }}
         className={`flex items-center justify-center rounded-lg border-2 border-dashed px-4 py-4 cursor-pointer transition-colors
-          ${archivo ? "border-secondary bg-secondary/5" : error ? "border-destructive/50 bg-destructive/5" : "border-border bg-background hover:border-secondary"}`}
-      >
+            ${archivo ? "border-secondary bg-secondary/5" : error ? "border-destructive/50 bg-destructive/5" : "border-border bg-background hover:border-secondary"}`}
+        >
         {archivo ? (
-          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
             <span className="text-xs font-medium text-secondary truncate max-w-xs">{archivo.name}</span>
             <button type="button" onClick={(e) => { e.stopPropagation(); setArchivo(null); setError(null) }}
@@ -421,7 +418,7 @@ function OficioUpload({ vigenciaInicio }: { vigenciaInicio: string }) {
         ) : (
           <div className="flex flex-col items-center gap-1 text-center">
             <Upload className="h-5 w-5 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">PDF, DOC (máx. 10 MB) — clic o arrastra</p>
+            <p className="text-xs text-muted-foreground">PDF, DOC (máx. 10 MB) — Clic (para buscar ) o Arrastra</p>
           </div>
         )}
       </div>
@@ -440,6 +437,11 @@ function splitList(text: string): string[] {
     .map((s) => s.replace(/^\s*[IVX]+\.\s*/, "").replace(/^\s*[•\-*]\s*/, "").trim())
     .filter(Boolean)
   return lines.length > 0 ? lines : [""]
+}
+
+function splitTags(s?: string): string[] {
+  if (!s) return []
+  return s.split(/[\n\r•·,;]+/).map(t => t.trim()).filter(Boolean)
 }
 
 function mapEscolaridad(excel: string): string {
@@ -538,6 +540,28 @@ function useExcelRows(historicos: { sheets: Record<string, HistoricoRow[]> }[]):
 }
 
 const FALLBACK_TIPOS_ACTIVIDAD: Record<string, { value: string; label: string }[]> = {
+  "centralizada:honorarios": [
+    { value: "profesional", label: "Actividades Profesionales" },
+    { value: "tecnico",     label: "Actividades Técnicas" },
+    { value: "operativo",   label: "Actividades Operativas" },
+    { value: "asesoria",    label: "Actividades de Asesoría" },
+  ],
+  "centralizada:asimilados": [
+    { value: "profesional", label: "Actividades Profesionales" },
+    { value: "tecnico",     label: "Actividades Técnicas" },
+    { value: "asesoria",    label: "Actividades de Asesoría" },
+  ],
+  "paraestatal:honorarios": [
+    { value: "direccion_proyecto",     label: "Dirección de Proyecto" },
+    { value: "coordinacion_tecnica",   label: "Coordinación Técnica" },
+    { value: "soporte_administrativo", label: "Soporte Administrativo" },
+    { value: "asesoria_especializada", label: "Asesoría Especializada" },
+  ],
+  "paraestatal:asimilados": [
+    { value: "direccion_proyecto",     label: "Dirección de Proyecto" },
+    { value: "coordinacion_tecnica",   label: "Coordinación Técnica" },
+    { value: "asesoria_especializada", label: "Asesoría Especializada" },
+  ],
   honorarios: [
     { value: "profesional", label: "Actividades Profesionales" },
     { value: "tecnico",     label: "Actividades Técnicas" },
@@ -558,7 +582,7 @@ const FALLBACK_TIPOS_ACTIVIDAD: Record<string, { value: string; label: string }[
 }
 
 function extraerTiposActividad(
-  rows: HistoricoRow[], regimen: string, programa?: string
+  rows: HistoricoRow[], regimen: string, programa?: string, secretaria?: string
 ): { value: string; label: string }[] {
   const regimenNorm = regimen.toLowerCase().trim()
   const filtered = rows
@@ -572,6 +596,10 @@ function extraerTiposActividad(
       if (!programa) return true
       return getCell(row, COL.programaProyecto) === programa
     })
+    .filter((row) => {
+      if (!secretaria) return true
+      return getCell(row, COL.secretaria).toLowerCase().includes(secretaria.toLowerCase())
+    })
   const seen = new Set<string>()
   const result: { value: string; label: string }[] = []
   filtered.forEach((row) => {
@@ -583,33 +611,50 @@ function extraerTiposActividad(
   return result
 }
 
-function useTiposActividad(regimen: string, rows: HistoricoRow[]): { value: string; label: string }[] {
-  return useMemo(() => {
+  function useTiposActividad(
+  regimen: string, rows: HistoricoRow[],
+  tipoAdmin?: "centralizada" | "paraestatal", secretaria?: string
+): { value: string; label: string }[] {
+    return useMemo(() => {
+
     if (!regimen) return []
-    if (rows.length === 0) return FALLBACK_TIPOS_ACTIVIDAD[regimen] ?? []
-    const fromExcel = extraerTiposActividad(rows, regimen)
-    return fromExcel.length > 0 ? fromExcel : (FALLBACK_TIPOS_ACTIVIDAD[regimen] ?? [])
-  }, [regimen, rows])
+    const key = tipoAdmin ? `${tipoAdmin}:${regimen}` : regimen
+    const fallback = FALLBACK_TIPOS_ACTIVIDAD[key] ?? FALLBACK_TIPOS_ACTIVIDAD[regimen] ?? []
+    if (rows.length === 0) return fallback
+    const fromExcel = extraerTiposActividad(rows, regimen, undefined, secretaria)
+    return fromExcel.length > 0 ? fromExcel : fallback
+  }, [regimen, rows, tipoAdmin, secretaria])
 }
 
-function useProgramas(rows: HistoricoRow[]): string[] {
+  function useProgramas(rows: HistoricoRow[], unidad?: string): string[] {
   return useMemo(() => {
     if (rows.length === 0) return []
+    const filtered = unidad
+      ? rows.filter((row) => {
+          const ua = getCell(row, COL.unidadAdscripcion)
+          return ua.toLowerCase().includes(unidad.toLowerCase()) ||
+            unidad.toLowerCase().includes(ua.toLowerCase())
+        })
+      : rows
+    const source = filtered.length > 0 ? filtered : rows
     const seen = new Set<string>()
-    rows.forEach((row) => { const p = getCell(row, COL.programaProyecto); if (p) seen.add(p) })
+    source.forEach((row) => { const p = getCell(row, COL.programaProyecto); if (p) seen.add(p) })
     return Array.from(seen).sort()
-  }, [rows])
+  }, [rows, unidad])
 }
 
 function useTiposActividadPorPrograma(
-  programa: string, regimen: string, rows: HistoricoRow[]
+  programa: string, regimen: string, rows: HistoricoRow[],
+  tipoAdmin?: "centralizada" | "paraestatal", secretaria?: string
 ): { value: string; label: string }[] {
   return useMemo(() => {
     if (!programa) return []
-    if (rows.length === 0) return FALLBACK_TIPOS_ACTIVIDAD[regimen] ?? []
-    const fromExcel = extraerTiposActividad(rows, regimen, programa)
-    return fromExcel.length > 0 ? fromExcel : extraerTiposActividad(rows, regimen)
-  }, [programa, regimen, rows])
+    const key = tipoAdmin ? `${tipoAdmin}:${regimen}` : regimen
+    const fallback = FALLBACK_TIPOS_ACTIVIDAD[key] ?? FALLBACK_TIPOS_ACTIVIDAD[regimen] ?? []
+    if (rows.length === 0) return fallback
+    const fromExcel = extraerTiposActividad(rows, regimen, programa, secretaria)
+    return fromExcel.length > 0 ? fromExcel : extraerTiposActividad(rows, regimen, undefined, secretaria)
+  }, [programa, regimen, rows, tipoAdmin, secretaria])
 }
 
 function useRowPrecarga(
@@ -673,68 +718,93 @@ function ReadonlyField({ label, value, hint }: { label: string; value: string; h
   )
 }
 
-function DynamicList({ label, items, onChange, max = 10, readonly = false, selectable = false }: {
-  label: string; items: string[]; onChange: (items: string[]) => void; max?: number; readonly?: boolean; selectable?: boolean
-}) {
-  const [selected, setSelected] = useState<Set<number>>(new Set())
-  const toggleSelected = (idx: number) =>
-    setSelected((prev) => { const s = new Set(prev); s.has(idx) ? s.delete(idx) : s.add(idx); return s })
-
+function DynamicList({
+  label, items, onChange, max = 10, readonly = false,
+  minRequired, nivelTabulador,
+  }: {
+  label: string
+  items: string[]
+  onChange: (items: string[]) => void
+  max?: number
+  readonly?: boolean
+  minRequired?: number
+  nivelTabulador?: string
+  }) {
+  const minEfectivo = useMemo(() => {
+    if (minRequired !== undefined) return minRequired
+    if (!nivelTabulador) return 5
+    const niv = nivelTabulador.trim().toUpperCase()
+    return (niv === "105" || niv === "504") ? 7 : 5
+  }, [minRequired, nivelTabulador])
+  const maxEfectivo = useMemo(() => {
+    if (!nivelTabulador) return max
+    const niv = nivelTabulador.trim().toUpperCase()
+    return (niv === "105" || niv === "504") ? 7 : max
+  }, [nivelTabulador, max])
+  const filledCount = items.filter((i) => i.trim() !== "").length
+  const belowMin = !readonly && filledCount < minEfectivo
   return (
     <div className="flex flex-col gap-2">
       {label && (
         <Label className="text-sm font-medium text-card-foreground flex items-center gap-1.5">
           {label}
           {readonly && <Lock className="h-3 w-3 text-muted-foreground" />}
+          {!readonly && (
+            <span className={`text-xs font-normal ml-1 ${belowMin ? "text-destructive" : "text-muted-foreground"}`}>
+              (mínimo {minEfectivo})
+            </span>
+          )}
         </Label>
       )}
-      {items.map((item, idx) => {
-        const isSelected = selectable && !readonly && selected.has(idx)
-        return (
-          <div key={idx}
-            className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors
-              ${isSelected ? "border-secondary bg-secondary/10" : "border-transparent"}`}
+      {items.map((item, idx) => (
+        <div
+          key={idx}
+          className="flex items-center gap-2 rounded-lg border-2 border-transparent px-3 py-2"
           >
-            {selectable && !readonly && (
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => toggleSelected(idx)}
-                className="shrink-0"
-              />
-            )}
-            {(!selectable || readonly) && (
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
-                {idx + 1}
-              </span>
-            )}
-            {readonly && !item ? (
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
+            {idx + 1}
+          </span>
+          {readonly && !item ? (
               <span className="text-sm text-muted-foreground">—</span>
-            ) : (
-              <Input
-                value={item}
-                onChange={(e) => {
-                  if (readonly) return
-                  const copy = [...items]; copy[idx] = e.target.value; onChange(copy)
-                }}
-                placeholder={`${label || "Item"} ${idx + 1}`}
-                className={`border-0 shadow-none focus-visible:ring-0 p-0 h-auto text-sm
-                  ${readonly ? "bg-transparent text-muted-foreground cursor-not-allowed" : "bg-transparent"}`}
-                readOnly={readonly}
+           ) : (
+            <Input
+              value={item}
+              onChange={(e) => {
+                if (readonly) return
+                const copy = [...items]; copy[idx] = e.target.value; onChange(copy)
+              }}
+              placeholder={`${label || "Item"} ${idx + 1}`}
+              className={`border-0 shadow-none focus-visible:ring-0 p-0 h-auto text-sm
+                ${readonly ? "bg-transparent text-muted-foreground cursor-not-allowed" : "bg-transparent"}`}
+              readOnly={readonly}
               />
-            )}
-          </div>
-        )
-      })}
-      {!readonly && items.length < max && (
+              )}
+          {!readonly && items.length > 1 && (
+            <button
+              type="button"
+              onClick={() => { const copy = items.filter((_, i) => i !== idx); onChange(copy) }}
+              className="ml-auto shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      ))}
+      {!readonly && items.length < maxEfectivo && (
         <Button type="button" variant="outline" size="sm" className="w-fit mt-1"
           onClick={() => onChange([...items, ""])}>
           <Plus className="mr-1 h-4 w-4" />Agregar
         </Button>
       )}
+      {!readonly && belowMin && (
+        <p className="text-xs text-destructive flex items-center gap-1 mt-0.5">
+          <AlertCircle className="h-3 w-3 shrink-0" />
+          Se requieren al menos {minEfectivo} elementos . Llevas {filledCount}.
+        </p>
+      )}
     </div>
   )
 }
-
 function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
   const steps = [
     { key: "tipo",       label: "Tipo de Solicitud" },
@@ -768,64 +838,127 @@ function formatMXN(n: number) {
   return n === 0 ? "$0" : `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
+function TagInput({
+  items, onAdd, onRemove, placeholder, readonly = false, min, max,
+}: {
+  items: string[]
+  onAdd: (val: string) => void
+  onRemove: (i: number) => void
+  placeholder?: string
+  readonly?: boolean
+  min?: number
+  max?: number
+}) {
+  const [draft, setDraft] = useState("")
+  const atMax = max !== undefined && items.length >= max
+  const belowMin = !readonly && min !== undefined && items.length < min
+
+  const add = () => {
+    const v = draft.trim()
+    if (!v || atMax) return
+    onAdd(v)
+    setDraft("")
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {!readonly && (
+        <div className="flex gap-2">
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add() } }}
+            placeholder={atMax ? `Máximo ${max} elementos alcanzado` : placeholder}
+            className="bg-background"
+            disabled={atMax}
+          />
+          <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={add} disabled={!draft.trim() || atMax}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      {!readonly && (min || max) && (
+        <span className={`text-xs ${belowMin ? "text-destructive" : "text-muted-foreground"}`}>
+          {items.length} elemento{items.length !== 1 ? "s" : ""}
+          {min && ` · mín. ${min}`}{max && ` · máx. ${max}`}
+        </span>
+      )}
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((item, i) => (
+            <Badge key={i} variant="secondary" className="gap-1 text-xs">
+              {item}
+              {!readonly && (
+                <button type="button" onClick={() => onRemove(i)} className="ml-0.5 hover:text-destructive">
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </Badge>
+          ))}
+        </div>
+      ) : (
+        readonly && <span className="text-sm text-muted-foreground">—</span>
+      )}
+      {belowMin && (
+        <p className="text-xs text-destructive flex items-center gap-1">
+          <AlertCircle className="h-3 w-3 shrink-0" />Mínimo {min} elementos requeridos.
+        </p>
+      )}
+    </div>
+  )
+}
+
 type TabuladorEntry = { nivel: string; categoria: string }
 
-function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSeleccionadoChange }: {
+const SSPC_KEYWORDS = ["SEGURIDAD Y PROTECCION CIUDADANA", "SEGURIDAD Y PROTECCIÓN CIUDADANA", "SSPC"]
+function isSSPC(secretaria?: string) {
+  if (!secretaria) return false
+  const upper = secretaria.toUpperCase()
+  return SSPC_KEYWORDS.some((k) => upper.includes(k))
+}
+
+function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSeleccionadoChange, secretaria }: {
   nivelCategoria?: string; importeBruto?: string; readonly?: boolean
   onSeleccionadoChange?: (nivel: string, categoria: string) => void
+  secretaria?: string
 }) {
   const normalizedImporte = parseImporteBruto(importeBruto || "")
   const [busqueda, setBusqueda]         = useState("")
   const [seleccionado, setSeleccionado] = useState<TabuladorEntry | null>(null)
-
+  const rangosActivos = useMemo(() =>
+    RANGOS_TABULADOR.filter((r) => {
+      const niv = parseInt(r.nivel, 10)
+      return niv >= 500 && niv < 600 ? isSSPC(secretaria) : true
+    }),
+  [secretaria])
   useEffect(() => {
     const normalized = parseImporteBruto(importeBruto || "")
-    const q = (nivelCategoria || normalized || "").trim()
-
-    if (!q) {
-      setBusqueda("")
-      setSeleccionado(null)
-      return
-    }
-    if (normalized) setBusqueda(normalized)
-    else if (nivelCategoria) setBusqueda(nivelCategoria)
-
-    const porNivel = RANGOS_TABULADOR.filter((r) => r.nivel.includes(q))
-    if (porNivel.length === 1) {
-      setSeleccionado({ nivel: porNivel[0].nivel, categoria: porNivel[0].categoria })
-      return
-    }
-    const val = parseMoney(normalized || q)
+    const q = normalized || ""
+    if (!q) { setBusqueda(""); setSeleccionado(null); return }
+    setBusqueda(normalized)
+    const val = parseMoney(q)
     if (val >= 0) {
-      const match = RANGOS_TABULADOR.find((r) => val >= r.min && val <= r.max)
-      if (match) {
-        setSeleccionado({ nivel: match.nivel, categoria: match.categoria })
-        return
-      }
+      const match = rangosActivos.find((r) => val >= r.min && val <= r.max)
+      if (match) { setSeleccionado({ nivel: match.nivel, categoria: match.categoria }); return }
     }
     setSeleccionado(null)
-  }, [nivelCategoria, importeBruto])
-
+  }, [importeBruto, rangosActivos])
   useEffect(() => {
     if (!onSeleccionadoChange) return
     onSeleccionadoChange(seleccionado?.nivel ?? "", seleccionado?.categoria ?? "")
   }, [seleccionado, onSeleccionadoChange])
-
   const coincidencias = useMemo(() => {
     const q = busqueda.trim()
     if (!q) return []
-    const porNivel = RANGOS_TABULADOR.filter((r) => r.nivel.includes(q))
-    if (porNivel.length > 0) return porNivel
     const val = parseMoney(q)
-    if (val >= 0) return RANGOS_TABULADOR.filter((r) => val >= r.min && val <= r.max)
+    if (val >= 0) return rangosActivos.filter((r) => val >= r.min && val <= r.max)
     return []
-  }, [busqueda])
+  }, [busqueda, rangosActivos])
 
   return (
     <Card className="shadow-sm border-secondary/30 border-2">
       <CardHeader className="px-4 pt-3 pb-1">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-          <ClipboardList className="h-4 w-4 text-secondary" />Tabulador — Nivel y Nombramiento
+          <ClipboardList className="h-4 w-4 text-secondary" />Equivalencia al Tabulador
           {readonly && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
         </CardTitle>
       </CardHeader>
@@ -855,27 +988,27 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
           </div>
         ) : (
           <>
-            {/* Banner informativo cuando hay auto-selección */}
+            {!seleccionado && coincidencias.length > 1 && (
+              <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
+                <Info className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+                  Hay varias coincidencias — seleccione el nivel que corresponda.
+                </span>
+              </div>
+            )}
             {seleccionado && (
               <div className="flex items-center gap-2 rounded-md bg-secondary/10 border border-secondary/30 px-3 py-2">
                 <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
                 <span className="text-xs text-secondary font-medium">
-                  Nivel auto-seleccionado según el importe. Puede buscar y elegir otro nivel abajo.
+                  Nivel seleccionado: <strong>{seleccionado.nivel}</strong>
+                  {seleccionado.categoria ? ` — categoría ${seleccionado.categoria}` : ""}
                 </span>
               </div>
             )}
-            <Input
-              placeholder="Buscar por nivel (ej. 108) o monto (ej. 15000)"
-              value={busqueda}
-              onChange={(e) => { setBusqueda(e.target.value); setSeleccionado(null) }}
-              className="bg-background"
-            />
             {busqueda.trim() === "" ? (
               <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
                 <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className="text-xs text-muted-foreground">
-                  Ingrese el importe bruto arriba para auto-seleccionar, o escriba un nivel (108) o monto (15000).
-                </span>
+                <span className="text-xs text-muted-foreground">Ingrese el importe para ver coincidencias</span>
               </div>
             ) : coincidencias.length === 0 ? (
               <div className="flex items-center gap-2 rounded-md bg-destructive/5 border border-destructive/20 px-3 py-2">
@@ -894,7 +1027,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
                         ${isSelected ? "border-secondary bg-secondary/15" : "border-secondary/20 bg-secondary/5 hover:border-secondary/50"}`}
                     >
                       <span className="text-sm font-semibold text-card-foreground shrink-0">
-                        {c.nivel} — {formatMXN(c.min)} — {formatMXN(c.max)}
+                        {c.nivel} : {formatMXN(c.min)} - {formatMXN(c.max)}
                       </span>
                       <span className="text-xs text-muted-foreground truncate">{c.puesto}</span>
                       {isSelected && <CheckCircle2 className="h-4 w-4 text-secondary ml-auto shrink-0" />}
@@ -909,26 +1042,6 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
     </Card>
   )
 }
-
-function TabuladorCard({ nivelCategoria, importeBruto, readonly, onSeleccionadoChange }: {
-  nivelCategoria?: string; importeBruto?: string; readonly?: boolean
-  onSeleccionadoChange?: (nivel: string, categoria: string) => void
-}) {
-  return <TabuladorNiveles nivelCategoria={nivelCategoria} importeBruto={importeBruto} readonly={readonly} onSeleccionadoChange={onSeleccionadoChange} />
-}
-
-function SelectTriggerTruncado({ placeholder, selectedLabel, className = "" }: {
-  placeholder: string; selectedLabel?: string; className?: string
-}) {
-  return (
-    <SelectTrigger className={`bg-background w-full ${className}`}>
-      <span className="block truncate text-sm pr-1">
-        {selectedLabel ?? <span className="text-muted-foreground">{placeholder}</span>}
-      </span>
-    </SelectTrigger>
-  )
-}
-
 function SelectConBusqueda({
   opciones, value, onValueChange, placeholder, disabled = false, className = "",
 }: {
@@ -940,47 +1053,114 @@ function SelectConBusqueda({
   className?: string
 }) {
   const [busqueda, setBusqueda] = useState("")
-  const filtradas = useMemo(
-    () => busqueda.trim()
-      ? opciones.filter((o) => norm(o.label).includes(norm(busqueda)))
-      : opciones,
-    [opciones, busqueda]
-  )
+  const [open, setOpen] = useState(false)
+  const palabras = busqueda.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const filtradas = useMemo(() => {
+    if (!palabras.length) return opciones
+    return opciones.filter((o) => {
+      const etiqueta = norm(o.label)
+      return palabras.every((p) => etiqueta.includes(norm(p)))
+    })
+  }, [opciones, busqueda])
   const selectedLabel = opciones.find((o) => o.value === value)?.label
-
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+    <Select
+      value={value}
+      onValueChange={(v) => { onValueChange(v); setOpen(false) }}
+      disabled={disabled}
+      open={open}
+      onOpenChange={(o) => { setOpen(o); if (!o) setBusqueda("") }}
+    >
       <SelectTrigger className={`bg-background w-full ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}>
         <span className="block truncate text-sm pr-1">
           {selectedLabel ?? <span className="text-muted-foreground">{placeholder}</span>}
         </span>
       </SelectTrigger>
       <SelectContent>
-        {opciones.length > 6 && (
-          <div className="px-2 py-1.5 border-b border-border">
+        <div className="px-2 py-1.5 border-b border-border sticky top-0 bg-popover z-10">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar..."
-              className="h-7 text-xs bg-background"
+              placeholder="Buscar…"
+              className="h-7 text-xs bg-background pl-7 pr-6"
               onKeyDown={(e) => e.stopPropagation()}
+              autoFocus
             />
+            {busqueda && (
+              <button
+                onClick={() => setBusqueda("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
-        )}
-        {filtradas.length === 0
-          ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin resultados</div>
-          : filtradas.map((o) => (
-            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-          ))
-        }
+          {busqueda && (
+            <p className="text-[10px] text-muted-foreground mt-1 pl-1">
+              {filtradas.length} resultado{filtradas.length !== 1 ? "s" : ""}
+            </p>
+          )}
+        </div>
+        <div className="max-h-52 overflow-y-auto">
+          {filtradas.length === 0
+            ? <div className="px-3 py-3 text-xs text-muted-foreground text-center">Sin resultados para "{busqueda}"</div>
+            : filtradas.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))
+          }
+        </div>
       </SelectContent>
     </Select>
   )
 }
 
+function MarcoNormativoModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-border bg-muted/30">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <Info className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-card-foreground">Marco Normativo — Aviso importante</span>
+          </div>
+          <button onClick={onClose} className="ml-auto text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="px-6 py-5 flex flex-col gap-3">
+          <p className="text-sm text-card-foreground">
+            Este apartado deberá contar con <strong>validación previa por la UEJ</strong> o su equivalente antes de su envío.
+          </p>
+          <p className="text-sm text-card-foreground">
+            La información registrada será <strong>responsabilidad de la persona titular</strong> de la Unidad de Enlace Financiero Administrativo o equivalente.
+          </p>
+        </div>
+        <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/20">
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onClose}>
+            <CheckCircle2 className="mr-1.5 h-4 w-4" />Entendido, continuar
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function getNumeroUA(secretaria: string, unidad: string): string {
+  if (!unidad) return "—"
+  const uas = getUAsForSecretaria(secretaria)
+  const idx = uas.findIndex((ua) => ua === unidad)
+  return idx >= 0 ? String(idx + 1) : unidad
+}
+
+
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
-  datosRenovacion, onFormChange,
+  datosRenovacion, onFormChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
 }: {
   prefilled: boolean
   lockVigenciaOnly?: boolean
@@ -989,6 +1169,10 @@ function FormularioPrestacion({
   esRenovacion?: boolean
   datosRenovacion?: FolioExcel | null
   onFormChange: (data: Partial<FormularioData>) => void
+  secretariaFija?: string | null
+  unidadFija?: string | null
+  claveReportePlazas?: string | null
+  catalogoUAs?: { clave: string; nombre: string }[]
 }) {
   const bloqueadoPorRenovacion = esRenovacion
 
@@ -1002,14 +1186,21 @@ function FormularioPrestacion({
   const regimenEfectivo = regimenPeriodo || regimen
 
   const [secretariaInput,      setSecretariaInput]      = useState(
-    datosRenovacion?.secretaria ?? (prefilled ? "Secretaria de Administracion" : "")
+    datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : "")
   )
   const [secretariaConfirmada, setSecretariaConfirmada] = useState(
-    datosRenovacion?.secretaria ?? (prefilled ? "Secretaria de Administracion" : "")
+    datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : "")
   )
   const [showSugerencias,      setShowSugerencias]      = useState(false)
-  const [unidadSeleccionada,   setUnidadSeleccionada]   = useState(datosRenovacion?.unidadAdscripcion ?? "")
-  const [urgSeleccionada,      setUrgSeleccionada]      = useState(datosRenovacion?.unidadResponsableGasto ?? "")
+  const [unidadSeleccionada,   setUnidadSeleccionada]   = useState(
+    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? ""
+  )
+  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? "")
+  const [urgSeleccionada,      setUrgSeleccionada]      = useState(
+    datosRenovacion?.unidadResponsableGasto ??
+    (secretariaFija && unidadFija ? getClaveForUA(secretariaFija, unidadFija) : "") ?? ""
+  )
+  const [tipoAdministracionForm, setTipoAdministracionForm] = useState<"centralizada" | "paraestatal">("centralizada")
   const [programaSeleccionado, setProgramaSeleccionado] = useState(datosRenovacion?.programaProyecto ?? "")
   const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
     datosRenovacion?.tipoActividad
@@ -1025,7 +1216,6 @@ function FormularioPrestacion({
       if (!secretariaInput) return SECRETARIAS_CATALOGO
       return SECRETARIAS_CATALOGO.filter((s) => s.toLowerCase().includes(secretariaInput.toLowerCase()))
     }
-    // Cuando no es renovación: filtra del JSON UA - Claves OK
     return filtrarSecretarias(secretariaInput)
   }, [secretariaInput, esRenovacion])
 
@@ -1033,29 +1223,29 @@ function FormularioPrestacion({
     () => getDatosSecretaria(secretariaConfirmada, excelRows),
     [secretariaConfirmada, excelRows]
   )
-
-  // Cuando no es renovación: UAs del JSON. Cuando es renovación: del Excel histórico/catálogo
   const unidadesDisponibles = esRenovacion
     ? (datosRelacionados?.unidades ?? [])
     : getUAsForSecretaria(secretariaConfirmada).map((ua) => ({ value: ua, label: ua }))
   const urgsDisponibles = datosRelacionados?.urgs ?? []
-
-  const programasDelExcel       = useProgramas(excelRows)
+  const programasDelExcel       = useProgramas(excelRows, unidadSeleccionada || undefined)
   const programasDeLaSecretaria = datosRelacionados?.programas ?? []
   const programas = programasDelExcel.length > 0 ? programasDelExcel : programasDeLaSecretaria
 
-  const tiposActividadPorPrograma = useTiposActividadPorPrograma(programaSeleccionado, regimenEfectivo, excelRows)
-  const tiposActividadPorRegimen  = useTiposActividad(regimenEfectivo, excelRows)
+  const tiposActividadPorPrograma = useTiposActividadPorPrograma(
+    programaSeleccionado, regimenEfectivo, excelRows, tipoAdministracionForm, secretariaConfirmada
+  )
+  const tiposActividadPorRegimen  = useTiposActividad(
+    regimenEfectivo, excelRows, tipoAdministracionForm, secretariaConfirmada
+  )
   const tiposActividad = programaSeleccionado && tiposActividadPorPrograma.length > 0
     ? tiposActividadPorPrograma : tiposActividadPorRegimen
-
   const rowPrecarga = useRowPrecarga(programaSeleccionado, tipoActividadSeleccionado, regimenEfectivo, excelRows)
-
   const [importeBruto, setImporteBruto] = useState(
     datosRenovacion?.importeBruto
       ? parseImporteBruto(datosRenovacion.importeBruto)
       : prefilled ? "45,000.00" : ""
   )
+  const [tipoImporte, setTipoImporte] = useState("Mensual")
   const [actividades, setActividades] = useState<string[]>(
     datosRenovacion?.actividades
       ? splitList(datosRenovacion.actividades)
@@ -1070,21 +1260,20 @@ function FormularioPrestacion({
     datosRenovacion?.objeto
       ?? (prefilled ? "Prestacion de servicios profesionales para el desarrollo e implementacion de sistemas informaticos." : "")
   )
-  const [escolaridad, setEscolaridad] = useState<string | undefined>(
-    datosRenovacion?.escolaridad ? mapEscolaridad(datosRenovacion.escolaridad) : prefilled ? "licenciatura" : undefined
+  const [escolaridad, setEscolaridad] = useState<string[]>(
+    datosRenovacion?.escolaridad ? [datosRenovacion.escolaridad] : prefilled ? ["Licenciatura"] : []
   )
-  const [compAdm, setCompAdm] = useState<string | undefined>(datosRenovacion?.compAdm || undefined)
-  const [compTec, setCompTec] = useState<string | undefined>(datosRenovacion?.compTec || undefined)
-  const [compSoc, setCompSoc] = useState<string | undefined>(datosRenovacion?.compSoc || undefined)
-  const [valores, setValores] = useState<string | undefined>(datosRenovacion?.valores || undefined)
-  const [areasExp, setAreasExp] = useState<string | undefined>(datosRenovacion?.areasExp || undefined)
+  const [compAdm, setCompAdm] = useState<string[]>(splitTags(datosRenovacion?.compAdm))
+  const [compTec, setCompTec] = useState<string[]>(splitTags(datosRenovacion?.compTec))
+  const [compSoc, setCompSoc] = useState<string[]>(splitTags(datosRenovacion?.compSoc))
+  const [valores, setValores] = useState<string[]>(splitTags(datosRenovacion?.valores))
+  const [areasExp, setAreasExp] = useState<string[]>(splitTags(datosRenovacion?.areasExp))
   const [nivelTabulador,    setNivelTabulador]    = useState("")
   const [categoriaTabulador, setCategoriaTabulador] = useState("")
-
   const fuenteDatos = excelRows.length > 0 && secretariaConfirmada ? "excel" : "catalogo"
-
   const notifyParent = useCallback((overrides: Partial<FormularioData> = {}) => {
-    const tipoActividadLabel = tiposActividad.find(t => t.value === tipoActividadSeleccionado)?.label ?? tipoActividadSeleccionado
+      const tipoActividadLabel = tiposActividad.find(t => t.value === tipoActividadSeleccionado)?.label ?? tipoActividadSeleccionado
+
     onFormChange({
       secretaria:           secretariaConfirmada || secretariaInput,
       unidadAdministrativa: unidadSeleccionada,
@@ -1094,34 +1283,35 @@ function FormularioPrestacion({
       tipoActividades:      tipoActividadLabel,
       numeroPrestadores,
       denominacion:         "",
+      puestoJefeInmediato:  "",
       vigenciaInicio,
       vigenciaFin,
       importeBruto,
+      tipoImporte,
       nivelTabulador,
       categoriaTabulador,
       objeto,
       actividades,
       responsabilidades,
-      escolaridad:          escolaridad ?? "",
-      compAdm:              compAdm ?? "",
-      compTec:              compTec ?? "",
-      compSoc:              compSoc ?? "",
-      valores:              valores ?? "",
-      areasExp:             areasExp ?? "",
+      marcoNormativo:       [],
+      escolaridad:          escolaridad.join(", "),
+      compAdm:              compAdm.join(", "),
+      compTec:              compTec.join(", "),
+      compSoc:              compSoc.join(", "),
+      valores:              valores.join(", "),
+      areasExp:             areasExp.join(", "),
       ...overrides,
     })
   }, [
     secretariaConfirmada, secretariaInput, unidadSeleccionada, urgSeleccionada,
     programaSeleccionado, regimenEfectivo, tipoActividadSeleccionado, tiposActividad,
     numeroPrestadores, nivelTabulador, categoriaTabulador,
-    vigenciaInicio, vigenciaFin, importeBruto,
+    vigenciaInicio, vigenciaFin, importeBruto, tipoImporte,
     objeto, actividades, responsabilidades,
     escolaridad, compAdm, compTec, compSoc, valores, areasExp, onFormChange,
   ])
 
-  useEffect(() => {
-    notifyParent()
-  }, [notifyParent])
+  useEffect(() => { notifyParent() }, [notifyParent])
 
   const handleSecretariaConfirm = (valor: string) => {
     if (bloqueadoPorRenovacion) return
@@ -1131,7 +1321,6 @@ function FormularioPrestacion({
     setProgramaSeleccionado("")
     setTipoActividadSeleccionado("")
     if (!esRenovacion) {
-      // Al seleccionar secretaría: pre-selecciona la primera UA y su clave
       const uas = getUAsForSecretaria(valor)
       const primeraUA = uas[0] ?? ""
       setUnidadSeleccionada(primeraUA)
@@ -1148,12 +1337,14 @@ function FormularioPrestacion({
 
   const handleUnidadChange = (ua: string) => {
     setUnidadSeleccionada(ua)
+    setProgramaSeleccionado("")
+    setTipoActividadSeleccionado("")
     if (!esRenovacion) {
-      // Busca registro exacto: SECRETARÍA + UA → CLAVE REPORTE PLAZAS (readonly)
-      setUrgSeleccionada(getClaveForUA(secretariaConfirmada, ua))
+      const clave = getClaveForUA(secretariaConfirmada, ua)
+      setUrgSeleccionada(clave)
+      setClaveUA(clave)
     }
   }
-
   const handleTipoActividadChange = (val: string) => {
     if (bloqueadoPorRenovacion) return
     setTipoActividadSeleccionado(val)
@@ -1177,9 +1368,9 @@ function FormularioPrestacion({
       const cAdm = getCell(fila, COL.compAdm);  const cTec = getCell(fila, COL.compTec)
       const cSoc = getCell(fila, COL.compSoc);  const val_ = getCell(fila, COL.valores)
       const aExp = getCell(fila, COL.areasExp)
-      if (esc)  setEscolaridad(mapEscolaridad(esc))
-      if (cAdm) setCompAdm(cAdm); if (cTec) setCompTec(cTec)
-      if (cSoc) setCompSoc(cSoc); if (val_) setValores(val_); if (aExp) setAreasExp(aExp)
+      if (esc)  setEscolaridad([esc])
+      if (cAdm) setCompAdm(splitTags(cAdm)); if (cTec) setCompTec(splitTags(cTec))
+      if (cSoc) setCompSoc(splitTags(cSoc)); if (val_) setValores(splitTags(val_)); if (aExp) setAreasExp(splitTags(aExp))
     }
   }
 
@@ -1194,14 +1385,15 @@ function FormularioPrestacion({
     if (bloqueadoPorRenovacion) return
     setRegimen(val); setTipoActividadSeleccionado("")
     setObjeto(""); setActividades([""]); setResponsabilidades([""])
-    setImporteBruto(""); setEscolaridad(undefined); setCompAdm(undefined)
-    setCompTec(undefined); setCompSoc(undefined); setValores(undefined); setAreasExp(undefined)
+    setImporteBruto(""); setEscolaridad([]); setCompAdm([])
+    setCompTec([]); setCompSoc([]); setValores([]); setAreasExp([])
   }
 
   const tipoActividadLabel = tipoActividadSeleccionado
     ? tiposActividad.find((t) => t.value === tipoActividadSeleccionado)?.label
     : undefined
   const camposDependientesHabilitados = !bloqueadoPorRenovacion && (esRenovacion || !!secretariaConfirmada)
+  const numeroUA = getNumeroUA(secretariaConfirmada || secretariaInput, unidadSeleccionada)
 
   return (
     <div className="flex flex-col gap-3">
@@ -1209,9 +1401,9 @@ function FormularioPrestacion({
         <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
           <Lock className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Renovación — datos precargados y bloqueados</span>
+            <span className="text-sm font-semibold text-card-foreground">Renovación — Datos  Precargados  y Bloqueados </span>
             <span className="text-xs text-muted-foreground">
-              Todos los campos se han cargado del folio anterior. Solo puede modificar la <strong>vigencia</strong>.
+              Todos los campos se han cargado del folio anterior. Solo puede Modificar la <strong>Vigencia</strong>.
             </span>
           </div>
         </div>
@@ -1221,139 +1413,94 @@ function FormularioPrestacion({
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
             <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">I</span>
-            Datos Generales
+             I. Datos Generales
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
           <div className="grid gap-3 md:grid-cols-2">
-            {/* Secretaria */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Secretaria
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                Secretaría / Dependencia / Organismo
+                <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
-                </div>
-              ) : esRenovacion ? (
-                <>
-                  <Input value={prefilled ? "Secretaria de Administracion" : ""} disabled className="bg-muted text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Precargada segun usuario</p>
-                </>
-              ) : (
-                <div className="relative">
-                  <Input
-                    value={secretariaInput}
-                    onChange={(e) => {
-                      setSecretariaInput(e.target.value); setSecretariaConfirmada("")
-                      setShowSugerencias(true); setUnidadSeleccionada(""); setUrgSeleccionada("")
-                      setProgramaSeleccionado(""); setTipoActividadSeleccionado("")
-                    }}
-                    onFocus={() => setShowSugerencias(true)}
-                    onBlur={() => setTimeout(() => setShowSugerencias(false), 200)}
-                    placeholder="Escriba la secretaria..." className="bg-background" autoComplete="off"
-                  />
-                  {showSugerencias && sugerencias.length > 0 && (
-                    <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
-                      <div className="max-h-52 overflow-y-auto py-1">
-                        {sugerencias.map((s) => (
-                          <button key={s} type="button" onMouseDown={() => handleSecretariaConfirm(s)}
-                            className={`w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors
-                                ${secretariaConfirmada === s ? "bg-accent/60 font-medium" : ""}`}>
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {secretariaConfirmada && !esRenovacion && getUAsForSecretaria(secretariaConfirmada).length > 0 && (
-                    <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 mt-1">
-                      <CheckCircle2 className="h-3 w-3 shrink-0" />
-                      Datos cargados desde UA - Claves OK · {getUAsForSecretaria(secretariaConfirmada).length} unidades
-                    </p>
-                  )}
-                  {secretariaConfirmada && !esRenovacion && getUAsForSecretaria(secretariaConfirmada).length === 0 && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                      <Info className="h-3 w-3 shrink-0" />Secretaria no encontrada en catálogo. Complete manualmente.
-                    </p>
-                  )}
-                  {secretariaConfirmada && esRenovacion && datosRelacionados && (
-                    <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 mt-1">
-                      <CheckCircle2 className="h-3 w-3 shrink-0" />
-                      Datos cargados desde {fuenteDatos === "excel" ? "Excel histórico" : "catálogo base"}
-                    </p>
-                  )}
-                  {secretariaConfirmada && esRenovacion && !datosRelacionados && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                      <Info className="h-3 w-3 shrink-0" />Secretaria capturada. Complete los campos manualmente.
-                    </p>
-                  )}
-                  {!secretariaConfirmada && secretariaInput && (
-                    <p className="text-xs text-muted-foreground mt-1">Seleccione una opcion de la lista</p>
-                  )}
-                  {!secretariaInput && (
-                    <p className="text-xs text-muted-foreground mt-1">Escriba para ver sugerencias</p>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
+              </div>
             </div>
 
-            {/* Unidad adscripcion */}
+            {/* Unidad Administrativa de Adscripción */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Unidad Administrativa de Adscripcion
+                Unidad Administrativa de Adscripción
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground">{unidadSeleccionada || "—"}</span>
+                  <span className="text-sm text-muted-foreground font-semibold font-mono">{numeroUA}</span>
                 </div>
-              ) : esRenovacion ? (
-                <SelectConBusqueda
-                  opciones={getDatosSecretaria("Secretaria de Administracion", excelRows)?.unidades ?? []}
+              ) : catalogoUAs.some((u) => u.clave !== "") ? (
+                <Select
+                  value={claveUA}
+                  onValueChange={(clave) => {
+                    const ua = catalogoUAs.find((u) => u.clave === clave)
+                    setClaveUA(clave)
+                    setUnidadSeleccionada(ua?.nombre ?? "")
+                    setProgramaSeleccionado("")
+                    setTipoActividadSeleccionado("")
+                  }}
+                   >
+                  <SelectTrigger className="bg-background w-full font-mono">
+                    <SelectValue placeholder="Seleccione clave" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {catalogoUAs.filter((u) => u.clave !== "").map((u) => (
+                      <SelectItem key={u.nombre} value={u.clave} className="font-mono">{fmtClave(u.clave)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
                   value={unidadSeleccionada}
-                  onValueChange={setUnidadSeleccionada}
-                  placeholder="Seleccione unidad"
+                  onChange={(e) => { setUnidadSeleccionada(e.target.value); setProgramaSeleccionado(""); setTipoActividadSeleccionado("") }}
+                  placeholder="Ingrese nombre de la unidad administrativa"
+                  className="bg-background"
                 />
-              ) : (
-                <>
-                  <SelectConBusqueda
-                    opciones={unidadesDisponibles}
-                    value={unidadSeleccionada}
-                    onValueChange={handleUnidadChange}
-                    placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaria" : "Seleccione unidad"}
-                    disabled={!camposDependientesHabilitados}
-                  />
-                  {secretariaConfirmada && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Info className="h-3 w-3 shrink-0" />
-                      {!esRenovacion ? "Catálogo UA - Claves" : fuenteDatos === "excel" ? "Desde Excel histórico" : "Catálogo base"} · {unidadesDisponibles.length} opciones
-                    </p>
-                  )}
-                </>
               )}
             </div>
 
-            {/* Clave Reporte Plazas / URG */}
+            {/* Unidad Responsable del Gasto */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                {esRenovacion ? "Unidad Responsable del Gasto" : "Clave Reporte Plazas"}
-                {(bloqueadoPorRenovacion || !esRenovacion) && <Lock className="h-3 w-3 text-muted-foreground" />}
+                Unidad Responsable del Gasto
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
-              {bloqueadoPorRenovacion || !esRenovacion ? (
+              {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground">{urgSeleccionada || "—"}</span>
-                  {!esRenovacion && urgSeleccionada && (
-                    <span className="ml-auto text-xs text-muted-foreground">Auto</span>
-                  )}
                 </div>
-              ) : (
+              ) : catalogoUAs.length > 0 ? (
+                <SelectConBusqueda
+                  opciones={catalogoUAs.map((u) => ({ value: u.nombre, label: u.nombre }))}
+                  value={urgSeleccionada}
+                  onValueChange={setUrgSeleccionada}
+                  placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaría" : "Seleccione unidad responsable"}
+                  disabled={!camposDependientesHabilitados}
+                />
+              ) : urgsDisponibles.length > 0 ? (
                 <SelectConBusqueda
                   opciones={urgsDisponibles}
                   value={urgSeleccionada}
                   onValueChange={setUrgSeleccionada}
-                  placeholder="Seleccione URG"
+                  placeholder="Seleccione unidad responsable"
+                  disabled={!camposDependientesHabilitados}
+                />
+              ) : (
+                <Input
+                  value={urgSeleccionada}
+                  onChange={(e) => setUrgSeleccionada(e.target.value)}
+                  placeholder="Ingrese unidad responsable del gasto"
+                  className="bg-background"
+                  disabled={!camposDependientesHabilitados}
                 />
               )}
             </div>
@@ -1369,19 +1516,13 @@ function FormularioPrestacion({
                   <span className="text-sm text-muted-foreground">{programaSeleccionado || "—"}</span>
                 </div>
               ) : programas.length > 0 ? (
-                <Select
-                  value={programaSeleccionado} onValueChange={handleProgramaChange}
+                <SelectConBusqueda
+                  opciones={programas.map((p) => ({ value: p, label: p }))}
+                  value={programaSeleccionado}
+                  onValueChange={handleProgramaChange}
+                  placeholder={!esRenovacion && !camposDependientesHabilitados ? "Ingrese primero la secretaría" : "Seleccione programa"}
                   disabled={!esRenovacion && !camposDependientesHabilitados}
-                >
-                  <SelectTriggerTruncado
-                    placeholder={!esRenovacion && !camposDependientesHabilitados ? "Ingrese primero la secretaria" : "Seleccione programa"}
-                    selectedLabel={programaSeleccionado || undefined}
-                    className={!esRenovacion && !camposDependientesHabilitados ? "opacity-50 cursor-not-allowed" : ""}
-                  />
-                  <SelectContent>
-                    {programas.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                />
               ) : (
                 <Input
                   value={programaSeleccionado}
@@ -1390,17 +1531,12 @@ function FormularioPrestacion({
                   disabled={!esRenovacion && !camposDependientesHabilitados}
                 />
               )}
-              {!bloqueadoPorRenovacion && excelRows.length === 0 && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Info className="h-3 w-3 shrink-0" />Cargue un Excel histórico para ver programas disponibles
-                </p>
-              )}
             </div>
 
             {/* Régimen */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Regimen de Contratacion
+                Régimen de Contratación
                 {regimenBloqueado && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -1416,18 +1552,13 @@ function FormularioPrestacion({
                   disabled={regimenBloqueado}
                 >
                   <SelectTrigger className={`bg-background w-full ${regimenBloqueado ? "opacity-70 cursor-not-allowed" : ""}`}>
-                    <SelectValue placeholder="Seleccione regimen" />
+                    <SelectValue placeholder="Seleccione régimen" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="honorarios">Honorarios</SelectItem>
                     <SelectItem value="asimilados">Honorarios Asimilados a Salarios</SelectItem>
                   </SelectContent>
                 </Select>
-              )}
-              {regimenBloqueado && !bloqueadoPorRenovacion && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Info className="h-3 w-3 shrink-0" />Determinado por formulario anterior.
-                </p>
               )}
             </div>
 
@@ -1444,42 +1575,30 @@ function FormularioPrestacion({
                   </span>
                 </div>
               ) : (
-                <>
-                  <Select
-                    value={tipoActividadSeleccionado}
-                    onValueChange={handleTipoActividadChange}
-                    disabled={!regimenEfectivo}
-                  >
-                    <SelectTriggerTruncado
-                      placeholder={!regimenEfectivo ? "Seleccione primero un régimen" : "Segun unidad administrativa"}
-                      selectedLabel={tipoActividadLabel}
-                      className={!regimenEfectivo ? "opacity-60 cursor-not-allowed" : ""}
-                    />
-                    <SelectContent>
-                      {tiposActividad.length === 0
-                        ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones para este régimen</div>
-                        : tiposActividad.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
-                      }
-                    </SelectContent>
-                  </Select>
-                  {regimenEfectivo && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Info className="h-3 w-3 shrink-0" />
-                      {excelRows.length > 0 ? "Desde Excel histórico" : "Catálogo base"} · Régimen:{" "}
-                      <span className="font-medium capitalize">
-                        {regimenEfectivo === "asimilados" ? "Honorarios asimilados" : regimenEfectivo}
-                      </span>
-                      {tiposActividad.length > 0 && <span className="ml-1">({tiposActividad.length} opciones)</span>}
-                    </p>
-                  )}
-                </>
+                <Select
+                  value={tipoActividadSeleccionado}
+                  onValueChange={handleTipoActividadChange}
+                  disabled={!regimenEfectivo}
+                >
+                  <SelectTrigger className={`bg-background w-full ${!regimenEfectivo ? "opacity-60 cursor-not-allowed" : ""}`}>
+                    <span className="block truncate text-sm pr-1">
+                      {tipoActividadLabel ?? <span className="text-muted-foreground">{!regimenEfectivo ? "Seleccione primero un régimen" : "Según unidad administrativa"}</span>}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposActividad.length === 0
+                      ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones para este régimen</div>
+                      : tiposActividad.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
+                    }
+                  </SelectContent>
+                </Select>
               )}
             </div>
 
-            {/* Numero prestadores */}
+            {/* Número prestadores */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Numero de Prestadores de Servicios
+                Número de Prestadores de Servicios
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               <Input
@@ -1492,8 +1611,50 @@ function FormularioPrestacion({
               />
             </div>
 
-            {/* Vigencia */}
+            {/* Tipo importe */}
             <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Tipo de Pago
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground capitalize">{tipoImporte}</span>
+                </div>
+              ) : (
+                <Select value={tipoImporte} onValueChange={setTipoImporte}>
+                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Mensual">Mensual</SelectItem>
+                    <SelectItem value="Unico">Único</SelectItem>
+                    <SelectItem value="Por_hora">Por Hora</SelectItem>
+                    <SelectItem value="Por_taller">Por Taller</SelectItem>
+                    <SelectItem value="Por_dia">Por Día</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* Importe Bruto */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Monto del Importe
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                <Input
+                  type="text" value={importeBruto}
+                  onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(e.target.value) }}
+                  placeholder="0.00"
+                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  readOnly={bloqueadoPorRenovacion}
+                />
+              </div>
+            </div>
+
+            {/* Vigencia */}
+            <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
                 {bloqueadoPorRenovacion && (
@@ -1505,13 +1666,12 @@ function FormularioPrestacion({
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Inicio</span>
-                  <Input
-                    type="date" value={vigenciaInicio} min={getVigenciaMin()}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      if (!esFechaPasada(v)) setVigenciaInicio(v)
-                    }}
-                    className={`bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`}
+                  <DatePickerHabil
+                    value={isoToDate(vigenciaInicio)}
+                    fromDate={isoToDate(getVigenciaMin())}
+                    onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
+                    placeholder="Seleccionar inicio"
+                    className={`w-full bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`}
                   />
                   {esFechaPasada(vigenciaInicio) && (
                     <p className="text-xs text-destructive flex items-center gap-1">
@@ -1520,14 +1680,13 @@ function FormularioPrestacion({
                   )}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Termino</span>
-                  <Input
-                    type="date" value={vigenciaFin} min={getVigenciaMin()}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      if (!esFechaPasada(v)) setVigenciaFin(v)
-                    }}
-                    className={`bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`}
+                  <span className="text-xs text-muted-foreground">Término</span>
+                  <DatePickerHabil
+                    value={isoToDate(vigenciaFin)}
+                    fromDate={isoToDate(vigenciaInicio || getVigenciaMin())}
+                    onChange={(d) => d && setVigenciaFin(dateToIso(d))}
+                    placeholder="Seleccionar término"
+                    className={`w-full bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`}
                   />
                   {esFechaPasada(vigenciaFin) && (
                     <p className="text-xs text-destructive flex items-center gap-1">
@@ -1536,34 +1695,10 @@ function FormularioPrestacion({
                   )}
                 </div>
               </div>
-              {bloqueadoPorRenovacion && (
-                <p className="text-xs text-secondary flex items-center gap-1">
-                  <Info className="h-3 w-3 shrink-0" />Único campo modificable en esta renovación.
-                </p>
-              )}
-            </div>
-
-            {/* Importe */}
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Importe Bruto
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                <Input
-                  type="text"
-                  value={importeBruto}
-                  onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(e.target.value) }}
-                  placeholder="0.00"
-                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                  readOnly={bloqueadoPorRenovacion}
-                />
-              </div>
             </div>
 
             {/* Adjunto */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
               <OficioUpload vigenciaInicio={vigenciaInicio} />
             </div>
@@ -1571,19 +1706,20 @@ function FormularioPrestacion({
         </CardContent>
       </Card>
 
-      {/* ── TABULADOR: ahora siempre recibe importeBruto del estado local ── */}
-      <TabuladorCard
+      {/* Tabulador */}
+      <TabuladorNiveles
         nivelCategoria={datosRenovacion?.nivelCategoria}
         importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeBruto}
         readonly={bloqueadoPorRenovacion}
         onSeleccionadoChange={(nivel, categoria) => { setNivelTabulador(nivel); setCategoriaTabulador(categoria) }}
+        secretaria={secretariaConfirmada || secretariaInput}
       />
 
       {/* Objeto */}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            I.1 Objeto de la Contratacion
+            I.1 Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
         </CardHeader>
@@ -1591,19 +1727,13 @@ function FormularioPrestacion({
           <Textarea
             value={objeto}
             onChange={(e) => { if (!bloqueadoPorRenovacion) setObjeto(e.target.value) }}
-            placeholder="Describa el objeto de la contratacion de manera detallada..."
+            placeholder="Describa el objeto de la contratación de manera detallada..."
             className={`min-h-28 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : "bg-background"}`}
             readOnly={bloqueadoPorRenovacion}
           />
-          {rowPrecarga && !bloqueadoPorRenovacion && (
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <Info className="h-3 w-3 shrink-0" />Precargado desde Excel histórico. Puede editarlo.
-            </p>
-          )}
         </CardContent>
       </Card>
 
-      {/* Actividades */}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
@@ -1612,11 +1742,14 @@ function FormularioPrestacion({
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
-          <DynamicList label="" items={actividades} onChange={setActividades} readonly={bloqueadoPorRenovacion} selectable />
+          <DynamicList
+            label="" items={actividades} onChange={setActividades}
+            readonly={bloqueadoPorRenovacion}
+            nivelTabulador={nivelTabulador}
+          />
         </CardContent>
       </Card>
 
-      {/* Responsabilidades */}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
@@ -1624,8 +1757,18 @@ function FormularioPrestacion({
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-4 pb-3 pt-0">
-          <DynamicList label="" items={responsabilidades} onChange={setResponsabilidades} readonly={bloqueadoPorRenovacion} selectable />
+        <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-2">
+          <DynamicList
+            label="" items={responsabilidades} onChange={setResponsabilidades}
+            readonly={bloqueadoPorRenovacion}
+            nivelTabulador={nivelTabulador}
+          />
+          <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
+            <Info className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-semibold text-card-foreground">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -1637,155 +1780,75 @@ function FormularioPrestacion({
             Perfil
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
+          <p className="text-xs text-muted-foreground italic">
+            SE REFIERE A LA ESCOLARIDAD, COMPETENCIAS Y EXPERIENCIA.
+          </p>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Escolaridad Minima
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground capitalize">{escolaridad || "—"}</span>
-                </div>
-              ) : (
-                <Select value={escolaridad} onValueChange={setEscolaridad}>
-                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione escolaridad" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bachillerato">Bachillerato</SelectItem>
-                    <SelectItem value="tecnico">Tecnico Superior</SelectItem>
-                    <SelectItem value="licenciatura">Licenciatura</SelectItem>
-                    <SelectItem value="maestria">Maestria</SelectItem>
-                    <SelectItem value="doctorado">Doctorado</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Competencias Administrativas
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  {compAdm
-                    ? <ul className="flex flex-col gap-0.5">{compAdm.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean).map((item, i) => <li key={i} className="flex gap-2 text-sm text-muted-foreground"><span className="shrink-0">•</span><span>{item}</span></li>)}</ul>
-                    : <span className="text-sm text-muted-foreground">—</span>}
-                </div>
-              ) : (
-                <Select value={compAdm} onValueChange={setCompAdm}>
-                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione competencia" /></SelectTrigger>
-                  <SelectContent>
-                    {OPCIONES_COMPETENCIAS_ADM.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Competencias Tecnicas
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  {compTec
-                    ? <ul className="flex flex-col gap-0.5">{compTec.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean).map((item, i) => <li key={i} className="flex gap-2 text-sm text-muted-foreground"><span className="shrink-0">•</span><span>{item}</span></li>)}</ul>
-                    : <span className="text-sm text-muted-foreground">—</span>}
-                </div>
-              ) : (
-                <Select value={compTec} onValueChange={setCompTec}>
-                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione competencia" /></SelectTrigger>
-                  <SelectContent>
-                    {OPCIONES_COMPETENCIAS_TEC.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Competencias Sociales
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  {compSoc
-                    ? <ul className="flex flex-col gap-0.5">{compSoc.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean).map((item, i) => <li key={i} className="flex gap-2 text-sm text-muted-foreground"><span className="shrink-0">•</span><span>{item}</span></li>)}</ul>
-                    : <span className="text-sm text-muted-foreground">—</span>}
-                </div>
-              ) : (
-                <Select value={compSoc} onValueChange={setCompSoc}>
-                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione competencia" /></SelectTrigger>
-                  <SelectContent>
-                    {OPCIONES_COMPETENCIAS_SOC.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Valores
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  {valores
-                    ? <ul className="flex flex-col gap-0.5">{valores.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean).map((item, i) => <li key={i} className="flex gap-2 text-sm text-muted-foreground"><span className="shrink-0">•</span><span>{item}</span></li>)}</ul>
-                    : <span className="text-sm text-muted-foreground">—</span>}
-                </div>
-              ) : (
-                <Select value={valores} onValueChange={setValores}>
-                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione valor" /></SelectTrigger>
-                  <SelectContent>
-                    {OPCIONES_VALORES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Areas de Experiencia
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  {areasExp
-                    ? <ul className="flex flex-col gap-0.5">{areasExp.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean).map((item, i) => <li key={i} className="flex gap-2 text-sm text-muted-foreground"><span className="shrink-0">•</span><span>{item}</span></li>)}</ul>
-                    : <span className="text-sm text-muted-foreground">—</span>}
-                </div>
-              ) : (
-                <Select value={areasExp} onValueChange={setAreasExp}>
-                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione área" /></SelectTrigger>
-                  <SelectContent>
-                    {OPCIONES_AREAS_EXP.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
+        <CardContent className="grid gap-x-6 gap-y-5 px-4 pb-4 pt-0 md:grid-cols-2">
+          {/* Escolaridad Mínima ocupa las 2 columnas al inicio */}
+          <div className="md:col-span-2 flex flex-col gap-2">
+            <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+              Escolaridad Mínima
+              {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+            </span>
+            <DynamicList
+              label="" items={escolaridad.length > 0 ? escolaridad : [""]}
+              onChange={setEscolaridad}
+              readonly={bloqueadoPorRenovacion}
+              minRequired={1}
+              max={1}
+            />
           </div>
+
+          {[
+            { sub: "II.1", label: "Competencias Administrativas", items: compAdm,  onChange: setCompAdm },
+            { sub: "II.2", label: "Competencias Técnicas",        items: compTec,  onChange: setCompTec },
+            { sub: "II.3", label: "Competencias Sociales",        items: compSoc,  onChange: setCompSoc },
+            { sub: null,   label: "Áreas de Experiencia",         items: areasExp, onChange: setAreasExp },
+            { sub: null,   label: "Valores",                      items: valores,  onChange: setValores },
+          ].map(({ sub, label, items, onChange }) => (
+            <div key={label} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                {sub && (
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
+                )}
+                <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+                  {label}
+                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </span>
+              </div>
+              <DynamicList
+                label="" items={items.length > 0 ? items : [""]}
+                onChange={onChange}
+                readonly={bloqueadoPorRenovacion}
+                minRequired={3}
+                max={5}
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>
   )
 }
-
 function FormularioNombramiento({
-  prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange,
+  prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
   onFormChange: (data: Partial<FormularioData>) => void
+  secretariaFija?: string | null
+  unidadFija?: string | null
+  claveReportePlazas?: string | null
+  catalogoUAs?: { clave: string; nombre: string }[]
 }) {
   const bloqueadoPorRenovacion = esRenovacion
 
-  const [importeNeto, setImporteNeto] = useState(
+  const [importeNeto,    setImporteNeto]    = useState(
     datosRenovacion?.importeBruto ? parseImporteBruto(datosRenovacion.importeBruto) : prefilled ? "28,500.00" : ""
   )
+  const [tipoImporte, setTipoImporte] = useState("Mensual")
+
   const [funciones, setFunciones] = useState<string[]>(
     datosRenovacion?.actividades ? splitList(datosRenovacion.actividades)
       : prefilled ? ["Coordinar procesos administrativos"] : [""]
@@ -1795,21 +1858,35 @@ function FormularioNombramiento({
       : prefilled ? ["Cumplimiento normativo del area"] : [""]
   )
   const [marcoNormativo, setMarcoNormativo] = useState<string[]>(
-    prefilled ? ["Ley Organica de la Administracion Publica"] : [""]
+    prefilled ? ["Ley Orgánica de la Administración Pública"] : [""]
   )
-  const [secretariaInput,      setSecretariaInput]      = useState(datosRenovacion?.secretaria ?? (prefilled ? "Secretaria de Administracion" : ""))
-  const [secretariaConfirmada, setSecretariaConfirmada] = useState(datosRenovacion?.secretaria ?? (prefilled ? "Secretaria de Administracion" : ""))
+  const [showMarcoModal, setShowMarcoModal] = useState(false)
+  const marcoModalShownRef = useRef(false)
+  const [secretariaInput,      setSecretariaInput]      = useState(datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : ""))
+  const [secretariaConfirmada, setSecretariaConfirmada] = useState(datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : ""))
   const [showSugerencias, setShowSugerencias] = useState(false)
-  const [unidadSeleccionada, setUnidadSeleccionada] = useState(datosRenovacion?.unidadAdscripcion ?? "")
-  const [urgSeleccionada, setUrgSeleccionada] = useState(datosRenovacion?.unidadResponsableGasto ?? "")
+  const [unidadAdscripcion, setUnidadAdscripcion] = useState(
+    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? ""
+  )
+  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? "")
+  const [urgSeleccionada, setUrgSeleccionada] = useState(
+    datosRenovacion?.unidadResponsableGasto ?? ""
+  )
+  const [tipoAdministracion, setTipoAdministracion] = useState<"centralizada" | "paraestatal">("centralizada")
   const [programaInput, setProgramaInput] = useState(datosRenovacion?.programaProyecto ?? (prefilled ? "P-005 Fortalecimiento Institucional" : ""))
   const [vigenciaInicio, setVigenciaInicio] = useState(prefilled ? "2026-03-01" : "")
   const [vigenciaFin,    setVigenciaFin]    = useState(prefilled ? "2026-08-31" : "")
   const [numeroPrestadores, setNumeroPrestadores] = useState(datosRenovacion?.numPrestadores ?? (prefilled ? "2" : ""))
   const [denominacion, setDenominacion] = useState(prefilled ? "Jefe de Departamento" : "")
+  const [puestoJefeInmediato, setPuestoJefeInmediato] = useState(prefilled ? "Director de Área" : "")
+  const [objetoNombramiento, setObjetoNombramiento] = useState(
+    datosRenovacion?.objeto ?? (prefilled ? "Nombramiento para coordinar funciones de la unidad administrativa." : "")
+  )
   const [nivelTabulador,     setNivelTabulador]     = useState("")
   const [categoriaTabulador, setCategoriaTabulador] = useState("")
-
+  const [condiciones, setCondiciones]               = useState<Record<string, string>>({})
+  const [riesgos,     setRiesgos]                   = useState<Record<string, string>>({})
+  const [resguardoActivos, setResguardoActivos]     = useState("")
   const sugerencias = useMemo(() => {
     if (esRenovacion) {
       if (!secretariaInput) return SECRETARIAS_CATALOGO
@@ -1819,77 +1896,88 @@ function FormularioNombramiento({
   }, [secretariaInput, esRenovacion])
 
   const datosRelacionados = useMemo(() => getDatosSecretaria(secretariaConfirmada, excelRows), [secretariaConfirmada, excelRows])
-  const unidadesDisponibles = esRenovacion
-    ? (datosRelacionados?.unidades ?? [])
-    : getUAsForSecretaria(secretariaConfirmada).map((ua) => ({ value: ua, label: ua }))
-  const urgsDisponibles     = datosRelacionados?.urgs     ?? []
-  const fuenteDatos = excelRows.length > 0 && secretariaConfirmada ? "excel" : "catalogo"
+  const unidadesAdscripcion = tipoAdministracion === "centralizada"
+    ? getUAsForSecretaria(secretariaConfirmada).map((ua) => ({ value: ua, label: ua }))
+    : []
+  const unidadesResponsables = useMemo(() => {
+    const fromExcel = datosRelacionados?.unidades ?? []
+    if (fromExcel.length > 0) return fromExcel
+    return getUAsForSecretaria(secretariaConfirmada).map((ua) => ({ value: ua, label: ua }))
+  }, [datosRelacionados, secretariaConfirmada])
 
+  const fuenteDatos = excelRows.length > 0 && secretariaConfirmada ? "excel" : "catalogo"
+  const camposDependientesHabilitados = !bloqueadoPorRenovacion && !!secretariaConfirmada
+  const numeroUA = getNumeroUA(secretariaConfirmada || secretariaInput, unidadAdscripcion)
   const handleSecretariaConfirm = (valor: string) => {
     if (bloqueadoPorRenovacion) return
     setSecretariaInput(valor); setSecretariaConfirmada(valor); setShowSugerencias(false)
-    if (!esRenovacion) {
+    if (tipoAdministracion === "centralizada") {
       const uas = getUAsForSecretaria(valor)
-      const primeraUA = uas[0] ?? ""
-      setUnidadSeleccionada(primeraUA)
-      setUrgSeleccionada(getClaveForUA(valor, primeraUA))
-    } else {
-      const datos = getDatosSecretaria(valor, excelRows)
-      setUnidadSeleccionada(datos?.unidades[0]?.value ?? "")
-      setUrgSeleccionada(datos?.urgs[0]?.value ?? "")
+      setUnidadAdscripcion(uas[0] ?? "")
     }
+    setUrgSeleccionada("")
   }
 
-  const handleUnidadChange2 = (ua: string) => {
-    setUnidadSeleccionada(ua)
-    if (!esRenovacion) {
-      // Busca registro exacto: SECRETARÍA + UA → CLAVE REPORTE PLAZAS (readonly)
-      setUrgSeleccionada(getClaveForUA(secretariaConfirmada, ua))
+  const handleTipoAdminChange = (val: "centralizada" | "paraestatal") => {
+    if (bloqueadoPorRenovacion) return
+    setTipoAdministracion(val)
+    if (val === "paraestatal") { setUnidadAdscripcion(""); setClaveUA("") }
+  }
+  const handleUnidadAdscripcionChange = (ua: string) => {
+    setUnidadAdscripcion(ua)
+    if (tipoAdministracion === "centralizada") {
+      setClaveUA(getClaveForUA(secretariaConfirmada, ua))
     }
   }
-
-  const camposDependientesHabilitados = !bloqueadoPorRenovacion && (esRenovacion || !!secretariaConfirmada)
 
   useEffect(() => {
     onFormChange({
       secretaria:           secretariaConfirmada || secretariaInput,
-      unidadAdministrativa: unidadSeleccionada,
+      unidadAdministrativa: unidadAdscripcion,
       unidadResponsable:    urgSeleccionada,
       programaProyecto:     programaInput,
       regimen:              "nombramiento",
       tipoActividades:      "",
       numeroPrestadores,
       denominacion,
+      puestoJefeInmediato,
       vigenciaInicio,
       vigenciaFin,
       importeBruto:         importeNeto,
+      tipoImporte,
       nivelTabulador,
       categoriaTabulador,
-      objeto:               "",
+      objeto:               objetoNombramiento,
       actividades:          funciones,
       responsabilidades,
+      marcoNormativo,
       escolaridad: "", compAdm: "", compTec: "", compSoc: "", valores: "", areasExp: "",
     })
   }, [
-    secretariaConfirmada, secretariaInput, unidadSeleccionada, urgSeleccionada,
-    programaInput, numeroPrestadores, denominacion, vigenciaInicio, vigenciaFin, importeNeto,
-    nivelTabulador, categoriaTabulador,
-    funciones, responsabilidades, onFormChange,
+    secretariaConfirmada, secretariaInput, unidadAdscripcion, urgSeleccionada,
+    programaInput, numeroPrestadores, denominacion, puestoJefeInmediato,
+    vigenciaInicio, vigenciaFin, importeNeto, tipoImporte,
+    nivelTabulador, categoriaTabulador, objetoNombramiento,
+    funciones, responsabilidades, marcoNormativo, onFormChange,
   ])
 
   return (
     <div className="flex flex-col gap-3">
+      {showMarcoModal && <MarcoNormativoModal onClose={() => setShowMarcoModal(false)} />}
+
       {bloqueadoPorRenovacion && (
         <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
           <Lock className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Renovación — datos precargados y bloqueados</span>
+            <span className="text-sm font-semibold text-card-foreground">Renovación — Datos  Precargados y Bloqueados</span>
             <span className="text-xs text-muted-foreground">
-              Todos los campos se han cargado del folio anterior. Solo puede modificar la <strong>vigencia</strong>.
+              La mayoría de campos vienen del folio anterior. Solo puede modificar <strong>vigencia, marco normativo, condiciones y riesgos</strong>.
             </span>
           </div>
         </div>
       )}
+
+      {/* I. Datos Generales */}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1899,122 +1987,242 @@ function FormularioNombramiento({
         </CardHeader>
         <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Secretaria {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
-                </div>
-              ) : esRenovacion ? (
-                <Input value={secretariaInput} disabled className="bg-muted text-muted-foreground" />
-              ) : (
-                <div className="relative">
-                  <Input
-                    value={secretariaInput}
-                    onChange={(e) => { setSecretariaInput(e.target.value); setSecretariaConfirmada(""); setShowSugerencias(true); setUnidadSeleccionada(""); setUrgSeleccionada("") }}
-                    onFocus={() => setShowSugerencias(true)}
-                    onBlur={() => setTimeout(() => setShowSugerencias(false), 200)}
-                    placeholder="Escriba la secretaria..." className="bg-background" autoComplete="off"
-                  />
-                  {showSugerencias && sugerencias.length > 0 && (
-                    <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
-                      <div className="max-h-52 overflow-y-auto py-1">
-                        {sugerencias.map((s) => (
-                          <button key={s} type="button" onMouseDown={() => handleSecretariaConfirm(s)}
-                            className={`w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors ${secretariaConfirmada === s ? "bg-accent/60 font-medium" : ""}`}>
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {secretariaConfirmada && !esRenovacion && getUAsForSecretaria(secretariaConfirmada).length > 0 && (
-                    <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 mt-1">
-                      <CheckCircle2 className="h-3 w-3 shrink-0" />
-                      Datos cargados desde UA - Claves OK · {getUAsForSecretaria(secretariaConfirmada).length} unidades
-                    </p>
-                  )}
-                  {secretariaConfirmada && esRenovacion && datosRelacionados && (
-                    <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 mt-1">
-                      <CheckCircle2 className="h-3 w-3 shrink-0" />Datos cargados desde {fuenteDatos === "excel" ? "Excel histórico" : "catálogo base"}
-                    </p>
-                  )}
-                  {!secretariaConfirmada && secretariaInput && (
-                    <p className="text-xs text-muted-foreground mt-1">Seleccione una opcion de la lista</p>
-                  )}
-                </div>
-              )}
-            </div>
 
+            {/* Secretaria  */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Unidad Administrativa {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                Secretaría / Dependencia / Organismo
+                <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground">{unidadSeleccionada || "—"}</span>
-                </div>
-              ) : (
-                <SelectConBusqueda opciones={unidadesDisponibles} value={unidadSeleccionada} onValueChange={handleUnidadChange2}
-                  placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaria" : "Seleccione unidad"}
-                  disabled={!camposDependientesHabilitados} />
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                {!esRenovacion ? "Clave Reporte Plazas" : "Unidad Responsable del Gasto"}
-                {(bloqueadoPorRenovacion || !esRenovacion) && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              {bloqueadoPorRenovacion || !esRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground">{urgSeleccionada || "—"}</span>
-                  {!esRenovacion && urgSeleccionada && (
-                    <span className="ml-auto text-xs text-muted-foreground">Auto</span>
-                  )}
-                </div>
-              ) : (
-                <SelectConBusqueda opciones={urgsDisponibles} value={urgSeleccionada} onValueChange={setUrgSeleccionada}
-                  placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaria" : "Seleccione URG"}
-                  disabled={!camposDependientesHabilitados} />
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Programa o Proyecto {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              <Input value={programaInput} onChange={(e) => { if (!bloqueadoPorRenovacion) setProgramaInput(e.target.value) }}
-                placeholder="Nombre del programa"
-                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                readOnly={bloqueadoPorRenovacion} disabled={!bloqueadoPorRenovacion && !camposDependientesHabilitados} />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Denominacion del Nombramiento {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              <Input value={denominacion} onChange={(e) => { if (!bloqueadoPorRenovacion) setDenominacion(e.target.value) }}
-                placeholder="Ej. Subdirector de Area"
-                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                readOnly={bloqueadoPorRenovacion} />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Importe Neto Mensual {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                <Input type="text" value={importeNeto} onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(e.target.value) }}
-                  placeholder="0.00"
-                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                  readOnly={bloqueadoPorRenovacion} />
+              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
               </div>
             </div>
 
+            {/* Tipo de administración */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Tipo de Administración
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground capitalize">{tipoAdministracion}</span>
+                </div>
+              ) : (
+                <RadioGroup
+                  value={tipoAdministracion}
+                  onValueChange={(v) => handleTipoAdminChange(v as "centralizada" | "paraestatal")}
+                  className="flex gap-4 pt-1"
+                >
+                  {["centralizada", "paraestatal"].map((opt) => (
+                    <div key={opt} className="flex items-center gap-2">
+                      <RadioGroupItem value={opt} id={`admin-${opt}`} />
+                      <Label htmlFor={`admin-${opt}`} className="text-sm font-normal cursor-pointer capitalize">{opt}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              )}
+            </div>
+
+            {/* Unidad Administrativa de Adscripción */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Unidad Administrativa de Adscripción
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground font-semibold font-mono">{numeroUA}</span>
+                </div>
+              ) : catalogoUAs.some((u) => u.clave !== "") ? (
+                <Select
+                  value={claveUA}
+                  onValueChange={(clave) => {
+                    const ua = catalogoUAs.find((u) => u.clave === clave)
+                    setClaveUA(clave)
+                    setUnidadAdscripcion(ua?.nombre ?? "")
+                  }}
+                >
+                  <SelectTrigger className="bg-background w-full font-mono">
+                    <SelectValue placeholder="Seleccione clave" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {catalogoUAs.filter((u) => u.clave !== "").map((u) => (
+                      <SelectItem key={u.nombre} value={u.clave} className="font-mono">{fmtClave(u.clave)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : tipoAdministracion === "centralizada" && unidadesAdscripcion.length > 0 ? (
+                <>
+                  <Select
+                    value={unidadAdscripcion}
+                    onValueChange={handleUnidadAdscripcionChange}
+                  >
+                    <SelectTrigger className="bg-background w-full">
+                      <SelectValue placeholder="Seleccione unidad administrativa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unidadesAdscripcion.map((u) => (
+                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {claveUA && (
+                    <p className="text-xs font-mono text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3 shrink-0" />Clave: {fmtClave(claveUA)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <Input
+                  value={claveUA}
+                  onChange={(e) => setClaveUA(e.target.value)}
+                  placeholder="Clave reporte plazas"
+                  className="bg-background font-mono"
+                />
+              )}
+            </div>
+
+            {/* Unidad Responsable del Gasto */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Unidad Responsable del Gasto
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground">{urgSeleccionada || "—"}</span>
+                </div>
+              ) : (
+                <>
+                  <SelectConBusqueda
+                    opciones={
+                      catalogoUAs.length > 0
+                        ? catalogoUAs.map((u) => ({ value: u.nombre, label: u.nombre }))
+                        : unidadesResponsables
+                    }
+                    value={urgSeleccionada}
+                    onValueChange={setUrgSeleccionada}
+                    placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaría" : "Seleccione unidad responsable"}
+                    disabled={!camposDependientesHabilitados}
+                  />
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Info className="h-3 w-3 shrink-0" />Independiente de la unidad de adscripción.
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Programa o Proyecto */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Programa o Proyecto
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Input
+                value={programaInput}
+                onChange={(e) => { if (!bloqueadoPorRenovacion) setProgramaInput(e.target.value) }}
+                placeholder="Nombre del programa"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+                disabled={!bloqueadoPorRenovacion && !camposDependientesHabilitados}
+              />
+              {!bloqueadoPorRenovacion && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3 shrink-0" />Puede Obtenerse desde el Oficio de Suficiencia Presupuestal.
+                </p>
+              )}
+            </div>
+
+            {/* Denominación */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Denominación del Nombramiento
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Input
+                value={denominacion}
+                onChange={(e) => { if (!bloqueadoPorRenovacion) setDenominacion(e.target.value) }}
+                placeholder="Ej. Subdirector de Área"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Puesto del Jefe Inmediato
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Input
+                value={puestoJefeInmediato}
+                onChange={(e) => { if (!bloqueadoPorRenovacion) setPuestoJefeInmediato(e.target.value) }}
+                placeholder="Ej. Director General"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+              />
+            </div>
+
+            {/* Número de personas */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Número de Personas a Contratar
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Input
+                type="number" min={1}
+                value={numeroPrestadores}
+                onChange={(e) => { if (!bloqueadoPorRenovacion) setNumeroPrestadores(e.target.value) }}
+                placeholder="Ej. 2"
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                readOnly={bloqueadoPorRenovacion}
+              />
+            </div>
+
+            {/* Tipo de Pago */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Tipo de Pago
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              {bloqueadoPorRenovacion ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                  <span className="text-sm text-muted-foreground capitalize">{tipoImporte}</span>
+                </div>
+              ) : (
+                <Select value={tipoImporte} onValueChange={setTipoImporte}>
+                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Mensual">Mensual</SelectItem>
+                    <SelectItem value="Unico">Único</SelectItem>
+                    <SelectItem value="Por_hora">Por Hora</SelectItem>
+                    <SelectItem value="Por_taller">Por Taller</SelectItem>
+                    <SelectItem value="Por_dia">Por Día</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* Importe Neto */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Importe Neto
+                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                <Input
+                  type="text" value={importeNeto}
+                  onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(e.target.value) }}
+                  placeholder="0.00"
+                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  readOnly={bloqueadoPorRenovacion}
+                />
+              </div>
+            </div>
+
+            {/* Vigencia */}
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
@@ -2023,18 +2231,26 @@ function FormularioNombramiento({
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Inicio</span>
-                  <Input type="date" value={vigenciaInicio} min={getVigenciaMin()}
-                    onChange={(e) => { const v = e.target.value; if (!esFechaPasada(v)) setVigenciaInicio(v) }}
-                    className={`bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`} />
+                  <DatePickerHabil
+                    value={isoToDate(vigenciaInicio)}
+                    fromDate={isoToDate(getVigenciaMin())}
+                    onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
+                    placeholder="Seleccionar inicio"
+                    className={`w-full bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`}
+                  />
                   {esFechaPasada(vigenciaInicio) && (
                     <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.</p>
                   )}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Termino</span>
-                  <Input type="date" value={vigenciaFin} min={getVigenciaMin()}
-                    onChange={(e) => { const v = e.target.value; if (!esFechaPasada(v)) setVigenciaFin(v) }}
-                    className={`bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`} />
+                  <span className="text-xs text-muted-foreground">Término</span>
+                  <DatePickerHabil
+                    value={isoToDate(vigenciaFin)}
+                    fromDate={isoToDate(vigenciaInicio || getVigenciaMin())}
+                    onChange={(d) => d && setVigenciaFin(dateToIso(d))}
+                    placeholder="Seleccionar término"
+                    className={`w-full bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`}
+                  />
                   {esFechaPasada(vigenciaFin) && (
                     <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.</p>
                   )}
@@ -2050,66 +2266,131 @@ function FormularioNombramiento({
         </CardContent>
       </Card>
 
-      {/* ── TABULADOR: ahora siempre recibe importeNeto del estado local ── */}
-      <TabuladorCard
+      <TabuladorNiveles
         nivelCategoria={datosRenovacion?.nivelCategoria}
         importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeNeto}
         readonly={bloqueadoPorRenovacion}
         onSeleccionadoChange={(nivel, categoria) => { setNivelTabulador(nivel); setCategoriaTabulador(categoria) }}
+        secretaria={secretariaConfirmada || secretariaInput}
       />
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            I.2 Funciones Principales {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+            II. Objeto del Nombramiento
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
-          <DynamicList label="" items={funciones} onChange={setFunciones} readonly={bloqueadoPorRenovacion} selectable />
+          <Textarea
+            value={objetoNombramiento}
+            onChange={(e) => { if (!bloqueadoPorRenovacion) setObjetoNombramiento(e.target.value) }}
+            placeholder="Describa el objeto del nombramiento de manera detallada..."
+            className={`min-h-24 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : "bg-background"}`}
+            readOnly={bloqueadoPorRenovacion}
+          />
         </CardContent>
       </Card>
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            I.3 Responsabilidades {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+            III. Actividades a Realizar
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
-          <DynamicList label="" items={responsabilidades} onChange={setResponsabilidades} readonly={bloqueadoPorRenovacion} selectable />
+          <DynamicList
+            label="" items={funciones} onChange={setFunciones}
+            readonly={bloqueadoPorRenovacion}
+            nivelTabulador={nivelTabulador}
+          />
+        </CardContent>
+      </Card>
+
+
+      <Card className="shadow-sm border-border">
+        <CardHeader className="px-4 pt-3 pb-1">
+          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            IV. Responsabilidades
+            {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-2">
+          <DynamicList
+            label="" items={responsabilidades} onChange={setResponsabilidades}
+            readonly={bloqueadoPorRenovacion}
+            nivelTabulador={nivelTabulador}
+          />
+          <p className="text-xs text-muted-foreground italic">
+            Las responsabilidades deberán ser congruentes con las actividades registradas.
+          </p>
         </CardContent>
       </Card>
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            I.4 Marco Normativo {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+            V. Marco Normativo
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary text-primary ml-1">Siempre editable</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-4 pb-3 pt-0">
-          <DynamicList label="" items={marcoNormativo} onChange={setMarcoNormativo} readonly={bloqueadoPorRenovacion} />
+        <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-2">
+          <div
+            className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 px-3 py-2 cursor-pointer hover:bg-primary/10 transition-colors"
+            onClick={() => setShowMarcoModal(true)}
+          >
+            <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+            <span className="text-xs text-primary">Ver aviso importante antes de capturar</span>
+          </div>
+          <DynamicList
+            label="" items={marcoNormativo} onChange={setMarcoNormativo}
+            readonly={false}
+          />
         </CardContent>
       </Card>
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            I.5 Condiciones y Riesgos {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+            VI. Condiciones y Riesgos
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary text-primary ml-1">Siempre editable</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
+        <CardContent className="flex flex-col gap-4 px-4 pb-4 pt-0">
           <div>
-            <Label className="text-sm font-medium mb-3 block">Condiciones</Label>
+            <Label className="text-sm font-medium mb-3 block">Condiciones de Trabajo</Label>
             <div className="overflow-hidden rounded-md border border-border">
               <table className="w-full text-sm">
-                <thead><tr className="bg-secondary text-secondary-foreground">
-                  <th className="px-4 py-2.5 text-left font-medium text-card-foreground">Condicion</th>
-                  <th className="px-4 py-2.5 text-center font-medium">Si</th>
-                  <th className="px-4 py-2.5 text-center font-medium">No</th>
-                </tr></thead>
-                <tbody>{["Cambio de domicilio", "Horario especial", "Viajar"].map((c) => (
-                  <CondicionRow key={c} label={c} defaultVal={prefilled ? "no" : ""} readonly={bloqueadoPorRenovacion} />
-                ))}</tbody>
+                <thead>
+                  <tr className="bg-secondary text-secondary-foreground">
+                    <th className="px-4 py-2.5 text-left font-medium text-card-foreground">Condición</th>
+                    <th className="px-4 py-2.5 text-center font-medium">Sí</th>
+                    <th className="px-4 py-2.5 text-center font-medium">No</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {["Cambio de domicilio", "Horario especial", "Viajar"].map((c) => {
+                    const key = c.toLowerCase().replace(/\s+/g, "-")
+                    return (
+                      <tr key={c} className="border-t border-border">
+                        <td className="px-4 py-2.5 text-card-foreground">{c}</td>
+                        {["si", "no"].map((opt) => (
+                          <td key={opt} className="px-4 py-2.5 text-center">
+                            <input
+                              type="radio"
+                              name={`cond-${key}`}
+                              value={opt}
+                              checked={condiciones[key] === opt}
+                              onChange={() => setCondiciones(prev => ({ ...prev, [key]: opt }))}
+                              className="cursor-pointer"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  })}
+                </tbody>
               </table>
             </div>
           </div>
@@ -2117,15 +2398,36 @@ function FormularioNombramiento({
             <Label className="text-sm font-medium mb-3 block">Tabla de Riesgos</Label>
             <div className="overflow-hidden rounded-md border border-border">
               <table className="w-full text-sm">
-                <thead><tr className="bg-secondary text-secondary-foreground">
-                  <th className="px-4 py-2.5 text-left font-medium">Riesgo</th>
-                  <th className="px-4 py-2.5 text-center font-medium">Bajo</th>
-                  <th className="px-4 py-2.5 text-center font-medium">Medio</th>
-                  <th className="px-4 py-2.5 text-center font-medium">Alto</th>
-                </tr></thead>
-                <tbody>{["Lesiones", "Caidas", "Mutilaciones", "Golpes", "Otros"].map((r) => (
-                  <RiesgoRow key={r} label={r} defaultVal={prefilled ? "bajo" : ""} readonly={bloqueadoPorRenovacion} />
-                ))}</tbody>
+                <thead>
+                  <tr className="bg-secondary text-secondary-foreground">
+                    <th className="px-4 py-2.5 text-left font-medium">Riesgo</th>
+                    <th className="px-4 py-2.5 text-center font-medium">Bajo</th>
+                    <th className="px-4 py-2.5 text-center font-medium">Medio</th>
+                    <th className="px-4 py-2.5 text-center font-medium">Alto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {["Lesiones", "Caídas", "Mutilaciones", "Golpes", "Otros"].map((r) => {
+                    const key = r.toLowerCase().replace(/\s+/g, "-")
+                    return (
+                      <tr key={r} className="border-t border-border">
+                        <td className="px-4 py-2.5 text-card-foreground">{r}</td>
+                        {["bajo", "medio", "alto"].map((nivel) => (
+                          <td key={nivel} className="px-4 py-2.5 text-center">
+                            <input
+                              type="radio"
+                              name={`riesgo-${key}`}
+                              value={nivel}
+                              checked={riesgos[key] === nivel}
+                              onChange={() => setRiesgos(prev => ({ ...prev, [key]: nivel }))}
+                              className="cursor-pointer"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    )
+                  })}
+                </tbody>
               </table>
             </div>
           </div>
@@ -2135,19 +2437,27 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            I.6 Resguardo Personalizado de Activos {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+            VII. Resguardo Personalizado de Activos
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary text-primary ml-1">Siempre editable</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <RadioGroup defaultValue={prefilled ? "no" : undefined} className="flex gap-6"
-            onValueChange={bloqueadoPorRenovacion ? () => {} : undefined}>
+        <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-3">
+          <div className="flex items-start gap-2 rounded-md bg-muted/40 border border-border px-3 py-2">
+            <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <span className="text-xs text-muted-foreground italic">(Contenido Informativo Pendiente de Definir)</span>
+          </div>
+          <RadioGroup
+            value={resguardoActivos}
+            onValueChange={setResguardoActivos}
+            className="flex gap-6"
+          >
             <div className="flex items-center gap-2">
-              <RadioGroupItem value="si" id="resg-si" disabled={bloqueadoPorRenovacion} />
-              <Label htmlFor="resg-si" className={`text-sm font-normal ${bloqueadoPorRenovacion ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>Si</Label>
+              <RadioGroupItem value="si" id="resg-si" />
+              <Label htmlFor="resg-si" className="text-sm font-normal cursor-pointer">Sí</Label>
             </div>
             <div className="flex items-center gap-2">
-              <RadioGroupItem value="no" id="resg-no" disabled={bloqueadoPorRenovacion} />
-              <Label htmlFor="resg-no" className={`text-sm font-normal ${bloqueadoPorRenovacion ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>No</Label>
+              <RadioGroupItem value="no" id="resg-no" />
+              <Label htmlFor="resg-no" className="text-sm font-normal cursor-pointer">No</Label>
             </div>
           </RadioGroup>
         </CardContent>
@@ -2211,7 +2521,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <CheckCircle2 className="h-12 w-12 text-secondary" />
             <p className="text-sm font-semibold text-card-foreground text-center">
-              {subTipo === "regularizacion" ? "Regularizacion registrada exitosamente" : "Excepcion DO registrada exitosamente"}
+              {subTipo === "regularizacion" ? "Regularización registrada exitosamente" : "Excepción DO registrada exitosamente"}
             </p>
             {subTipo === "regularizacion" && (
               <Badge className="bg-primary/10 text-primary border-0 text-sm px-3 py-1">
@@ -2228,22 +2538,20 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
       </div>
     )
   }
-
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5"><ArrowLeft className="h-4 w-4" />Volver</Button>
         <Separator orientation="vertical" className="h-6" />
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Excepcion DO</h2>
-          <p className="text-sm text-muted-foreground">Captura directa por la Direccion de Organizacion</p>
+          <h2 className="text-xl font-semibold text-foreground">Excepción DO</h2>
+          <p className="text-sm text-muted-foreground">Captura directa por la Dirección de Organización</p>
         </div>
       </div>
-
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <ShieldAlert className="h-5 w-5 text-accent-foreground" />Tipo de Excepcion
+            <ShieldAlert className="h-5 w-5 text-accent-foreground" />Tipo de Excepción
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -2252,25 +2560,24 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
               <RadioGroupItem value="captura" id="sub-captura" className="mt-0.5" />
               <div className="flex flex-col gap-1">
                 <span className="text-sm font-medium text-card-foreground">Captura DO</span>
-                <span className="text-xs text-muted-foreground">Ingreso directo con folio de recepcion y fecha asignados manualmente por la DO.</span>
+                <span className="text-xs text-muted-foreground">Ingreso directo con folio de recepción y fecha asignados manualmente por la DO.</span>
               </div>
             </label>
             <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${subTipo === "regularizacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
               <RadioGroupItem value="regularizacion" id="sub-regularizacion" className="mt-0.5" />
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-card-foreground">Regularizacion</span>
-                <span className="text-xs text-muted-foreground">Ingreso con folio temporal generado automaticamente.</span>
+                <span className="text-sm font-medium text-card-foreground">Regularización</span>
+                <span className="text-xs text-muted-foreground">Ingreso con folio temporal generado automáticamente.</span>
               </div>
             </label>
           </RadioGroup>
         </CardContent>
       </Card>
-
       <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
         <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Cancelar</Button>
         <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
           {subTipo === "regularizacion" ? <Clock className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
-          {subTipo === "regularizacion" ? "Registrar Regularizacion" : "Registrar Excepcion DO"}
+          {subTipo === "regularizacion" ? "Registrar Regularización" : "Registrar Excepción DO"}
         </Button>
       </div>
     </div>
@@ -2296,9 +2603,11 @@ function buildSolicitudPayload({
     tipo_actividades:      formData.tipoActividades         ?? null,
     numero_prestadores:    formData.numeroPrestadores ? parseInt(formData.numeroPrestadores) || null : null,
     denominacion:          formData.denominacion            || null,
+    puesto_jefe_inmediato: (formData as any).puestoJefeInmediato || null,
     vigencia_inicio:       formData.vigenciaInicio || null,
     vigencia_fin:          formData.vigenciaFin    || null,
     importe_bruto:         formData.importeBruto ? parseFloat(formData.importeBruto.replace(/[$,\s]/g, "")) || null : null,
+    tipo_importe:          formData.tipoImporte || null,
     es_renovacion:         esRenovacion === "si",
     folio_anterior:        folioSeleccionado || null,
     nivel_tabulador:       formData.nivelTabulador      || null,
@@ -2306,6 +2615,7 @@ function buildSolicitudPayload({
     objeto:                formData.objeto              ?? null,
     actividades:           formData.actividades          ?? [],
     responsabilidades:     formData.responsabilidades    ?? [],
+    marco_normativo:       (formData as any).marcoNormativo ?? [],
     escolaridad:           formData.escolaridad          ?? null,
     comp_adm:              formData.compAdm              ?? null,
     comp_tec:              formData.compTec              ?? null,
@@ -2315,39 +2625,7 @@ function buildSolicitudPayload({
   }
 }
 
-function CondicionRow({ label, defaultVal, readonly }: { label: string; defaultVal: "" | "no"; readonly: boolean }) {
-  const name = `cond-${label.toLowerCase().replace(/\s+/g, "-")}`
-  return (
-    <tr className="border-t border-border">
-      <td className="px-4 py-2.5 text-card-foreground">{label}</td>
-      <td className="px-4 py-2.5 text-center">
-        <input type="radio" name={name} value="si" defaultChecked={defaultVal === "no" ? false : undefined} disabled={readonly} />
-      </td>
-      <td className="px-4 py-2.5 text-center">
-        <input type="radio" name={name} value="no" defaultChecked={defaultVal === "no"} disabled={readonly} />
-      </td>
-    </tr>
-  )
-}
-
-function RiesgoRow({ label, defaultVal, readonly }: { label: string; defaultVal: "" | "bajo"; readonly: boolean }) {
-  const name = `riesgo-${label.toLowerCase().replace(/\s+/g, "-")}`
-  return (
-    <tr className="border-t border-border">
-      <td className="px-4 py-2.5 text-card-foreground">{label}</td>
-      <td className="px-4 py-2.5 text-center">
-        <input type="radio" name={name} value="bajo" defaultChecked={defaultVal === "bajo"} disabled={readonly} />
-      </td>
-      <td className="px-4 py-2.5 text-center">
-        <input type="radio" name={name} value="medio" defaultChecked={false} disabled={readonly} />
-      </td>
-      <td className="px-4 py-2.5 text-center">
-        <input type="radio" name={name} value="alto" defaultChecked={false} disabled={readonly} />
-      </td>
-    </tr>
-  )
-}
-
+type FolioExcelInternal = FolioExcel
 export function NuevaSolicitudPage() {
   const [step,                setStep]                = useState<Step>("tipo")
   const [tipo,                setTipo]                = useState<TipoSolicitud>("")
@@ -2358,17 +2636,14 @@ export function NuevaSolicitudPage() {
   const [lockVigenciaOnly,    setLockVigenciaOnly]    = useState(false)
   const [datosRenovacion,     setDatosRenovacion]     = useState<FolioExcel | null>(null)
   const [showModalMismasCondiciones, setShowModalMismasCondiciones] = useState(false)
-
   const [enviado,       setEnviado]       = useState(false)
   const [folioGenerado, setFolioGenerado] = useState("")
   const [enviando,      setEnviando]      = useState(false)
   const [errorEnvio,    setErrorEnvio]    = useState<string | null>(null)
-
   const [guardandoBorrador,     setGuardandoBorrador]     = useState(false)
   const [borradorGuardado,      setBorradorGuardado]      = useState(false)
   const [errorBorrador,         setErrorBorrador]         = useState<string | null>(null)
   const [folioBorradorGuardado, setFolioBorradorGuardado] = useState<string>("")
-
   const [formData, setFormData] = useState<Partial<FormularioData>>({})
   const handleFormChange = useCallback((data: Partial<FormularioData>) => {
     setFormData(prev => ({ ...prev, ...data }))
@@ -2377,23 +2652,44 @@ export function NuevaSolicitudPage() {
   const { } = useSolicitudes()
   const { getPermisoActivo, consumirPermiso } = useAutorizaciones()
   const { user } = useAuth()
-
   const [regimenPeriodo,      setRegimenPeriodo]      = useState<"" | "honorarios" | "asimilados" | "nombramiento">("")
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState("")
   const { historicos } = useHistoricoStore()
   const excelRows = useExcelRows(historicos)
-
   const [foliosDB, setFoliosDB] = useState<FolioExcel[]>([])
+  const [calHonorarios,    setCalHonorarios]    = useState<PeriodoCap3000[]>([])
+  const [calAsimilados,    setCalAsimilados]    = useState<PeriodoCap1000[]>([])
+  const [calNombramiento,  setCalNombramiento]  = useState<PeriodoCap1000[]>([])
+  const [calCargando,      setCalCargando]      = useState(true)
+  useEffect(() => {
+    const year = new Date().getFullYear()
+    fetch(`/api/calendario?ejercicio=${year}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setCalHonorarios(data.honorarios ?? [])
+        setCalAsimilados(data.asimilados ?? [])
+        setCalNombramiento(data.nombramiento ?? [])
+      })
+      .catch(() => {})
+      .finally(() => setCalCargando(false))
+  }, [])
+
+  const [catalogoTree, setCatalogoTree] = useState<OrganoCentralizadoNode[]>([])
+  useEffect(() => {
+    fetchCentralizadaTree().then(setCatalogoTree).catch(() => {})
+  }, [])
 
   useEffect(() => {
     try { sessionStorage.removeItem("sisodi_folios_recientes") } catch { /* ignore */ }
   }, [])
-
   useEffect(() => {
     if (esRenovacion !== "si") return
     const usuarioId = (user as any)?.id ?? (user as any)?.uuid ?? null
     if (!usuarioId) return
-    fetch("/api/mi-justificacion?tab=Todas&pageSize=200", {
+    const secretaria = user?.secretariaTexto ?? user?.area ?? ""
+    const params = new URLSearchParams({ tab: "Todas", pageSize: "200" })
+    if (secretaria) params.set("secretaria", secretaria)
+    fetch(`/api/mi-justificacion?${params.toString()}`, {
       headers: { "x-user-id": String(usuarioId) },
     })
       .then((r) => r.json())
@@ -2435,41 +2731,111 @@ export function NuevaSolicitudPage() {
           })
         setFoliosDB(folios)
       })
-      .catch(() => {/* silencioso */})
+      .catch(() => { })
   }, [esRenovacion, user])
 
   const periodoInfo = useMemo(() => {
     if (!regimenPeriodo || !periodoSeleccionado) return null
     const row = regimenPeriodo === "honorarios"
-      ? CAP_3000.find((r) => r.mes === periodoSeleccionado)
+      ? calHonorarios.find((r) => r.mes === periodoSeleccionado)
       : regimenPeriodo === "asimilados"
-      ? CAP_1000.find((r) => r.quincena === periodoSeleccionado)
-      : NOMBRAMIENTO_TD.find((r) => r.quincena === periodoSeleccionado)
+      ? calAsimilados.find((r) => r.quincena === periodoSeleccionado)
+      : calNombramiento.find((r) => r.quincena === periodoSeleccionado)
     if (!row) return null
     const limiteDODate = parseDateDMY(row.limiteDO)
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const enTiempo = today <= limiteDODate
     return { row, limiteDODate, enTiempo }
-  }, [regimenPeriodo, periodoSeleccionado])
+  }, [regimenPeriodo, periodoSeleccionado, calHonorarios, calAsimilados, calNombramiento])
 
   const periodoVencido = periodoSeleccionado ? (periodoInfo ? !periodoInfo.enTiempo : false) : false
-  const puedeAvanzarDeTipo = !!(tipo && regimenPeriodo && periodoSeleccionado && !periodoVencido)
+  const permisoActivo = regimenPeriodo && periodoSeleccionado && user?.id
+    ? getPermisoActivo(user.id, regimenPeriodo, periodoSeleccionado) : null
+
+  const calendarioCompleto = useMemo(() => {
+    if (calCargando) return false
+    const isDateFilled = (s: string) => /^\d{1,2}\/\d{2}\/\d{4}$/.test(s)
+    const honOk  = calHonorarios.length   >= 12 && calHonorarios.every(r  => isDateFilled(r.limiteDO)  && isDateFilled(r.limiteDGRH))
+    const asimOk = calAsimilados.length   >= 22 && calAsimilados.every(r  => isDateFilled(r.limiteDO)  && isDateFilled(r.limiteDGRH))
+    const nomOk  = calNombramiento.length >= 22 && calNombramiento.every(r => isDateFilled(r.limiteDO) && isDateFilled(r.limiteDGRH))
+    return honOk && asimOk && nomOk
+  }, [calCargando, calHonorarios, calAsimilados, calNombramiento])
+
+  const puedeAvanzarDeTipo = !!(tipo && regimenPeriodo && periodoSeleccionado && (!periodoVencido || permisoActivo) && calendarioCompleto)
+  const [secretariaFrescaTexto, setSecretariaFrescaTexto] = useState<string | null>(null)
+  useEffect(() => {
+    const sesionTieneSecretaria = !!(user?.secretariaTexto ?? user?.area)
+    if (sesionTieneSecretaria || !user?.id) return
+    fetch(`/api/auth?action=perfil&id=${user.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const texto = data.secretariaTexto ?? data.area ?? null
+        if (texto) setSecretariaFrescaTexto(texto)
+      })
+      .catch(() => {})
+  }, [user?.id, user?.secretariaTexto, user?.area])
 
   const userSecretariaRaiz = useMemo(() => {
-    const texto = user?.secretariaTexto ?? user?.area ?? null
+    const texto = user?.secretariaTexto ?? user?.area ?? secretariaFrescaTexto ?? null
     if (!texto) return null
     return norm(texto.split(" > ")[0])
-  }, [user])
+  }, [user, secretariaFrescaTexto])
 
+  const userSecretariaOriginal = useMemo(() => {
+    const texto = user?.secretariaTexto ?? user?.area ?? secretariaFrescaTexto ?? null
+    if (!texto) return null
+    const raiz = texto.split(" > ")[0]
+    const todas = filtrarSecretarias("")
+    const exacta = todas.find((s) => norm(s) === norm(raiz))
+    return exacta ?? raiz
+  }, [user, secretariaFrescaTexto])
+
+  const userUAOriginal = useMemo(() => {
+    const texto = user?.secretariaTexto ?? secretariaFrescaTexto ?? null
+    if (!texto) return null
+    const partes = texto.split(" > ")
+    if (partes.length < 2) return null
+    const uaTexto = partes[1]
+    const uas = getUAsForSecretaria(userSecretariaOriginal ?? "")
+    const exacta = uas.find((ua) => norm(ua) === norm(uaTexto))
+    if (exacta) return exacta
+    const parcial = uas.find((ua) => norm(ua).includes(norm(uaTexto)) || norm(uaTexto).includes(norm(ua)))
+    return parcial ?? uaTexto
+  }, [user, secretariaFrescaTexto, userSecretariaOriginal])
+
+  const userClaveReporte = useMemo(() => {
+    if (user?.claveReportePlazas) return user.claveReportePlazas
+    return getClaveForUA(userSecretariaOriginal ?? "", userUAOriginal ?? "") || null
+  }, [user?.claveReportePlazas, userSecretariaOriginal, userUAOriginal])
+
+  const normCat = (s: string) =>
+    s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ")
+
+  const catalogoUAsDelUsuario = useMemo((): { clave: string; nombre: string }[] => {
+    if (!userSecretariaOriginal || catalogoTree.length === 0) return []
+    const secNorm = normCat(userSecretariaOriginal)
+    const rootNode = catalogoTree.find((n) => {
+      const nn = normCat(n.nombre)
+      return nn === secNorm || nn.includes(secNorm) || secNorm.includes(nn)
+    })
+    if (!rootNode) return []
+    return rootNode.children
+      .map((ua) => ({
+        clave:  ua.ua_clave_administrativa ?? ua.clave_reporte_plazas ?? "",
+        nombre: ua.nombre,
+      }))
+  }, [catalogoTree, userSecretariaOriginal])
   const foliosReales = useMemo((): FolioExcel[] => {
     const foliosExcel = excelRows.length === 0 ? [] : excelRows
       .filter((row) => {
         const folioDictamen      = getCell(row, COL.folioDictamen)
         const folioJustificacion = getCell(row, COL.folioJustificacion)
         const folioId = folioDictamen || folioJustificacion
-
         if (!esFolioValido(folioId)) return false
-
+        if (userSecretariaRaiz) {
+          const secRow = norm(getCell(row, COL.secretaria))
+          if (!secRow.includes(userSecretariaRaiz) && !userSecretariaRaiz.includes(secRow)) return false
+        }
         const reg = normalizaRegimen(getCell(row, COL.regimen))
         if (tipo === "nombramiento" && reg !== "nombramiento") return false
         if (tipo === "prestacion"   && reg === "nombramiento") return false
@@ -2510,14 +2876,16 @@ export function NuevaSolicitudPage() {
       .sort((a, b) => a.id.localeCompare(b.id))
 
     const idsExcel = new Set(foliosExcel.map((f) => f.id))
-    const dbUnicos  = foliosDB.filter((f) => !idsExcel.has(f.id))
+    const dbUnicos  = foliosDB.filter((f) => {
+      if (idsExcel.has(f.id)) return false
+      if (!userSecretariaRaiz || !f.secretaria) return true
+      const secNorm = norm(f.secretaria)
+      return secNorm.includes(userSecretariaRaiz) || userSecretariaRaiz.includes(secNorm)
+    })
     return [...dbUnicos, ...foliosExcel]
-  }, [excelRows, tipo, periodoSeleccionado, esRenovacion, foliosDB])
-
+  }, [excelRows, tipo, periodoSeleccionado, esRenovacion, foliosDB, userSecretariaRaiz])
   const hayFoliosReales = foliosReales.length > 0
-
   const foliosDBIds = useMemo(() => new Set(foliosDB.map((f) => f.id)), [foliosDB])
-
   const handleContinueToRenovacion = () => {
     if (puedeAvanzarDeTipo) setStep("renovacion")
   }
@@ -2541,107 +2909,48 @@ export function NuevaSolicitudPage() {
     else if (step === "renovacion") setStep("tipo")
   }, [step])
 
-  const permisoActivo = regimenPeriodo && periodoSeleccionado && user?.nombre
-    ? getPermisoActivo(user.nombre, regimenPeriodo, periodoSeleccionado) : null
-
   const folioSeleccionadoData = folioSeleccionado
     ? foliosReales.find((f) => f.id === folioSeleccionado) : null
-
   const handleGuardarBorrador = useCallback(async () => {
     setGuardandoBorrador(true)
     setErrorBorrador(null)
     try {
       const usuarioId = (user as any)?.id ?? (user as any)?.uuid ?? null
-      if (!usuarioId) {
-        setErrorBorrador("No se pudo identificar al usuario. Vuelva a iniciar sesión.")
-        setGuardandoBorrador(false)
-        return
-      }
-      const payload = {
-        ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: false, esRenovacion, folioSeleccionado, formData }),
-        estado_nombre: "Borrador",
-      }
-      const res = await fetch("/api/solicitudes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
+      if (!usuarioId) { setErrorBorrador("No se pudo identificar al usuario."); setGuardandoBorrador(false); return }
+      const payload = { ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: false, esRenovacion, folioSeleccionado, formData }), estado_nombre: "Borrador" }
+      const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       const json = await res.json()
-      if (!res.ok || !json.ok) {
-        setErrorBorrador(json.error ?? "Error al guardar el borrador. Intente de nuevo.")
-        setGuardandoBorrador(false)
-        return
-      }
+      if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al guardar el borrador."); setGuardandoBorrador(false); return }
       setFolioBorradorGuardado(json.folio ?? json.data?.folio_recepcion ?? "")
       setBorradorGuardado(true)
-    } catch (err) {
-      console.error("Error de red al guardar borrador:", err)
-      setErrorBorrador("Error de conexión. Verifique su red e intente de nuevo.")
-    } finally {
-      setGuardandoBorrador(false)
-    }
+    } catch { setErrorBorrador("Error de conexión.") } finally { setGuardandoBorrador(false) }
   }, [user, tipo, regimenPeriodo, esRenovacion, folioSeleccionado, formData])
 
   const handleEnviarAValidacion = useCallback(
     async (periodoStillValid: boolean, hasPermiso: boolean) => {
       if (!periodoStillValid && !hasPermiso) return
-      setEnviando(true)
-      setErrorEnvio(null)
+      setEnviando(true); setErrorEnvio(null)
       try {
-        if (!periodoStillValid && hasPermiso && user?.nombre && regimenPeriodo && periodoSeleccionado) {
-          consumirPermiso(user.nombre, regimenPeriodo, periodoSeleccionado)
+        if (!periodoStillValid && hasPermiso && user?.id && regimenPeriodo && periodoSeleccionado) {
+          await consumirPermiso(user.id, regimenPeriodo, periodoSeleccionado)
         }
         const usuarioId = (user as any)?.id ?? (user as any)?.uuid ?? null
-        if (!usuarioId) {
-          setErrorEnvio("No se pudo identificar al usuario. Vuelva a iniciar sesión.")
-          setEnviando(false)
-          return
-        }
-        const payload = buildSolicitudPayload({
-          usuarioId, tipo, regimenPeriodo,
-          esExtemporanea: !periodoStillValid && hasPermiso,
-          esRenovacion, folioSeleccionado, formData,
-        })
-        const res = await fetch("/api/solicitudes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
+        if (!usuarioId) { setErrorEnvio("No se pudo identificar al usuario."); setEnviando(false); return }
+        const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
+        const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         const json = await res.json()
-        if (!res.ok || !json.ok) {
-          setErrorEnvio(json.error ?? "Error al registrar la solicitud. Intente de nuevo.")
-          setEnviando(false)
-          return
-        }
+        if (!res.ok || !json.ok) { setErrorEnvio(json.error ?? "Error al registrar la solicitud."); setEnviando(false); return }
         const solicitudId = json.data?.id
-        if (!solicitudId) {
-          setErrorEnvio("No se pudo obtener el ID de la solicitud creada.")
-          setEnviando(false)
-          return
-        }
+        if (!solicitudId) { setErrorEnvio("No se pudo obtener el ID de la solicitud."); setEnviando(false); return }
         const patchRes = await fetch("/api/validacion", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            solicitudId,
-            nuevoEstado: "En Validacion Justificaciones",
-            usuarioId,
-            comentario: "Solicitud enviada a Validacion de Justificaciones por la URG",
-          }),
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ solicitudId, nuevoEstado: "En Validacion Justificaciones", usuarioId, comentario: "Solicitud enviada a Validacion de Justificaciones por la URG" }),
         })
         const patchJson = await patchRes.json()
-        if (!patchRes.ok || !patchJson.ok) {
-          console.warn("Solicitud creada pero no se pudo cambiar el estado:", patchJson.error)
-        }
-        const folioGuardado = json.folio ?? json.data?.folio_justificacion ?? json.data?.folio_recepcion ?? ""
-        setFolioGenerado(folioGuardado)
+        if (!patchRes.ok || !patchJson.ok) console.warn("No se pudo cambiar el estado:", patchJson.error)
+        setFolioGenerado(json.folio ?? json.data?.folio_justificacion ?? json.data?.folio_recepcion ?? "")
         setEnviado(true)
-      } catch (err) {
-        console.error("Error de red al enviar solicitud:", err)
-        setErrorEnvio("Error de conexión. Verifique su red e intente de nuevo.")
-      } finally {
-        setEnviando(false)
-      }
+      } catch { setErrorEnvio("Error de conexión.") } finally { setEnviando(false) }
     },
     [user, regimenPeriodo, periodoSeleccionado, consumirPermiso, tipo, formData, esRenovacion, folioSeleccionado]
   )
@@ -2653,8 +2962,7 @@ export function NuevaSolicitudPage() {
     setEsRenovacion(""); setFolioSeleccionado(""); setCondicionRenovacion("")
     setPrefilled(false); setLockVigenciaOnly(false); setDatosRenovacion(null)
     setRegimenPeriodo(""); setPeriodoSeleccionado("")
-    setErrorEnvio(null); setErrorBorrador(null)
-    setFormData({})
+    setErrorEnvio(null); setErrorBorrador(null); setFormData({})
   }, [])
 
   if (enviado) {
@@ -2666,26 +2974,12 @@ export function NuevaSolicitudPage() {
               <CheckCircle2 className="h-9 w-9 text-secondary" />
             </div>
             <div className="flex flex-col items-center gap-1 text-center">
-              <p className="text-lg font-semibold text-card-foreground">Solicitud enviada a validación UEFA</p>
-              <p className="text-sm text-muted-foreground">
-                La solicitud fue ingresada correctamente. Puede seguir su avance en Mis Solicitudes y fue Enviadas a UEFA.
-              </p>
+              <p className="text-lg font-semibold text-card-foreground">Solicitud enviada a validación</p>
+              <p className="text-sm text-muted-foreground">La solicitud fue enviada exitosamente. Puede seguir su seguimiento en Validación Justificación.</p>
             </div>
             {folioGenerado && (
               <Badge className="bg-primary/10 text-primary border-0 text-sm px-4 py-1.5">Folio: {folioGenerado}</Badge>
             )}
-            <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-muted/30 px-6 py-3 text-center">
-              <span className="text-xs text-muted-foreground">Tipo de solicitud</span>
-              <span className="text-sm font-medium text-card-foreground">
-                {tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento por Tiempo Determinado"}
-              </span>
-              {periodoSeleccionado && (
-                <>
-                  <span className="text-xs text-muted-foreground mt-1">Periodo</span>
-                  <span className="text-sm font-medium text-card-foreground">{periodoSeleccionado}</span>
-                </>
-              )}
-            </div>
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={handleReset}>
                 <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
@@ -2696,7 +2990,6 @@ export function NuevaSolicitudPage() {
       </div>
     )
   }
-
   if (borradorGuardado) {
     return (
       <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
@@ -2707,9 +3000,7 @@ export function NuevaSolicitudPage() {
             </div>
             <div className="flex flex-col items-center gap-1 text-center">
               <p className="text-lg font-semibold text-card-foreground">Borrador guardado correctamente</p>
-              <p className="text-sm text-muted-foreground">
-                Puede continuar la captura desde "Mis Solicitudes" → pestaña "Borradores".
-              </p>
+              <p className="text-sm text-muted-foreground">Puede continuar la captura desde "Mis Solicitudes" → pestaña "Borradores".</p>
             </div>
             {folioBorradorGuardado && (
               <Badge className="bg-muted text-muted-foreground border-0 text-sm px-4 py-1.5">Folio: {folioBorradorGuardado}</Badge>
@@ -2724,24 +3015,44 @@ export function NuevaSolicitudPage() {
       </div>
     )
   }
-
   return (
-    <PageLayout title="Nueva Solicitud" description="Registre una nueva solicitud de dictaminacion tecnica funcional">
+    <PageLayout title="Nueva Solicitud" description="Registre una nueva solicitud de dictaminación técnica funcional">
       <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <StepIndicator step={step} tipo={tipo} />
       </div>
-
-      {/* PASO 1 — TIPO */}
       {step === "tipo" && (
         <>
-          <Card className="shadow-sm border-secondary/30 border-2">
-            <CardHeader className="px-4 pt-3 pb-1">
+          {calCargando && (
+            <Card className="shadow-sm border-border">
+              <CardContent className="flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                Verificando calendario de recepción...
+              </CardContent>
+            </Card>
+          )}
+          {!calCargando && !calendarioCompleto && (
+            <Card className="shadow-sm border-destructive/40 bg-destructive/5">
+              <CardContent className="flex items-start gap-3 px-4 py-3">
+                <AlertCircle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-destructive">Calendario de Recepción Incompleto!</span>
+                  <span className="text-xs text-muted-foreground">
+                    Para continuar con el  registro  es Necesario Contar  con las fechas de
+                    los <strong> 3 Regímenes</strong> (Honorarios, Asimilados y Nombramiento)
+                    <strong> Todos los  Meses/Quincenas   </strong> Deben tener fecha Configurada.
+                  </span>z
+                </div>
+              </CardContent>
+            </Card>
+          )}
+              <Card className={`shadow-sm border-secondary/30 border-2 ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
+              <CardHeader className="px-4 pt-3 pb-1">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                <Calendar className="h-4 w-4 text-secondary" />Periodo de aplicacion
+              <Calendar className="h-4 w-4 text-secondary" />Período de Aplicación
               </CardTitle>
-              <CardDescription>Seleccione el regimen y periodo para consultar las fechas limite de recepcion</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
+              <CardDescription>Seleccione el régimen y período para consultar las fechas límite de recepción</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium">Régimen de Contratación<span className="text-destructive ml-0.5">*</span></Label>
@@ -2751,7 +3062,7 @@ export function NuevaSolicitudPage() {
                     if (nuevo === "nombramiento") setTipo("nombramiento")
                     else setTipo("prestacion")
                   }}>
-                    <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione regimen" /></SelectTrigger>
+                    <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="honorarios">Honorarios</SelectItem>
                       <SelectItem value="asimilados">Honorarios asimilados a salarios</SelectItem>
@@ -2761,28 +3072,28 @@ export function NuevaSolicitudPage() {
                 </div>
                 {regimenPeriodo === "honorarios" && (
                   <div className="flex flex-col gap-2">
-                    <Label className="text-sm font-medium">Mes de aplicacion<span className="text-destructive ml-0.5">*</span></Label>
+                    <Label className="text-sm font-medium">Mes de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
                       <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione mes" /></SelectTrigger>
-                      <SelectContent>{CAP_3000.map((r) => <SelectItem key={r.mes} value={r.mes}>{r.mes}</SelectItem>)}</SelectContent>
+                      <SelectContent>{calHonorarios.map((r) => <SelectItem key={r.mes} value={r.mes}>{r.mes}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
                 {regimenPeriodo === "asimilados" && (
                   <div className="flex flex-col gap-2">
-                    <Label className="text-sm font-medium">Quincena de aplicacion<span className="text-destructive ml-0.5">*</span></Label>
+                    <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
                       <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
-                      <SelectContent>{CAP_1000.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
+                      <SelectContent>{calAsimilados.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
                 {regimenPeriodo === "nombramiento" && (
                   <div className="flex flex-col gap-2">
-                    <Label className="text-sm font-medium">Quincena de aplicacion<span className="text-destructive ml-0.5">*</span></Label>
+                    <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
                       <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
-                      <SelectContent>{NOMBRAMIENTO_TD.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
+                      <SelectContent>{calNombramiento.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
@@ -2792,11 +3103,11 @@ export function NuevaSolicitudPage() {
                 <div className={`rounded-lg border-2 p-4 flex flex-col gap-3 ${periodoInfo.enTiempo ? "border-secondary/30 bg-secondary/5" : "border-destructive/40 bg-destructive/5"}`}>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">Limite DO (Dictamen)</span>
+                      <span className="text-xs text-muted-foreground">Límite DO (Dictamen)</span>
                       <span className="text-sm font-semibold text-card-foreground">{periodoInfo.row.limiteDO}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">Limite DGRH (Alta)</span>
+                      <span className="text-xs text-muted-foreground">Límite DGRH (Alta)</span>
                       <span className="text-sm font-semibold text-card-foreground">{periodoInfo.row.limiteDGRH}</span>
                     </div>
                   </div>
@@ -2805,11 +3116,19 @@ export function NuevaSolicitudPage() {
                       <Badge className="bg-secondary/15 text-secondary border-0 gap-1">
                         <CheckCircle2 className="h-3.5 w-3.5" />En tiempo
                       </Badge>
+                    ) : permisoActivo ? (
+                      <div className="flex items-start gap-2 w-full">
+                        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#f97316" }} />
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-semibold" style={{ color: "#f97316" }}>Período vencido — temporalmente habilitado</span>
+                          <span className="text-xs text-muted-foreground">Tiene autorización para registrar fuera de tiempo.</span>
+                        </div>
+                      </div>
                     ) : (
                       <div className="flex items-start gap-2 w-full">
                         <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold text-destructive">Periodo vencido — no se puede registrar</span>
+                          <span className="text-sm font-semibold text-destructive">Período vencido — no se puede registrar</span>
                           <span className="text-xs text-muted-foreground">La fecha límite DO ({periodoInfo.row.limiteDO}) ya pasó.</span>
                         </div>
                       </div>
@@ -2820,7 +3139,7 @@ export function NuevaSolicitudPage() {
             </CardContent>
           </Card>
 
-          <Card className={`shadow-sm border-border ${periodoVencido ? "opacity-50 pointer-events-none" : ""}`}>
+          <Card className={`shadow-sm border-border ${(periodoVencido && !permisoActivo) || !calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
             <CardHeader className="px-4 pt-3 pb-1">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
                 <FilePlus className="h-4 w-4 text-secondary" />Seleccione Tipo de Solicitud
@@ -2836,14 +3155,14 @@ export function NuevaSolicitudPage() {
                 <label htmlFor="tipo-prestacion" className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-2.5 transition-colors ${tipo === "prestacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
                   <RadioGroupItem value="prestacion" id="tipo-prestacion" className="mt-0.5" disabled={regimenPeriodo === "nombramiento"} />
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-card-foreground">Justificacion de Prestacion de Servicios</span>
+                    <span className="text-sm font-semibold text-card-foreground">Justificación de Prestación de Servicios</span>
                     <span className="text-xs text-muted-foreground">Honorarios / Honorarios Asimilados a Salarios</span>
                   </div>
                 </label>
                 <label htmlFor="tipo-nombramiento" className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-2.5 transition-colors ${tipo === "nombramiento" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
                   <RadioGroupItem value="nombramiento" id="tipo-nombramiento" className="mt-0.5" disabled={regimenPeriodo !== "nombramiento"} />
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-card-foreground">Justificacion para Nombramiento por Tiempo Determinado</span>
+                    <span className="text-sm font-semibold text-card-foreground">Justificación para Nombramiento por Tiempo Determinado</span>
                     <span className="text-xs text-muted-foreground">Nombramiento por Tiempo Determinado</span>
                   </div>
                 </label>
@@ -2859,21 +3178,21 @@ export function NuevaSolicitudPage() {
         </>
       )}
 
-      {/* PASO 2 — RENOVACION */}
+
       {step === "renovacion" && (
         <Card className="shadow-sm border-border">
           <CardHeader className="px-4 pt-3 pb-1">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-              <FileText className="h-4 w-4 text-secondary" />Renovacion
+              <FileText className="h-4 w-4 text-secondary" />Renovación
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
             <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">Renovación de la Dictamen *</Label>
+              <Label className="text-sm font-medium">¿Es renovación de un dictamen anterior? *</Label>
               <RadioGroup value={esRenovacion} onValueChange={setEsRenovacion} className="flex gap-6">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="si" id="ren-si" />
-                  <Label htmlFor="ren-si" className="text-sm font-normal cursor-pointer">Si</Label>
+                  <Label htmlFor="ren-si" className="text-sm font-normal cursor-pointer">Sí</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="no" id="ren-no" />
@@ -2886,7 +3205,7 @@ export function NuevaSolicitudPage() {
               <div className="flex flex-col gap-5 rounded-lg border border-border bg-card p-4">
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium">
-                    Folio del Dictamen/Opinion Anterior
+                    Folio del Dictamen/Opinión Anterior
                     {hayFoliosReales && (
                       <span className="ml-2 text-xs font-normal text-muted-foreground">
                         ({foliosReales.length} encontrados{periodoSeleccionado ? ` · ${periodoSeleccionado}` : ""})
@@ -2912,35 +3231,32 @@ export function NuevaSolicitudPage() {
                             <span className="font-medium">{f.folioJustificacion}</span>{" / "}
                             <span className="font-medium">{f.folioDictamen}</span>
                             {f.secretaria && <span className="text-muted-foreground"> - {f.secretaria}</span>}
-                            {foliosDBIds.has(f.id) && (
-                              <span className="ml-1.5 text-[10px] text-blue-500 font-semibold">● BD</span>
-                            )}
+                            {foliosDBIds.has(f.id) && <span className="ml-1.5 text-[10px] text-blue-500 font-semibold"> BD</span>}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   )}
                 </div>
-
                 {folioSeleccionadoData && (
                   <>
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Folio de Justificacion</span>
+                        <span className="text-xs text-muted-foreground">Folio de Justificación</span>
                         <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.folioJustificacion}</span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Folio de Dictamen/Opinion</span>
+                        <span className="text-xs text-muted-foreground">Folio de Dictamen/Opinión</span>
                         <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.folioDictamen}</span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Secretaria</span>
+                        <span className="text-xs text-muted-foreground">Secretaría</span>
                         <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.secretaria || "—"}</span>
                       </div>
                     </div>
                     <Separator />
                     <div className="flex flex-col gap-3">
-                      <Label className="text-sm font-medium">Condicion de Renovacion</Label>
+                      <Label className="text-sm font-medium">Condición de Renovación</Label>
                       <label
                         className={`flex items-start gap-3 rounded-lg border-2 p-4 cursor-pointer transition-colors
                           ${condicionRenovacion === "mismas" ? "border-secondary bg-secondary/5" : "border-border hover:border-secondary/40"}`}
@@ -2949,15 +3265,16 @@ export function NuevaSolicitudPage() {
                           if (condicionRenovacion === "mismas") setCondicionRenovacion("")
                           else setShowModalMismasCondiciones(true)
                         }}
-                      >
+                        >
+
                         <Checkbox checked={condicionRenovacion === "mismas"} className="mt-0.5 shrink-0 pointer-events-none" readOnly />
                         <div className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium text-card-foreground">Se solicita bajo mismas condiciones técnicas y funcionales</span>
-                          <span className="text-xs text-muted-foreground">Marque esta casilla si confirma que no hay cambios respecto al dictamen anterior</span>
+                          <span className="text-xs text-muted-foreground">Marque si confirma que no hay cambios respecto al dictamen anterior</span>
                         </div>
                         {condicionRenovacion === "mismas" && <CheckCircle2 className="h-4 w-4 shrink-0 text-secondary ml-auto mt-0.5" />}
                       </label>
-                    </div>
+                      </div>
 
                     {showModalMismasCondiciones && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -2980,10 +3297,11 @@ export function NuevaSolicitudPage() {
                               b) La Dirección General de Desarrollo Organizacional emitirá la dictaminación correspondiente a la presente Justificación.
                             </p>
                             <div className="rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3 flex flex-col gap-1.5">
-                              <span className="text-xs font-semibold text-secondary uppercase tracking-wide">Único campo editable</span>
-                              <span className="text-sm text-card-foreground flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-secondary shrink-0" />Vigencia de la nueva solicitud
-                              </span>
+                              <span className="text-xs font-semibold text-secondary uppercase tracking-wide">Campos editables en renovación</span>
+                              <ul className="text-sm text-card-foreground flex flex-col gap-1">
+                                <li className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-secondary shrink-0" />Vigencia</li>
+
+                              </ul>
                             </div>
                           </div>
                           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/20">
@@ -3007,7 +3325,7 @@ export function NuevaSolicitudPage() {
                 onClick={handleContinueToFormulario}
                 disabled={
                   !esRenovacion ||
-                  (esRenovacion === "si" && hayFoliosReales && !folioSeleccionado) ||
+                  (esRenovacion === "si" && !folioSeleccionado) ||
                   (esRenovacion === "si" && folioSeleccionado && condicionRenovacion !== "mismas")
                 }
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -3024,11 +3342,11 @@ export function NuevaSolicitudPage() {
         <>
           <div className="flex items-center gap-3 flex-wrap">
             <Badge className="bg-primary text-primary-foreground">
-              {tipo === "prestacion" ? "Prestacion de Servicios" : "Nombramiento por Tiempo Determinado"}
+              {tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento por Tiempo Determinado"}
             </Badge>
             {prefilled && datosRenovacion && (
               <Badge variant="outline" className="border-secondary text-secondary gap-1">
-                <Lock className="h-3 w-3" />Renovacion — solo vigencia editable
+                <Lock className="h-3 w-3" />Renovación
               </Badge>
             )}
             {excelRows.length > 0 && (
@@ -3047,6 +3365,10 @@ export function NuevaSolicitudPage() {
               esRenovacion={esRenovacion === "si"}
               datosRenovacion={datosRenovacion}
               onFormChange={handleFormChange}
+              secretariaFija={userSecretariaOriginal}
+              unidadFija={userUAOriginal}
+              claveReportePlazas={userClaveReporte}
+              catalogoUAs={catalogoUAsDelUsuario}
             />
           ) : (
             <FormularioNombramiento
@@ -3055,17 +3377,23 @@ export function NuevaSolicitudPage() {
               excelRows={excelRows}
               datosRenovacion={datosRenovacion}
               onFormChange={handleFormChange}
+              secretariaFija={userSecretariaOriginal}
+              unidadFija={userUAOriginal}
+              claveReportePlazas={userClaveReporte}
+              catalogoUAs={catalogoUAsDelUsuario}
             />
           )}
 
           {(() => {
-            const periodoStillValid = regimenPeriodo && periodoSeleccionado
-              ? isPeriodoVigente(regimenPeriodo, periodoSeleccionado).vigente
-              : false
+            // Usar el calendario real de la API (periodoInfo) en lugar del mock
+            const periodoStillValid = periodoInfo?.enTiempo ?? false
             const hasPermiso = !!permisoActivo
-            const vigenciaOk = !esFechaPasada(formData.vigenciaInicio ?? "") &&
-                                !esFechaPasada(formData.vigenciaFin    ?? "") &&
-                                !!(formData.vigenciaInicio) && !!(formData.vigenciaFin)
+            // Con permiso especial relajamos la restricción de fecha pasada (captura extemporánea)
+            const vigenciaOk = hasPermiso
+              ? !!(formData.vigenciaInicio) && !!(formData.vigenciaFin)
+              : !esFechaPasada(formData.vigenciaInicio ?? "") &&
+                !esFechaPasada(formData.vigenciaFin    ?? "") &&
+                !!(formData.vigenciaInicio) && !!(formData.vigenciaFin)
             const canSend = (periodoStillValid || hasPermiso) && !enviando && !guardandoBorrador && vigenciaOk
 
             return (
@@ -3097,7 +3425,7 @@ export function NuevaSolicitudPage() {
                       disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso)}>
                       {enviando
                         ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
-                        : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validacion</>
+                        : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validación</>
                       }
                     </Button>
                   </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -8,25 +8,32 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
 import {
+
   Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
-  Loader2, Shield, CheckCircle2, ToggleLeft, Eye,
+  Loader2, Shield, CheckCircle2, ToggleLeft, Eye, Unlock, Trash2,
 } from "lucide-react"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { PageLayout } from "@/components/page-layout"
-import { useAutorizaciones } from "@/lib/autorizaciones-store"
+import { useAutorizaciones, type PermisoCaptura } from "@/lib/autorizaciones-store"
+import { useCalendario } from "@/lib/calendario-store"
+import { useAuth } from "@/lib/auth-context"
 import {
   fetchMenusTree, fetchPermisosUser, updatePermisosUser,
   type MenuNode, type PermisosUser,
 } from "@/lib/permisos-api"
 import { MenuPermisoTree } from "@/components/menu-permiso-tree"
 import {
+
   fetchCentralizadaTree,
+  fetchCategoriasParaestatal,
   type OrganoCentralizadoNode,
+  type CategoriaParaestatalItem,
 } from "@/lib/catalogo-api"
 
 const ROLES = ["Director Operativo", "Analista", "Revisor", "Capturista", "Administrador"]
@@ -103,9 +110,6 @@ function validarRFC(rfc: string): boolean {
   return rfcRegex.test(rfc.toUpperCase())
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   Secretaría Step Selector – wizard paso a paso
-   ═══════════════════════════════════════════════════════════════════ */
 
 const STEP_LABELS = ["Secretaría", "Dirección", "Subdirección", "Departamento", "Unidad"]
 
@@ -125,6 +129,21 @@ function findNodePath(
   return null
 }
 
+function flattenTree(
+  nodes: OrganoCentralizadoNode[],
+  path: OrganoCentralizadoNode[] = []
+): { node: OrganoCentralizadoNode; path: OrganoCentralizadoNode[] }[] {
+  const result: { node: OrganoCentralizadoNode; path: OrganoCentralizadoNode[] }[] = []
+  for (const node of nodes) {
+    const currentPath = [...path, node]
+    result.push({ node, path: currentPath })
+    if (node.children && node.children.length > 0) {
+      result.push(...flattenTree(node.children, currentPath))
+    }
+  }
+  return result
+}
+
 function HighlightText({ text, query }: { text: string; query: string }) {
   if (!query) return <>{text}</>
   const idx = text.toLowerCase().indexOf(query.toLowerCase())
@@ -139,27 +158,42 @@ function HighlightText({ text, query }: { text: string; query: string }) {
     </>
   )
 }
-
 function SecretariaTreeSelector({
   tree,
   treeLoading,
   selectedId,
   onSelect,
   error,
+  levelOffset = 0,
 }: {
   tree: OrganoCentralizadoNode[]
   treeLoading: boolean
   selectedId: string | null
   onSelect: (id: string | null, nombre: string, path: string[]) => void
   error?: string
+  levelOffset?: number
 }) {
   const [steps, setSteps] = useState<OrganoCentralizadoNode[]>([])
   const [searchQueries, setSearchQueries] = useState<Record<number, string>>({})
+  const [autocompleteQuery, setAutocompleteQuery] = useState("")
+
+  const allNodes = useMemo(() => flattenTree(tree), [tree])
+
+  const filteredNodes = useMemo(() => {
+    const q = autocompleteQuery.trim()
+    if (!q) return []
+    return allNodes
+      .filter(({ node }) => node.nombre.toLowerCase().includes(q.toLowerCase()))
+      .slice(0, 12)
+  }, [allNodes, autocompleteQuery])
 
   useEffect(() => {
     if (!selectedId || tree.length === 0) return
     const path = findNodePath(tree, selectedId)
-    if (path) setSteps(path)
+    if (path) {
+      setSteps(path)
+      setAutocompleteQuery(path.map((n) => n.nombre).join(" › "))
+    }
   }, [tree, selectedId])
 
   const handlePickAtLevel = (level: number, node: OrganoCentralizadoNode) => {
@@ -173,6 +207,7 @@ function SecretariaTreeSelector({
       return next
     })
     const pathNames = newSteps.map((n) => n.nombre)
+    setAutocompleteQuery(pathNames.join(" › "))
     onSelect(node.id, node.nombre, pathNames)
   }
 
@@ -188,8 +223,11 @@ function SecretariaTreeSelector({
     })
     if (newSteps.length > 0) {
       const last = newSteps[newSteps.length - 1]
-      onSelect(last.id, last.nombre, newSteps.map((n) => n.nombre))
+      const pathNames = newSteps.map((n) => n.nombre)
+      setAutocompleteQuery(pathNames.join(" › "))
+      onSelect(last.id, last.nombre, pathNames)
     } else {
+      setAutocompleteQuery("")
       onSelect(null, "", [])
     }
   }
@@ -197,6 +235,7 @@ function SecretariaTreeSelector({
   const handleReset = () => {
     setSteps([])
     setSearchQueries({})
+    setAutocompleteQuery("")
     onSelect(null, "", [])
   }
 
@@ -208,7 +247,7 @@ function SecretariaTreeSelector({
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground py-6 justify-center border border-border rounded-lg bg-muted/20">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Cargando estructura organizacional...
+        Cargando Estructura Organizacional...
       </div>
     )
   }
@@ -216,7 +255,7 @@ function SecretariaTreeSelector({
   const levels: { label: string; options: OrganoCentralizadoNode[]; selected: OrganoCentralizadoNode | null }[] = []
 
   levels.push({
-    label: STEP_LABELS[0],
+    label: STEP_LABELS[Math.min(levelOffset, STEP_LABELS.length - 1)],
     options: tree,
     selected: steps[0] ?? null,
   })
@@ -225,7 +264,7 @@ function SecretariaTreeSelector({
     const children = steps[i].children ?? []
     if (children.length > 0) {
       levels.push({
-        label: STEP_LABELS[Math.min(i + 1, STEP_LABELS.length - 1)],
+        label: STEP_LABELS[Math.min(levelOffset + i + 1, STEP_LABELS.length - 1)],
         options: children,
         selected: steps[i + 1] ?? null,
       })
@@ -239,7 +278,7 @@ function SecretariaTreeSelector({
         const filtered = query
           ? level.options.filter((n) => n.nombre.toLowerCase().includes(query.toLowerCase()))
           : level.options
-
+        const treeMatches = query && filtered.length === 0 ? filteredNodes : []
         return (
           <div key={idx} className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
@@ -277,26 +316,30 @@ function SecretariaTreeSelector({
 
             {!level.selected && (
               <div className="ml-7">
-                {level.options.length > 5 && (
+                {(level.options.length > 5 || idx === 0) && (
                   <div className="relative mb-1.5">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      placeholder={`Buscar ${level.label.toLowerCase()}...`}
+                      placeholder={idx === 0 ? "Escribir para buscar secretaría o unidad..." : `Buscar ${level.label.toLowerCase()}...`}
                       value={query}
-                      onChange={(e) => setSearchAtLevel(idx, e.target.value)}
-                      className="pl-8 h-8 text-xs bg-background"
-                      autoFocus
+                      onChange={(e) => {
+                        setSearchAtLevel(idx, e.target.value)
+                        setAutocompleteQuery(e.target.value)
+                      }}
+                      className={`pl-8 h-8 text-xs bg-background ${error && idx === 0 ? "border-destructive" : ""}`}
+                      autoFocus={idx !== 0}
                     />
                   </div>
                 )}
 
-                <div className={`rounded-lg border bg-card max-h-44 overflow-y-auto ${error && idx === 0 ? "border-destructive" : "border-border"}`}>
-                  {filtered.length === 0 ? (
+                <div className="rounded-lg border border-border bg-card max-h-44 overflow-y-auto">
+                  {filtered.length === 0 && treeMatches.length === 0 && (
                     <div className="flex flex-col items-center py-4 text-center">
                       <Search className="h-4 w-4 text-muted-foreground/30 mb-1" />
                       <p className="text-[11px] text-muted-foreground">Sin resultados para &ldquo;{query}&rdquo;</p>
                     </div>
-                  ) : (
+                  )}
+                  {filtered.length > 0 && (
                     <div className="divide-y divide-border/40">
                       {filtered.map((node) => {
                         const hasChildren = node.children && node.children.length > 0
@@ -322,8 +365,35 @@ function SecretariaTreeSelector({
                       })}
                     </div>
                   )}
+                  {treeMatches.length > 0 && (
+                    <div className="divide-y divide-border/40">
+                      {treeMatches.map(({ node, path }) => (
+                        <button
+                          key={node.id}
+                          type="button"
+                          className="w-full flex flex-col px-3 py-2 text-left hover:bg-primary/[0.05] transition-colors"
+                          onClick={() => {
+                            setSteps(path)
+                            const pathNames = path.map((n) => n.nombre)
+                            setAutocompleteQuery(pathNames.join(" › "))
+                            setSearchQueries({})
+                            onSelect(node.id, node.nombre, pathNames)
+                          }}
+                        >
+                          <span className="text-xs font-medium text-foreground truncate">
+                            <HighlightText text={node.nombre} query={query} />
+                          </span>
+                          {path.length > 1 && (
+                            <span className="text-[10px] text-muted-foreground truncate">
+                              {path.slice(0, -1).map((n) => n.nombre).join(" › ")}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {error && idx === 0 && <span className="text-[10px] text-destructive mt-0.5">{error}</span>}
+                {error && idx === 0 && <span className="text-[10px] text-destructive mt-0.5 block">{error}</span>}
               </div>
             )}
           </div>
@@ -342,6 +412,24 @@ function SecretariaTreeSelector({
       )}
     </div>
   )
+}
+
+function paraestatalToTree(cats: CategoriaParaestatalItem[]): OrganoCentralizadoNode[] {
+  return cats.map((cat) => ({
+    id: `cat-${cat.id}`,
+    nombre: cat.nombre,
+    orden: cat.orden,
+    tipo: "categoria",
+    parent_id: null,
+    children: cat.organos.map((org) => ({
+      id: `org-${org.id}`,
+      nombre: org.nombre,
+      orden: org.orden,
+      tipo: "organo",
+      parent_id: `cat-${cat.id}`,
+      children: [],
+    })),
+  }))
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -363,6 +451,9 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     secretaria: "",
     secretariaId: null as string | null,
     secretariaPath: [] as string[],
+    unidad: "",
+    unidadId: null as string | null,
+    unidadPath: [] as string[],
     estatus: "Activo" as "Activo" | "Inactivo",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -370,13 +461,26 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const [apiError, setApiError] = useState("")
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
+  const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">("centralizada")
 
   useEffect(() => {
-    fetchCentralizadaTree()
+    setTreeLoading(true)
+    setTree([])
+    const promise = tipoAdmin === "centralizada"
+      ? fetchCentralizadaTree()
+      : fetchCategoriasParaestatal().then(paraestatalToTree)
+    promise
       .then(setTree)
       .catch(() => setTree([]))
       .finally(() => setTreeLoading(false))
-  }, [])
+  }, [tipoAdmin])
+
+  const unidadTree = useMemo((): OrganoCentralizadoNode[] => {
+    if (!form.secretariaId) return []
+    const path = findNodePath(tree, form.secretariaId)
+    const selectedNode = path?.[path.length - 1]
+    return selectedNode?.children ?? []
+  }, [tree, form.secretariaId])
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -397,16 +501,24 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     setLoading(true)
     setApiError("")
     try {
-      const secretariaTexto = form.secretariaPath.length > 0
-        ? form.secretariaPath.join(" > ")
-        : form.secretaria
+      const nodePath = form.secretariaId ? findNodePath(tree, form.secretariaId) : null
+      const rootNombre = nodePath?.[0]?.nombre ?? form.secretariaPath[0] ?? form.secretaria
+      const uaNombre = nodePath && nodePath.length > 1
+        ? (nodePath[1].ua_clave_administrativa ?? nodePath[1].nombre)
+        : null
+      const secretariaTexto = uaNombre ? `${rootNombre} > ${uaNombre}` : rootNombre
+      const rawSecretariaId = form.secretariaId?.startsWith("org-")
+        ? form.secretariaId.slice(4)
+        : form.secretariaId?.startsWith("cat-")
+          ? null
+          : form.secretariaId
       const nuevo = await crearUsuario({
         nombre:          form.nombre,
         correo:          form.correo,
         rfc:             form.rfc.toUpperCase(),
         password:        form.password,
         rolNombre:       form.rol,
-        secretariaId:    form.secretariaId,
+        secretariaId:    rawSecretariaId,
         secretariaTexto,
       })
       onSaved(nuevo)
@@ -423,13 +535,15 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     label: string,
     type = "text",
     placeholder = "",
-    hint?: string
+    hint?: string,
+    autoComplete = "off"
   ) => (
     <div className="flex flex-col gap-1.5">
       <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
       <Input
         type={type}
         placeholder={placeholder}
+        autoComplete={autoComplete}
         value={form[key] as string}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
         className={`bg-background h-9 text-xs ${errors[key] ? "border-destructive" : ""}`}
@@ -475,9 +589,21 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               <div className="sm:col-span-2">
                 {field("nombre", "Nombre completo", "text", "Ej. Juan Pérez García")}
               </div>
-              {field("correo",   "Correo electrónico", "email",    "usuario@gobierno.gob.mx")}
-              {field("rfc",      "RFC",                "text",     "ABCD850101XYZ", "Opcional — 13 caracteres")}
-              {field("password", "Contraseña",         "password", "Mínimo 6 caracteres")}
+              {field("correo",   "Correo electrónico", "email",    "usuario@gobierno.gob.mx", undefined, "email")}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">RFC</Label>
+                <Input
+                  placeholder="ABCD850101XYZ"
+                  value={form.rfc}
+                  autoComplete="off"
+                  onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
+                  className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+                  maxLength={13}
+                />
+                {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
+                {errors.rfc  && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
+              </div>
+              {field("password", "Contraseña",         "password", "Mínimo 6 caracteres", undefined, "new-password")}
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
@@ -507,7 +633,26 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </div>
           </div>
 
-          {/* Secretaría selector */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
+            <Select
+              value={tipoAdmin}
+              onValueChange={(v) => {
+                setTipoAdmin(v as "centralizada" | "paraestatal")
+                setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
+              }}
+            >
+              <SelectTrigger className="bg-background h-9 text-xs">
+                <SelectValue placeholder="Seleccione tipo de administración" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="centralizada">Administración Centralizada</SelectItem>
+                <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Secretaría  */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -525,6 +670,9 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                   secretariaId: id,
                   secretaria: nombre,
                   secretariaPath: path,
+                  unidad: "",
+                  unidadId: null,
+                  unidadPath: [],
                 }))
               }
             />
@@ -560,10 +708,11 @@ type EditarUsuarioModalProps = {
 }
 
 function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalProps) {
+  const rfcLimpio = usuario.rfc?.trim().toUpperCase() ?? ""
   const [form, setForm] = useState({
-    nombre:          usuario.nombre,
-    correo:          usuario.correo,
-    rfc:             usuario.rfc ?? "",
+    nombre:          usuario.nombre.trim(),
+    correo:          /\S+@\S+\.\S+/.test(usuario.correo) ? usuario.correo : "",
+    rfc:             validarRFC(rfcLimpio) ? rfcLimpio : "",
     rol:             usuario.rol,
     secretaria:      usuario.secretaria,
     secretariaId:    usuario.secretariaId,
@@ -577,13 +726,62 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   const [apiError, setApiError] = useState("")
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
+  const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">("centralizada")
+  const initializedRef = useRef(false)
 
+  // Auto-detect type on first load: try centralizada, if secretariaId not found try paraestatal
   useEffect(() => {
+    setTreeLoading(true)
     fetchCentralizadaTree()
+      .then((central) => {
+        if (usuario.secretariaId) {
+          const found = findNodePath(central, usuario.secretariaId)
+          if (!found) {
+            // Not in centralizada — load paraestatal
+            fetchCategoriasParaestatal()
+              .then((cats) => {
+                const paraTree = paraestatalToTree(cats)
+                const paraFound = findNodePath(paraTree, `org-${usuario.secretariaId}`)
+                if (paraFound) {
+                  initializedRef.current = true
+                  setTipoAdmin("paraestatal")
+                  setTree(paraTree)
+                  setForm((f) => ({ ...f, secretariaId: `org-${usuario.secretariaId}` }))
+                } else {
+                  setTree(central)
+                }
+              })
+              .catch(() => setTree(central))
+              .finally(() => {
+                initializedRef.current = true
+                setTreeLoading(false)
+              })
+            return
+          }
+        }
+        initializedRef.current = true
+        setTree(central)
+        setTreeLoading(false)
+      })
+      .catch(() => {
+        initializedRef.current = true
+        setTreeLoading(false)
+      })
+  }, [])
+
+  // Reload tree when user manually changes tipoAdmin (skip initial render)
+  useEffect(() => {
+    if (!initializedRef.current) return
+    setTreeLoading(true)
+    setTree([])
+    const promise = tipoAdmin === "centralizada"
+      ? fetchCentralizadaTree()
+      : fetchCategoriasParaestatal().then(paraestatalToTree)
+    promise
       .then(setTree)
       .catch(() => setTree([]))
       .finally(() => setTreeLoading(false))
-  }, [])
+  }, [tipoAdmin])
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -604,16 +802,29 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     setLoading(true)
     setApiError("")
     try {
-      const secretariaTexto = form.secretariaPath.length > 0
-        ? form.secretariaPath.join(" > ")
-        : form.secretaria
+      let secretariaTexto: string
+      if (form.secretariaPath.length > 0) {
+        const nodePath = form.secretariaId ? findNodePath(tree, form.secretariaId) : null
+        const rootNombre = nodePath?.[0]?.nombre ?? form.secretariaPath[0]
+        const uaNombre = nodePath && nodePath.length > 1
+          ? (nodePath[1].ua_clave_administrativa ?? nodePath[1].nombre)
+          : null
+        secretariaTexto = uaNombre ? `${rootNombre} > ${uaNombre}` : rootNombre
+      } else {
+        secretariaTexto = form.secretaria
+      }
+      const rawSecretariaId = form.secretariaId?.startsWith("org-")
+        ? form.secretariaId.slice(4)
+        : form.secretariaId?.startsWith("cat-")
+          ? null
+          : form.secretariaId
       const payload: Record<string, unknown> = {
         nombre:          form.nombre,
         correo:          form.correo,
         rfc:             form.rfc ? form.rfc.toUpperCase() : null,
         rolNombre:       form.rol,
         activo:          form.estatus === "Activo",
-        secretariaId:    form.secretariaId,
+        secretariaId:    rawSecretariaId,
         secretariaTexto,
       }
       if (form.password) payload.password = form.password
@@ -632,13 +843,15 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     label: string,
     type = "text",
     placeholder = "",
-    hint?: string
+    hint?: string,
+    autoComplete = "off"
   ) => (
     <div className="flex flex-col gap-1.5">
       <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
       <Input
         type={type}
         placeholder={placeholder}
+        autoComplete={autoComplete}
         value={form[key] as string}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
         className={`bg-background h-9 text-xs ${errors[key] ? "border-destructive" : ""}`}
@@ -685,7 +898,19 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 {field("nombre", "Nombre completo", "text", "Ej. Juan Pérez García")}
               </div>
               {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx")}
-              {field("rfc",    "RFC",                "text",  "ABCD850101XYZ", "Opcional — 13 caracteres")}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">RFC</Label>
+                <Input
+                  placeholder="ABCD850101XYZ"
+                  value={form.rfc}
+                  autoComplete="off"
+                  onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
+                  className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+                  maxLength={13}
+                />
+                {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
+                {errors.rfc  && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
+              </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
@@ -713,6 +938,26 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 </Select>
               </div>
             </div>
+          </div>
+
+          {/* Tipo de administración */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
+            <Select
+              value={tipoAdmin}
+              onValueChange={(v) => {
+                setTipoAdmin(v as "centralizada" | "paraestatal")
+                setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [] }))
+              }}
+            >
+              <SelectTrigger className="bg-background h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="centralizada">Administración Centralizada</SelectItem>
+                <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Secretaría selector */}
@@ -745,8 +990,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               <div className="flex-1 border-t border-border" />
             </div>
             <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
-              {field("password",        "Nueva contraseña",     "password", "Dejar en blanco para no cambiar")}
-              {field("confirmPassword", "Confirmar contraseña", "password", "Repite la nueva contraseña")}
+              {field("password",        "Nueva contraseña",     "password", "Dejar en blanco para no cambiar", undefined, "new-password")}
+              {field("confirmPassword", "Confirmar contraseña", "password", "Repite la nueva contraseña",        undefined, "new-password")}
             </div>
           </div>
         </div>
@@ -768,10 +1013,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     </div>
   )
 }
-
-/* ═══════════════════════════════════════════════════════════════════
-   Modal: Permisos de menús
-   ═══════════════════════════════════════════════════════════════════ */
 
 function samePermisos(a: PermisosUser, b: PermisosUser): boolean {
   if (a.menuIds.length !== b.menuIds.length) return false
@@ -795,7 +1036,6 @@ type PermisoModalProps = {
   usuario: Usuario
   onClose: () => void
 }
-
 function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   const [tree, setTree] = useState<MenuNode[] | null>(null)
   const [treeLoading, setTreeLoading] = useState(true)
@@ -805,6 +1045,33 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   const [permisosSaveLoading, setPermisosSaveLoading] = useState(false)
   const [permisosSaveError, setPermisosSaveError] = useState<string | null>(null)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const { habilitarPermiso, revocarPermiso, getPermisosUsuario } = useAutorizaciones()
+  const { honorarios: calHon, asimilados: calAs, nombramiento: calNom } = useCalendario()
+  const { user: currentUser } = useAuth()
+  const [capturaHabilitada, setCapturaHabilitada] = useState(false)
+  const [regimenCap, setRegimenCap] = useState<"honorarios" | "asimilados" | "nombramiento" | "">("")
+  const [periodoCap, setPeriodoCap]  = useState("")
+  const [captSaved,  setCaptSaved]   = useState(false)
+  const permisosCaptura = getPermisosUsuario(usuario.id)
+  const activosCaptura  = permisosCaptura.filter((p) => p.active && !p.used)
+  const periodoOpcionesCap = regimenCap === "honorarios"
+    ? calHon.map((r) => r.mes)
+    : regimenCap === "asimilados"
+    ? calAs.map((r) => r.quincena)
+    : regimenCap === "nombramiento"
+    ? calNom.map((r) => r.quincena)
+    : []
+
+  const handleHabilitarCaptura = async () => {
+    if (!regimenCap || !periodoCap) return
+    try {
+      await habilitarPermiso({ userId: usuario.id, regimen: regimenCap, periodo: periodoCap, grantedBy: currentUser?.nombre ?? "Administrador" })
+      setCaptSaved(true)
+      setRegimenCap("")
+      setPeriodoCap("")
+      setTimeout(() => setCaptSaved(false), 2500)
+    } catch { /* silencioso */ }
+  }
 
   const isDirty = useMemo(() => {
     if (permisos == null || initialPermisos == null) return false
@@ -856,7 +1123,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
       return next
     })
   }, [])
-
   const handleSavePermisos = useCallback(async () => {
     if (permisos == null) return
     setPermisosSaveError(null)
@@ -867,22 +1133,19 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
       setInitialPermisos(updated)
       onClose()
     } catch (e) {
-      setPermisosSaveError(e instanceof Error ? e.message : "Error al guardar")
+      setPermisosSaveError(e instanceof Error ? e.message : "Error al Guardar ")
     } finally {
       setPermisosSaveLoading(false)
     }
   }, [usuario.id, permisos, onClose])
-
   const requestClose = useCallback(() => {
     if (isDirty) setShowCloseConfirm(true)
     else onClose()
   }, [isDirty, onClose])
-
   const handleCloseWithoutSave = useCallback(() => {
     setShowCloseConfirm(false)
     onClose()
   }, [onClose])
-
   const handleSaveAndClose = useCallback(async () => {
     if (permisos == null) return
     setPermisosSaveError(null)
@@ -937,10 +1200,10 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
                 Permisos de menús
               </h2>
               <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
-            </div>
+          </div>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={requestClose}>
-            <X className="h-4 w-4" />
+          <X className="h-4 w-4" />
           </Button>
         </div>
 
@@ -948,7 +1211,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
           {permisosLoading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
               <Loader2 className="h-5 w-5 animate-spin" />
-              Cargando permisos del usuario...
+              Cargando permisos del usuario... lo que quiero es que 
             </div>
           )}
           {!permisosLoading && permisos != null && tree != null && tree.length > 0 && (
@@ -956,28 +1219,20 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
               <div className="flex items-center gap-4 rounded-lg bg-muted/40 border border-border px-4 py-3">
                 <div className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">Menús activos:</span>
+                  <span className="text-muted-foreground">Menús Activos:</span>
                   <Badge variant="secondary" className="font-mono">
                     {permisos.menuIds.length}
                   </Badge>
                 </div>
-                <Separator orientation="vertical" className="h-5" />
-                <div className="flex items-center gap-2 text-sm">
-                  <ToggleLeft className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">Acciones activas:</span>
-                  <Badge variant="secondary" className="font-mono">
-                    {Object.values(permisos.menuActions).reduce((sum, arr) => sum + arr.length, 0)}
-                  </Badge>
-                </div>
-              </div>
 
+              </div>
               <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50/50 border border-blue-200/50 rounded-md px-3 py-2.5">
                 <Eye className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-500" />
                 <span>
-                  Active o desactive secciones completas con el switch principal. Las acciones (Crear, Editar, Ver, etc.) aparecen como etiquetas que puede activar o desactivar con un clic.
+                  Active o desactive secciones completas con el switch principal.
+                  Las acciones (Crear, Editar, Ver, etc.)  aparecen como etiquetas que puede activar o desactivar con un clic.
                 </span>
               </div>
-
               {treeLoading ? (
                 <p className="text-sm text-muted-foreground">Cargando árbol de menús...</p>
               ) : (
@@ -992,13 +1247,111 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
                   />
                 </div>
               )}
+            </>
+          )}
+          {!permisosLoading && permisos != null && (!tree || tree.length === 0) && !treeLoading && (
+            <p className="text-sm text-muted-foreground py-4">No hay menús configurados.</p>
+          )}
+          {!permisosLoading && permisos != null && (
+            <>
+              <div
+                className={`rounded-lg transition-all ${
+                  capturaHabilitada
+                    ? "bg-primary/[0.03] border border-primary/10"
+                    : "bg-transparent border border-transparent hover:bg-muted/30"
+                }`}
+              >
+                <div className="flex items-center gap-3 px-3 py-2.5">
+                  <Switch
+                    id="habilitar-captura-switch"
+                    checked={capturaHabilitada}
+                    onCheckedChange={(v) => {
+                      setCapturaHabilitada(v)
+                      if (!v) { setRegimenCap(""); setPeriodoCap(""); setCaptSaved(false) }
+                    }}
+                    className="shrink-0"
+                  />
+                  <label
+                    htmlFor="habilitar-captura-switch"
+                    className={`text-sm font-medium cursor-pointer flex-1 ${capturaHabilitada ? "text-card-foreground" : "text-muted-foreground"}`}
+                  >
+                    Habilitar captura
+                  </label>
+                  {activosCaptura.length > 0 && (
+                    <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                      {activosCaptura.length}
+                    </Badge>
+                  )}
+                </div>
+
+                {capturaHabilitada && (
+                  <div className="flex flex-col gap-3 px-3 pb-3 ml-11">
+                    {activosCaptura.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        {activosCaptura.map((p, i) => (
+                          <div key={i} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs font-medium text-card-foreground">{p.regimen} · {p.periodo}</span>
+                              <span className="text-[10px] text-muted-foreground">Otorgado: {p.grantedAt} por {p.grantedBy}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void revocarPermiso(p.id)}
+                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                              title="Revocar permiso"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-sm">Régimen</Label>
+                      <Select value={regimenCap} onValueChange={(v) => { setRegimenCap(v as typeof regimenCap); setPeriodoCap("") }}>
+                        <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
+                        <SelectContent className="z-[200]">
+                          <SelectItem value="honorarios">Honorarios</SelectItem>
+                          <SelectItem value="asimilados">Asimilados a Salarios</SelectItem>
+                          <SelectItem value="nombramiento">Nombramiento TD</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {regimenCap && (
+                      <div className="flex flex-col gap-2">
+                        <Label className="text-sm">{regimenCap === "honorarios" ? "Mes" : "Quincena"} de aplicación</Label>
+                        <Select value={periodoCap} onValueChange={setPeriodoCap}>
+                          <SelectTrigger className="bg-background">
+                            <SelectValue placeholder={`Seleccione ${regimenCap === "honorarios" ? "mes" : "quincena"}`} />
+                          </SelectTrigger>
+                          <SelectContent className="z-[200]">
+                            {periodoOpcionesCap.map((p) => (
+                              <SelectItem key={p} value={p}>{p}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {captSaved && (
+                      <div className="flex items-center gap-2 rounded-md bg-secondary/10 border border-secondary/30 px-3 py-2 text-sm text-secondary">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Permiso Otorgado Correctamente
+                      </div>
+                    )}
+                    <Button size="sm" className="self-start" onClick={handleHabilitarCaptura} disabled={!regimenCap || !periodoCap}>
+                      <Unlock className="h-3.5 w-3.5 mr-1.5" />
+                      Habilitar
+                    </Button>
+                  </div>
+                )}
+              </div>
 
               <div className="flex items-center gap-3 pt-3 border-t border-border shrink-0">
                 <Button
                   onClick={() => void handleSavePermisos()}
                   disabled={permisosSaveLoading}
                   className="min-w-[140px]"
-                >
+                  >
                   {permisosSaveLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
@@ -1012,11 +1365,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
               </div>
             </>
           )}
-          {!permisosLoading && permisos != null && (!tree || tree.length === 0) && !treeLoading && (
-            <p className="text-sm text-muted-foreground py-4">No hay menús configurados.</p>
-          )}
         </div>
-
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
           <Button variant="outline" size="sm" className="text-xs h-9" onClick={requestClose}>Cerrar</Button>
         </div>
@@ -1025,6 +1374,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     </>
   )
 }
+
 
 /* ═══════════════════════════════════════════════════════════════════
    Página principal de Usuarios
@@ -1035,9 +1385,10 @@ export function UsuariosPage() {
   const [loading,       setLoading]       = useState(true)
   const [loadError,     setLoadError]     = useState("")
   const [searchTerm,    setSearchTerm]    = useState("")
-  const [permisoUserId, setPermisoUserId] = useState<string | null>(null)
-  const [editingUserId, setEditingUserId] = useState<string | null>(null)
-  const [showNewForm,   setShowNewForm]   = useState(false)
+  const [permisoUserId,         setPermisoUserId]         = useState<string | null>(null)
+  const [editingUserId,         setEditingUserId]         = useState<string | null>(null)
+  const [showNewForm,           setShowNewForm]           = useState(false)
+  const [newFormKey,            setNewFormKey]            = useState(0)
   const { permisos } = useAutorizaciones()
 
   useEffect(() => {
@@ -1056,8 +1407,8 @@ export function UsuariosPage() {
       row.secretaria.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const hasActivePermiso = (nombre: string) =>
-    permisos.some((p) => p.userId === nombre && p.active && !p.used)
+  const hasActivePermiso = (id: string) =>
+    permisos.some((p) => p.userId === id && p.active && !p.used)
 
   const toggleEstatus = async (u: Usuario) => {
     try {
@@ -1067,10 +1418,8 @@ export function UsuariosPage() {
       alert(err instanceof Error ? err.message : "Error")
     }
   }
-
-  const usuarioEditando = editingUserId ? usuarios.find((u) => u.id === editingUserId) ?? null : null
-  const usuarioPermiso  = permisoUserId ? usuarios.find((u) => u.id === permisoUserId)  ?? null : null
-
+  const usuarioEditando       = editingUserId         ? usuarios.find((u) => u.id === editingUserId)         ?? null : null
+  const usuarioPermiso        = permisoUserId         ? usuarios.find((u) => u.id === permisoUserId)         ?? null : null
   return (
     <PageLayout
       title="Usuarios"
@@ -1087,8 +1436,9 @@ export function UsuariosPage() {
       {/* Modales */}
       {showNewForm && (
         <NuevoUsuarioModal
-          onClose={() => setShowNewForm(false)}
-          onSaved={(u) => setUsuarios((prev) => [...prev, u])}
+          key={newFormKey}
+          onClose={() => { setShowNewForm(false); setNewFormKey((k) => k + 1) }}
+          onSaved={(u) => { setUsuarios((prev) => [...prev, u]); setShowNewForm(false); setNewFormKey((k) => k + 1) }}
         />
       )}
       {usuarioEditando && (
@@ -1149,7 +1499,7 @@ export function UsuariosPage() {
                     <td className="px-4 py-3 font-medium text-card-foreground">
                       <div className="flex items-center gap-2">
                         {row.nombre}
-                        {hasActivePermiso(row.nombre) && (
+                        {hasActivePermiso(row.id) && (
                           <span className="inline-block h-2 w-2 rounded-full bg-secondary shrink-0" title="Permiso activo" />
                         )}
                       </div>
@@ -1159,7 +1509,9 @@ export function UsuariosPage() {
                       {row.rfc ?? <span className="text-muted-foreground/50 italic">—</span>}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px]">{row.secretaria}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px]">
+                      {row.secretaria?.split(" > ")[0] ?? "—"}
+                    </td>
                     <td className="px-4 py-3">
                       {row.estatus === "Activo" ? (
                         <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary/90">Activo</Badge>

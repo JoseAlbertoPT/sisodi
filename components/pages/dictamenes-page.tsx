@@ -44,10 +44,8 @@ const INICIALES_MES_MAP: Record<string, string> = {
   "09": "SE", "10": "OC", "11": "NO", "12": "DI",
 }
 
-
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio || folio === "—") return "—"
-
 
   const matchLegacy = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
   if (matchLegacy) {
@@ -475,7 +473,7 @@ export function DictamenesPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Núm. Dictamen</th>
+                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Dictamen</th>
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Recepción</th>
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Secretaría</th>
                     <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Tipo</th>

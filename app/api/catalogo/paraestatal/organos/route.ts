@@ -5,14 +5,9 @@ function err(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status })
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const categoriaId = req.nextUrl.searchParams.get("categoriaId")
-    const where = categoriaId ? { categoria_id: Number(categoriaId) } : {}
-
     const organos = await prisma.organo_paraestatal.findMany({
-      where,
-      include: { categoria: true },
       orderBy: [{ orden: "asc" }, { nombre: "asc" }],
     })
     return NextResponse.json(organos)
@@ -24,17 +19,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { nombre, categoriaId, orden } = await req.json()
+    const { nombre, categoriaId, orden, ua_clave_administrativa, clave_reporte_plazas } = await req.json()
     if (!nombre?.trim()) return err("El nombre es requerido")
     if (!categoriaId) return err("La categoría es requerida")
 
     const created = await prisma.organo_paraestatal.create({
       data: {
         nombre: nombre.trim(),
-        categoria_id: Number(categoriaId),
+        categoria_id: categoriaId,
         orden: orden ?? 0,
+        ua_clave_administrativa: ua_clave_administrativa?.trim() || null,
+        clave_reporte_plazas: clave_reporte_plazas?.trim() || null,
       },
-      include: { categoria: true },
     })
     return NextResponse.json(created, { status: 201 })
   } catch (e) {

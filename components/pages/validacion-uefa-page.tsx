@@ -61,6 +61,7 @@ interface UefaSolicitud {
   tipoFirma?: string | null
   destinatarios?: string[]
   firmadoPor?: { reviso: string; valido: string; emitio: string } | null
+  secretariaId: string | null
   objeto: string
   actividades: string[]
   responsabilidades: string[]
@@ -230,6 +231,7 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
       valido: validadorEntry?.usuario?.nombre ?? "—",
       emitio: emisorEntry?.usuario?.nombre    ?? "—",
     },
+    secretariaId: item.usuario?.secretaria_id ?? null,
     _raw: item,
   }
 }
@@ -700,15 +702,94 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
   )
 }
 
+function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: {
+  open: boolean; onClose: () => void
+  onConfirm: (revisorId: string) => void
+  folio: string; secretariaId: string | null
+}) {
+  const [revisores,   setRevisores]   = useState<{ id: string; nombre: string }[]>([])
+  const [cargando,    setCargando]    = useState(false)
+  const [seleccionado, setSeleccionado] = useState<string>("")
+
+  useEffect(() => {
+    if (!open) { setSeleccionado(""); return }
+    setCargando(true)
+    const params = new URLSearchParams({ rol: "Revisor" })
+    if (secretariaId) params.set("secretariaId", secretariaId)
+    fetch(`/api/usuarios?${params}`)
+      .then(r => r.json())
+      .then(data => setRevisores(Array.isArray(data) ? data : []))
+      .catch(() => setRevisores([]))
+      .finally(() => setCargando(false))
+  }, [open, secretariaId])
+
+  const handleClose = () => { setSeleccionado(""); onClose() }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <CheckCircle2 className="h-5 w-5 text-primary" />Aprobar y Asignar Revisor
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Seleccione el Revisor que revisará la solicitud <strong>{folio}</strong>.
+        </p>
+        {cargando ? (
+          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+          </div>
+        ) : revisores.length === 0 ? (
+          <div className="flex items-center gap-2 py-4 text-sm text-destructive">
+            <AlertTriangle className="h-4 w-4" />No hay usuarios con rol Revisor en su secretaría.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto py-1">
+            {revisores.map(r => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setSeleccionado(r.id)}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors ${
+                  seleccionado === r.id
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted text-card-foreground"
+                }`}
+              >
+                {seleccionado === r.id
+                  ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  : <span className="h-4 w-4 shrink-0 rounded-full border border-muted-foreground/40 inline-block" />
+                }
+                {r.nombre}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button
+            onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
+            disabled={!seleccionado || cargando}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+          >
+            <CheckCircle2 className="h-4 w-4" />Confirmar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustificacion, guardando }: {
   solicitud: UefaSolicitud; onBack: () => void
   onAprobar: (id: number) => void; onObservar: (id: number) => void
   onFirmarJustificacion: (id: number) => void; guardando: boolean
 }) {
-  const [showObservarModal,  setShowObservarModal]  = useState(false)
+  const [showObservarModal, setShowObservarModal] = useState(false)
+  const [showFirmarConfirm, setShowFirmarConfirm] = useState(false)
+  const [showDictamen,      setShowDictamen]      = useState(false)
   const [showAprobarConfirm, setShowAprobarConfirm] = useState(false)
-  const [showFirmarConfirm,  setShowFirmarConfirm]  = useState(false)
-  const [showDictamen,       setShowDictamen]       = useState(false)
 
   const tab                = getTabForEstado(solicitud.estado)
   const isNueva            = tab === "Nuevas"
@@ -902,8 +983,8 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         open={showAprobarConfirm}
         onClose={() => setShowAprobarConfirm(false)}
         onConfirm={() => { setShowAprobarConfirm(false); onAprobar(solicitud.id) }}
-        title="¿Aprobar y enviar al Revisor?"
-        description={`La solicitud ${solicitud.folioJustificacion} será enviada al Revisor para su revisión.`}
+        title="¿Aprobar y enviar a Validación?"
+        description={`La solicitud ${solicitud.folioJustificacion} será enviada a la Bandeja de Validación Final (DO).`}
         confirmLabel="Sí, aprobar"
         icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
@@ -964,20 +1045,20 @@ export function ValidacionUefaPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           solicitudId: id,
-          nuevoEstado: "En Revision Revisor",
+          nuevoEstado: "En Validacion Final",
           usuarioId:   (user as any)?.id ?? "",
-          comentario:  "Aprobada por Validacion de Justificaciones → Revisor",
+          comentario:  "Aprobada por Validacion de Justificaciones → Enviada a Validación Final (DO)",
         }),
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? "Error al aprobar"); return }
       setSolicitudes(prev => prev.map(s => s.id === id ? {
         ...s,
-        estado: "En Revision Revisor",
+        estado: "En Validacion Final",
         historial: [...s.historial, {
           fecha:   formatFechaHora(new Date().toISOString()),
           usuario: (user as any)?.nombre ?? "Validacion",
-          accion:  "Aprobada → Enviada al Revisor",
+          accion:  "Aprobada → Enviada a Validación Final (DO)",
         }],
       } : s))
       setSelectedId(null)
@@ -1032,20 +1113,20 @@ export function ValidacionUefaPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           solicitudId: id,
-          nuevoEstado: "En Validacion Final",
+          nuevoEstado: "Pendiente Firma Dictamen",
           usuarioId:   (user as any)?.id ?? "",
-          comentario:  "Justificacion firmada por Validacion — enviada a Validacion Final",
+          comentario:  "Justificacion firmada por Validacion — enviada a Emision (Filtro 3) para firma dictamen",
         }),
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? "Error al firmar"); return }
       setSolicitudes(prev => prev.map(s => s.id === id ? {
         ...s,
-        estado: "En Validacion Final",
+        estado: "Pendiente Firma Dictamen",
         historial: [...s.historial, {
           fecha:   formatFechaHora(new Date().toISOString()),
           usuario: (user as any)?.nombre ?? "Validacion",
-          accion:  "Justificacion firmada → Enviada a Validacion Final",
+          accion:  "Justificacion firmada → Enviada a Emision para firma dictamen",
         }],
       } : s))
       setSelectedId(null)
@@ -1272,8 +1353,8 @@ export function ValidacionUefaPage() {
         open={!!aprobarTargetId}
         onClose={() => setAprobarTargetId(null)}
         onConfirm={() => { if (aprobarTargetId) handleAprobar(aprobarTargetId) }}
-        title="¿Aprobar y enviar al Revisor?"
-        description={`La solicitud ${solicitudes.find(s => s.id === aprobarTargetId)?.folioJustificacion ?? ""} será enviada al Revisor para su revisión.`}
+        title="¿Aprobar y enviar a Validación?"
+        description={`La solicitud ${solicitudes.find(s => s.id === aprobarTargetId)?.folioJustificacion ?? ""} será enviada a la Bandeja de Validación Final (DO).`}
         confirmLabel="Sí, aprobar"
         icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />

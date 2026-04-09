@@ -11,6 +11,8 @@ interface FlatNode {
   orden: number
   tipo: string | null
   parent_id: string | null
+  ua_clave_administrativa: string | null
+  clave_reporte_plazas: string | null
 }
 
 interface TreeNode extends FlatNode {
@@ -57,8 +59,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { nombre, parentId, orden, tipo } = await req.json()
+    const { nombre, parentId, orden, tipo, ua_clave_administrativa, clave_reporte_plazas } = await req.json()
     if (!nombre?.trim()) return err("El nombre es requerido")
+
+    const duplicate = await prisma.organo_centralizado.findFirst({
+      where: {
+        nombre: { equals: nombre.trim(), mode: "insensitive" },
+        parent_id: parentId || null,
+      },
+    })
+    if (duplicate) return err("Ya existe un registro con ese nombre")
 
     const created = await prisma.organo_centralizado.create({
       data: {
@@ -66,6 +76,8 @@ export async function POST(req: NextRequest) {
         parent_id: parentId || null,
         orden: orden ?? 0,
         tipo: tipo || null,
+        ua_clave_administrativa: ua_clave_administrativa?.trim() || null,
+        clave_reporte_plazas: clave_reporte_plazas?.trim() || null,
       },
     })
     return NextResponse.json(created, { status: 201 })

@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-// folios
-const INICIALES_MES: Record<number, string> = {
-  1: "EN", 2: "FE", 3: "MR", 4: "AB",
-  5: "MY", 6: "JN", 7: "JL", 8: "AG",
-  9: "SE", 10: "OC", 11: "NO", 12: "DI",
-}
-
 async function generarFolioDictamen(tipo: "dictamen" | "opinion"): Promise<string> {
   const ahora = new Date()
   const mes   = ahora.getMonth() + 1
   const anio  = ahora.getFullYear()
-  const ini   = INICIALES_MES[mes] ?? "XX"
   const clave = tipo === "dictamen" ? "DICT" : "OPI"
 
   const registro = await prisma.consecutivo_folio.upsert({
@@ -21,8 +13,9 @@ async function generarFolioDictamen(tipo: "dictamen" | "opinion"): Promise<strin
     create: { tipo: clave, mes, anio, consecutivo: 1 },
   })
 
-  const num = String(registro.consecutivo ?? 1).padStart(3, "0")
-  return `${ini}-${num}-${anio}`
+  const num     = String(registro.consecutivo ?? 1).padStart(3, "0")
+  const mesPad  = String(mes).padStart(2, "0")
+  return `${num}/${mesPad}/${anio}`
 }
 
 export async function GET(req: NextRequest) {
@@ -87,16 +80,10 @@ export async function GET(req: NextRequest) {
             if (s) destinatarios.push(s)
           })
         }
-        let firmadoPor: { reviso: string; valido: string; emitio: string } | null = null
-        const mFirma = comentario.match(
-          /Revis[oó]:\s*([^|]+)\|\s*Valid[oó]:\s*([^|]+)\|\s*Emiti[oó]:\s*(.+)/
-        )
-        if (mFirma) {
-          firmadoPor = {
-            reviso: mFirma[1].trim(),
-            valido: mFirma[2].trim(),
-            emitio: mFirma[3].trim(),
-          }
+        const firmadoPor = {
+          reviso: "Revisor",
+          valido: "Validación Final",
+          emitio: "Emisor",
         }
 
         return {

@@ -6,11 +6,24 @@ function err(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status })
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url)
+    const rolFiltro         = searchParams.get("rol")
+    const secretariaIdFiltro = searchParams.get("secretariaId")
+
+    const where: any = { activo: true }
+    if (rolFiltro) {
+      where.rol = { nombre: { equals: rolFiltro, mode: "insensitive" } }
+    }
+    if (secretariaIdFiltro) {
+      where.secretaria_id = secretariaIdFiltro
+    }
+
     const usuarios = await prisma.usuario.findMany({
+      where,
       include: { rol: true, area: true },
-      orderBy: { fecha_creacion: "desc" },
+      orderBy: { nombre: "asc" },
     })
 
     return NextResponse.json(

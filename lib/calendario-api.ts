@@ -59,10 +59,10 @@ function buildQuincenas(year: number): PeriodoCap1000[] {
   return MESES.flatMap((mes) => {
     const mm = mesNumero(mes)
     const suffix = `/${mm}/${year}`
-    return [
-      { quincena: `1ra ${mes}`, limiteDO: suffix, limiteDGRH: suffix },
-      { quincena: `2da ${mes}`, limiteDO: suffix, limiteDGRH: suffix },
-    ]
+    const quincenas: PeriodoCap1000[] = []
+    if (mes !== "Enero")     quincenas.push({ quincena: `1ra ${mes}`, limiteDO: suffix, limiteDGRH: suffix })
+    if (mes !== "Diciembre") quincenas.push({ quincena: `2da ${mes}`, limiteDO: suffix, limiteDGRH: suffix })
+    return quincenas
   })
 }
 

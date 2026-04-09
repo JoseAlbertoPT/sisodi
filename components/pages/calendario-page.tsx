@@ -21,12 +21,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { DatePickerHabil, dmyToDate, dateToDmy } from "@/components/ui/date-picker-habil"
 
 type TabRecepcion = "honorarios" | "asimilados" | "nombramiento"
+
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ]
+
+// Quincenas válidas: excluye "1ra Enero" y "2da Diciembre"
+const QUINCENA_NAMES: string[] = MESES.flatMap((mes) => {
+  const qs: string[] = []
+  if (mes !== "Enero") qs.push(`1ra ${mes}`)
+  if (mes !== "Diciembre") qs.push(`2da ${mes}`)
+  return qs
+})
 
 const MESES_CORTO: Record<string, string> = {
   "01": "Ene", "02": "Feb", "03": "Mar", "04": "Abr",
@@ -56,6 +66,9 @@ function DayMonthInput({
 
   const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, "").slice(0, 2)
+    if (raw === "") { onChange(buildDate("", currentMonth)); return }
+    const num = parseInt(raw, 10)
+    if (num < 1 || num > 31) return
     onChange(buildDate(raw, currentMonth))
   }
 
@@ -137,10 +150,18 @@ export function CalendarioPage() {
   }
 
   const handleStartEdit = () => {
+    // Siempre inicializa con el template completo para que las filas
+    // que no están en BD (ej. Enero) se puedan editar sin perderse.
     setEditData({
-      honorarios: honorarios.map((r) => ({ ...r })),
-      asimilados: asimilados.map((r) => ({ ...r })),
-      nombramiento: nombramiento.map((r) => ({ ...r })),
+      honorarios: MESES.map((mes) =>
+        honorarios.find((r) => r.mes === mes) ?? { mes, limiteDO: "", limiteDGRH: "" }
+      ),
+      asimilados: QUINCENA_NAMES.map((q) =>
+        asimilados.find((r) => r.quincena === q) ?? { quincena: q, limiteDO: "", limiteDGRH: "" }
+      ),
+      nombramiento: QUINCENA_NAMES.map((q) =>
+        nombramiento.find((r) => r.quincena === q) ?? { quincena: q, limiteDO: "", limiteDGRH: "" }
+      ),
     })
     setEditing(true)
   }
@@ -217,9 +238,24 @@ export function CalendarioPage() {
   }
 
   const displayData = editing && editData ? editData : { honorarios, asimilados, nombramiento }
-  const honorariosSorted = [...displayData.honorarios].sort(
-    (a, b) => MESES.indexOf(a.mes) - MESES.indexOf(b.mes),
+
+  const quincenaOrder = (q: string) => {
+    const mitad = q.startsWith("1ra") ? 0 : 1
+    const mes = q.replace(/^(1ra|2da)\s+/, "")
+    return MESES.indexOf(mes) * 2 + mitad
+  }
+
+  const honorariosSorted = MESES.map((mes) =>
+    displayData.honorarios.find((r) => r.mes === mes) ?? { mes, limiteDO: "", limiteDGRH: "" }
   )
+
+  const buildSortedQuincenas = (rows: typeof displayData.asimilados) =>
+    QUINCENA_NAMES
+      .map((q) => rows.find((r) => r.quincena === q) ?? { quincena: q, limiteDO: "", limiteDGRH: "" })
+      .sort((a, b) => quincenaOrder(a.quincena) - quincenaOrder(b.quincena))
+
+  const asimiladosSorted   = buildSortedQuincenas(displayData.asimilados)
+  const nombramientoSorted = buildSortedQuincenas(displayData.nombramiento)
 
   const filledCount = {
     honorarios: displayData.honorarios.filter((r) => r.limiteDO && !r.limiteDO.startsWith("/")).length,
@@ -368,8 +404,24 @@ export function CalendarioPage() {
                         <td className="px-5 py-3"><span className="font-medium text-card-foreground">{row.mes}</span></td>
                         {editing ? (
                           <>
-                            <td className="px-5 py-2 text-center"><DayMonthInput value={row.limiteDO} mesName={row.mes} year={ejercicio} onChange={(v) => updateEditRow("honorarios", row.mes, "limiteDO", v)} /></td>
-                            <td className="px-5 py-2 text-center"><DayMonthInput value={row.limiteDGRH} mesName={row.mes} year={ejercicio} onChange={(v) => updateEditRow("honorarios", row.mes, "limiteDGRH", v)} /></td>
+                            <td className="px-3 py-2 text-center">
+                              <DatePickerHabil
+                                value={dmyToDate(row.limiteDO)}
+                                defaultMonth={new Date(ejercicio, MESES.indexOf(row.mes), 1)}
+                                onChange={(d) => updateEditRow("honorarios", row.mes, "limiteDO", d ? dateToDmy(d) : "")}
+                                className="w-36"
+                                compact
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <DatePickerHabil
+                                value={dmyToDate(row.limiteDGRH)}
+                                defaultMonth={new Date(ejercicio, MESES.indexOf(row.mes), 1)}
+                                onChange={(d) => updateEditRow("honorarios", row.mes, "limiteDGRH", d ? dateToDmy(d) : "")}
+                                className="w-36"
+                                compact
+                              />
+                            </td>
                           </>
                         ) : (
                           <>
@@ -387,21 +439,49 @@ export function CalendarioPage() {
             {(tabRecepcion === "asimilados" || tabRecepcion === "nombramiento") && (
               <div className="overflow-hidden rounded-lg border border-border">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-secondary text-secondary-foreground">
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Quincena de aplicación</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider">Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
-                    </tr>
-                  </thead>
+
+               <thead>
+              <tr className="bg-secondary text-secondary-foreground">
+            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider w-48">
+           Mes de aplicación
+           </th>
+          <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider w-56">
+          Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)
+          <span className="block text-[10px] font-normal normal-case tracking-normal opacity-75 mt-0.5">
+          </span>
+          </th>
+           <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider w-56">
+              Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)
+            <span className="block text-[10px] font-normal normal-case tracking-normal opacity-75 mt-0.5">
+            </span>
+            </th>
+             </tr>
+            </thead>
+
                   <tbody>
-                    {(tabRecepcion === "asimilados" ? displayData.asimilados : displayData.nombramiento).map((row, idx) => (
+                    {(tabRecepcion === "asimilados" ? asimiladosSorted : nombramientoSorted).map((row, idx) => (
                       <tr key={row.quincena} className={`border-t border-border/60 transition-colors ${idx % 2 === 0 ? "bg-card" : "bg-muted/20"} ${!editing && row.limiteDO && !row.limiteDO.startsWith("/") ? "hover:bg-muted/40" : ""}`}>
                         <td className="px-5 py-3"><span className="font-medium text-card-foreground">{row.quincena}</span></td>
                         {editing ? (
                           <>
-                            <td className="px-5 py-2 text-center"><DayMonthInput value={row.limiteDO} mesName={mesDeQuincena(row.quincena)} year={ejercicio} onChange={(v) => updateEditRow(tabRecepcion, row.quincena, "limiteDO", v)} /></td>
-                            <td className="px-5 py-2 text-center"><DayMonthInput value={row.limiteDGRH} mesName={mesDeQuincena(row.quincena)} year={ejercicio} onChange={(v) => updateEditRow(tabRecepcion, row.quincena, "limiteDGRH", v)} /></td>
+                            <td className="px-3 py-2 text-center">
+                              <DatePickerHabil
+                                value={dmyToDate(row.limiteDO)}
+                                defaultMonth={new Date(ejercicio, MESES.indexOf(mesDeQuincena(row.quincena)), 1)}
+                                onChange={(d) => updateEditRow(tabRecepcion, row.quincena, "limiteDO", d ? dateToDmy(d) : "")}
+                                className="w-36"
+                                compact
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <DatePickerHabil
+                                value={dmyToDate(row.limiteDGRH)}
+                                defaultMonth={new Date(ejercicio, MESES.indexOf(mesDeQuincena(row.quincena)), 1)}
+                                onChange={(d) => updateEditRow(tabRecepcion, row.quincena, "limiteDGRH", d ? dateToDmy(d) : "")}
+                                className="w-36"
+                                compact
+                              />
+                            </td>
                           </>
                         ) : (
                           <>
@@ -415,7 +495,6 @@ export function CalendarioPage() {
                 </table>
               </div>
             )}
-
             <div className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
               <Info className="h-4 w-4 shrink-0 text-muted-foreground/60" />
               <span className="text-[11px] text-muted-foreground leading-relaxed">

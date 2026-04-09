@@ -10,13 +10,13 @@ export async function PATCH(
     const body = await req.json()
     const data: Record<string, unknown> = {}
     if (body.nombre !== undefined) data.nombre = body.nombre.trim()
-    if (body.categoriaId !== undefined) data.categoria_id = Number(body.categoriaId)
     if (body.orden !== undefined) data.orden = body.orden
+    if (body.ua_clave_administrativa !== undefined) data.ua_clave_administrativa = body.ua_clave_administrativa?.trim() || null
+    if (body.clave_reporte_plazas !== undefined) data.clave_reporte_plazas = body.clave_reporte_plazas?.trim() || null
 
     const updated = await prisma.organo_paraestatal.update({
       where: { id: Number(id) },
       data,
-      include: { categoria: true },
     })
     return NextResponse.json(updated)
   } catch (e) {

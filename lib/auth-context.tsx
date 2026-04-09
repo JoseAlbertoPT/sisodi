@@ -9,6 +9,8 @@ interface User {
   rol: string
   area: string | null
   secretariaTexto: string | null
+  secretariaId: string | null
+  claveReportePlazas: string | null
   mustChangePassword: boolean
 }
 

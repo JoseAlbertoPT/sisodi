@@ -46,6 +46,29 @@ function maskEmail(correo: string) {
   return local[0] + "***" + local[local.length - 1] + "@" + dominio
 }
 
+export async function GET(req: NextRequest) {
+  const action = req.nextUrl.searchParams.get("action")
+  const id     = req.nextUrl.searchParams.get("id")
+
+  if (action === "perfil" && id) {
+    try {
+      const usuario = await prisma.usuario.findUnique({
+        where:   { id },
+        include: { area: true, organo_centralizado: true },
+      })
+      if (!usuario) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      return NextResponse.json({
+        secretariaTexto: usuario.secretaria_texto ?? usuario.organo_centralizado?.nombre ?? null,
+        area:            usuario.area?.nombre ?? null,
+      })
+    } catch (e) {
+      return NextResponse.json({ error: "Error interno" }, { status: 500 })
+    }
+  }
+
+  return NextResponse.json({ error: "Acción no reconocida" }, { status: 400 })
+}
+
 export async function POST(req: NextRequest) {
   const action = req.nextUrl.searchParams.get("action")
 
@@ -59,7 +82,7 @@ export async function POST(req: NextRequest) {
 
       const usuario = await prisma.usuario.findUnique({
         where:   { rfc: rfc.trim().toUpperCase() },
-        include: { rol: true, area: true },
+        include: { rol: true, area: true, organo_centralizado: true },
       })
 
       if (!usuario)        return err("Credenciales incorrectas", 401)
@@ -69,14 +92,16 @@ export async function POST(req: NextRequest) {
       if (!valida) return err("Credenciales incorrectas", 401)
 
       return NextResponse.json({
-        id:                 usuario.id,
-        nombre:             usuario.nombre,
-        correo:             usuario.correo,
-        rfc:                usuario.rfc,
-        rol:                usuario.rol.nombre,
-        area:               usuario.area?.nombre ?? null,
-        secretariaTexto:    usuario.secretaria_texto ?? null,
-        mustChangePassword: usuario.must_change_password ?? false,
+        id:                  usuario.id,
+        nombre:              usuario.nombre,
+        correo:              usuario.correo,
+        rfc:                 usuario.rfc,
+        rol:                 usuario.rol.nombre,
+        area:                usuario.area?.nombre ?? null,
+        secretariaTexto:     usuario.secretaria_texto ?? usuario.organo_centralizado?.nombre ?? null,
+        secretariaId:        usuario.secretaria_id ?? null,
+        claveReportePlazas:  usuario.organo_centralizado?.clave_reporte_plazas ?? null,
+        mustChangePassword:  usuario.must_change_password ?? false,
       })
     }
     if (action === "change-password") {

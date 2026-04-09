@@ -15,7 +15,7 @@ import {
   Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
-  FileText, History, Download,
+  FileText, History, Download, UserCheck,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 
@@ -28,6 +28,7 @@ interface FiltroSolicitud {
   tipo: string
   denominacion: string
   secretaria: string
+  secretariaId: string | null
   estado: string
   esRegularizacion: boolean
   fechaRecepcionDO: string | null
@@ -387,24 +388,118 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
   )
 }
 
+interface RevisorInfo { id: string; nombre: string; correo: string }
+
+function AprobarAsignarModal({ open, onClose, onConfirm, folio, secretariaId, guardando }: {
+  open: boolean
+  onClose: () => void
+  onConfirm: (revisorId: string) => void
+  folio: string
+  secretariaId: string | null
+  guardando: boolean
+}) {
+  const [revisores,  setRevisores]  = useState<RevisorInfo[]>([])
+  const [loading,    setLoading]    = useState(false)
+  const [selectedId, setSelectedId] = useState("")
+
+  useEffect(() => {
+    if (!open) return
+    setSelectedId("")
+    setLoading(true)
+    const params = new URLSearchParams({ rol: "Revisor" })
+    if (secretariaId) params.set("secretariaId", secretariaId)
+    fetch(`/api/usuarios?${params}`)
+      .then(r => r.json())
+      .then(json => {
+        const lista: RevisorInfo[] = (Array.isArray(json) ? json : [])
+          .map((u: any) => ({ id: u.id, nombre: u.nombre, correo: u.correo }))
+        setRevisores(lista)
+      })
+      .catch(() => setRevisores([]))
+      .finally(() => setLoading(false))
+  }, [open, secretariaId])
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <UserCheck className="h-5 w-5 text-primary" />
+            Aprobar y Asignar Revisor
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 pt-2">
+          <p className="text-sm text-muted-foreground">
+            Solicitud <span className="font-semibold text-card-foreground">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
+          </p>
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+            </div>
+          ) : revisores.length === 0 ? (
+            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+          ) : (
+            <Select value={selectedId} onValueChange={setSelectedId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar revisor..." />
+              </SelectTrigger>
+              <SelectContent>
+                {revisores.map(r => (
+                  <SelectItem key={r.id} value={r.id}>
+                    <span className="font-medium">{r.nombre}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={!selectedId || guardando || loading}
+              onClick={() => onConfirm(selectedId)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+            >
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+              Aprobar y asignar
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardando }: {
   solicitud: FiltroSolicitud
   filtro: 1 | 2 | 3
   onBack: () => void
-  onAprobar: (id: string) => void
+  onAprobar: (id: string, revisorId?: string) => void
   onObservar: (id: string, obs: string) => void
   guardando: boolean
 }) {
-  const [showAprobarModal,  setShowAprobarModal]  = useState(false)
-  const [showObservarModal, setShowObservarModal] = useState(false)
-  const [activePanel,       setActivePanel]       = useState<"revision" | "historial">("revision")
+  const [showAprobarModal,        setShowAprobarModal]        = useState(false)
+  const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
+  const [showObservarModal,       setShowObservarModal]       = useState(false)
+  const [activePanel,             setActivePanel]             = useState<"revision" | "historial">("revision")
 
   const raw = solicitud._raw
 
+  // Filtro 2: 1ra vez (sin historial de Filtro 1) → asigna revisor; 2da vez → directo a Emisor
+  const yaEstuvoEnRevisor = (solicitud._raw?.historial_solicitud ?? []).some(
+    (h: any) => (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "")
+      .toLowerCase().includes("en revision revisor")
+  )
+
   const labelAprobar =
-    filtro === 1 ? "Aprobar → Pendiente Firma"
-    : filtro === 2 ? "Aprobar → Emisor"
-    : "Aprobar → Emitir"
+    filtro === 1 ? "Aprobar → Validación"
+    : filtro === 2 ? (yaEstuvoEnRevisor ? "Aprobar → Emisor" : "Aprobar → Revisor")
+    : solicitud.estado.toLowerCase().includes("pendiente firma dictamen")
+      ? "Firmar Dictamen → Emitir"
+      : "Aprobar → Firma Justificación"
 
   const folioFormateado = formatearFolio(solicitud.folioRecepcion)
 
@@ -453,7 +548,10 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           <Button
-            onClick={() => setShowAprobarModal(true)}
+            onClick={() => {
+              if (filtro === 2 && !yaEstuvoEnRevisor) setShowAprobarAsignarModal(true)
+              else setShowAprobarModal(true)
+            }}
             disabled={guardando}
             className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
             size="sm"
@@ -654,6 +752,14 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
         onConfirm={(obs) => { setShowObservarModal(false); onObservar(solicitud.id, obs) }}
         folio={folioFormateado}
       />
+      <AprobarAsignarModal
+        open={showAprobarAsignarModal}
+        onClose={() => setShowAprobarAsignarModal(false)}
+        onConfirm={(revisorId) => { setShowAprobarAsignarModal(false); onAprobar(solicitud.id, revisorId) }}
+        folio={folioFormateado}
+        secretariaId={solicitud.secretariaId}
+        guardando={guardando}
+      />
     </div>
   )
 }
@@ -673,8 +779,9 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
   const [guardando,      setGuardando]      = useState(false)
   const [activeTab,      setActiveTab]      = useState<TabKey>("todas")
   const [selectedId,     setSelectedId]     = useState<string | null>(null)
-  const [observarTarget, setObservarTarget] = useState<string | null>(null)
-  const [aprobarTarget,  setAprobarTarget]  = useState<string | null>(null)
+  const [observarTarget,        setObservarTarget]        = useState<string | null>(null)
+  const [aprobarTarget,        setAprobarTarget]        = useState<string | null>(null)
+  const [aprobarAsignarTarget, setAprobarAsignarTarget] = useState<string | null>(null)
 
   const [searchTerm,       setSearchTerm]       = useState("")
   const [filterAnio,       setFilterAnio]       = useState("2026")
@@ -686,17 +793,21 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const res  = await fetch(`/api/filtro?filtro=${filtro}`)
+      const userId = (user as any)?.id ?? ""
+      const url = filtro === 1 && userId
+        ? `/api/filtro?filtro=${filtro}&revisorId=${userId}`
+        : `/api/filtro?filtro=${filtro}`
+      const res  = await fetch(url)
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar"); return }
       setSolicitudes(json.data ?? [])
     } catch { setError("Error de conexión al servidor") }
     finally { setLoading(false) }
-  }, [filtro])
+  }, [filtro, user])
 
   useEffect(() => { cargar() }, [cargar])
 
-  const handleAprobar = useCallback(async (id: string) => {
+  const handleAprobar = useCallback(async (id: string, revisorId?: string) => {
     setGuardando(true)
     try {
       const res  = await fetch("/api/filtro", {
@@ -707,6 +818,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
           accion: "aprobar",
           filtro,
           usuarioId: (user as any)?.id ?? "",
+          ...(revisorId ? { revisorId } : {}),
         }),
       })
       const json = await res.json()
@@ -924,7 +1036,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         </Select>
       </div>
 
-      {/* ── TABLA ── */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm font-semibold text-card-foreground">
@@ -1002,13 +1113,11 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             )}
                           </div>
                         </td>
-                        {/* Régimen de Contratación — CORREGIDO */}
                         <td className="px-3 py-3 text-muted-foreground text-xs max-w-[180px]">
                           <span className="line-clamp-2">{formatRegimen(sol._raw?.regimen)}</span>
                         </td>
                         {/* Secretaría */}
                         <td className="px-3 py-3 text-muted-foreground text-xs">{sol.secretaria}</td>
-                        {/* Folio Dictamen (filtro >= 2) */}
                         {filtro >= 2 && (
                           <td className="px-3 py-3">
                             {sol.folioDictamen
@@ -1019,13 +1128,11 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             }
                           </td>
                         )}
-                        {/* Fecha de Recepción */}
                         <td className="px-3 py-3 text-xs text-muted-foreground">
                           {sol.fechaRecepcionDO
                             ? new Date(sol.fechaRecepcionDO).toLocaleDateString("es-MX")
                             : "---"}
                         </td>
-                        {/* Fecha de Corrección */}
                         <td className="px-3 py-3">
                           {sol.lastObservedStage ? (
                             <div className="flex flex-col gap-0.5">
@@ -1036,7 +1143,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             <span className="text-xs text-muted-foreground">---</span>
                           )}
                         </td>
-                        {/* Ult. Observo */}
                         <td className="px-3 py-3">
                           {sol.lastObservedEstado ? (
                             <span className="text-xs text-muted-foreground">{sol.lastObservedEstado}</span>
@@ -1044,9 +1150,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             <span className="text-xs text-muted-foreground">---</span>
                           )}
                         </td>
-                        {/* SLA */}
                         <td className="px-3 py-3"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
-                        {/* Acción */}
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-1.5">
                             <Button
@@ -1058,11 +1162,23 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             </Button>
                             <Button
                               variant="ghost" size="sm"
-                              onClick={() => setAprobarTarget(sol.id)}
+                              onClick={() => {
+                                const yaFiltro1 = (sol._raw?.historial_solicitud ?? []).some(
+                                  (h: any) => (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "")
+                                    .toLowerCase().includes("en revision revisor")
+                                )
+                                if (filtro === 2 && !yaFiltro1)
+                                  setAprobarAsignarTarget(sol.id)
+                                else
+                                  setAprobarTarget(sol.id)
+                              }}
                               disabled={guardando}
                               className="text-primary hover:text-primary/80 gap-1.5"
                             >
-                              <CheckCircle2 className="h-4 w-4" />Aprobar
+                              <CheckCircle2 className="h-4 w-4" />
+                              {filtro === 3 && sol.estado.toLowerCase().includes("pendiente firma dictamen")
+                                ? "Firmar"
+                                : "Aprobar"}
                             </Button>
                             <Button
                               variant="ghost" size="sm"
@@ -1084,14 +1200,18 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         </CardContent>
       </Card>
 
-      {/* Modales globales */}
       <ConfirmModal
         open={!!aprobarTarget}
         onClose={() => setAprobarTarget(null)}
         onConfirm={() => { if (aprobarTarget) handleAprobar(aprobarTarget) }}
-        title="¿Aprobar y avanzar al siguiente filtro?"
-        description={`La solicitud ${formatearFolio(solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion)} avanzará al siguiente paso.`}
-        confirmLabel="Sí, aprobar"
+        title={(() => {
+          const sol = solicitudes.find(s => s.id === aprobarTarget)
+          if (filtro === 3 && sol?.estado.toLowerCase().includes("pendiente firma dictamen"))
+            return "¿Firmar dictamen y emitir?"
+          return "¿Aprobar y avanzar al siguiente paso?"
+        })()}
+        description={`La solicitud ${formatearFolio(solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion)} avanzará al siguiente paso del proceso.`}
+        confirmLabel="Sí, confirmar"
         icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
       <ObservarModal
@@ -1100,6 +1220,21 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         onConfirm={(obs) => { if (observarTarget) handleObservar(observarTarget, obs) }}
         folio={formatearFolio(solicitudes.find(s => s.id === observarTarget)?.folioRecepcion)}
       />
+      <AprobarAsignarModal
+        open={!!aprobarAsignarTarget}
+        onClose={() => setAprobarAsignarTarget(null)}
+        onConfirm={(revisorId) => {
+          if (aprobarAsignarTarget) {
+            handleAprobar(aprobarAsignarTarget, revisorId)
+            setAprobarAsignarTarget(null)
+          }
+        }}
+        folio={formatearFolio(solicitudes.find(s => s.id === aprobarAsignarTarget)?.folioRecepcion ?? "")}
+        secretariaId={solicitudes.find(s => s.id === aprobarAsignarTarget)?.secretariaId ?? null}
+        guardando={guardando}
+      />
     </PageLayout>
   )
 }
+
+

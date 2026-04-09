@@ -13,6 +13,7 @@ model accion {
   descripcion     String?
   rol_menu_accion rol_menu_accion[]
 }
+
 model adjunto {
   id             Int       @id @default(autoincrement())
   solicitud_id   Int
@@ -97,11 +98,11 @@ model menu {
   id        Int        @id @default(autoincrement())
   nombre    String     @db.VarChar(150)
   ruta      String?    @db.VarChar(200)
+  orden     Int?       @default(0)
+  activo    Boolean?   @default(true)
   icono     String?    @db.VarChar(50)
   key       String?    @db.VarChar(50)
   parent_id Int?
-  orden     Int?       @default(0)
-  activo    Boolean?   @default(true)
   parent    menu?      @relation("menu_hierarchy", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   children  menu[]     @relation("menu_hierarchy")
   rol_menu  rol_menu[]
@@ -159,11 +160,11 @@ model solicitud {
   tipo_solicitud        String                @db.VarChar(100)
   es_extemporanea       Boolean?              @default(false)
   folio_recepcion       String?               @db.VarChar(50)
-  folio_justificacion   String?               @db.VarChar(50)
   folio_dictamen        String?               @db.VarChar(50)
   fecha_creacion        DateTime?             @default(now()) @db.Timestamp(6)
   fecha_envio           DateTime?             @db.Timestamp(6)
   fecha_emision         DateTime?             @db.Timestamp(6)
+  folio_justificacion   String?               @db.VarChar(50)
   secretaria            String?               @db.VarChar(200)
   unidad_administrativa String?               @db.VarChar(200)
   unidad_responsable    String?               @db.VarChar(200)
@@ -180,20 +181,22 @@ model solicitud {
   nivel_tabulador       String?               @db.VarChar(20)
   categoria_tabulador   String?               @db.VarChar(10)
   objeto                String?
-  actividades           String[]
-  responsabilidades     String[]
+  actividades           String[]              @default([])
+  responsabilidades     String[]              @default([])
   escolaridad           String?               @db.VarChar(100)
   comp_adm              String?
   comp_tec              String?
   comp_soc              String?
   valores               String?
   areas_exp             String?
+  revisor_asignado_id   String?               @db.Uuid
   adjunto               adjunto[]
   checklist_detalle     checklist_detalle[]
   dictamen              dictamen?
   historial_solicitud   historial_solicitud[]
   estado                estado                @relation(fields: [estado_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   periodo               periodo               @relation(fields: [periodo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  revisor_asignado      usuario?              @relation("solicitud_revisor_asignado", fields: [revisor_asignado_id], references: [id], onUpdate: NoAction)
   usuario               usuario               @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([estado_id], map: "idx_solicitud_estado")
@@ -201,27 +204,29 @@ model solicitud {
 }
 
 model usuario {
-  id                   String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre               String                @db.VarChar(150)
-  correo               String                @unique @db.VarChar(150)
-  rfc                  String?               @unique @db.VarChar(13)
-  password_hash        String
-  must_change_password Boolean?              @default(false)
-  rol_id               Int
-  area_id              Int?
-  secretaria_id        String?               @db.Uuid
-  secretaria_texto     String?               @db.VarChar(512)
-  activo               Boolean?              @default(true)
-  fecha_creacion       DateTime?             @default(now()) @db.Timestamp(6)
-  historial_solicitud  historial_solicitud[]
-  solicitud            solicitud[]
-  area                 area?                 @relation(fields: [area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  rol                  rol                   @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  organo_centralizado  organo_centralizado?  @relation(fields: [secretaria_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  codigo_recuperacion  codigo_recuperacion?
+  id                    String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre                String                @db.VarChar(150)
+  correo                String                @unique @db.VarChar(150)
+  password_hash         String
+  rol_id                Int
+  area_id               Int?
+  activo                Boolean?              @default(true)
+  fecha_creacion        DateTime?             @default(now()) @db.Timestamp(6)
+  rfc                   String?               @unique @db.VarChar(13)
+  must_change_password  Boolean?              @default(false)
+  secretaria_id         String?               @db.Uuid
+  secretaria_texto      String?               @db.VarChar(512)
+  codigo_recuperacion   codigo_recuperacion?
+  historial_solicitud   historial_solicitud[]
+  permiso_captura       permiso_captura[]
+  solicitudes_asignadas solicitud[]           @relation("solicitud_revisor_asignado")
+  solicitud             solicitud[]
+  area                  area?                 @relation(fields: [area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rol                   rol                   @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  organo_centralizado   organo_centralizado?  @relation(fields: [secretaria_id], references: [id], onUpdate: NoAction)
 
   @@index([rol_id], map: "idx_usuario_rol")
-  @@index([rfc],    map: "idx_usuario_rfc")
+  @@index([rfc], map: "idx_usuario_rfc")
 }
 
 model codigo_recuperacion {
@@ -235,36 +240,38 @@ model codigo_recuperacion {
 }
 
 model historico {
-  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre_archivo   String   @db.VarChar(512)
-  subido_en        DateTime @default(now()) @db.Timestamp(6)
-  sheet_names      String[]
-  sheets           Json     @default("{}")
-  nombre_archivo2  String?  @db.VarChar(512)
-  sheet_names2     String[]
-  sheets2          Json?
+  id              String   @id(map: "PK_0fad738d5b2a11ac448686db608") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre_archivo  String   @db.VarChar(512)
+  subido_en       DateTime @default(now()) @db.Timestamp(6)
+  sheet_names     String[] @default([])
+  sheets          Json     @default("{}")
+  nombre_archivo2 String?  @db.VarChar(512)
+  sheet_names2    String[] @default([])
+  sheets2         Json?    @default("{}")
 }
 
 model calendario {
   id          Int    @id @default(autoincrement())
   ejercicio   Int
-  regimen     String @db.VarChar(20)
-  periodo     String @db.VarChar(50)
-  limite_do   String @db.VarChar(20)
   limite_dgrh String @db.VarChar(20)
+  limite_do   String @db.VarChar(20)
+  periodo     String @db.VarChar(50)
+  regimen     String @db.VarChar(20)
 
   @@unique([ejercicio, regimen, periodo])
 }
 
 model organo_centralizado {
-  id        String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre    String                @db.VarChar(512)
-  orden     Int                   @default(0)
-  tipo      String?               @db.VarChar(64)
-  parent_id String?               @db.Uuid
-  parent    organo_centralizado?  @relation("organo_centralizado_hierarchy", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  children  organo_centralizado[] @relation("organo_centralizado_hierarchy")
-  usuarios  usuario[]
+  id                      String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre                  String                @db.VarChar(512)
+  orden                   Int                   @default(0)
+  tipo                    String?               @db.VarChar(64)
+  parent_id               String?               @db.Uuid
+  clave_reporte_plazas    String?               @db.VarChar(100)
+  ua_clave_administrativa String?               @db.VarChar(512)
+  parent                  organo_centralizado?  @relation("organo_centralizado_hierarchy", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  children                organo_centralizado[] @relation("organo_centralizado_hierarchy")
+  usuarios                usuario[]
 }
 
 model categoria_paraestatal {
@@ -275,9 +282,24 @@ model categoria_paraestatal {
 }
 
 model organo_paraestatal {
-  id           Int                   @id @default(autoincrement())
-  nombre       String                @db.VarChar(512)
-  orden        Int                   @default(0)
-  categoria_id Int
-  categoria    categoria_paraestatal @relation(fields: [categoria_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                      Int                   @id @default(autoincrement())
+  nombre                  String                @db.VarChar(512)
+  orden                   Int                   @default(0)
+  categoria_id            Int
+  clave_reporte_plazas    String?               @db.VarChar(100)
+  ua_clave_administrativa String?               @db.VarChar(512)
+  categoria               categoria_paraestatal @relation(fields: [categoria_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model permiso_captura {
+  id          Int       @id @default(autoincrement())
+  usuario_id  String    @db.Uuid
+  regimen     String    @db.VarChar(20)
+  periodo     String    @db.VarChar(50)
+  active      Boolean   @default(true)
+  used        Boolean   @default(false)
+  granted_at  DateTime  @default(now()) @db.Timestamp(6)
+  granted_by  String    @db.VarChar(150)
+  consumed_at DateTime? @db.Timestamp(6)
+  usuario     usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }

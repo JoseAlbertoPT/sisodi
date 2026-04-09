@@ -52,3 +52,24 @@ export function getClaveForUA(secretaria: string, ua: string): string {
   )
   return registro?.["CLAVE REPORTE PLAZAS"] ?? ""
 }
+
+/**
+ * Formatea una clave de reporte de plazas con el patrón [1,2,2,1,1,1,1].
+ * Para ≤8 dígitos el 2do grupo se rellena con cero a la izquierda.
+ * Ejemplo: "12400000" → "1 02 40 0 0 0 0"
+ */
+export function formatClave(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 9)
+  if (!digits) return ""
+  if (digits.length === 9) {
+    return [digits[0], digits.slice(1, 3), digits.slice(3, 5), digits[5], digits[6], digits[7], digits[8]].join(" ")
+  }
+  // ≤8 dígitos: el 2do grupo (1 dígito raw) se rellena con cero → "0X"
+  const parts: string[] = []
+  if (digits.length >= 1) parts.push(digits[0])
+  if (digits.length >= 2) parts.push("0" + digits[1])
+  if (digits.length >= 4) parts.push(digits.slice(2, 4))
+  else if (digits.length === 3) parts.push(digits[2])
+  for (let i = 4; i < digits.length; i++) parts.push(digits[i])
+  return parts.join(" ")
+}

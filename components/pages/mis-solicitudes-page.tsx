@@ -71,6 +71,7 @@ interface UrgSolicitud {
   folio: string
   folioJustificacion: string | null
   folioRecepcion?: string
+  folioDictamen?: string
   tipo: "Prestacion de Servicios" | "Nombramiento Tiempo Determinado"
   secretaria: string
   fecha: string
@@ -106,51 +107,62 @@ interface UrgSolicitud {
   periodoAplicacion: string
   fechaRecepcion?: string
 }
-function getFolioSegunEstado(sol: UrgSolicitud, activeTab: UrgTab): React.ReactNode {
-  const efectivaTab: UrgTab =
-    activeTab === "Todas" ? getTab(sol.estado) : activeTab
+function FoliosCell({ sol }: { sol: UrgSolicitud }) {
+  const efectivaTab = getTab(sol.estado)
+  const entries: { label: string; value: string; highlight?: boolean }[] = []
 
-  switch (efectivaTab) {
-    case "Borradores": {
-      const base = sol.folioJustificacion ?? sol.folio
-      return (
-        <span>
-          <span className="font-semibold">{base}</span>
-          <span className="ml-1.5 text-[11px] text-muted-foreground italic">(borrador)</span>
-        </span>
-      )
-    }
-
-    case "En Validacion": {
-      if (sol.folioJustificacion) {
-        return <span className="font-semibold">{sol.folioJustificacion}</span>
-      }
-      const anio = new Date().getFullYear()
-      const num = sol.folio.split("-").pop()?.padStart(4, "0") ?? "0000"
-      return <span className="font-semibold">JUST-{anio}-{num}</span>
-    }
-
-    case "Observadas/Devueltas":
-    case "En Proceso":
-    case "Emitidas": {
-      if (sol.folioRecepcion) {
-        return <span className="font-semibold">{sol.folioRecepcion}</span>
-      }
-      const num = sol.folioJustificacion?.split("-").pop() ?? sol.folio.split("-").pop() ?? "000"
-      return <span className="font-semibold">MR-{num}</span>
-    }
-
-    default:
-      return <span className="font-medium">{sol.folioJustificacion ?? sol.folio}</span>
+  if (sol.folioJustificacion) {
+    entries.push({
+      label: "Justificación",
+      value: sol.folioJustificacion,
+      highlight: efectivaTab === "Borradores" || efectivaTab === "En Validacion" || efectivaTab === "Observadas/Devueltas",
+    })
+  } else {
+    entries.push({
+      label: "Borrador",
+      value: sol.folio,
+      highlight: efectivaTab === "Borradores",
+    })
   }
+
+  if (sol.folioRecepcion) {
+    entries.push({
+      label: "Recepción DO",
+      value: sol.folioRecepcion,
+      highlight: efectivaTab === "En Proceso" || efectivaTab === "Emitidas",
+    })
+  }
+
+  if (sol.folioDictamen) {
+    entries.push({
+      label: "Dictamen",
+      value: sol.folioDictamen,
+      highlight: efectivaTab === "Emitidas",
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {entries.map(({ label, value, highlight }) => (
+        <div key={label} className="flex items-center gap-1.5">
+          <span className={`text-[10px] rounded px-1 py-0.5 shrink-0 ${
+            highlight
+              ? "bg-primary/10 text-primary font-semibold"
+              : "bg-muted text-muted-foreground"
+          }`}>
+            {label}
+          </span>
+          <span className={`text-xs ${highlight ? "font-semibold text-card-foreground" : "text-muted-foreground"}`}>
+            {value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
-function getFolioHeader(tab: UrgTab): string {
-  if (tab === "En Proceso" || tab === "Emitidas") return "Folio de Recepción"
-  if (tab === "Observadas/Devueltas") return "Folio de Recepción"
-  if (tab === "Todas") return "Folio"
-  if (tab === "En Validacion") return "Folio de Justificación"
-  return "Folio"
+function getFolioHeader(_tab: UrgTab): string {
+  return "Folios"
 }
 
 function getTab(estado: UrgEstado): UrgTab {
@@ -167,11 +179,9 @@ function getTab(estado: UrgEstado): UrgTab {
   if (n === "emitido") return "Emitidas"
   return "Todas"
 }
-
 function estadoBadge(estado: UrgEstado) {
   const n = (estado ?? "").toLowerCase()
   let bg = "bg-muted", text = "text-muted-foreground", label: string = estado ?? "—"
-
   if (n === "borrador" || n === "en captura") {
     bg = "bg-muted"; text = "text-muted-foreground"; label = "Borrador"
   } else if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion")) {
@@ -199,7 +209,6 @@ function estadoBadge(estado: UrgEstado) {
   } else if (n === "emitido") {
     bg = "bg-emerald-100"; text = "text-emerald-800"; label = "Emitido"
   }
-
   return (
     <Badge className={`${bg} ${text} hover:${bg} border-0 text-xs`}>{label}</Badge>
   )
@@ -272,6 +281,7 @@ function mapApiItem(item: any): UrgSolicitud {
     folio:                item.folio_justificacion ?? `SOL-${new Date().getFullYear()}-${String(item.id).padStart(4, "0")}`,
     folioJustificacion:   item.folio_justificacion ?? null,
     folioRecepcion:       item.folio_recepcion     ?? undefined,
+    folioDictamen:        item.folio_dictamen      ?? item.dictamen?.folio ?? undefined,
     tipo:                 item.tipo_solicitud       as UrgSolicitud["tipo"],
     secretaria:           item.secretaria           ?? "",
     fecha:                fmt(item.fecha_creacion),
@@ -358,22 +368,35 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   )
 }
 
-function PerfilListField({ label, value }: { label: string; value: string }) {
-  const items = value ? value.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean) : []
+function toList(val: string | string[]): string[] {
+  if (Array.isArray(val)) return val.filter(Boolean)
+  if (!val) return []
+  return val.split(/[\n,•·]+/).map((s) => s.trim()).filter(Boolean)
+}
+
+function ReadOnlyList({ label, value, sub }: { label: string; value: string | string[]; sub?: string }) {
+  const items = toList(value)
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        {sub && (
+          <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
+        )}
+        <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+      </div>
       {items.length === 0 ? (
-        <span className="text-sm font-medium text-card-foreground">—</span>
+        <span className="text-sm text-muted-foreground italic px-3">—</span>
       ) : (
-        <ul className="flex flex-col gap-0.5">
-          {items.map((item, i) => (
-            <li key={i} className="flex gap-2 text-sm text-card-foreground">
-              <span className="shrink-0 text-muted-foreground">•</span>
-              <span>{item}</span>
-            </li>
+        <div className="flex flex-col gap-0.5">
+          {items.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2 rounded-lg px-3 py-1.5">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
+                {idx + 1}
+              </span>
+              <span className="text-sm text-card-foreground">{item}</span>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   )
@@ -452,25 +475,21 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
       </SectionCard>
 
       <SectionCard title="I.2 Actividades a Realizar">
-        <div className="grid gap-4">
-          <ReadOnlyTextarea label="Actividades" value={solicitud.actividades} />
-        </div>
+        <ReadOnlyList label="Actividades" value={solicitud.actividades} />
       </SectionCard>
 
       <SectionCard title="I.3 Responsabilidades">
-        <div className="grid gap-4">
-          <ReadOnlyTextarea label="Responsabilidades" value={solicitud.responsabilidades} />
-        </div>
+        <ReadOnlyList label="Responsabilidades" value={solicitud.responsabilidades} />
       </SectionCard>
 
       <SectionCard num="II" title="Perfil">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField   label="Escolaridad Mínima"          value={solicitud.escolaridad} />
-          <PerfilListField label="Competencias Administrativas" value={solicitud.compAdm} />
-          <PerfilListField label="Competencias Técnicas"        value={solicitud.compTec} />
-          <PerfilListField label="Competencias Sociales"        value={solicitud.compSoc} />
-          <PerfilListField label="Valores"                      value={solicitud.valores} />
-          <PerfilListField label="Áreas de Experiencia"         value={solicitud.areasExp} />
+        <div className="grid gap-5 md:grid-cols-2">
+          <ReadOnlyList sub="II.1" label="Competencias Administrativas" value={solicitud.compAdm} />
+          <ReadOnlyList sub="II.2" label="Competencias Técnicas"        value={solicitud.compTec} />
+          <ReadOnlyList sub="II.3" label="Competencias Sociales"        value={solicitud.compSoc} />
+          <ReadOnlyList label="Escolaridad Mínima"    value={solicitud.escolaridad} />
+          <ReadOnlyList label="Áreas de Experiencia"  value={solicitud.areasExp} />
+          <ReadOnlyList label="Valores"               value={solicitud.valores} />
         </div>
       </SectionCard>
 
@@ -513,21 +532,21 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
       </SectionCard>
 
       <SectionCard title="I.2 Actividades a Realizar">
-        <ReadOnlyTextarea label="Actividades" value={solicitud.actividades} />
+        <ReadOnlyList label="Actividades" value={solicitud.actividades} />
       </SectionCard>
 
       <SectionCard title="I.3 Responsabilidades">
-        <ReadOnlyTextarea label="Responsabilidades" value={solicitud.responsabilidades} />
+        <ReadOnlyList label="Responsabilidades" value={solicitud.responsabilidades} />
       </SectionCard>
 
       <SectionCard num="II" title="Perfil">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField   label="Escolaridad Mínima"          value={solicitud.escolaridad} />
-          <PerfilListField label="Competencias Administrativas" value={solicitud.compAdm} />
-          <PerfilListField label="Competencias Técnicas"        value={solicitud.compTec} />
-          <PerfilListField label="Competencias Sociales"        value={solicitud.compSoc} />
-          <PerfilListField label="Valores"                      value={solicitud.valores} />
-          <PerfilListField label="Áreas de Experiencia"         value={solicitud.areasExp} />
+        <div className="grid gap-5 md:grid-cols-2">
+          <ReadOnlyList sub="II.1" label="Competencias Administrativas" value={solicitud.compAdm} />
+          <ReadOnlyList sub="II.2" label="Competencias Técnicas"        value={solicitud.compTec} />
+          <ReadOnlyList sub="II.3" label="Competencias Sociales"        value={solicitud.compSoc} />
+          <ReadOnlyList label="Escolaridad Mínima"    value={solicitud.escolaridad} />
+          <ReadOnlyList label="Áreas de Experiencia"  value={solicitud.areasExp} />
+          <ReadOnlyList label="Valores"               value={solicitud.valores} />
         </div>
       </SectionCard>
 
@@ -615,8 +634,6 @@ function DetalleView({
     }
   }
 
-  const folioHeader = sol.folioJustificacion || sol.folioRecepcion || sol.folio
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -626,7 +643,7 @@ function DetalleView({
             <ArrowLeft className="h-4 w-4" />Volver a bandeja
           </Button>
           <Separator orientation="vertical" className="h-6" />
-          <span className="text-sm font-semibold text-card-foreground">{folioHeader}</span>
+          <FoliosCell sol={sol} />
           {estadoBadge(sol.estado)}
         </div>
         <div className="flex items-center gap-2">
@@ -1013,8 +1030,8 @@ export function MisSolicitudesPage() {
                   return (
                     <tr key={sol.id}
                       className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-card-foreground">
-                        {getFolioSegunEstado(sol, activeTab)}
+                      <td className="px-4 py-3">
+                        <FoliosCell sol={sol} />
                       </td>
                       <td className="px-4 py-3 text-xs">
                         <span className="text-muted-foreground">{sol.tipo}</span>

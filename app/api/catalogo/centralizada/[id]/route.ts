@@ -28,10 +28,28 @@ export async function PATCH(
     const { id } = await params
     const body = await req.json()
     const data: Record<string, unknown> = {}
-    if (body.nombre !== undefined) data.nombre = body.nombre.trim()
+
+    if (body.nombre !== undefined) {
+      const nombre = body.nombre.trim()
+      const current = await prisma.organo_centralizado.findUnique({ where: { id } })
+      if (!current) return err("No encontrado", 404)
+
+      const duplicate = await prisma.organo_centralizado.findFirst({
+        where: {
+          nombre: { equals: nombre, mode: "insensitive" },
+          parent_id: current.parent_id,
+          id: { not: id },
+        },
+      })
+      if (duplicate) return err("Ya existe un registro con ese nombre")
+      data.nombre = nombre
+    }
+
     if (body.parentId !== undefined) data.parent_id = body.parentId || null
     if (body.orden !== undefined) data.orden = body.orden
     if (body.tipo !== undefined) data.tipo = body.tipo || null
+    if (body.ua_clave_administrativa !== undefined) data.ua_clave_administrativa = body.ua_clave_administrativa?.trim() || null
+    if (body.clave_reporte_plazas !== undefined) data.clave_reporte_plazas = body.clave_reporte_plazas?.trim() || null
 
     const updated = await prisma.organo_centralizado.update({ where: { id }, data })
     return NextResponse.json(updated)
