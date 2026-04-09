@@ -390,12 +390,11 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
 
 interface RevisorInfo { id: string; nombre: string; correo: string }
 
-function AprobarAsignarModal({ open, onClose, onConfirm, folio, secretariaId, guardando }: {
+function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
   open: boolean
   onClose: () => void
   onConfirm: (revisorId: string) => void
   folio: string
-  secretariaId: string | null
   guardando: boolean
 }) {
   const [revisores,  setRevisores]  = useState<RevisorInfo[]>([])
@@ -406,9 +405,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, secretariaId, gu
     if (!open) return
     setSelectedId("")
     setLoading(true)
-    const params = new URLSearchParams({ rol: "Revisor" })
-    if (secretariaId) params.set("secretariaId", secretariaId)
-    fetch(`/api/usuarios?${params}`)
+    fetch("/api/usuarios?rol=Revisor")
       .then(r => r.json())
       .then(json => {
         const lista: RevisorInfo[] = (Array.isArray(json) ? json : [])
@@ -417,7 +414,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, secretariaId, gu
       })
       .catch(() => setRevisores([]))
       .finally(() => setLoading(false))
-  }, [open, secretariaId])
+  }, [open])
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
@@ -757,7 +754,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
         onClose={() => setShowAprobarAsignarModal(false)}
         onConfirm={(revisorId) => { setShowAprobarAsignarModal(false); onAprobar(solicitud.id, revisorId) }}
         folio={folioFormateado}
-        secretariaId={solicitud.secretariaId}
         guardando={guardando}
       />
     </div>
@@ -1230,7 +1226,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
           }
         }}
         folio={formatearFolio(solicitudes.find(s => s.id === aprobarAsignarTarget)?.folioRecepcion ?? "")}
-        secretariaId={solicitudes.find(s => s.id === aprobarAsignarTarget)?.secretariaId ?? null}
         guardando={guardando}
       />
     </PageLayout>
