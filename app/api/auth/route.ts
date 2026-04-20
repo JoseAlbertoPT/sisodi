@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
         secretariaId:        usuario.secretaria_id ?? null,
         claveReportePlazas:  usuario.organo_centralizado?.clave_reporte_plazas ?? null,
         mustChangePassword:  usuario.must_change_password ?? false,
+        tipoAdministracion:  usuario.organo_centralizado ? "centralizada" : "paraestatal",
       })
     }
     if (action === "change-password") {

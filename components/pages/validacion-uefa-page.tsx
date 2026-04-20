@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { useAuth } from "@/lib/auth-context"
+import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 
 type UefaEstado = string
 
@@ -85,8 +86,8 @@ const INICIALES_MES_MAP: Record<string, string> = {
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio || folio === "—") return "—"
 
-  const matchLegacy = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
-  if (matchLegacy) return matchLegacy[1].padStart(3, "0")
+  const matchLegacy = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
+  if (matchLegacy) return `${matchLegacy[1]}/${matchLegacy[2].padStart(2, "0")}/${matchLegacy[3]}`
 
   const matchDictamen = folio.match(/^[A-Z]{2,3}-(\d+)-(\d{4})$/)
   if (matchDictamen) return `${matchDictamen[1].padStart(3, "0")}-${matchDictamen[2]}`
@@ -117,15 +118,28 @@ function norm(s: string): string {
 
 function getTabForEstado(estado: string): UefaTab {
   const n = norm(estado)
+
   if (n === "en captura" || n.includes("en validacion justificaciones") || n.includes("enviada a validacion")) return "Nuevas"
   if (n.includes("pendiente firma justificacion")) return "Pendiente Firma"
-  if (n.includes("en revision") || n.includes("en validacion final") || n.includes("pendiente firma dictamen")) return "En Proceso"
   if (n.includes("observado por validacion") && !n.includes("final")) return "Observadas"
-  if (n.includes("observado por") || n.includes("observado do")) return "Devueltas"
+  if (n.includes("observado por do") || n.includes("observado do")) return "Observadas"
+  if (n.includes("observado por revisor")) return "Observadas"
+  if (n.includes("observado por") ) return "Devueltas"
   if (n === "emitido") return "Emitidas"
+
+  if (
+    n.includes("en revision") ||
+    n.includes("en validacion final") ||
+    n.includes("pendiente firma dictamen") ||
+    n.includes("pendiente do") ||
+    n.includes("aceptado por revisor") ||
+    n.includes("aprobado por revisor") ||
+    n.includes("observado por validacion final") ||
+    n.includes("observado por emisor")
+  ) return "En Proceso"
+
   return "Nuevas"
 }
-
 function formatRegimen(raw: string): string {
   const r = (raw ?? "").toLowerCase().trim()
   if (r.includes("asimilado")) return "Honorarios Asimilados a Salarios"
@@ -236,7 +250,6 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
   }
 }
 
-// modal para ver en dictamen
 function DictamenModal({
   solicitud,
   onClose,
@@ -297,7 +310,6 @@ function DictamenModal({
     pw.focus()
     setTimeout(() => pw.print(), 500)
   }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
       <Card className="w-full max-w-2xl max-h-[85vh] flex flex-col shadow-xl border-2 border-primary/20">
@@ -317,7 +329,6 @@ function DictamenModal({
             <Button variant="ghost" size="sm" onClick={onClose}>Cerrar</Button>
           </div>
         </CardHeader>
-
         <ScrollArea className="flex-1 px-6 pb-6">
           <div className="bg-card rounded-lg p-6 border border-border flex flex-col gap-4">
             {/* Encabezado institucional */}
@@ -356,7 +367,7 @@ function DictamenModal({
               </div>
             </div>
 
-            {/* Destinatarios */}
+            {/* Destinatarios  */}
             <div>
               <span className="text-xs text-muted-foreground block mb-1">Destinatarios</span>
               {(solicitud.destinatarios ?? []).length > 0 ? (
@@ -424,8 +435,8 @@ function UefaEstadoBadge({ estado }: { estado: string }) {
     "Nuevas":          { bg: "bg-secondary/15",   text: "text-secondary" },
     "Pendiente Firma": { bg: "bg-accent/15",       text: "text-accent-foreground" },
     "En Proceso":      { bg: "bg-primary/15",      text: "text-primary" },
-    "Observadas":      { bg: "bg-destructive/15",  text: "text-destructive" },
-    "Devueltas":       { bg: "bg-orange-500/15",   text: "text-orange-600" },
+    "Observadas":      { bg: "bg-[#832B56]/15",    text: "text-[#832B56]" },
+    "Devueltas":       { bg: "bg-[#832B56]/15",    text: "text-[#832B56]" },
     "Emitidas":        { bg: "bg-primary/15",      text: "text-primary" },
     "Todas":           { bg: "bg-muted",           text: "text-muted-foreground" },
   }
@@ -434,9 +445,9 @@ function UefaEstadoBadge({ estado }: { estado: string }) {
   let label = estado
   if (n === "en captura")                               label = "En Validacion Justificaciones"
   else if (n.includes("pendiente firma dictamen"))      label = "Pendiente Firma Dictamen"
-  else if (n.includes("observado por revisor"))         label = "Devuelta por Revisor"
-  else if (n.includes("observado por validacion final")) label = "Devuelta por Validacion Final"
-  else if (n.includes("observado por emisor"))          label = "Devuelta por Emisor"
+  else if (n.includes("observado por revisor"))         label = "Observada por Revision DGDO"
+  else if (n.includes("observado por validacion final")) label = "Observada por Validacion DGDO"
+  else if (n.includes("observado por emisor"))          label = "Observada por Emision DGDO"
 
   return (
     <Badge className={`${bg} ${text} border-0 text-xs whitespace-nowrap`}>{label}</Badge>
@@ -500,7 +511,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
 
 function parseListField(text: string | null | undefined): string[] {
   if (!text || text === "—") return []
-  return text.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean)
+  return text.split(/[\n•·,]+/).map(s => s.trim()).filter(Boolean)
 }
 
 function PerfilListField({ label, value }: { label: string; value: string | null | undefined }) {
@@ -545,29 +556,48 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
   const raw = solicitud._raw
   const folioDictamenMostrar = solicitud.numeroDictamen
     ?? (solicitud.folioDictamen ? formatearFolio(solicitud.folioDictamen) : null)
+  const regimenNorm      = (solicitud.regimen ?? "").toLowerCase()
+  const esNombramiento   = regimenNorm.includes("nombramiento") || regimenNorm.includes("tiempo determinado")
+  const marcoNormativo   = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
+  const condRiesgos      = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
+  const resguardoActivos = raw?.resguardo_activos ?? ""
 
   return (
     <div className="flex flex-col gap-4">
       <SectionCard num="I" title="Datos Generales">
         <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Secretaría"                           value={solicitud.secretaria} />
-          <ReadOnlyField label="Unidad Administrativa de Adscripción" value={solicitud.unidadAdministrativa} />
-          <ReadOnlyField label="Unidad Responsable del Gasto"         value={solicitud.unidadResponsable} />
+          <ReadOnlyField label="Secretaría / Dependencia / Organismo" value={solicitud.secretaria} />
+          <ReadOnlyField label="Unidad Administrativa de Adscripción" value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
+          <ReadOnlyField label="Unidad Responsable del Gasto"         value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
           <ReadOnlyField label="Programa o Proyecto"                  value={solicitud.programaProyecto} />
           <ReadOnlyField label="Régimen de Contratación"              value={formatRegimen(solicitud.regimen)} />
-          <ReadOnlyField label="Tipo de Actividades"                  value={solicitud.tipoActividades} />
+          {esNombramiento && (
+            <ReadOnlyField label="Denominación del Nombramiento"      value={solicitud.denominacion} />
+          )}
+          {esNombramiento && (
+            <ReadOnlyField label="Puesto del Jefe Inmediato"          value={raw?.puesto_jefe_inmediato ?? "—"} />
+          )}
           <ReadOnlyField label="Número de Prestadores de Servicio"    value={solicitud.numeroPrestadores} />
-          <ReadOnlyField label="Denominación"                         value={solicitud.denominacion} />
+          {!esNombramiento && (
+            <ReadOnlyField label="Tipo de Actividades"                value={solicitud.tipoActividades} />
+          )}
+          <ReadOnlyField label="Tipo de Pago"    value={raw?.tipo_importe || "Mensual"} />
           <ReadOnlyField label="Vigencia Inicio"                      value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                     value={solicitud.vigenciaFin} />
-          <ReadOnlyField label="Importe Bruto"                        value={solicitud.importeBruto} />
+          <ReadOnlyField label="Importe Neto"   value={solicitud.importeBruto} />
         </div>
       </SectionCard>
 
-      <SectionCard title="Renovación">
+      {/*<SectionCard title="Renovación">
         <div className="grid gap-4 md:grid-cols-2">
           <ReadOnlyField label="¿Es Renovación?"   value={solicitud.esRenovacion ? "SÍ" : "NO"} />
-          <ReadOnlyField label="Folio del Dictamen" value={folioDictamenMostrar ?? solicitud.folioAnterior ?? "—"} />
+        </div>
+      </SectionCard>*/}
+
+      <SectionCard title="Tabulador — Nivel y Categoría">
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReadOnlyField label="Nivel"     value={raw?.nivel_tabulador     ?? "—"} />
+          <ReadOnlyField label="Categoría" value={raw?.categoria_tabulador ?? "—"} />
         </div>
       </SectionCard>
 
@@ -587,26 +617,53 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
         <ListaItems items={solicitud.responsabilidades} />
       </SectionCard>
 
-      <SectionCard title="Perfil">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(solicitud.escolaridad)} />
-          <PerfilListField label="Competencias Administrativas"  value={solicitud.compAdm} />
-          <PerfilListField label="Competencias Técnicas"         value={solicitud.compTec} />
-          <PerfilListField label="Competencias Sociales"         value={solicitud.compSoc} />
-          <PerfilListField label="Valores"                       value={solicitud.valores} />
-          <PerfilListField label="Áreas de Experiencia"          value={solicitud.areasExp} />
-        </div>
-      </SectionCard>
+      {esNombramiento && marcoNormativo.length > 0 && (
+        <SectionCard title="V. Marco Normativo">
+          <ListaItems items={marcoNormativo} />
+        </SectionCard>
+      )}
+
+      {esNombramiento && condRiesgos.length > 0 && (
+        <SectionCard title="VI. Condiciones y Riesgos">
+          <ListaItems items={condRiesgos} />
+        </SectionCard>
+      )}
+
+      {esNombramiento && resguardoActivos && (
+        <SectionCard title="VII. Resguardo Personalizado de Activos">
+          <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos} />
+        </SectionCard>
+      )}
+
+      {!esNombramiento && (
+        <SectionCard title="Perfil Requerido">
+          <div className="grid gap-4 md:grid-cols-2">
+            <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(solicitud.escolaridad)} />
+            <PerfilListField label="Competencias Administrativas"  value={solicitud.compAdm} />
+            <PerfilListField label="Competencias Técnicas"         value={solicitud.compTec} />
+            <PerfilListField label="Competencias Sociales"         value={solicitud.compSoc} />
+            <PerfilListField label="Valores"                       value={solicitud.valores} />
+            <PerfilListField label="Áreas de Experiencia"          value={solicitud.areasExp} />
+          </div>
+        </SectionCard>
+      )}
 
       <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
         {raw?.adjunto?.length > 0 ? (
-          <ul className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             {raw.adjunto.map((adj: any, i: number) => (
-              <li key={i} className="flex items-center gap-2 text-sm text-card-foreground">
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />{adj.nombre_archivo}
-              </li>
+              <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
+                <FileText className="h-5 w-5 text-secondary shrink-0" />
+                <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
+                {adj.ruta && (
+                  <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
+                    onClick={() => window.open(adj.ruta, "_blank")}>
+                    Ver
+                  </Button>
+                )}
+              </div>
             ))}
-          </ul>
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
         )}
@@ -786,7 +843,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
   onAprobar: (id: number) => void; onObservar: (id: number) => void
   onFirmarJustificacion: (id: number) => void; guardando: boolean
 }) {
-  const [showObservarModal, setShowObservarModal] = useState(false)
   const [showFirmarConfirm, setShowFirmarConfirm] = useState(false)
   const [showDictamen,      setShowDictamen]      = useState(false)
   const [showAprobarConfirm, setShowAprobarConfirm] = useState(false)
@@ -816,11 +872,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
           <Separator orientation="vertical" className="h-6" />
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-card-foreground">{solicitud.folioJustificacion}</span>
-            {folioDictamenMostrar && (
-              <span className="text-xs text-muted-foreground">
-                Dictamen: <span className="font-medium text-secondary">{folioDictamenMostrar}</span>
-              </span>
-            )}
           </div>
           <UefaEstadoBadge estado={solicitud.estado} />
         </div>
@@ -853,11 +904,11 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                 size="sm"
               >
                 {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                Aprobar → Revisor
+                Aprobar
               </Button>
               <Button
                 variant="outline" size="sm"
-                onClick={() => setShowObservarModal(true)}
+                onClick={() => onObservar(solicitud.id)}
                 disabled={guardando}
                 className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
               >
@@ -902,7 +953,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
           <CardContent className="flex items-start gap-3 py-4">
             <Info className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-semibold text-destructive">Observaciones de Validación</span>
+              <span className="text-sm font-semibold text-destructive">Observaciones por  Validación UEFA </span>
               {solicitud.observacionesUefa
                 ? <p className="text-sm text-card-foreground mt-1">{solicitud.observacionesUefa}</p>
                 : <p className="text-sm text-muted-foreground mt-1">Sin detalle de observaciones registrado.</p>}
@@ -912,12 +963,12 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
       )}
 
       {isDevuelta && (
-        <Card className="border-2 border-orange-500/30 shadow-sm">
+        <Card className="border-2 border-[#832B56]/30 shadow-sm">
           <CardContent className="flex items-center gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <AlertTriangle className="h-5 w-5 text-[#832B56]" />
             <div>
-              <span className="text-sm font-medium text-orange-600">Devuelta con Observaciones</span>
-              <p className="text-xs text-muted-foreground">Observada por Revisor, Validación Final o Emisor. Pendiente de corrección por la URG.</p>
+              <span className="text-sm font-medium text-[#832B56]">Devuelta con Observaciones</span>
+              <p className="text-xs text-muted-foreground">Observada por Revision DGDO, Validacion DGDO o Emision DGDO. Pendiente de corrección por la URG.</p>
             </div>
           </CardContent>
         </Card>
@@ -984,7 +1035,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         onClose={() => setShowAprobarConfirm(false)}
         onConfirm={() => { setShowAprobarConfirm(false); onAprobar(solicitud.id) }}
         title="¿Aprobar y enviar a Validación?"
-        description={`La solicitud ${solicitud.folioJustificacion} será enviada a la Bandeja de Validación Final (DO).`}
+        description={`La solicitud ${solicitud.folioJustificacion} será enviada a la Bandeja de Validación  (DO).`}
         confirmLabel="Sí, aprobar"
         icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
@@ -996,12 +1047,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         description={`Se firmará la justificación ${solicitud.folioJustificacion} y pasará a Validación Final.`}
         confirmLabel="Sí, firmar"
         icon={<Stamp className="h-5 w-5 text-secondary" />}
-      />
-      <ObservarModal
-        open={showObservarModal}
-        onClose={() => setShowObservarModal(false)}
-        onConfirm={() => { setShowObservarModal(false); onObservar(solicitud.id) }}
-        folio={solicitud.folioJustificacion}
       />
     </div>
   )
@@ -1024,7 +1069,8 @@ export function ValidacionUefaPage() {
   const cargarSolicitudes = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-        const res  = await fetch("/api/validacion?estado=todos")
+        const viewerId = (user as any)?.id ?? ""
+        const res  = await fetch(`/api/validacion?estado=todos&viewerId=${viewerId}`)
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar solicitudes"); return }
       setSolicitudes((json.data ?? []).map(mapBDtoSolicitud))
@@ -1045,20 +1091,20 @@ export function ValidacionUefaPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           solicitudId: id,
-          nuevoEstado: "En Validacion Final",
+          nuevoEstado: "Pendiente DO",
           usuarioId:   (user as any)?.id ?? "",
-          comentario:  "Aprobada por Validacion de Justificaciones → Enviada a Validación Final (DO)",
+          comentario:  "Aprobada por Validacion de Justificaciones → Pendiente de asignación en DO",
         }),
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? "Error al aprobar"); return }
       setSolicitudes(prev => prev.map(s => s.id === id ? {
         ...s,
-        estado: "En Validacion Final",
+        estado: "Pendiente DO",
         historial: [...s.historial, {
           fecha:   formatFechaHora(new Date().toISOString()),
           usuario: (user as any)?.nombre ?? "Validacion",
-          accion:  "Aprobada → Enviada a Validación Final (DO)",
+          accion:  "Aprobada → Pendiente de asignación en DO",
         }],
       } : s))
       setSelectedId(null)
@@ -1239,8 +1285,7 @@ export function ValidacionUefaPage() {
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">
                     <th className="px-4 py-3 text-left font-semibold">Folio de Justificación</th>
-                    <th className="px-4 py-3 text-left font-semibold"> Nombramiento por Tiempo Determinado</th>
-                    <th className="px-4 py-3 text-left font-semibold">Folio Dictamen</th>
+                    <th className="px-4 py-3 text-left font-semibold">Régimen de Contratación</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Creación</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Recepción</th>
                     <th className="px-4 py-3 text-left font-semibold">Estado Actual</th>
@@ -1252,20 +1297,22 @@ export function ValidacionUefaPage() {
                     const solTab             = getTabForEstado(sol.estado)
                     const folioDictamenLabel = sol.numeroDictamen
                       ?? (sol.folioDictamen ? formatearFolio(sol.folioDictamen) : null)
+                    const folioRecepcion     = sol.folio && sol.folio !== `SOL-${sol.id}` ? sol.folio : null
+                    const usaFolioRecepcion  = solTab === "En Proceso" || solTab === "Devueltas" || solTab === "Emitidas"
+                    const folioPrincipal     = usaFolioRecepcion ? (folioRecepcion ?? sol.folioJustificacion) : sol.folioJustificacion
+                    const folioSecundario    = usaFolioRecepcion && folioRecepcion
+                      ? (solTab === "Emitidas" && folioDictamenLabel ? folioDictamenLabel : null)
+                      : null
 
                     return (
                       <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-card-foreground">{sol.folioJustificacion}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{sol.tipo}</td>
-                        <td className="px-4 py-3">
-                          {folioDictamenLabel ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-semibold text-secondary">
-                              {folioDictamenLabel}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                        <td className="px-4 py-3 font-medium text-card-foreground">
+                          <span>{folioPrincipal}</span>
+                          {folioSecundario && (
+                            <span className="block text-xs text-muted-foreground mt-0.5">{folioSecundario}</span>
                           )}
                         </td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatRegimen(sol.regimen)}</td>
                         <td className="px-4 py-3 text-muted-foreground">{sol.fecha}</td>
                         <td className="px-4 py-3 text-muted-foreground">{sol.vigenciaInicio}</td>
                         <td className="px-4 py-3"><UefaEstadoBadge estado={sol.estado} /></td>
@@ -1280,7 +1327,7 @@ export function ValidacionUefaPage() {
                             </Button>
                             {solTab === "Nuevas" && (
                               <>
-                                <Button
+                              { /*  <Button
                                   variant="ghost" size="sm"
                                   onClick={() => setAprobarTargetId(sol.id)}
                                   disabled={guardando}
@@ -1295,7 +1342,7 @@ export function ValidacionUefaPage() {
                                   className="text-destructive hover:text-destructive/80 gap-1.5"
                                 >
                                   <RotateCcw className="h-4 w-4" />Observar
-                                </Button>
+                                </Button>*/ }
                               </>
                             )}
                             {solTab === "Pendiente Firma" && (

@@ -393,9 +393,9 @@ export function CalendarioPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
-                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mes de aplicación</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider">Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
+                      <th className="px-5 py-3 text-left font-semibold">Mes de aplicación</th>
+                      <th className="px-5 py-3 text-center font-semibold">Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)</th>
+                      <th className="px-5 py-3 text-center font-semibold">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -440,23 +440,13 @@ export function CalendarioPage() {
               <div className="overflow-hidden rounded-lg border border-border">
                 <table className="w-full text-sm">
 
-               <thead>
-              <tr className="bg-secondary text-secondary-foreground">
-            <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider w-48">
-           Mes de aplicación
-           </th>
-          <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider w-56">
-          Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)
-          <span className="block text-[10px] font-normal normal-case tracking-normal opacity-75 mt-0.5">
-          </span>
-          </th>
-           <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider w-56">
-              Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)
-            <span className="block text-[10px] font-normal normal-case tracking-normal opacity-75 mt-0.5">
-            </span>
-            </th>
-             </tr>
-            </thead>
+                  <thead>
+                    <tr className="bg-secondary text-secondary-foreground">
+                      <th className="px-5 py-3 text-left font-semibold w-48">Mes de aplicación</th>
+                      <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)</th>
+                      <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
+                    </tr>
+                  </thead>
 
                   <tbody>
                     {(tabRecepcion === "asimilados" ? asimiladosSorted : nombramientoSorted).map((row, idx) => (

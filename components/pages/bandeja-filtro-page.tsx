@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,13 +16,14 @@ import {
   Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
-  FileText, History, Download, UserCheck,
+  FileText, History, Download, UserCheck, ClipboardCheck, Stamp,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 
 interface FiltroSolicitud {
   id: string
-  folioSolicitud: string
+  folioSolicitud: string | null
   folioRecepcion: string | null
   folioDictamen: string | null
   folioTemporal: boolean
@@ -42,7 +44,7 @@ interface FiltroSolicitud {
   isNuevaEnFiltro: Record<number, boolean>
   _raw?: any
 }
-type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "todas"
+type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "pendientes_asignacion" | "en_validacion" | "pendientes_firma" | "todas"
 const FILTRO_LABELS: Record<number, string> = {
   1: "Revisor",
   2: "Validación Final",
@@ -64,12 +66,8 @@ const INICIALES_MES_MAP: Record<string, string> = {
 }
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio) return "---"
-  const match = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
-  if (match) {
-    const num = match[1].padStart(3, "0")
-    const mes = match[2].padStart(2, "0")
-    return `${INICIALES_MES_MAP[mes] ?? "XX"}-${num}`
-  }
+  const match = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
+  if (match) return `${match[1]}/${match[2].padStart(2, "0")}/${match[3]}`
   return folio
 }
 function formatFecha(v: string | null | undefined) {
@@ -105,15 +103,33 @@ function getEstadoObservado(filtro: number) {
   if (filtro === 2) return "Observado por Validacion Final"
   return "Observado por Emisor"
 }
+function classifyDO(s: FiltroSolicitud): TabKey {
+  const n = s.estado.toLowerCase()
+  if (n === "pendiente do") return "pendientes_asignacion"
+  if (n === "pendiente firma dictamen") return "pendientes_firma"
+  if (
+    n.includes("observado por emisor") || n.includes("observado por revisor") ||
+    n.includes("observado por do")     || n.includes("devuelta por do") ||
+    n.includes("observado do filtro")
+  ) return "observadas"
+  if (
+    n === "aceptado por revisor"     || n === "aprobado por revisor" ||
+    n.includes("en validacion final") || n.includes("en revision revisor")
+  ) return "en_validacion"
+  return "todas"
+}
 function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
+  if (filtro === 2) return classifyDO(s)
   const estadoEnRevision = getEstadoEnRevision(filtro)
   const estadoObservado  = getEstadoObservado(filtro)
   const estadoExtra      = filtro === 3 ? "Pendiente Firma Dictamen" : null
-  if (s.estado === estadoObservado) return "observadas"
-  if (s.estado === estadoEnRevision || s.estado === estadoExtra) {
-    if (s.reingresoCount > 0 && !s.openedInFiltro[filtro]) return "correcciones"
-    if (s.isNuevaEnFiltro[filtro] && !s.openedInFiltro[filtro]) return "nuevas"
-    if (s.openedInFiltro[filtro]) return "revision"
+  const estadoNorm       = s.estado.toLowerCase()
+  if (estadoNorm === estadoObservado.toLowerCase() || estadoNorm === "observado por validacion final") return "observadas"
+  if (filtro === 1 && (estadoNorm === "aceptado por revisor" || estadoNorm === "aprobado por revisor")) return "revision"
+  if (estadoNorm === estadoEnRevision.toLowerCase() || s.estado === estadoExtra) {
+    if (s.openedInFiltro[filtro] || !!s.folioDictamen) return "revision"
+    if (s.reingresoCount > 0) return "correcciones"
+    if (s.isNuevaEnFiltro[filtro]) return "nuevas"
     return "nuevas"
   }
   return "todas"
@@ -137,12 +153,19 @@ function getSlaLabel(dias: number | null) {
   if (dias <= 0) return `Vencido ${Math.abs(dias)}d`
   return `${dias} día${dias !== 1 ? "s" : ""}`
 }
-const TAB_CONFIG: Record<TabKey, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
-  nuevas:       { label: "Nuevas",       icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+const TAB_CONFIG: Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
+  nuevas:       { label: "Asignadas",    icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
   correcciones: { label: "Correcciones", icon: <RotateCcw className="h-3.5 w-3.5" />,    activeBg: "bg-accent/10",      activeText: "text-accent-foreground" },
   revision:     { label: "En revisión",  icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
   observadas:   { label: "Observadas",   icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
   todas:        { label: "Todas",        icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
+}
+const TAB_CONFIG_DO: Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
+  pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600" },
+  en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary" },
+  observadas:            { label: "Observadas",               icon: <AlertTriangle className="h-3.5 w-3.5" />,  activeBg: "bg-destructive/10", activeText: "text-destructive" },
+  pendientes_firma:      { label: "Pendientes de firma",      icon: <Stamp className="h-3.5 w-3.5" />,          activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+  todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground" },
 }
 
 function SlaIndicator({ diasRestantes }: { diasRestantes: number | null }) {
@@ -179,7 +202,6 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
     </Card>
   )
 }
-
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
@@ -188,12 +210,10 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
-
 function parseListField(text: string | null | undefined): string[] {
   if (!text || text === "—") return []
-  return text.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean)
+  return text.split(/[\n•·,]+/).map(s => s.trim()).filter(Boolean)
 }
-
 function PerfilListField({ label, value }: { label: string; value: string | null | undefined }) {
   const items = parseListField(value)
   return (
@@ -214,6 +234,7 @@ function PerfilListField({ label, value }: { label: string; value: string | null
     </div>
   )
 }
+
 
 function ListaItems({ items }: { items: string[] }) {
   const validItems = (items ?? []).filter(Boolean)
@@ -237,44 +258,29 @@ function ExpedienteCompleto({ raw }: { raw: any }) {
     <div className="flex flex-col gap-4">
       <SectionCard num="I" title="Datos Generales">
         <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Secretaría"                            value={raw?.secretaria ?? "—"} />
-          <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={raw?.unidad_administrativa ?? "—"} />
-          <ReadOnlyField label="Unidad Responsable del Gasto"          value={raw?.unidad_responsable ?? "—"} />
-          <ReadOnlyField label="Programa o Proyecto"                   value={raw?.programa_proyecto ?? "—"} />
-          <ReadOnlyField label="Denominación"                          value={raw?.denominacion || raw?.tipo_solicitud || "—"} />
+          <ReadOnlyField label="Secretaría / Dependencia / Organismo"  value={raw?.secretaria ?? "—"} />
+          <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
+          <ReadOnlyField label="Unidad Responsable del Gasto"          value={getNombreForClave(raw?.unidad_responsable ?? "") || raw?.nombre_unidad_responsable || raw?.unidad_responsable_nombre || raw?.unidad_responsable || "—"} />
           <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(raw?.regimen)} />
-          <ReadOnlyField label="Tipo de Actividades"                   value={raw?.tipo_actividades ?? "—"} />
           <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
+          <ReadOnlyField label="Programa o Proyecto"                   value={raw?.programa_proyecto ?? "—"} />
+          <ReadOnlyField label="Tipo de Actividades"                   value={raw?.tipo_actividades ?? "—"} />
           <ReadOnlyField label="Vigencia Inicio"                       value={formatFecha(raw?.vigencia_inicio)} />
           <ReadOnlyField label="Vigencia Término"                      value={formatFecha(raw?.vigencia_fin)} />
           <ReadOnlyField label="Importe Bruto"                         value={raw?.importe_bruto != null ? `$${Number(raw.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"} />
-          <ReadOnlyField label="Extemporánea"                          value={raw?.es_extemporanea ? "Sí" : "No"} />
         </div>
       </SectionCard>
-
-      <SectionCard title="Renovacion">
-        <div className="flex flex-col gap-3">
-       <ReadOnlyField label="¿Es Renovación?" value={raw?.es_renovacion ? "SÍ" : "NO"} />
-       <ReadOnlyField label="Folio del Dictamen"  value={raw?.folio_dictamen ?? raw?.dictamen?.folio ?? "—"}
-
-          />
-        </div>
-      </SectionCard>
-
       <SectionCard title="I.1 Objeto de la Contratación">
         <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
-
       <SectionCard title="I.2 Actividades a Realizar">
         <ListaItems items={Array.isArray(raw?.actividades) ? raw.actividades : []} />
       </SectionCard>
-
       <SectionCard title="I.3 Responsabilidades">
         <ListaItems items={Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : []} />
       </SectionCard>
-
       <SectionCard num="II" title="Perfil">
         <div className="grid gap-4 md:grid-cols-2">
           <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(raw?.escolaridad)} />
@@ -285,19 +291,24 @@ function ExpedienteCompleto({ raw }: { raw: any }) {
           <PerfilListField label="Áreas de Experiencia"          value={raw?.areas_exp} />
         </div>
       </SectionCard>
-
       <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
         {raw?.adjunto?.length > 0 ? (
-          <ul className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             {(raw.adjunto as any[]).map((adj, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm text-card-foreground">
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                {adj.nombre_archivo}
-              </li>
+              <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
+                <FileText className="h-5 w-5 text-secondary shrink-0" />
+                <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
+                {adj.ruta && (
+                  <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
+                    onClick={() => window.open(adj.ruta, "_blank")}>
+                    Ver
+                  </Button>
+                )}
+              </div>
             ))}
-          </ul>
+          </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Sin Documentos  Adjuntos.</p>
+          <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
         )}
       </SectionCard>
     </div>
@@ -344,7 +355,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Vas a marcar <strong>{folio}</strong> con observaciones. Se devolverá a la URG.
+         Vas a marcar <strong>{folio}</strong> con observaciones. Se devolverá a la URG.
         </p>
         <div className="flex items-center justify-end gap-3 pt-2">
           <Button variant="outline" onClick={handleClose}>Cancelar</Button>
@@ -389,7 +400,6 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
 }
 
 interface RevisorInfo { id: string; nombre: string; correo: string }
-
 function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
   open: boolean
   onClose: () => void
@@ -415,14 +425,13 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
       .catch(() => setRevisores([]))
       .finally(() => setLoading(false))
   }, [open])
-
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <UserCheck className="h-5 w-5 text-primary" />
-            Aprobar y Asignar Revisor
+            Aprobar
           </DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4 pt-2">
@@ -459,7 +468,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
               className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
-            >
+              >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
               Aprobar y asignar
             </Button>
@@ -467,6 +476,173 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
+  open: boolean
+  onClose: () => void
+  onConfirm: (revisorId: string) => void
+  folio: string
+  guardando: boolean
+  }) {
+  const [revisores,  setRevisores]  = useState<RevisorInfo[]>([])
+  const [loading,    setLoading]    = useState(false)
+  const [selectedId, setSelectedId] = useState("")
+
+  useEffect(() => {
+    if (!open) return
+    setSelectedId("")
+    setLoading(true)
+    fetch("/api/usuarios?rol=Revisor")
+      .then(r => r.json())
+      .then(json => {
+        const lista: RevisorInfo[] = (Array.isArray(json) ? json : [])
+          .map((u: any) => ({ id: u.id, nombre: u.nombre, correo: u.correo }))
+        setRevisores(lista)
+        })
+      .catch(() => setRevisores([]))
+      .finally(() => setLoading(false))
+      }, [open])
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <UserCheck className="h-5 w-5 text-primary" />
+            Asignar Revisor
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 pt-2">
+          <p className="text-sm text-muted-foreground">
+            Solicitud <span className="font-semibold text-card-foreground">{folio}</span> — selecciona el revisor que la atenderá.
+          </p>
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+            </div>
+          ) : revisores.length === 0 ? (
+            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+          ) : (
+            <Select value={selectedId} onValueChange={setSelectedId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar revisor..." />
+              </SelectTrigger>
+              <SelectContent>
+                {revisores.map(r => (
+                  <SelectItem key={r.id} value={r.id}>
+                    <span className="font-medium">{r.nombre}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={!selectedId || guardando || loading}
+              onClick={() => onConfirm(selectedId)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+            >
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+              Asignar
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function FolioDictamenCard({
+  folioDictamen,
+  onAsignar,
+}: {
+  folioDictamen: string | null
+  onAsignar: (folio: string) => Promise<void>
+}) {
+  const today = new Date()
+  const [mes,         setMes]         = useState(String(today.getMonth() + 1).padStart(2, "0"))
+  const [anio,        setAnio]        = useState(String(today.getFullYear()))
+  const [consecutivo, setConsecutivo] = useState("1")
+  const [guardando,   setGuardando]   = useState(false)
+
+  useEffect(() => {
+    const mesNum  = today.getMonth() + 1
+    const anioNum = today.getFullYear()
+    fetch(`/api/folio-dictamen/siguiente?mes=${mesNum}&anio=${anioNum}`)
+      .then(r => r.json())
+      .then(json => { if (json.ok) setConsecutivo(String(json.siguiente)) })
+      .catch(() => {})
+  }, [])
+
+  const folioPreview = `${String(consecutivo).padStart(2, "0")}/${mes}/${anio}`
+
+  const handleAsignar = async () => {
+    if (!consecutivo || !mes || !anio) return
+    setGuardando(true)
+    await onAsignar(folioPreview)
+    setGuardando(false)
+  }
+
+  if (folioDictamen) {
+    return (
+      <Card className="shadow-sm border-secondary/30 border-2 bg-secondary/[0.03]">
+        <CardContent className="flex items-center gap-3 p-4">
+          <Stamp className="h-5 w-5 text-secondary" />
+          <div>
+            <p className="text-sm font-semibold text-card-foreground">Folio de Dictamen Asignado</p>
+            <p className="text-xs text-muted-foreground font-mono">{formatearFolio(folioDictamen)}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="shadow-sm border-border">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+          <Stamp className="h-4 w-4 text-secondary" />Asignar Folio de Dictamen
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Asigne el número secuencial de dictamen.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Mes</Label>
+            <Input value={mes} onChange={e => setMes(e.target.value.replace(/\D/g, "").slice(0, 2))} placeholder="03" className="bg-background font-mono" maxLength={2} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Año</Label>
+            <Input value={anio} onChange={e => setAnio(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="2026" className="bg-background font-mono" maxLength={4} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Consecutivo</Label>
+            <Input type="number" min={1} value={consecutivo} onChange={e => setConsecutivo(e.target.value)} className="bg-background font-mono" />
+          </div>
+        </div>
+        <div className="rounded-md bg-muted/50 px-3 py-2">
+          <span className="text-xs text-muted-foreground">Folio de dictamen: </span>
+          <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview}</span>
+        </div>
+        <Button
+          onClick={handleAsignar}
+          disabled={guardando || !consecutivo || !mes || !anio}
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+        >
+          {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
+          Asignar Folio de Dictamen
+        </Button>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -478,14 +654,32 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
   onObservar: (id: string, obs: string) => void
   guardando: boolean
 }) {
+  const { user } = useAuth()
   const [showAprobarModal,        setShowAprobarModal]        = useState(false)
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
   const [showObservarModal,       setShowObservarModal]       = useState(false)
   const [activePanel,             setActivePanel]             = useState<"revision" | "historial">("revision")
+  const [folioDictamen,           setFolioDictamen]           = useState<string | null>(
+    solicitud._raw?.folio_dictamen ?? solicitud._raw?.dictamen?.folio ?? null
+  )
 
   const raw = solicitud._raw
 
-  // Filtro 2: 1ra vez (sin historial de Filtro 1) → asigna revisor; 2da vez → directo a Emisor
+  const handleAsignarFolioDictamen = async (folio: string) => {
+    const res  = await fetch("/api/filtro", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        solicitudId: Number(solicitud.id),
+        accion: "asignarFolio",
+        usuarioId: (user as any)?.id ?? "",
+        folioDictamen: folio,
+      }),
+    })
+    const json = await res.json()
+    if (json.ok) setFolioDictamen(folio)
+  }
+
   const yaEstuvoEnRevisor = (solicitud._raw?.historial_solicitud ?? []).some(
     (h: any) => (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "")
       .toLowerCase().includes("en revision revisor")
@@ -539,10 +733,10 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
           </div>
           <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>
           <SlaIndicator diasRestantes={solicitud.slaRestante} />
-        </div>
-        <div className="flex items-center gap-2">
+          </div>
+          <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5">
-            <Download className="h-4 w-4" />Justificación (PDF)
+          <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           <Button
             onClick={() => {
@@ -552,7 +746,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
             disabled={guardando}
             className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
             size="sm"
-          >
+            >
             {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
             {labelAprobar}
           </Button>
@@ -561,7 +755,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
             onClick={() => setShowObservarModal(true)}
             disabled={guardando}
             className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
-          >
+            >
             <RotateCcw className="h-4 w-4" />Observar
           </Button>
         </div>
@@ -591,28 +785,21 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
       )}
 
       {observacionesUefa && (
-        <Card className="border-2 border-orange-500/30 shadow-sm">
+        <Card className="border-2 border-[#832B56]/30 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-[#832B56] shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-semibold text-orange-600">Observaciones UEFA</span>
+              <span className="text-sm font-semibold text-[#832B56]">Observaciones UEFA</span>
               <p className="text-sm text-card-foreground mt-1">{observacionesUefa}</p>
             </div>
           </CardContent>
         </Card>
       )}
-
       {/* Layout principal */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 flex flex-col gap-4">
           <ExpedienteCompleto raw={raw} />
-          {filtro >= 2 && solicitud.folioDictamen && (
-            <SectionCard title="Dictamen previo" icon={<FileSearch className="h-4 w-4 text-secondary" />}>
-              <ReadOnlyField label="Folio Dictamen" value={formatearFolio(solicitud.folioDictamen)} />
-            </SectionCard>
-          )}
         </div>
-
         <div className="lg:col-span-1 flex flex-col gap-4">
           <div className="flex rounded-lg border border-border overflow-hidden">
             <button
@@ -632,22 +819,19 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
                   ? "bg-primary text-primary-foreground"
                   : "bg-card text-muted-foreground hover:bg-muted"
               }`}
-            >
+              >
               <History className="h-4 w-4" />Historial
             </button>
           </div>
-
           {activePanel === "revision" && (
             <Card className="shadow-sm border-border">
               <CardContent className="pt-4 flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Folio de Recepción</span>
-                  <span className="text-sm font-semibold text-card-foreground">{folioFormateado}</span>
-                  {solicitud.folioTemporal && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive w-fit mt-1">
-                      Folio temporal
-                    </span>
-                  )}
+                  {solicitud.folioRecepcion
+                    ? <span className="text-sm font-semibold text-card-foreground font-mono">{folioFormateado}</span>
+                    : <span className="text-sm text-muted-foreground italic">Sin asignar</span>
+                  }
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Denominación</span>
@@ -699,6 +883,13 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
             </Card>
           )}
 
+          {filtro === 1 && activePanel === "revision" && (
+            <FolioDictamenCard
+              folioDictamen={folioDictamen}
+              onAsignar={handleAsignarFolioDictamen}
+            />
+          )}
+
           {activePanel === "historial" && (
             <Card className="shadow-sm border-border sticky top-4">
               <CardHeader className="pb-2">
@@ -742,7 +933,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, guardan
         description={`La solicitud ${folioFormateado} avanzará al siguiente paso del proceso.`}
         confirmLabel="Sí, aprobar"
         icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
-      />
+        />
       <ObservarModal
         open={showObservarModal}
         onClose={() => setShowObservarModal(false)}
@@ -765,19 +956,18 @@ interface BandejaFiltroPageProps {
   filtro: 1 | 2 | 3
   onOpenReview?: (solicitudId: string, filtro: 1 | 2 | 3) => void
 }
-
 export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPageProps) {
   const { user } = useAuth()
-
   const [solicitudes,    setSolicitudes]    = useState<FiltroSolicitud[]>([])
   const [loading,        setLoading]        = useState(true)
   const [error,          setError]          = useState<string | null>(null)
   const [guardando,      setGuardando]      = useState(false)
-  const [activeTab,      setActiveTab]      = useState<TabKey>("todas")
+  const [activeTab,      setActiveTab]      = useState<TabKey>(filtro === 2 ? "pendientes_asignacion" : "nuevas")
   const [selectedId,     setSelectedId]     = useState<string | null>(null)
   const [observarTarget,        setObservarTarget]        = useState<string | null>(null)
   const [aprobarTarget,        setAprobarTarget]        = useState<string | null>(null)
-  const [aprobarAsignarTarget, setAprobarAsignarTarget] = useState<string | null>(null)
+  const [aprobarAsignarTarget,  setAprobarAsignarTarget]  = useState<string | null>(null)
+  const [asignarRevisorTarget,  setAsignarRevisorTarget]  = useState<string | null>(null)
 
   const [searchTerm,       setSearchTerm]       = useState("")
   const [filterAnio,       setFilterAnio]       = useState("2026")
@@ -791,8 +981,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
     try {
       const userId = (user as any)?.id ?? ""
       const url = filtro === 1 && userId
-        ? `/api/filtro?filtro=${filtro}&revisorId=${userId}`
-        : `/api/filtro?filtro=${filtro}`
+        ? `/api/filtro?filtro=${filtro}&revisorId=${userId}&userId=${userId}`
+        : `/api/filtro?filtro=${filtro}&userId=${userId}`
       const res  = await fetch(url)
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar"); return }
@@ -847,12 +1037,60 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
       )
       setSelectedId(null); setObservarTarget(null)
+      setActiveTab("observadas")
     } catch { alert("Error de conexión al observar") }
     finally { setGuardando(false) }
   }, [filtro, user])
 
+  const handleAceptar = useCallback(async (id: string) => {
+    setGuardando(true)
+    try {
+      const res  = await fetch("/api/filtro", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          solicitudId: Number(id),
+          accion: "aceptar",
+          usuarioId: (user as any)?.id ?? "",
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) { alert(json.error ?? "Error al aceptar"); return }
+      setSolicitudes(prev =>
+        prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
+      )
+    } catch { alert("Error de conexión al aceptar") }
+    finally { setGuardando(false) }
+  }, [user])
+
+  const handleAsignarRevisor = useCallback(async (id: string, revisorId: string) => {
+    setGuardando(true)
+    try {
+      const res  = await fetch("/api/filtro", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          solicitudId: Number(id),
+          accion: "asignarRevisor",
+          usuarioId: (user as any)?.id ?? "",
+          revisorId,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) { alert(json.error ?? "Error al asignar revisor"); return }
+      setSolicitudes(prev => prev.filter(s => s.id !== id))
+      setAsignarRevisorTarget(null)
+      setSelectedId(null)
+    } catch { alert("Error de conexión al asignar revisor") }
+    finally { setGuardando(false) }
+  }, [user])
+
   const tabCounts = useMemo(() => {
-    const c: Record<TabKey, number> = { nuevas: 0, correcciones: 0, revision: 0, observadas: 0, todas: 0 }
+    const c: Record<TabKey, number> = {
+      nuevas: 0, correcciones: 0, revision: 0, observadas: 0,
+      pendientes_asignacion: 0, en_validacion: 0, pendientes_firma: 0,
+      todas: 0,
+    }
     c.todas = solicitudes.length
     solicitudes.forEach(s => {
       const tab = classifySolicitud(s, filtro)
@@ -950,13 +1188,22 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
 
       {/* Tarjetas resumen */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[
-          { label: "Total en bandeja", value: solicitudes.length,         icon: <Filter className="h-5 w-5 text-secondary" />,          bg: "bg-secondary/10" },
-          { label: "Nuevas",           value: tabCounts.nuevas,           icon: <CircleDot className="h-5 w-5 text-secondary" />,        bg: "bg-secondary/10" },
-          { label: "Correcciones",     value: tabCounts.correcciones,     icon: <RotateCcw className="h-5 w-5 text-accent-foreground" />, bg: "bg-accent/10" },
-          { label: "SLA en riesgo",    value: solicitudes.filter(s => s.slaRestante !== null && s.slaRestante <= 5).length,
-                                                                           icon: <AlertTriangle className="h-5 w-5 text-destructive" />,  bg: "bg-destructive/10" },
-        ].map((c, i) => (
+        {(filtro === 2
+          ? [
+              { label: "Total en bandeja",         value: solicitudes.length,                     icon: <Filter className="h-5 w-5 text-secondary" />,          bg: "bg-secondary/10" },
+              { label: "Pendientes de asignación", value: tabCounts.pendientes_asignacion,         icon: <UserCheck className="h-5 w-5 text-orange-600" />,       bg: "bg-orange-500/10" },
+              { label: "En validación",            value: tabCounts.en_validacion,                 icon: <ClipboardCheck className="h-5 w-5 text-primary" />,     bg: "bg-primary/10" },
+              { label: "SLA en riesgo",            value: solicitudes.filter(s => s.slaRestante !== null && s.slaRestante <= 5).length,
+                                                                                                    icon: <AlertTriangle className="h-5 w-5 text-destructive" />,  bg: "bg-destructive/10" },
+            ]
+          : [
+              { label: "Total en bandeja", value: solicitudes.length,         icon: <Filter className="h-5 w-5 text-secondary" />,          bg: "bg-secondary/10" },
+              { label: "Nuevas",           value: tabCounts.nuevas,           icon: <CircleDot className="h-5 w-5 text-secondary" />,        bg: "bg-secondary/10" },
+              { label: "Correcciones",     value: tabCounts.correcciones,     icon: <RotateCcw className="h-5 w-5 text-accent-foreground" />, bg: "bg-accent/10" },
+              { label: "SLA en riesgo",    value: solicitudes.filter(s => s.slaRestante !== null && s.slaRestante <= 5).length,
+                                                                               icon: <AlertTriangle className="h-5 w-5 text-destructive" />,  bg: "bg-destructive/10" },
+            ]
+        ).map((c, i) => (
           <Card key={i} className="shadow-sm border-border">
             <CardContent className="flex items-center gap-3 p-4">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${c.bg}`}>{c.icon}</div>
@@ -972,12 +1219,18 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       <FilterTabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as TabKey)}
-        items={(Object.keys(TAB_CONFIG) as TabKey[]).map((tabKey) => ({
-          value: tabKey,
-          label: TAB_CONFIG[tabKey].label,
-          count: tabCounts[tabKey],
-          icon: TAB_CONFIG[tabKey].icon,
-        }))}
+        items={(filtro === 2
+          ? Object.keys(TAB_CONFIG_DO)
+          : Object.keys(TAB_CONFIG)
+        ).map((tabKey) => {
+          const cfg = filtro === 2 ? TAB_CONFIG_DO[tabKey] : TAB_CONFIG[tabKey]
+          return {
+            value: tabKey,
+            label: cfg.label,
+            count: tabCounts[tabKey as TabKey],
+            icon:  cfg.icon,
+          }
+        })}
       />
 
       {/* filtros  */}
@@ -1053,22 +1306,21 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">
-                    <th className="px-3 py-3 text-left font-semibold">Estatus</th>
-                    <th className="px-3 py-3 text-left font-semibold">Folio Recepción</th>
-                    <th className="px-3 py-3 text-left font-semibold">Régimen de Contratación</th>
-                    <th className="px-3 py-3 text-left font-semibold">Secretaría</th>
-                    {filtro >= 2 && <th className="px-3 py-3 text-left font-semibold">Folio Dictamen</th>}
-                    <th className="px-3 py-3 text-left font-semibold">Fecha de Recepción</th>
-                    <th className="px-3 py-3 text-left font-semibold">Fecha de Corrección</th>
-                    <th className="px-3 py-3 text-left font-semibold">Ult. Observo</th>
-                    <th className="px-3 py-3 text-left font-semibold">SLA</th>
-                    <th className="px-3 py-3 text-left font-semibold">Acción</th>
+                    <th className="px-4 py-3 text-left font-semibold">Estatus</th>
+                    <th className="px-4 py-3 text-left font-semibold">Folio Recepción</th>
+                    <th className="px-4 py-3 text-left font-semibold">Régimen de Contratación</th>
+                    <th className="px-4 py-3 text-left font-semibold">Secretaría</th>
+                    <th className="px-4 py-3 text-left font-semibold">Fecha de Recepción</th>
+                    <th className="px-4 py-3 text-left font-semibold">Fecha de Corrección</th>
+                    <th className="px-4 py-3 text-left font-semibold">Ult. Observo</th>
+                    <th className="px-4 py-3 text-left font-semibold">SLA</th>
+                    <th className="px-4 py-3 text-left font-semibold">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={filtro >= 2 ? 10 : 9} className="px-4 py-12 text-center text-muted-foreground">
+                      <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
                         <div className="flex flex-col items-center gap-2">
                           <Filter className="h-8 w-8 text-muted-foreground/40" />
                           <span>No hay solicitudes en esta clasificación</span>
@@ -1077,14 +1329,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                     </tr>
                   ) : filtered.map(sol => {
                     const tab    = classifySolicitud(sol, filtro)
-                    const config = TAB_CONFIG[tab]
+                    const config = (filtro === 2 ? TAB_CONFIG_DO : TAB_CONFIG)[tab]
                     return (
                       <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
+
                         {/* Estatus */}
-                        <td className="px-3 py-3">
-                          <div className="flex flex-col gap-1">
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${config.activeBg} ${config.activeText}`}>
-                              {config.icon}{config.label}
+                        <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${config.activeBg} ${config.activeText}`}>
+                        {config.icon}{config.label}
                             </span>
                             {sol.reingresoCount > 0 && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent-foreground">
@@ -1093,15 +1346,14 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             )}
                           </div>
                         </td>
+
                         {/* Folio Recepción */}
-                        <td className="px-3 py-3 font-medium text-card-foreground">
+                        <td className="px-4 py-3 font-medium text-card-foreground">
                           <div className="flex flex-col gap-1">
-                            <span>{formatearFolio(sol.folioRecepcion)}</span>
-                            {sol.folioTemporal && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive w-fit">
-                                Folio temporal
-                              </span>
-                            )}
+                            {sol.folioRecepcion
+                              ? <span className="font-mono">{formatearFolio(sol.folioRecepcion)}</span>
+                              : <span className="text-muted-foreground italic text-xs">Sin asignar</span>
+                            }
                             {sol.esRegularizacion && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary w-fit">
                                 Regularización
@@ -1109,27 +1361,18 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-muted-foreground text-xs max-w-[180px]">
+                        <td className="px-4 py-3 text-muted-foreground text-xs max-w-[180px]">
                           <span className="line-clamp-2">{formatRegimen(sol._raw?.regimen)}</span>
                         </td>
+
                         {/* Secretaría */}
-                        <td className="px-3 py-3 text-muted-foreground text-xs">{sol.secretaria}</td>
-                        {filtro >= 2 && (
-                          <td className="px-3 py-3">
-                            {sol.folioDictamen
-                              ? <span className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-medium text-secondary">
-                                  {formatearFolio(sol.folioDictamen)}
-                                </span>
-                              : <span className="text-xs text-muted-foreground">---</span>
-                            }
-                          </td>
-                        )}
-                        <td className="px-3 py-3 text-xs text-muted-foreground">
+                        <td className="px-4 py-3 text-muted-foreground text-xs">{sol.secretaria}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
                           {sol.fechaRecepcionDO
                             ? new Date(sol.fechaRecepcionDO).toLocaleDateString("es-MX")
                             : "---"}
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-4 py-3">
                           {sol.lastObservedStage ? (
                             <div className="flex flex-col gap-0.5">
                               <span className="text-xs text-card-foreground">Filtro {sol.lastObservedStage}</span>
@@ -1139,24 +1382,62 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                             <span className="text-xs text-muted-foreground">---</span>
                           )}
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-4 py-3">
                           {sol.lastObservedEstado ? (
                             <span className="text-xs text-muted-foreground">{sol.lastObservedEstado}</span>
                           ) : (
                             <span className="text-xs text-muted-foreground">---</span>
                           )}
                         </td>
-                        <td className="px-3 py-3"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
-                        <td className="px-3 py-3">
+                        <td className="px-4 py-3"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
-                            <Button
-                              variant="ghost" size="sm"
-                              onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
-                              className="text-secondary hover:text-primary gap-1.5"
-                            >
-                              <FileSearch className="h-4 w-4" />Revisar
-                            </Button>
-                            <Button
+                            {filtro === 2 ? (
+                              tab === "pendientes_asignacion" ? (
+                                <Button
+                                  variant="ghost" size="sm"
+                                  onClick={() => setAsignarRevisorTarget(sol.id)}
+                                  disabled={guardando}
+                                  className="text-primary hover:text-primary/80 gap-1.5 font-medium"
+                                >
+                                  <UserCheck className="h-4 w-4" />Asignar Revisor
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost" size="sm"
+                                  onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
+                                  className="text-secondary hover:text-primary gap-1.5"
+                                >
+                                  <FileSearch className="h-4 w-4" />Revisar
+                                </Button>
+                              )
+                            ) : filtro === 1 && sol.estado.toLowerCase().includes("en revision revisor") ? (
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => handleAceptar(sol.id)}
+                                disabled={guardando}
+                                className="text-primary hover:text-primary/80 gap-1.5 font-medium"
+                              >
+                                <ClipboardCheck className="h-4 w-4" />Aceptar
+                              </Button>
+                            ) : filtro === 1 && (sol.estado.toLowerCase() === "aceptado por revisor" || sol.estado.toLowerCase() === "aprobado por revisor") ? (
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
+                                className="text-secondary hover:text-primary gap-1.5"
+                              >
+                                <FileSearch className="h-4 w-4" />Revisar
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
+                                className="text-secondary hover:text-primary gap-1.5"
+                              >
+                                <FileSearch className="h-4 w-4" />Revisar
+                              </Button>
+                            )}
+                            {/* <Button
                               variant="ghost" size="sm"
                               onClick={() => {
                                 const yaFiltro1 = (sol._raw?.historial_solicitud ?? []).some(
@@ -1183,7 +1464,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                               className="text-destructive hover:text-destructive/80 gap-1.5"
                             >
                               <RotateCcw className="h-4 w-4" />Observar
-                            </Button>
+                            </Button> */}
                           </div>
                         </td>
                       </tr>
@@ -1226,6 +1507,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
           }
         }}
         folio={formatearFolio(solicitudes.find(s => s.id === aprobarAsignarTarget)?.folioRecepcion ?? "")}
+        guardando={guardando}
+       />
+      <AsignarRevisorModal
+        open={!!asignarRevisorTarget}
+        onClose={() => setAsignarRevisorTarget(null)}
+        onConfirm={(revisorId) => {
+          if (asignarRevisorTarget) handleAsignarRevisor(asignarRevisorTarget, revisorId)
+        }}
+        folio={formatearFolio(solicitudes.find(s => s.id === asignarRevisorTarget)?.folioRecepcion ?? "")}
         guardando={guardando}
       />
     </PageLayout>

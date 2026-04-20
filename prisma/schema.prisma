@@ -190,6 +190,11 @@ model solicitud {
   valores               String?
   areas_exp             String?
   revisor_asignado_id   String?               @db.Uuid
+  puesto_jefe_inmediato String?               @db.VarChar(200)
+  marco_normativo       String[]              @default([])
+  condiciones_riesgos   String[]              @default([])
+  resguardo_activos     String?               @db.VarChar(10)
+  tipo_importe          String?               @db.VarChar(20)
   adjunto               adjunto[]
   checklist_detalle     checklist_detalle[]
   dictamen              dictamen?

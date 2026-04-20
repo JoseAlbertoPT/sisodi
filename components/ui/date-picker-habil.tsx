@@ -41,15 +41,13 @@ export function dateToDmy(d: Date): string {
   return `${dd}/${mm}/${d.getFullYear()}`
 }
 
-const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6
-
 interface DatePickerHabilProps {
   /** Fecha seleccionada como objeto Date (o undefined si vacío) */
   value?: Date
   onChange: (date: Date | undefined) => void
   /** Fecha mínima seleccionable */
   fromDate?: Date
-  /** Mes/año fijo al que se navega inicialmente */
+  /** Mes/año al que se navega inicialmente cuando no hay valor seleccionado */
   defaultMonth?: Date
   placeholder?: string
   disabled?: boolean
@@ -69,6 +67,17 @@ export function DatePickerHabil({
   compact = false,
 }: DatePickerHabilProps) {
   const [open, setOpen] = React.useState(false)
+
+  // Estado controlado del mes visible — persiste al navegar entre meses
+  const [month, setMonth] = React.useState<Date>(
+    () => value ?? defaultMonth ?? new Date()
+  )
+
+  // Cuando cambia el valor externo, sincroniza el mes visible
+  React.useEffect(() => {
+    if (value) setMonth(value)
+    else if (defaultMonth) setMonth(defaultMonth)
+  }, [value, defaultMonth])
 
   const label = value
     ? value.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
@@ -96,7 +105,9 @@ export function DatePickerHabil({
           mode="single"
           locale={es}
           selected={value}
-          defaultMonth={value ?? defaultMonth}
+          month={month}
+          onMonthChange={setMonth}
+          startMonth={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
           fromDate={fromDate}
           weekStartsOn={1}
           disabled={[{ dayOfWeek: [0, 6] }]}
@@ -109,28 +120,34 @@ export function DatePickerHabil({
             weekend: "text-muted-foreground/40 bg-muted/30 cursor-not-allowed line-through",
           }}
           classNames={{
-            root: "p-3",
-            months: "flex flex-col gap-4",
-            month: "flex flex-col gap-3",
-            nav: "flex items-center gap-1 w-full absolute top-3 inset-x-3 justify-between",
-            button_previous: "h-7 w-7 p-0 opacity-70 hover:opacity-100 border border-input rounded-md flex items-center justify-center",
-            button_next: "h-7 w-7 p-0 opacity-70 hover:opacity-100 border border-input rounded-md flex items-center justify-center",
-            month_caption: "flex justify-center pt-1 relative items-center h-7",
-            caption_label: "text-sm font-medium capitalize",
-            weekdays: "flex",
-            weekday: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center pb-1",
-            week: "flex w-full mt-1",
-            day: "relative p-0 text-center w-9 h-9",
-            day_button: "w-full h-full rounded-md text-sm font-normal hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring",
-            selected: "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground",
-            today: "[&>button]:font-bold [&>button]:underline",
-            outside: "opacity-40",
-            disabled: "opacity-30 pointer-events-none",
+            root:          "p-3 select-none",
+            months:        "flex flex-col gap-4",
+            month:         "flex flex-col gap-3",
+            month_caption: "flex items-center justify-between h-8 px-1",
+            caption_label: "text-sm font-semibold capitalize text-card-foreground",
+            nav:           "flex items-center gap-1",
+            button_previous: cn(
+              "h-7 w-7 p-0 border border-input rounded-md flex items-center justify-center",
+              "opacity-70 hover:opacity-100 hover:bg-accent transition-opacity",
+            ),
+            button_next: cn(
+              "h-7 w-7 p-0 border border-input rounded-md flex items-center justify-center",
+              "opacity-70 hover:opacity-100 hover:bg-accent transition-opacity",
+            ),
+            weekdays:    "flex mt-1",
+            weekday:     "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center pb-1",
+            week:        "flex w-full mt-1",
+            day:         "relative p-0 text-center w-9 h-9",
+            day_button:  "w-full h-full rounded-md text-sm font-normal hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring",
+            selected:    "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground",
+            today:       "[&>button]:font-bold [&>button]:underline",
+            outside:     "opacity-40",
+            disabled:    "opacity-30 pointer-events-none",
           }}
           components={{
             Chevron: ({ orientation }) =>
               orientation === "left"
-                ? <ChevronLeftIcon className="h-4 w-4" />
+                ? null
                 : <ChevronRightIcon className="h-4 w-4" />,
           }}
         />

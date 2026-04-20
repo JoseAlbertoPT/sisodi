@@ -12,16 +12,13 @@ interface TreeNode {
   acciones: { code: string; label: string }[]
 }
 export async function GET() {
-  // Get all active menus
   const allMenus = await prisma.menu.findMany({
     where: { activo: true },
     orderBy: { orden: "asc" },
   })
 
-  // Get all acciones
   const allAcciones = await prisma.accion.findMany()
 
-  // Build tree
   const nodeMap = new Map<number, TreeNode>()
   for (const m of allMenus) {
     nodeMap.set(m.id, {
@@ -36,8 +33,6 @@ export async function GET() {
     })
   }
 
-  // Assign acciones to leaf menus (menus with a key/route)
-  // Each leaf menu gets all available acciones
   for (const m of allMenus) {
     if (m.key && nodeMap.has(m.id)) {
       nodeMap.get(m.id)!.acciones = allAcciones.map((a) => ({
