@@ -6,7 +6,6 @@ interface PermisosUser {
   menuActions: Record<string, string[]>
 }
 
-// GET: obtener permisos del rol del usuario
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
@@ -21,7 +20,6 @@ export async function GET(
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
   }
 
-  // Get menu IDs for this role
   const rolMenus = await prisma.rol_menu.findMany({
     where: { rol_id: user.rol_id },
     include: {
@@ -45,7 +43,6 @@ export async function GET(
   return NextResponse.json(result)
 }
 
-// PUT: actualizar permisos del rol del usuario
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
@@ -63,7 +60,6 @@ export async function PUT(
 
   const rolId = user.rol_id
 
-  // Delete existing rol_menu entries for this role
   await prisma.rol_menu_accion.deleteMany({
     where: { rol_menu: { rol_id: rolId } },
   })
@@ -71,14 +67,12 @@ export async function PUT(
     where: { rol_id: rolId },
   })
 
-  // Insert new rol_menu entries
   for (const menuIdStr of body.menuIds) {
     const menuId = parseInt(menuIdStr, 10)
     const rolMenu = await prisma.rol_menu.create({
       data: { rol_id: rolId, menu_id: menuId },
     })
 
-    // Insert actions for this menu
     const actionNames = body.menuActions[menuIdStr] ?? []
     if (actionNames.length > 0) {
       const acciones = await prisma.accion.findMany({
@@ -96,7 +90,6 @@ export async function PUT(
     }
   }
 
-  // Return updated permisos
   const rolMenus = await prisma.rol_menu.findMany({
     where: { rol_id: rolId },
     include: {

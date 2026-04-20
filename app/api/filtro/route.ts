@@ -18,12 +18,12 @@ function estadoObservado(filtro: number) {
   return "Observado por Emisor"
 }
 
-function generarFolioTemporal(id: number, fecha: Date | null | undefined): string {
+function generarFolioTemporal(id: number, fecha: Date | null | undefined, sufijo?: number): string {
   const f   = fecha ?? new Date()
   const mes = f.getMonth() + 1
   const ini = INICIALES_MES[mes] ?? "XX"
   const num = String(id).padStart(3, "0")
-  return `${ini}-${num}`
+  return sufijo ? `${ini}-${num}-${sufijo}` : `${ini}-${num}`
 }
 
 async function generarFolioDictamen(tipo: "dictamen" | "opinion"): Promise<string> {
@@ -49,11 +49,9 @@ function resolverFolioDictamen(item: any): string | null {
     item?.folioDictamen         ??
     item?.dictamen?.folio       ??
     item?.folio_dictamen        ??
-    item?.folio_anterior        ??   // renovaciones guardan el folio previo aquí
     item?._raw?.folioDictamen   ??
     item?._raw?.dictamen?.folio ??
     item?._raw?.folio_dictamen  ??
-    item?._raw?.folio_anterior  ??
     null
   )
 }
@@ -73,14 +71,20 @@ export async function GET(req: NextRequest) {
 
     const estadosNombres = [
       estadoEnRevision(filtro),
-      estadoObservado(filtro),
+      ...(filtro === 3 ? [estadoObservado(filtro)] : []),  // solo filtro 3 (Emisor) ve sus propias observadas
       ...(filtro === 3 ? ["Pendiente Firma Dictamen"] : []),
+      ...(filtro === 1 ? [
+        "Aceptado por Revisor",
+        "Observado por Validacion Final",  // regresada desde Validacion Final → solo la ve el Revisor
+      ] : []),
+      ...(filtro === 2 ? [
+        "Pendiente DO",           // llega de UEFA → tab: Pendientes de asignación
+        "Observado por Emisor",   // regresada desde Emisor → tab: Observadas
+        "Observado por DO",       // regresada desde Jefe DO → tab: Observadas en UEFA
+        "Observado por Revisor",  // regresada por Revisor → tab: Observadas
+      ] : []),
     ]
 
-    // ── FIX CRÍTICO: búsqueda insensible a mayúsculas/acentos ────────────────
-    // PostgreSQL hace comparación case-sensitive por defecto, lo que causaba
-    // que solicitudes con estados como "En Revisión DO Filtro 1" (con acento)
-    // no aparecieran en la bandeja aunque el badge las mostrara correctamente.
     const estados = await prisma.estado.findMany({
       where: {
         OR: estadosNombres.map((nombre) => ({
@@ -95,9 +99,41 @@ export async function GET(req: NextRequest) {
 
     const estadoIds = estados.map((e) => e.id)
 
-    const revisorId = searchParams.get("revisorId")
-    const whereClause: any = { estado_id: { in: estadoIds } }
-    if (filtro === 1 && revisorId) {
+    const revisorId    = searchParams.get("revisorId")
+    const viewerUserId = searchParams.get("userId")
+
+    let organoFilter: any = {}
+    let esRolRevisor = false
+
+    if (viewerUserId) {
+      const viewer = await prisma.usuario.findUnique({
+        where:  { id: viewerUserId },
+        select: {
+          organo_centralizado: { select: { id: true } },
+          rol: { select: { nombre: true } },
+        },
+      })
+      if (viewer) {
+        esRolRevisor = viewer.rol?.nombre?.toLowerCase() === "revisor"
+        if (viewer.organo_centralizado !== null) {
+          organoFilter = {
+            OR: [
+              { usuario: { organo_centralizado: { isNot: null } } },
+              { usuario: { secretaria_id: null } },
+            ],
+          }
+        } else {
+          organoFilter = { usuario: { organo_centralizado: { is: null } } }
+        }
+      }
+    }
+
+    const whereClause: any = { estado_id: { in: estadoIds }, ...organoFilter }
+
+    // Revisor solo ve solicitudes asignadas a él, sin importar el filtro
+    if (esRolRevisor && viewerUserId) {
+      whereClause.revisor_asignado_id = viewerUserId
+    } else if (filtro === 1 && revisorId) {
       whereClause.revisor_asignado_id = revisorId
     }
 
@@ -130,6 +166,7 @@ export async function GET(req: NextRequest) {
         checklist_detalle: {
           include: { checklist: true },
         },
+        adjunto: true,
       },
       orderBy: { fecha_creacion: "desc" },
     })
@@ -157,7 +194,6 @@ export async function GET(req: NextRequest) {
         if (n.includes("revisor")) return 1
         if (n.includes("validacion final")) return 2
         if (n.includes("emisor")) return 3
-        // legacy pattern
         const m = lastObservedEstado.match(/filtro\s+(\d)/i)
         return m ? parseInt(m[1], 10) : null
       })()
@@ -178,9 +214,10 @@ export async function GET(req: NextRequest) {
       }
 
       const etapaFiltro    = `F${filtro}`
+      const tieneFolioDictamen = !!(sol.dictamen?.folio ?? (sol as any).folio_dictamen)
       const openedInFiltro = sol.checklist_detalle.some(
         (cd) => cd.checklist?.etapa === etapaFiltro
-      )
+      ) || tieneFolioDictamen
 
       const fueObservadaEnEsteFiltro = historial.some((h) => {
         const nombre =
@@ -195,9 +232,22 @@ export async function GET(req: NextRequest) {
 
       const isNuevaEnFiltro = !fueObservadaEnEsteFiltro && !openedInFiltro
       const fechaParaFolio  = sol.fecha_envio ?? sol.fecha_creacion
-      const folioRecepcion  =
-        sol.folio_recepcion ??
-        generarFolioTemporal(sol.id, fechaParaFolio ? new Date(fechaParaFolio) : null)
+
+      // Extraer número base y sufijo del folio JUST-YYYY-NNNN o JUST-YYYY-NNNN-S
+      const { numParaFolioTemp, sufijoFolio } = (() => {
+        if ((sol as any).folio_justificacion) {
+          const partes = String((sol as any).folio_justificacion).split("-")
+          // Formato: JUST(0) - YYYY(1) - NNNN(2) - [S(3)]
+          if (partes.length >= 3) {
+            const base = parseInt(partes[2], 10)
+            const sufijo = partes.length === 4 ? parseInt(partes[3], 10) : undefined
+            if (!isNaN(base) && base > 0) return { numParaFolioTemp: base, sufijoFolio: sufijo }
+          }
+        }
+        return { numParaFolioTemp: sol.id, sufijoFolio: undefined }
+      })()
+
+      const folioRecepcion  = sol.folio_recepcion ?? null
 
       const fechaRecepcionDO = sol.fecha_envio
         ? new Date(sol.fecha_envio).toISOString().slice(0, 10)
@@ -205,16 +255,11 @@ export async function GET(req: NextRequest) {
         ? new Date(sol.fecha_creacion).toISOString().slice(0, 10)
         : null
 
-      // ── FIX: Resolver folio dictamen desde TODAS las fuentes ─────────────
-      // Incluye folio_anterior para el caso de renovaciones donde el dictamen
-      // previo se almacena en ese campo y no en la relación dictamen.
       const folioDictamen =
         sol.dictamen?.folio ??
         (sol as any).folio_dictamen ??
-        (sol as any).folio_anterior ??
         null
 
-      // _raw enriquecido con folioDictamen propagado al nivel raíz
       const rawEnriquecido = {
         ...sol,
         folioDictamen,
@@ -231,10 +276,10 @@ export async function GET(req: NextRequest) {
         folioSolicitud:   folioRecepcion,
         folioRecepcion,
         folioDictamen,
-        folioTemporal:    !sol.folio_recepcion,
+        folioTemporal:    false,
         tipo:             sol.tipo_solicitud,
         denominacion:     (sol as any).denominacion || sol.tipo_solicitud || "—",
-        secretaria:       sol.usuario?.area?.nombre ?? "—",
+        secretaria:       (sol as any).secretaria ?? sol.usuario?.area?.nombre ?? "—",
         secretariaId:     sol.usuario?.secretaria_id ?? null,
         estado:           sol.estado.nombre,
         esRegularizacion: (sol as any).es_extemporanea ?? false,
@@ -265,7 +310,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { solicitudId, accion, filtro, usuarioId, observaciones, folioDictamen, revisorId } = body
+    const { solicitudId, accion, filtro, usuarioId, observaciones, folioDictamen, folioRecepcion, revisorId } = body
 
     if (!solicitudId || !accion || !usuarioId) {
       return NextResponse.json(
@@ -274,9 +319,9 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    if (!["aprobar", "observar", "asignarFolio"].includes(accion)) {
+    if (!["aprobar", "observar", "asignarFolio", "asignarFolioRecepcion", "aceptar", "asignarRevisor"].includes(accion)) {
       return NextResponse.json(
-        { ok: false, error: "Acción inválida. Use 'aprobar', 'observar' o 'asignarFolio'" },
+        { ok: false, error: "Acción inválida. Use 'aprobar', 'observar', 'asignarFolio', 'asignarFolioRecepcion', 'aceptar' o 'asignarRevisor'" },
         { status: 400 }
       )
     }
@@ -289,7 +334,6 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    // ── asignarFolio ──────────────────────────────────────────────────────────
     if (accion === "asignarFolio") {
       if (!folioDictamen) {
         return NextResponse.json(
@@ -336,6 +380,23 @@ export async function PATCH(req: NextRequest) {
         // campo puede no existir en el esquema aún — ignorar silenciosamente
       }
 
+      // Actualizar consecutivo para que el siguiente folio sea auto-calculado
+      try {
+        const partes = folioDictamen.split("/")
+        if (partes.length === 3) {
+          const consecutivoNum = parseInt(partes[0], 10)
+          const mesNum         = parseInt(partes[1], 10)
+          const anioNum        = parseInt(partes[2], 10)
+          if (!isNaN(consecutivoNum) && !isNaN(mesNum) && !isNaN(anioNum)) {
+            await prisma.consecutivo_folio.upsert({
+              where:  { tipo_mes_anio: { tipo: "FDICT", mes: mesNum, anio: anioNum } },
+              update: { consecutivo: consecutivoNum },
+              create: { tipo: "FDICT", mes: mesNum, anio: anioNum, consecutivo: consecutivoNum },
+            })
+          }
+        }
+      } catch { /* ignorar */ }
+
       return NextResponse.json({
         ok:            true,
         accion:        "asignarFolio",
@@ -343,7 +404,111 @@ export async function PATCH(req: NextRequest) {
       })
     }
 
-    // ── aprobar / observar ────────────────────────────────────────────────────
+    if (accion === "asignarFolioRecepcion") {
+      if (!folioRecepcion) {
+        return NextResponse.json(
+          { ok: false, error: "Se requiere 'folioRecepcion' para la acción asignarFolioRecepcion" },
+          { status: 400 }
+        )
+      }
+
+      const solicitudExistente = await prisma.solicitud.findUnique({ where: { id: idNum } })
+      if (!solicitudExistente) {
+        return NextResponse.json({ ok: false, error: "Solicitud no encontrada" }, { status: 404 })
+      }
+
+      await prisma.solicitud.update({
+        where: { id: idNum },
+        data:  { folio_recepcion: folioRecepcion },
+      })
+
+      // Actualizar consecutivo FREC — formato AB-001
+      try {
+        const matchFrec = folioRecepcion.match(/^([A-Z]{2})-(\d+)$/)
+        if (matchFrec) {
+          const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
+          const mesNum         = MONTH_CODES.indexOf(matchFrec[1]) + 1
+          const consecutivoNum = parseInt(matchFrec[2], 10)
+          const anioNum        = new Date().getFullYear()
+          if (mesNum > 0 && !isNaN(consecutivoNum)) {
+            await prisma.consecutivo_folio.upsert({
+              where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
+              update: { consecutivo: consecutivoNum },
+              create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: consecutivoNum },
+            })
+          }
+        }
+      } catch { /* ignorar */ }
+
+      return NextResponse.json({ ok: true, accion: "asignarFolioRecepcion", folioRecepcion })
+    }
+
+    if (accion === "asignarRevisor") {
+      if (!revisorId) {
+        return NextResponse.json(
+          { ok: false, error: "Se requiere 'revisorId' para la acción asignarRevisor" },
+          { status: 400 }
+        )
+      }
+      let estadoRevision = await prisma.estado.findFirst({
+        where: { nombre: { equals: "En Revision Revisor", mode: "insensitive" } },
+      })
+      if (!estadoRevision) {
+        estadoRevision = await prisma.estado.create({
+          data: { nombre: "En Revision Revisor", descripcion: "Solicitud enviada a revisión por revisor asignado" },
+        })
+      }
+      const solicitudActual = await prisma.solicitud.findUnique({
+        where: { id: idNum },
+        select: { estado_id: true },
+      })
+
+      await prisma.solicitud.update({
+        where: { id: idNum },
+        data:  {
+          revisor_asignado_id: revisorId,
+          estado_id: estadoRevision.id,
+        },
+      })
+      await prisma.historial_solicitud.create({
+        data: {
+          solicitud_id:       idNum,
+          usuario_id:         usuarioId,
+          estado_anterior_id: solicitudActual?.estado_id ?? null,
+          estado_nuevo_id:    estadoRevision.id,
+          comentario:         "Enviada a revisión con revisor asignado desde Validación Final",
+        },
+      })
+      return NextResponse.json({
+        ok: true, accion: "asignarRevisor",
+        estadoNuevo: "En Revision Revisor",
+        revisorId,
+      })
+    }
+
+    if (accion === "aceptar") {
+      let estadoAceptado = await prisma.estado.findFirst({
+        where: { nombre: { equals: "Aceptado por Revisor", mode: "insensitive" } },
+      })
+      if (!estadoAceptado) {
+        estadoAceptado = await prisma.estado.create({
+          data: { nombre: "Aceptado por Revisor", descripcion: "Solicitud aceptada por el Revisor asignado" },
+        })
+      }
+      const solicitudActual = await prisma.solicitud.findUnique({ where: { id: idNum }, select: { estado_id: true } })
+      await prisma.solicitud.update({ where: { id: idNum }, data: { estado_id: estadoAceptado.id } })
+      await prisma.historial_solicitud.create({
+        data: {
+          solicitud_id:       idNum,
+          usuario_id:         usuarioId,
+          estado_anterior_id: solicitudActual?.estado_id ?? null,
+          estado_nuevo_id:    estadoAceptado.id,
+          comentario:         "Revisión aceptada por el Revisor",
+        },
+      })
+      return NextResponse.json({ ok: true, estadoNuevo: "Aceptado por Revisor" })
+    }
+
     if (!filtro) {
       return NextResponse.json(
         { ok: false, error: "Se requiere 'filtro' para las acciones aprobar/observar" },
@@ -371,7 +536,6 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    // Detectar si la solicitud ya pasó por Filtro 1
     const yaEsperoPorFiltro1 = solicitud.historial_solicitud.some((h) => {
       const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
       return nombre.toLowerCase().includes("en revision revisor")
@@ -380,27 +544,27 @@ export async function PATCH(req: NextRequest) {
     let nombreEstadoNuevo: string
     if (accion === "aprobar") {
       if (filtro === 1) {
-        // Filtro 1 (Revisión) aprueba → regresa a Filtro 2 (Validación Final)
         nombreEstadoNuevo = estadoEnRevision(2)
       } else if (filtro === 2) {
-        // Filtro 2: 1ra vez → asigna revisor → Filtro 1; 2da vez (ya pasó Filtro 1) → Filtro 3
         nombreEstadoNuevo = yaEsperoPorFiltro1 ? estadoEnRevision(3) : estadoEnRevision(1)
       } else {
-        // Filtro 3: depende del estado actual
         const estadoActual = solicitud.estado.nombre.toLowerCase()
         if (estadoActual.includes("pendiente firma dictamen")) {
-          // Filtro 3 firma → genera dictamen → Emitido (manejado abajo)
           nombreEstadoNuevo = "Emitido"
         } else {
-          // Filtro 3 aprueba → va a UEFA para firma de justificación
           nombreEstadoNuevo = "Pendiente Firma Justificacion"
         }
       }
     } else {
-      nombreEstadoNuevo = estadoObservado(filtro)
+      const estadoActualNorm = solicitud.estado.nombre.toLowerCase()
+      // Jefe DO observa desde "Aceptado por Revisor" → regresa a UEFA como "Observado por DO"
+      if (filtro === 1 && estadoActualNorm.includes("aceptado por revisor")) {
+        nombreEstadoNuevo = "Observado por DO"
+      } else {
+        nombreEstadoNuevo = estadoObservado(filtro)
+      }
     }
 
-    // Buscar estado con mode insensitive para consistencia
     let estadoNuevo = await prisma.estado.findFirst({
       where: { nombre: { equals: nombreEstadoNuevo, mode: "insensitive" } },
     })
@@ -420,7 +584,6 @@ export async function PATCH(req: NextRequest) {
           : String(observaciones)
         : null
 
-    // Si Filtro 2 aprueba por primera vez (→ Revisor), guardar revisor asignado
     const asignarRevisor = filtro === 2 && nombreEstadoNuevo === estadoEnRevision(1) && revisorId
 
     const solicitudActualizada = await prisma.solicitud.update({
@@ -453,13 +616,10 @@ export async function PATCH(req: NextRequest) {
       },
     })
 
-    // ── EMISIÓN cuando Filtro 3 firma (estado era "Pendiente Firma Dictamen") ──
-    if (accion === "aprobar" && filtro === 3 && nombreEstadoNuevo === "Emitido" && !solicitud.dictamen) {
+    if (accion === "aprobar" && filtro === 3 && nombreEstadoNuevo === "Emitido") {
       try {
-        const esParaestatal =
-          (solicitud.tipo_solicitud ?? "").toLowerCase().includes("paraestatal")
-        const tipoDoc: "dictamen" | "opinion" = esParaestatal ? "opinion" : "dictamen"
-        const folio = await generarFolioDictamen(tipoDoc)
+        const folioAsignado = (solicitud as any).folio_dictamen ?? solicitud.dictamen?.folio ?? null
+        const ahora = new Date()
 
         let estadoEmitido = await prisma.estado.findFirst({
           where: { nombre: { equals: "Emitido", mode: "insensitive" } },
@@ -473,25 +633,10 @@ export async function PATCH(req: NextRequest) {
           })
         }
 
-        const ahora = new Date()
-
-        await prisma.$transaction([
-          prisma.dictamen.create({
-            data: {
-              solicitud_id:  idNum,
-              folio,
-              fecha_emision: ahora,
-              tipo_firma:    "autografa",
-              archivo_pdf:   null,
-            },
-          }),
+        const updates: any[] = [
           prisma.solicitud.update({
             where: { id: idNum },
-            data: {
-              estado_id:      estadoEmitido.id,
-              folio_dictamen: folio,
-              fecha_emision:  ahora,
-            } as any,
+            data:  { estado_id: estadoEmitido.id, fecha_emision: ahora } as any,
           }),
           prisma.historial_solicitud.create({
             data: {
@@ -499,24 +644,42 @@ export async function PATCH(req: NextRequest) {
               usuario_id:         usuarioId,
               estado_anterior_id: estadoNuevo.id,
               estado_nuevo_id:    estadoEmitido.id,
-              comentario: `Dictamen emitido. Folio: ${folio} | Tipo firma: autografa`,
+              comentario: folioAsignado
+                ? `Dictamen emitido. Folio: ${folioAsignado} | Tipo firma: autografa`
+                : "Dictamen emitido",
             },
           }),
-        ])
+        ]
+
+        if (folioAsignado && !solicitud.dictamen) {
+          updates.unshift(
+            prisma.dictamen.create({
+              data: {
+                solicitud_id:  idNum,
+                folio:         folioAsignado,
+                fecha_emision: ahora,
+                tipo_firma:    "autografa",
+                archivo_pdf:   null,
+              },
+            })
+          )
+        }
+
+        await prisma.$transaction(updates)
 
         return NextResponse.json({
           ok:            true,
           estadoNuevo:   "Emitido",
-          folioDictamen: folio,
+          folioDictamen: folioAsignado,
           data:          solicitudActualizada,
         })
       } catch (emisionError: any) {
-        console.error("[AUTO-EMISION Filtro 3]", emisionError)
+        console.error("[EMISION Filtro 3]", emisionError)
         return NextResponse.json({
           ok:               true,
           estadoNuevo:      nombreEstadoNuevo,
           folioDictamen:    null,
-          autoEmisionError: emisionError?.message ?? "Error en auto-emisión",
+          autoEmisionError: emisionError?.message ?? "Error en emisión",
           data:             solicitudActualizada,
         })
       }

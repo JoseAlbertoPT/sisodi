@@ -60,11 +60,22 @@ export async function POST(req: NextRequest) {
       nivel_tabulador, categoria_tabulador,
       objeto, actividades, responsabilidades,
       escolaridad, comp_adm, comp_tec, comp_soc, valores, areas_exp,
+      puesto_jefe_inmediato, marco_normativo, condiciones_riesgos, resguardo_activos,
+      tipo_importe,
       estado_nombre,
     } = body
 
     if (!usuarioId)      return NextResponse.json({ ok: false, error: "usuarioId es requerido" }, { status: 400 })
     if (!tipo_solicitud) return NextResponse.json({ ok: false, error: "tipo_solicitud es requerido" }, { status: 400 })
+
+    const usuarioCreador = await prisma.usuario.findUnique({
+      where:  { id: usuarioId },
+      select: { secretaria_id: true },
+    })
+    // Contador independiente por secretaría (centralizado) o compartido para paraestatal
+    const tipoFolioJUST = usuarioCreador?.secretaria_id
+      ? `JUST-${usuarioCreador.secretaria_id}`
+      : "JUST-P"
 
     const estadoNombre = estado_nombre ?? "En Captura"
     let estadoInicial = await prisma.estado.findFirst({
@@ -113,16 +124,44 @@ export async function POST(req: NextRequest) {
         comp_soc:              comp_soc ?? null,
         valores:               valores ?? null,
         areas_exp:             areas_exp ?? null,
+        puesto_jefe_inmediato: puesto_jefe_inmediato ?? null,
+        marco_normativo:       marco_normativo ?? [],
+        condiciones_riesgos:   condiciones_riesgos ?? [],
+        resguardo_activos:     resguardo_activos ?? null,
+        tipo_importe:          tipo_importe ?? null,
       },
     })
 
     // Generate folios based on state
     const fechaCreacion = nueva.fecha_creacion ?? new Date()
     const year          = fechaCreacion.getFullYear()
-    const idPadded      = String(nueva.id).padStart(4, "0")
     const esBorrador    = estadoNombre === "Borrador"
 
-    const folioJustificacion = esBorrador ? null : `JUST-${year}-${idPadded}`
+    let folioJustificacion: string | null = null
+    if (!esBorrador) {
+      if (esExtemporanea) {
+        const registroActual = await prisma.consecutivo_folio.findFirst({
+          where: { tipo: tipoFolioJUST, mes: 0, anio: year },
+        })
+        const ultimoConsecutivo = registroActual?.consecutivo ?? 1
+        const basePadded    = String(ultimoConsecutivo).padStart(4, "0")
+        const baseParaFolio = `JUST-${year}-${basePadded}`
+
+        const yaExistentes = await prisma.solicitud.findMany({
+          where:  { folio_justificacion: { startsWith: `${baseParaFolio}-` } },
+          select: { folio_justificacion: true },
+        })
+        const sufijo = yaExistentes.length + 1
+        folioJustificacion = `${baseParaFolio}-${sufijo}`
+      } else {
+        const registro = await prisma.consecutivo_folio.upsert({
+          where:  { tipo_mes_anio: { tipo: tipoFolioJUST, mes: 0, anio: year } },
+          update: { consecutivo: { increment: 1 } },
+          create: { tipo: tipoFolioJUST, mes: 0, anio: year, consecutivo: 1 },
+        })
+        folioJustificacion = `JUST-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
+      }
+    }
 
     const nuevaConFolio = await prisma.solicitud.update({
       where: { id: nueva.id },
@@ -162,9 +201,11 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { solicitudId, ...campos } = body
+    const { solicitudId: rawId, ...campos } = body
 
-    if (!solicitudId) return NextResponse.json({ ok: false, error: "solicitudId es requerido" }, { status: 400 })
+    if (!rawId) return NextResponse.json({ ok: false, error: "solicitudId es requerido" }, { status: 400 })
+    const solicitudId = Number(rawId)
+    if (isNaN(solicitudId)) return NextResponse.json({ ok: false, error: "solicitudId debe ser un número" }, { status: 400 })
 
     const data: any = {}
     const map: Record<string, string> = {
@@ -190,6 +231,11 @@ export async function PATCH(req: NextRequest) {
       comp_soc:              "comp_soc",
       valores:               "valores",
       areas_exp:             "areas_exp",
+      puesto_jefe_inmediato: "puesto_jefe_inmediato",
+      marco_normativo:       "marco_normativo",
+      condiciones_riesgos:   "condiciones_riesgos",
+      resguardo_activos:     "resguardo_activos",
+      tipo_importe:          "tipo_importe",
     }
     for (const [k, v] of Object.entries(map)) {
       if (campos[k] !== undefined) data[v] = campos[k]

@@ -12,6 +12,7 @@ interface User {
   secretariaId: string | null
   claveReportePlazas: string | null
   mustChangePassword: boolean
+  tipoAdministracion: "centralizada" | "paraestatal"
 }
 
 interface AuthContextType {

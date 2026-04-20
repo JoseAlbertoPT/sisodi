@@ -43,6 +43,16 @@ export function getUAsForSecretaria(secretaria: string): string[] {
  * )
  * claveReportePlazas = registro['CLAVE REPORTE PLAZAS']
  */
+/**
+ * Devuelve el nombre de UA (UA DE CLAVES ADMINISTRATIVAS) a partir de una CLAVE REPORTE PLAZAS.
+ * Útil para mostrar el nombre cuando en BD se almacenó la clave.
+ */
+export function getNombreForClave(clave: string): string {
+  if (!clave) return ""
+  const registro = DATOS.find((d) => d["CLAVE REPORTE PLAZAS"] === clave)
+  return registro?.["UA DE CLAVES ADMINISTRATIVAS"] ?? clave
+}
+
 export function getClaveForUA(secretaria: string, ua: string): string {
   if (!secretaria || !ua) return ""
   const registro = DATOS.find(

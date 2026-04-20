@@ -47,10 +47,8 @@ const INICIALES_MES_MAP: Record<string, string> = {
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio || folio === "—") return "—"
 
-  const matchLegacy = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
-  if (matchLegacy) {
-    return matchLegacy[1].padStart(3, "0")
-  }
+  const matchLegacy = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
+  if (matchLegacy) return `${matchLegacy[1]}/${matchLegacy[2].padStart(2, "0")}/${matchLegacy[3]}`
 
   const matchDictamen = folio.match(/^[A-Z]{2,3}-(\d+)-(\d{4})$/)
   if (matchDictamen) {
@@ -472,16 +470,16 @@ export function DictamenesPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Dictamen</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Folio Recepción</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Secretaría</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Tipo</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Denominación</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Fecha Dict.</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Modalidad</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Destinatarios</th>
-                    <th className="px-3 py-3 text-left font-semibold text-muted-foreground">Acciones</th>
+                  <tr className="bg-secondary text-secondary-foreground">
+                    <th className="px-4 py-3 text-left font-semibold">Folio Dictamen</th>
+                    <th className="px-4 py-3 text-left font-semibold">Folio Recepción</th>
+                    <th className="px-4 py-3 text-left font-semibold">Secretaría</th>
+                    <th className="px-4 py-3 text-left font-semibold">Tipo</th>
+                    <th className="px-4 py-3 text-left font-semibold">Denominación</th>
+                    <th className="px-4 py-3 text-left font-semibold">Fecha Dict.</th>
+                    <th className="px-4 py-3 text-left font-semibold">Modalidad</th>
+                    <th className="px-4 py-3 text-left font-semibold">Destinatarios</th>
+                    <th className="px-4 py-3 text-left font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -494,18 +492,18 @@ export function DictamenesPage() {
                   ) : filtered.map((d) => (
                     <tr key={d.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
 
-                      <td className="px-3 py-3 font-medium text-card-foreground font-mono text-xs">
+                      <td className="px-4 py-3 font-medium text-card-foreground font-mono text-xs">
                         {d.folioDictamen ?? "—"}
                       </td>
 
                       { }
-                      <td className="px-3 py-3 font-medium text-card-foreground font-mono text-xs">
+                      <td className="px-4 py-3 font-medium text-card-foreground font-mono text-xs">
                         {formatearFolio(d.folioRecepcion)}
                       </td>
 
-                      <td className="px-3 py-3 text-muted-foreground text-xs">{d.secretaria}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{d.secretaria}</td>
 
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
                         <Badge className={`text-[10px] border-0 ${
                           d.tipoDoc === "dictamen"
                             ? "bg-primary/10 text-primary"
@@ -515,23 +513,23 @@ export function DictamenesPage() {
                         </Badge>
                       </td>
 
-                      <td className="px-3 py-3 text-muted-foreground text-xs max-w-[200px]">
+                      <td className="px-4 py-3 text-muted-foreground text-xs max-w-[200px]">
                         <span className="line-clamp-2">{d.denominacion ?? "—"}</span>
                       </td>
 
-                      <td className="px-3 py-3 text-muted-foreground text-xs">
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
                         {d.fechaEmision
                           ? new Date(d.fechaEmision).toLocaleDateString("es-MX")
                           : "—"}
                       </td>
 
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
                         <Badge variant="outline" className="text-[10px]">
                           {d.tipoFirma === "electronica" ? "Electrónica" : "Autógrafa"}
                         </Badge>
                       </td>
 
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
                         {d.destinatarios.length > 0 ? (
                           <div className="flex flex-wrap gap-1 max-w-40">
                             {d.destinatarios.slice(0, 2).map((dest, i) => (
@@ -550,7 +548,7 @@ export function DictamenesPage() {
                         )}
                       </td>
 
-                      <td className="px-3 py-3">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost" size="sm"

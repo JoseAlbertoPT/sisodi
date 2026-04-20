@@ -21,20 +21,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Rol no encontrado" }, { status: 404 })
   }
 
-  // Get menu IDs assigned to this role
   const rolMenus = await prisma.rol_menu.findMany({
     where: { rol_id: rol.id },
     select: { menu_id: true },
   })
   const menuIds = new Set(rolMenus.map((rm) => rm.menu_id))
 
-  // Fetch all menus that are active and assigned to this role
   const allMenus = await prisma.menu.findMany({
     where: { activo: true },
     orderBy: { orden: "asc" },
   })
 
-  // Auto-include parents if a child is assigned but parent isn't
   for (const m of allMenus) {
     if (menuIds.has(m.id) && m.parent_id && !menuIds.has(m.parent_id)) {
       menuIds.add(m.parent_id)
@@ -42,10 +39,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Filter to only assigned menus
   const assigned = allMenus.filter((m) => menuIds.has(m.id))
 
-  // Build tree (flat → nested)
   const nodeMap = new Map<number, MenuNode>()
   for (const m of assigned) {
     nodeMap.set(m.id, {

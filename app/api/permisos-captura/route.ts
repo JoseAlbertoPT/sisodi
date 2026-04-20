@@ -18,8 +18,6 @@ function toClient(p: {
   }
 }
 
-/** GET /api/permisos-captura?usuarioId=<uuid>  →  permisos del usuario
- *  GET /api/permisos-captura                   →  todos los permisos activos */
 export async function GET(req: NextRequest) {
   try {
     const usuarioId = req.nextUrl.searchParams.get("usuarioId")
@@ -34,14 +32,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST /api/permisos-captura  { usuarioId, regimen, periodo, grantedBy } */
 export async function POST(req: NextRequest) {
   try {
     const { usuarioId, regimen, periodo, grantedBy } = await req.json()
     if (!usuarioId || !regimen || !periodo || !grantedBy)
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
 
-    // Desactivar permisos activos anteriores para la misma combinación
     await prisma.permiso_captura.updateMany({
       where: { usuario_id: usuarioId, regimen, periodo, active: true, used: false },
       data: { active: false },

@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from "@/lib/auth-context"
 import { AppSidebar, type PageKey } from "@/components/app-sidebar"
 import { AppHeader } from "@/components/app-header"
 import { DashboardPage } from "@/components/pages/dashboard-page"
 import { BandejaFiltroPage } from "@/components/pages/bandeja-filtro-page"
 import { RevisionDOPage } from "@/components/pages/revision-do-page"
-import { NuevaSolicitudPage } from "@/components/pages/nueva-solicitud-page"
+import { NuevaSolicitudPage, type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import { MisSolicitudesPage } from "@/components/pages/mis-solicitudes-page"
 import { DictamenesPage } from "@/components/pages/dictamenes-page"
 
@@ -17,10 +18,22 @@ import { ValidacionUefaPage } from "@/components/pages/validacion-uefa-page"
 import { ConfiguracionPage } from "@/components/pages/configuracion-page"
 
 export function AppShell() {
+  const { user } = useAuth()
   const [currentPage, setCurrentPage] = useState<PageKey>("dashboard")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [reviewSolicitudId, setReviewSolicitudId] = useState<string | null>(null)
   const [reviewFiltro, setReviewFiltro] = useState<1 | 2 | 3>(1)
+  const [editSolicitud, setEditSolicitud] = useState<EditSolicitudPayload | undefined>(undefined)
+
+  const handleNavigate = (page: PageKey) => {
+    if (page !== "nueva-solicitud") setEditSolicitud(undefined)
+    setCurrentPage(page)
+  }
+
+  const handleEditSolicitud = (payload: EditSolicitudPayload) => {
+    setEditSolicitud(payload)
+    setCurrentPage("nueva-solicitud")
+  }
 
   const handleOpenReview = (solicitudId: string, filtro: 1 | 2 | 3) => {
     setReviewSolicitudId(solicitudId)
@@ -38,9 +51,9 @@ export function AppShell() {
       case "dashboard":
         return <DashboardPage onNavigate={setCurrentPage} onOpenReview={handleOpenReview} />
       case "nueva-solicitud":
-        return <NuevaSolicitudPage />
+        return <NuevaSolicitudPage key={editSolicitud?.id ?? "new"} editSolicitud={editSolicitud} />
       case "mis-solicitudes":
-        return <MisSolicitudesPage />
+        return <MisSolicitudesPage key={user?.id ?? "anon"} onEditSolicitud={handleEditSolicitud} />
       case "validacion-uefa":
         return <ValidacionUefaPage />
       case "bandeja-filtro1":
@@ -76,7 +89,7 @@ export function AppShell() {
     <div className="flex h-screen overflow-hidden bg-background">
       <AppSidebar
         currentPage={currentPage}
-        onNavigate={setCurrentPage}
+        onNavigate={handleNavigate}
         collapsed={sidebarCollapsed}
         onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
       />

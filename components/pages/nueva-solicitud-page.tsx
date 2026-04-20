@@ -40,6 +40,7 @@ export type FormularioData = {
   numeroPrestadores:     string
   denominacion:          string
   puestoJefeInmediato:   string
+  tipoAdministracionNom?: "centralizada" | "paraestatal"
   vigenciaInicio:        string
   vigenciaFin:           string
   importeBruto:          string
@@ -50,6 +51,8 @@ export type FormularioData = {
   actividades:           string[]
   responsabilidades:     string[]
   marcoNormativo:        string[]
+  condicionesRiesgos?:   string[]
+  resguardoActivos?:     string
   escolaridad:           string
   compAdm:               string
   compTec:               string
@@ -130,6 +133,7 @@ const DATOS_FALLBACK: Record<string, DatosSecretaria> = {
     programas: ["F-001 Control Presupuestal", "F-002 Fiscalizacion"],
     regimen: "asimilados",
   },
+
   "Secretaria de Educacion": {
     unidades: [
       { value: "Dir. de Educacion Basica",           label: "Dir. de Educacion Basica" },
@@ -368,7 +372,7 @@ function esFolioValido(folio: string): boolean {
   return true
 }
 
-function OficioUpload({ vigenciaInicio }: { vigenciaInicio: string }) {
+function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string; onFileChange?: (file: File | null) => void }) {
   const [archivo, setArchivo] = useState<File | null>(null)
   const [error,   setError]   = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -395,6 +399,7 @@ function OficioUpload({ vigenciaInicio }: { vigenciaInicio: string }) {
       return
     }
     setArchivo(file)
+    onFileChange?.(file)
   }
 
         return (
@@ -412,7 +417,7 @@ function OficioUpload({ vigenciaInicio }: { vigenciaInicio: string }) {
             <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
             <span className="text-xs font-medium text-secondary truncate max-w-xs">{archivo.name}</span>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setArchivo(null); setError(null) }}
+            <button type="button" onClick={(e) => { e.stopPropagation(); setArchivo(null); setError(null); onFileChange?.(null) }}
               className="text-muted-foreground hover:text-destructive ml-1 text-xs leading-none">✕</button>
           </div>
         ) : (
@@ -429,6 +434,18 @@ function OficioUpload({ vigenciaInicio }: { vigenciaInicio: string }) {
       )}
     </div>
   )
+}
+
+function formatFolioJustificacion(folio: string): string {
+  const m = folio.match(/^JUST-(\d{4})-(\d+)$/)
+  if (!m) return folio
+  return `${parseInt(m[2], 10)}/${m[1]}`
+}
+
+function formatFolioDictamen(folio: string): string {
+  const m = folio.match(/^(\d+)\/\d{1,2}\/(\d{4})$/)
+  if (!m) return folio
+  return `${parseInt(m[1], 10)}/${m[2]}`
 }
 
 function splitList(text: string): string[] {
@@ -1116,10 +1133,10 @@ function SelectConBusqueda({
   )
 }
 
-function MarcoNormativoModal({ onClose }: { onClose: () => void }) {
+function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; onDismiss: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onDismiss} />
       <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
         <div className="flex items-center gap-3 px-6 py-5 border-b border-border bg-muted/30">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
@@ -1128,7 +1145,7 @@ function MarcoNormativoModal({ onClose }: { onClose: () => void }) {
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-card-foreground">Marco Normativo — Aviso importante</span>
           </div>
-          <button onClick={onClose} className="ml-auto text-muted-foreground hover:text-foreground">
+          <button onClick={onDismiss} className="ml-auto text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1141,7 +1158,7 @@ function MarcoNormativoModal({ onClose }: { onClose: () => void }) {
           </p>
         </div>
         <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/20">
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onClose}>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onAccept}>
             <CheckCircle2 className="mr-1.5 h-4 w-4" />Entendido, continuar
           </Button>
         </div>
@@ -1160,7 +1177,8 @@ function getNumeroUA(secretaria: string, unidad: string): string {
 
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
-  datosRenovacion, onFormChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
+  datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
+  initialData,
 }: {
   prefilled: boolean
   lockVigenciaOnly?: boolean
@@ -1169,47 +1187,57 @@ function FormularioPrestacion({
   esRenovacion?: boolean
   datosRenovacion?: FolioExcel | null
   onFormChange: (data: Partial<FormularioData>) => void
+  onArchivoChange?: (file: File | null) => void
   secretariaFija?: string | null
   unidadFija?: string | null
   claveReportePlazas?: string | null
   catalogoUAs?: { clave: string; nombre: string }[]
+  initialData?: Partial<FormularioData>
 }) {
   const bloqueadoPorRenovacion = esRenovacion
 
   const regimenInicial = datosRenovacion
     ? normalizaRegimen(datosRenovacion.regimen)
-    : regimenPeriodo === "honorarios" ? "honorarios"
+    : initialData?.regimen
+    || (regimenPeriodo === "honorarios" ? "honorarios"
     : regimenPeriodo === "asimilados" ? "asimilados"
-    : prefilled ? "honorarios" : ""
+    : prefilled ? "honorarios" : "")
   const regimenBloqueado = bloqueadoPorRenovacion || regimenPeriodo === "honorarios" || regimenPeriodo === "asimilados"
   const [regimen, setRegimen] = useState(regimenInicial)
   const regimenEfectivo = regimenPeriodo || regimen
 
-  const [secretariaInput,      setSecretariaInput]      = useState(
-    datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : "")
-  )
-  const [secretariaConfirmada, setSecretariaConfirmada] = useState(
-    datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : "")
-  )
+  const secInicial = datosRenovacion?.secretaria ?? secretariaFija ?? initialData?.secretaria ?? (prefilled ? "Secretaria de Administracion" : "")
+  const [secretariaInput,      setSecretariaInput]      = useState(secInicial)
+  const [secretariaConfirmada, setSecretariaConfirmada] = useState(secInicial)
   const [showSugerencias,      setShowSugerencias]      = useState(false)
   const [unidadSeleccionada,   setUnidadSeleccionada]   = useState(
-    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? ""
+    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? initialData?.unidadAdministrativa ?? ""
   )
   const [claveUA, setClaveUA] = useState(claveReportePlazas ?? "")
   const [urgSeleccionada,      setUrgSeleccionada]      = useState(
-    datosRenovacion?.unidadResponsableGasto ??
-    (secretariaFija && unidadFija ? getClaveForUA(secretariaFija, unidadFija) : "") ?? ""
+    datosRenovacion?.unidadResponsableGasto
+    ?? initialData?.unidadResponsable
+    ?? (secretariaFija && unidadFija ? getClaveForUA(secretariaFija, unidadFija) : "")
+    ?? ""
   )
   const [tipoAdministracionForm, setTipoAdministracionForm] = useState<"centralizada" | "paraestatal">("centralizada")
-  const [programaSeleccionado, setProgramaSeleccionado] = useState(datosRenovacion?.programaProyecto ?? "")
+  const [programaSeleccionado, setProgramaSeleccionado] = useState(
+    datosRenovacion?.programaProyecto ?? initialData?.programaProyecto ?? ""
+  )
   const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
     datosRenovacion?.tipoActividad
       ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
-      : ""
+      : initialData?.tipoActividades ?? ""
   )
-  const [numeroPrestadores, setNumeroPrestadores] = useState(datosRenovacion?.numPrestadores ?? (prefilled ? "3" : ""))
-  const [vigenciaInicio, setVigenciaInicio] = useState(prefilled ? "2026-01-01" : "")
-  const [vigenciaFin,    setVigenciaFin]    = useState(prefilled ? "2026-06-30" : "")
+  const [numeroPrestadores, setNumeroPrestadores] = useState(
+    datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "3" : "")
+  )
+  const [vigenciaInicio, setVigenciaInicio] = useState(
+    initialData?.vigenciaInicio ?? (prefilled ? "2026-01-01" : "")
+  )
+  const [vigenciaFin, setVigenciaFin] = useState(
+    initialData?.vigenciaFin ?? (prefilled ? "2026-06-30" : "")
+  )
 
   const sugerencias = useMemo(() => {
     if (esRenovacion) {
@@ -1243,40 +1271,48 @@ function FormularioPrestacion({
   const [importeBruto, setImporteBruto] = useState(
     datosRenovacion?.importeBruto
       ? parseImporteBruto(datosRenovacion.importeBruto)
-      : prefilled ? "45,000.00" : ""
+      : initialData?.importeBruto ?? (prefilled ? "45,000.00" : "")
   )
-  const [tipoImporte, setTipoImporte] = useState("Mensual")
+  const [tipoImporte, setTipoImporte] = useState(initialData?.tipoImporte || "Mensual")
   const [actividades, setActividades] = useState<string[]>(
     datosRenovacion?.actividades
       ? splitList(datosRenovacion.actividades)
-      : prefilled ? ["Desarrollo de modulos del sistema institucional"] : [""]
+      : initialData?.actividades && initialData.actividades.length > 0
+        ? initialData.actividades
+        : prefilled ? ["Desarrollo de modulos del sistema institucional"] : [""]
   )
   const [responsabilidades, setResponsabilidades] = useState<string[]>(
     datosRenovacion?.responsabilidades
       ? splitList(datosRenovacion.responsabilidades)
-      : prefilled ? ["Cumplir con los plazos establecidos"] : [""]
+      : initialData?.responsabilidades && initialData.responsabilidades.length > 0
+        ? initialData.responsabilidades
+        : prefilled ? ["Cumplir con los plazos establecidos"] : [""]
   )
   const [objeto, setObjeto] = useState(
-    datosRenovacion?.objeto
-      ?? (prefilled ? "Prestacion de servicios profesionales para el desarrollo e implementacion de sistemas informaticos." : "")
+    datosRenovacion?.objeto ?? initialData?.objeto
+    ?? (prefilled ? "Prestacion de servicios profesionales para el desarrollo e implementacion de sistemas informaticos." : "")
   )
   const [escolaridad, setEscolaridad] = useState<string[]>(
-    datosRenovacion?.escolaridad ? [datosRenovacion.escolaridad] : prefilled ? ["Licenciatura"] : []
+    datosRenovacion?.escolaridad
+      ? [datosRenovacion.escolaridad]
+      : initialData?.escolaridad
+        ? splitTags(initialData.escolaridad)
+        : prefilled ? ["Licenciatura"] : []
   )
-  const [compAdm, setCompAdm] = useState<string[]>(splitTags(datosRenovacion?.compAdm))
-  const [compTec, setCompTec] = useState<string[]>(splitTags(datosRenovacion?.compTec))
-  const [compSoc, setCompSoc] = useState<string[]>(splitTags(datosRenovacion?.compSoc))
-  const [valores, setValores] = useState<string[]>(splitTags(datosRenovacion?.valores))
-  const [areasExp, setAreasExp] = useState<string[]>(splitTags(datosRenovacion?.areasExp))
-  const [nivelTabulador,    setNivelTabulador]    = useState("")
-  const [categoriaTabulador, setCategoriaTabulador] = useState("")
+  const [compAdm, setCompAdm] = useState<string[]>(splitTags(datosRenovacion?.compAdm ?? initialData?.compAdm))
+  const [compTec, setCompTec] = useState<string[]>(splitTags(datosRenovacion?.compTec ?? initialData?.compTec))
+  const [compSoc, setCompSoc] = useState<string[]>(splitTags(datosRenovacion?.compSoc ?? initialData?.compSoc))
+  const [valores, setValores] = useState<string[]>(splitTags(datosRenovacion?.valores ?? initialData?.valores))
+  const [areasExp, setAreasExp] = useState<string[]>(splitTags(datosRenovacion?.areasExp ?? initialData?.areasExp))
+  const [nivelTabulador,    setNivelTabulador]    = useState(initialData?.nivelTabulador ?? "")
+  const [categoriaTabulador, setCategoriaTabulador] = useState(initialData?.categoriaTabulador ?? "")
   const fuenteDatos = excelRows.length > 0 && secretariaConfirmada ? "excel" : "catalogo"
   const notifyParent = useCallback((overrides: Partial<FormularioData> = {}) => {
       const tipoActividadLabel = tiposActividad.find(t => t.value === tipoActividadSeleccionado)?.label ?? tipoActividadSeleccionado
 
     onFormChange({
       secretaria:           secretariaConfirmada || secretariaInput,
-      unidadAdministrativa: unidadSeleccionada,
+      unidadAdministrativa: claveUA || unidadSeleccionada,
       unidadResponsable:    urgSeleccionada,
       programaProyecto:     programaSeleccionado,
       regimen:              regimenEfectivo,
@@ -1303,7 +1339,7 @@ function FormularioPrestacion({
       ...overrides,
     })
   }, [
-    secretariaConfirmada, secretariaInput, unidadSeleccionada, urgSeleccionada,
+    secretariaConfirmada, secretariaInput, claveUA, unidadSeleccionada, urgSeleccionada,
     programaSeleccionado, regimenEfectivo, tipoActividadSeleccionado, tiposActividad,
     numeroPrestadores, nivelTabulador, categoriaTabulador,
     vigenciaInicio, vigenciaFin, importeBruto, tipoImporte,
@@ -1638,7 +1674,7 @@ function FormularioPrestacion({
             {/* Importe Bruto */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Monto del Importe
+                Importe Bruto
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               <div className="relative">
@@ -1700,7 +1736,7 @@ function FormularioPrestacion({
             {/* Adjunto */}
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
-              <OficioUpload vigenciaInicio={vigenciaInicio} />
+              <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} />
             </div>
           </div>
         </CardContent>
@@ -1718,8 +1754,9 @@ function FormularioPrestacion({
       {/* Objeto */}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            I.1 Objeto de la Contratación
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+            <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">II</span>
+            Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
         </CardHeader>
@@ -1736,8 +1773,9 @@ function FormularioPrestacion({
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            I.2 Actividades a Realizar
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+            <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">III</span>
+            Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
         </CardHeader>
@@ -1752,8 +1790,9 @@ function FormularioPrestacion({
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            I.3 Responsabilidades
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+            <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">IV</span>
+            Responsabilidades
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
         </CardHeader>
@@ -1776,7 +1815,7 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">II</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">V</span>
             Perfil
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
@@ -1785,7 +1824,6 @@ function FormularioPrestacion({
           </p>
         </CardHeader>
         <CardContent className="grid gap-x-6 gap-y-5 px-4 pb-4 pt-0 md:grid-cols-2">
-          {/* Escolaridad Mínima ocupa las 2 columnas al inicio */}
           <div className="md:col-span-2 flex flex-col gap-2">
             <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
               Escolaridad Mínima
@@ -1832,23 +1870,24 @@ function FormularioPrestacion({
   )
 }
 function FormularioNombramiento({
-  prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
+  prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
+  tipoAdministracionUsuario = "centralizada",
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
   onFormChange: (data: Partial<FormularioData>) => void
+  onArchivoChange?: (file: File | null) => void
   secretariaFija?: string | null
   unidadFija?: string | null
   claveReportePlazas?: string | null
   catalogoUAs?: { clave: string; nombre: string }[]
+  tipoAdministracionUsuario?: "centralizada" | "paraestatal"
 }) {
   const bloqueadoPorRenovacion = esRenovacion
-
   const [importeNeto,    setImporteNeto]    = useState(
     datosRenovacion?.importeBruto ? parseImporteBruto(datosRenovacion.importeBruto) : prefilled ? "28,500.00" : ""
   )
   const [tipoImporte, setTipoImporte] = useState("Mensual")
-
   const [funciones, setFunciones] = useState<string[]>(
     datosRenovacion?.actividades ? splitList(datosRenovacion.actividades)
       : prefilled ? ["Coordinar procesos administrativos"] : [""]
@@ -1862,17 +1901,27 @@ function FormularioNombramiento({
   )
   const [showMarcoModal, setShowMarcoModal] = useState(false)
   const marcoModalShownRef = useRef(false)
+  const [pendingMarcoChange, setPendingMarcoChange] = useState<string[] | null>(null)
+
+  const handleMarcoNormativoChange = useCallback((newItems: string[]) => {
+    if (!marcoModalShownRef.current) {
+      setPendingMarcoChange(newItems)
+      setShowMarcoModal(true)
+      return
+    }
+    setMarcoNormativo(newItems)
+  }, [])
   const [secretariaInput,      setSecretariaInput]      = useState(datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : ""))
   const [secretariaConfirmada, setSecretariaConfirmada] = useState(datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : ""))
   const [showSugerencias, setShowSugerencias] = useState(false)
   const [unidadAdscripcion, setUnidadAdscripcion] = useState(
     datosRenovacion?.unidadAdscripcion ?? unidadFija ?? ""
+
   )
   const [claveUA, setClaveUA] = useState(claveReportePlazas ?? "")
   const [urgSeleccionada, setUrgSeleccionada] = useState(
     datosRenovacion?.unidadResponsableGasto ?? ""
   )
-  const [tipoAdministracion, setTipoAdministracion] = useState<"centralizada" | "paraestatal">("centralizada")
   const [programaInput, setProgramaInput] = useState(datosRenovacion?.programaProyecto ?? (prefilled ? "P-005 Fortalecimiento Institucional" : ""))
   const [vigenciaInicio, setVigenciaInicio] = useState(prefilled ? "2026-03-01" : "")
   const [vigenciaFin,    setVigenciaFin]    = useState(prefilled ? "2026-08-31" : "")
@@ -1887,6 +1936,7 @@ function FormularioNombramiento({
   const [condiciones, setCondiciones]               = useState<Record<string, string>>({})
   const [riesgos,     setRiesgos]                   = useState<Record<string, string>>({})
   const [resguardoActivos, setResguardoActivos]     = useState("")
+  const tipoAdministracion = tipoAdministracionUsuario
   const sugerencias = useMemo(() => {
     if (esRenovacion) {
       if (!secretariaInput) return SECRETARIAS_CATALOGO
@@ -1896,14 +1946,13 @@ function FormularioNombramiento({
   }, [secretariaInput, esRenovacion])
 
   const datosRelacionados = useMemo(() => getDatosSecretaria(secretariaConfirmada, excelRows), [secretariaConfirmada, excelRows])
-  const unidadesAdscripcion = tipoAdministracion === "centralizada"
-    ? getUAsForSecretaria(secretariaConfirmada).map((ua) => ({ value: ua, label: ua }))
-    : []
-  const unidadesResponsables = useMemo(() => {
-    const fromExcel = datosRelacionados?.unidades ?? []
-    if (fromExcel.length > 0) return fromExcel
-    return getUAsForSecretaria(secretariaConfirmada).map((ua) => ({ value: ua, label: ua }))
-  }, [datosRelacionados, secretariaConfirmada])
+  const clavesAdscripcion = useMemo((): { clave: string; nombre: string }[] => {
+    if (catalogoUAs.some((u) => u.clave !== "")) return catalogoUAs.filter((u) => u.clave !== "")
+    return getUAsForSecretaria(secretariaConfirmada)
+      .map((ua) => ({ clave: getClaveForUA(secretariaConfirmada, ua), nombre: ua }))
+      .filter((u) => u.clave !== "")
+  }, [catalogoUAs, secretariaConfirmada])
+  const urgsDisponibles = datosRelacionados?.urgs ?? []
 
   const fuenteDatos = excelRows.length > 0 && secretariaConfirmada ? "excel" : "catalogo"
   const camposDependientesHabilitados = !bloqueadoPorRenovacion && !!secretariaConfirmada
@@ -1911,29 +1960,14 @@ function FormularioNombramiento({
   const handleSecretariaConfirm = (valor: string) => {
     if (bloqueadoPorRenovacion) return
     setSecretariaInput(valor); setSecretariaConfirmada(valor); setShowSugerencias(false)
-    if (tipoAdministracion === "centralizada") {
-      const uas = getUAsForSecretaria(valor)
-      setUnidadAdscripcion(uas[0] ?? "")
-    }
-    setUrgSeleccionada("")
-  }
-
-  const handleTipoAdminChange = (val: "centralizada" | "paraestatal") => {
-    if (bloqueadoPorRenovacion) return
-    setTipoAdministracion(val)
-    if (val === "paraestatal") { setUnidadAdscripcion(""); setClaveUA("") }
-  }
-  const handleUnidadAdscripcionChange = (ua: string) => {
-    setUnidadAdscripcion(ua)
-    if (tipoAdministracion === "centralizada") {
-      setClaveUA(getClaveForUA(secretariaConfirmada, ua))
-    }
+    setUnidadAdscripcion(""); setClaveUA(""); setUrgSeleccionada("")
   }
 
   useEffect(() => {
+    const formatKey = (k: string) => k.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase())
     onFormChange({
       secretaria:           secretariaConfirmada || secretariaInput,
-      unidadAdministrativa: unidadAdscripcion,
+      unidadAdministrativa: claveUA || unidadAdscripcion,
       unidadResponsable:    urgSeleccionada,
       programaProyecto:     programaInput,
       regimen:              "nombramiento",
@@ -1941,6 +1975,7 @@ function FormularioNombramiento({
       numeroPrestadores,
       denominacion,
       puestoJefeInmediato,
+      tipoAdministracionNom: tipoAdministracion,
       vigenciaInicio,
       vigenciaFin,
       importeBruto:         importeNeto,
@@ -1951,19 +1986,44 @@ function FormularioNombramiento({
       actividades:          funciones,
       responsabilidades,
       marcoNormativo,
+      condicionesRiesgos: [
+        ...Object.entries(condiciones)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `${formatKey(k)}: ${v === "si" ? "Sí" : "No"}`),
+        ...Object.entries(riesgos)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `${formatKey(k)}: ${v.charAt(0).toUpperCase() + v.slice(1)}`),
+      ],
+      resguardoActivos: resguardoActivos || undefined,
       escolaridad: "", compAdm: "", compTec: "", compSoc: "", valores: "", areasExp: "",
     })
   }, [
-    secretariaConfirmada, secretariaInput, unidadAdscripcion, urgSeleccionada,
+    secretariaConfirmada, secretariaInput, claveUA, unidadAdscripcion, urgSeleccionada,
     programaInput, numeroPrestadores, denominacion, puestoJefeInmediato,
+    tipoAdministracion,
     vigenciaInicio, vigenciaFin, importeNeto, tipoImporte,
     nivelTabulador, categoriaTabulador, objetoNombramiento,
-    funciones, responsabilidades, marcoNormativo, onFormChange,
+    funciones, responsabilidades, marcoNormativo, condiciones, riesgos, resguardoActivos, onFormChange,
   ])
 
   return (
     <div className="flex flex-col gap-3">
-      {showMarcoModal && <MarcoNormativoModal onClose={() => setShowMarcoModal(false)} />}
+      {showMarcoModal && (
+        <MarcoNormativoModal
+          onAccept={() => {
+            marcoModalShownRef.current = true
+            if (pendingMarcoChange !== null) {
+              setMarcoNormativo(pendingMarcoChange)
+              setPendingMarcoChange(null)
+            }
+            setShowMarcoModal(false)
+          }}
+          onDismiss={() => {
+            setPendingMarcoChange(null)
+            setShowMarcoModal(false)
+          }}
+        />
+      )}
 
       {bloqueadoPorRenovacion && (
         <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
@@ -1999,31 +2059,6 @@ function FormularioNombramiento({
               </div>
             </div>
 
-            {/* Tipo de administración */}
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Tipo de Administración
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground capitalize">{tipoAdministracion}</span>
-                </div>
-              ) : (
-                <RadioGroup
-                  value={tipoAdministracion}
-                  onValueChange={(v) => handleTipoAdminChange(v as "centralizada" | "paraestatal")}
-                  className="flex gap-4 pt-1"
-                >
-                  {["centralizada", "paraestatal"].map((opt) => (
-                    <div key={opt} className="flex items-center gap-2">
-                      <RadioGroupItem value={opt} id={`admin-${opt}`} />
-                      <Label htmlFor={`admin-${opt}`} className="text-sm font-normal cursor-pointer capitalize">{opt}</Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              )}
-            </div>
 
             {/* Unidad Administrativa de Adscripción */}
             <div className="flex flex-col gap-2">
@@ -2035,51 +2070,31 @@ function FormularioNombramiento({
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground font-semibold font-mono">{numeroUA}</span>
                 </div>
-              ) : catalogoUAs.some((u) => u.clave !== "") ? (
+              ) : clavesAdscripcion.length > 0 ? (
                 <Select
                   value={claveUA}
                   onValueChange={(clave) => {
-                    const ua = catalogoUAs.find((u) => u.clave === clave)
+                    const ua = clavesAdscripcion.find((u) => u.clave === clave)
                     setClaveUA(clave)
                     setUnidadAdscripcion(ua?.nombre ?? "")
                   }}
                 >
                   <SelectTrigger className="bg-background w-full font-mono">
-                    <SelectValue placeholder="Seleccione clave" />
+                    <SelectValue placeholder={!camposDependientesHabilitados ? "Seleccione primero la secretaría" : "Seleccione clave"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {catalogoUAs.filter((u) => u.clave !== "").map((u) => (
+                    {clavesAdscripcion.map((u) => (
                       <SelectItem key={u.nombre} value={u.clave} className="font-mono">{fmtClave(u.clave)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              ) : tipoAdministracion === "centralizada" && unidadesAdscripcion.length > 0 ? (
-                <>
-                  <Select
-                    value={unidadAdscripcion}
-                    onValueChange={handleUnidadAdscripcionChange}
-                  >
-                    <SelectTrigger className="bg-background w-full">
-                      <SelectValue placeholder="Seleccione unidad administrativa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {unidadesAdscripcion.map((u) => (
-                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {claveUA && (
-                    <p className="text-xs font-mono text-muted-foreground flex items-center gap-1">
-                      <Info className="h-3 w-3 shrink-0" />Clave: {fmtClave(claveUA)}
-                    </p>
-                  )}
-                </>
               ) : (
                 <Input
-                  value={claveUA}
-                  onChange={(e) => setClaveUA(e.target.value)}
-                  placeholder="Clave reporte plazas"
-                  className="bg-background font-mono"
+                  value={unidadAdscripcion}
+                  onChange={(e) => setUnidadAdscripcion(e.target.value)}
+                  placeholder="Ingrese nombre de la unidad administrativa"
+                  className="bg-background"
+                  disabled={!camposDependientesHabilitados}
                 />
               )}
             </div>
@@ -2094,23 +2109,30 @@ function FormularioNombramiento({
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground">{urgSeleccionada || "—"}</span>
                 </div>
+              ) : catalogoUAs.length > 0 ? (
+                <SelectConBusqueda
+                  opciones={catalogoUAs.map((u) => ({ value: u.nombre, label: u.nombre }))}
+                  value={urgSeleccionada}
+                  onValueChange={setUrgSeleccionada}
+                  placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaría" : "Seleccione unidad responsable"}
+                  disabled={!camposDependientesHabilitados}
+                />
+              ) : urgsDisponibles.length > 0 ? (
+                <SelectConBusqueda
+                  opciones={urgsDisponibles}
+                  value={urgSeleccionada}
+                  onValueChange={setUrgSeleccionada}
+                  placeholder="Seleccione unidad responsable"
+                  disabled={!camposDependientesHabilitados}
+                />
               ) : (
-                <>
-                  <SelectConBusqueda
-                    opciones={
-                      catalogoUAs.length > 0
-                        ? catalogoUAs.map((u) => ({ value: u.nombre, label: u.nombre }))
-                        : unidadesResponsables
-                    }
-                    value={urgSeleccionada}
-                    onValueChange={setUrgSeleccionada}
-                    placeholder={!camposDependientesHabilitados ? "Ingrese primero la secretaría" : "Seleccione unidad responsable"}
-                    disabled={!camposDependientesHabilitados}
-                  />
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Info className="h-3 w-3 shrink-0" />Independiente de la unidad de adscripción.
-                  </p>
-                </>
+                <Input
+                  value={urgSeleccionada}
+                  onChange={(e) => setUrgSeleccionada(e.target.value)}
+                  placeholder="Ingrese unidad responsable del gasto"
+                  className="bg-background"
+                  disabled={!camposDependientesHabilitados}
+                />
               )}
             </div>
 
@@ -2135,50 +2157,51 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {/* Denominación */}
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Denominación del Nombramiento
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              <Input
-                value={denominacion}
-                onChange={(e) => { if (!bloqueadoPorRenovacion) setDenominacion(e.target.value) }}
-                placeholder="Ej. Subdirector de Área"
-                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                readOnly={bloqueadoPorRenovacion}
-              />
-            </div>
+            {/* Denominación, Puesto y Número — todos los regímenes de nombramiento */}
+            <>
+              <div className="flex flex-col gap-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  Denominación del Nombramiento
+                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </Label>
+                <Input
+                  value={denominacion}
+                  onChange={(e) => { if (!bloqueadoPorRenovacion) setDenominacion(e.target.value) }}
+                  placeholder="Ej. Subdirector de Área"
+                  className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  readOnly={bloqueadoPorRenovacion}
+                />
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Puesto del Jefe Inmediato
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              <Input
-                value={puestoJefeInmediato}
-                onChange={(e) => { if (!bloqueadoPorRenovacion) setPuestoJefeInmediato(e.target.value) }}
-                placeholder="Ej. Director General"
-                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                readOnly={bloqueadoPorRenovacion}
-              />
-            </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  Puesto del Jefe Inmediato
+                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </Label>
+                <Input
+                  value={puestoJefeInmediato}
+                  onChange={(e) => { if (!bloqueadoPorRenovacion) setPuestoJefeInmediato(e.target.value) }}
+                  placeholder="Ej. Director General"
+                  className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  readOnly={bloqueadoPorRenovacion}
+                />
+              </div>
 
-            {/* Número de personas */}
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                Número de Personas a Contratar
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
-              </Label>
-              <Input
-                type="number" min={1}
-                value={numeroPrestadores}
-                onChange={(e) => { if (!bloqueadoPorRenovacion) setNumeroPrestadores(e.target.value) }}
-                placeholder="Ej. 2"
-                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                readOnly={bloqueadoPorRenovacion}
-              />
-            </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  Número de Personas a Contratar
+                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </Label>
+                <Input
+                  type="number" min={1}
+                  value={numeroPrestadores}
+                  onChange={(e) => { if (!bloqueadoPorRenovacion) setNumeroPrestadores(e.target.value) }}
+                  placeholder="Ej. 2"
+                  className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  readOnly={bloqueadoPorRenovacion}
+                />
+              </div>
+            </>
 
             {/* Tipo de Pago */}
             <div className="flex flex-col gap-2">
@@ -2260,7 +2283,7 @@ function FormularioNombramiento({
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
-              <OficioUpload vigenciaInicio={vigenciaInicio} />
+              <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} />
             </div>
           </div>
         </CardContent>
@@ -2336,15 +2359,8 @@ function FormularioNombramiento({
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-2">
-          <div
-            className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 px-3 py-2 cursor-pointer hover:bg-primary/10 transition-colors"
-            onClick={() => setShowMarcoModal(true)}
-          >
-            <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-            <span className="text-xs text-primary">Ver aviso importante antes de capturar</span>
-          </div>
           <DynamicList
-            label="" items={marcoNormativo} onChange={setMarcoNormativo}
+            label="" items={marcoNormativo} onChange={handleMarcoNormativoChange}
             readonly={false}
           />
         </CardContent>
@@ -2442,9 +2458,20 @@ function FormularioNombramiento({
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-3">
-          <div className="flex items-start gap-2 rounded-md bg-muted/40 border border-border px-3 py-2">
+          <div className="flex items-start gap-2 rounded-md bg-muted/40 border border-border px-3 py-2.5">
             <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-            <span className="text-xs text-muted-foreground italic">(Contenido Informativo Pendiente de Definir)</span>
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-muted-foreground italic leading-relaxed">
+                <span className="font-semibold not-italic text-card-foreground">Administración Pública Centralizada:</span>{" "}
+                En este caso se estará a lo que establezca el formato de Resguardo Personalizado de Activos de bienes muebles e intangibles,
+                emitido por la Dirección General de Patrimonio de la Secretaría de Administración y Finanzas,
+                que señala las obligaciones como resguardante de los Activos.
+              </p>
+              <p className="text-xs text-muted-foreground italic leading-relaxed">
+                <span className="font-semibold not-italic text-card-foreground">Organismos Auxiliares:</span>{" "}
+                En este caso se estará a lo establecido por sus disposiciones administrativas correspondientes.
+              </p>
+            </div>
           </div>
           <RadioGroup
             value={resguardoActivos}
@@ -2584,6 +2611,46 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
   )
 }
 
+function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSolicitud): string[] {
+  const faltantes: string[] = []
+  const check = (val: string | string[] | undefined, label: string) => {
+    if (Array.isArray(val)) {
+      if (val.length === 0 || val.every((v) => !v.trim())) faltantes.push(label)
+    } else {
+      if (!val || !val.toString().trim()) faltantes.push(label)
+    }
+  }
+  check(formData.secretaria,           "Secretaría")
+  check(formData.unidadAdministrativa, "Unidad Administrativa")
+  check(formData.unidadResponsable,    "Unidad Responsable del Gasto")
+  check(formData.programaProyecto,     "Programa o Proyecto")
+  if (tipo === "prestacion") {
+    check(formData.numeroPrestadores, "Número de Prestadores")
+  }
+  check(formData.vigenciaInicio,       "Vigencia Inicio")
+  check(formData.vigenciaFin,          "Vigencia Fin")
+  check(formData.importeBruto,         "Importe Bruto")
+  check(formData.nivelTabulador,       "Nivel Tabulador")
+  check(formData.categoriaTabulador,   "Categoría Tabulador")
+  check(formData.objeto,               "Objeto de la Contratación")
+  check(formData.actividades,          "Actividades")
+  check(formData.responsabilidades,    "Responsabilidades")
+  if (tipo === "prestacion") {
+    check(formData.regimen,       "Régimen de Contratación")
+    check(formData.tipoActividades, "Tipo de Actividades")
+    check(formData.escolaridad,   "Escolaridad")
+    check(formData.compAdm,       "Competencias Administrativas")
+    check(formData.compTec,       "Competencias Técnicas")
+    check(formData.compSoc,       "Competencias Sociales")
+    check(formData.valores,       "Valores")
+    check(formData.areasExp,      "Áreas de Experiencia")
+  } else if (tipo === "nombramiento") {
+    check(formData.denominacion,        "Denominación del Nombramiento")
+    check(formData.puestoJefeInmediato, "Puesto del Jefe Inmediato")
+    check(formData.numeroPrestadores,   "Número de Personas a Contratar")
+  }
+  return faltantes
+}
 function buildSolicitudPayload({
   usuarioId, tipo, regimenPeriodo, esExtemporanea, esRenovacion, folioSeleccionado, formData,
 }: {
@@ -2603,7 +2670,7 @@ function buildSolicitudPayload({
     tipo_actividades:      formData.tipoActividades         ?? null,
     numero_prestadores:    formData.numeroPrestadores ? parseInt(formData.numeroPrestadores) || null : null,
     denominacion:          formData.denominacion            || null,
-    puesto_jefe_inmediato: (formData as any).puestoJefeInmediato || null,
+    puesto_jefe_inmediato: formData.puestoJefeInmediato     || null,
     vigencia_inicio:       formData.vigenciaInicio || null,
     vigencia_fin:          formData.vigenciaFin    || null,
     importe_bruto:         formData.importeBruto ? parseFloat(formData.importeBruto.replace(/[$,\s]/g, "")) || null : null,
@@ -2615,8 +2682,10 @@ function buildSolicitudPayload({
     objeto:                formData.objeto              ?? null,
     actividades:           formData.actividades          ?? [],
     responsabilidades:     formData.responsabilidades    ?? [],
-    marco_normativo:       (formData as any).marcoNormativo ?? [],
-    escolaridad:           formData.escolaridad          ?? null,
+    marco_normativo:       formData.marcoNormativo         ?? [],
+    condiciones_riesgos:   formData.condicionesRiesgos    ?? [],
+    resguardo_activos:     formData.resguardoActivos       ?? null,
+    escolaridad:           formData.escolaridad            ?? null,
     comp_adm:              formData.compAdm              ?? null,
     comp_tec:              formData.compTec              ?? null,
     comp_soc:              formData.compSoc              ?? null,
@@ -2626,9 +2695,17 @@ function buildSolicitudPayload({
 }
 
 type FolioExcelInternal = FolioExcel
-export function NuevaSolicitudPage() {
-  const [step,                setStep]                = useState<Step>("tipo")
-  const [tipo,                setTipo]                = useState<TipoSolicitud>("")
+export type EditSolicitudPayload = {
+  id: string
+  tipo: TipoSolicitud
+  regimen: "" | "honorarios" | "asimilados" | "nombramiento"
+  periodo: string
+  formData: Partial<FormularioData>
+}
+
+export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSolicitudPayload }) {
+  const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
+  const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")
   const [esRenovacion,        setEsRenovacion]        = useState<string>("")
   const [folioSeleccionado,   setFolioSeleccionado]   = useState<string>("")
   const [condicionRenovacion, setCondicionRenovacion] = useState<string>("")
@@ -2644,7 +2721,8 @@ export function NuevaSolicitudPage() {
   const [borradorGuardado,      setBorradorGuardado]      = useState(false)
   const [errorBorrador,         setErrorBorrador]         = useState<string | null>(null)
   const [folioBorradorGuardado, setFolioBorradorGuardado] = useState<string>("")
-  const [formData, setFormData] = useState<Partial<FormularioData>>({})
+  const [formData, setFormData] = useState<Partial<FormularioData>>(editSolicitud?.formData ?? {})
+  const [archivoAdjunto, setArchivoAdjunto] = useState<File | null>(null)
   const handleFormChange = useCallback((data: Partial<FormularioData>) => {
     setFormData(prev => ({ ...prev, ...data }))
   }, [])
@@ -2652,8 +2730,8 @@ export function NuevaSolicitudPage() {
   const { } = useSolicitudes()
   const { getPermisoActivo, consumirPermiso } = useAutorizaciones()
   const { user } = useAuth()
-  const [regimenPeriodo,      setRegimenPeriodo]      = useState<"" | "honorarios" | "asimilados" | "nombramiento">("")
-  const [periodoSeleccionado, setPeriodoSeleccionado] = useState("")
+  const [regimenPeriodo,      setRegimenPeriodo]      = useState<"" | "honorarios" | "asimilados" | "nombramiento">(editSolicitud?.regimen ?? "")
+  const [periodoSeleccionado, setPeriodoSeleccionado] = useState(editSolicitud?.periodo ?? "")
   const { historicos } = useHistoricoStore()
   const excelRows = useExcelRows(historicos)
   const [foliosDB, setFoliosDB] = useState<FolioExcel[]>([])
@@ -2678,6 +2756,7 @@ export function NuevaSolicitudPage() {
   useEffect(() => {
     fetchCentralizadaTree().then(setCatalogoTree).catch(() => {})
   }, [])
+
 
   useEffect(() => {
     try { sessionStorage.removeItem("sisodi_folios_recientes") } catch { /* ignore */ }
@@ -2719,14 +2798,14 @@ export function NuevaSolicitudPage() {
               importeBruto:           s.importe_bruto != null ? String(s.importe_bruto) : "",
               nivelCategoria:         s.nivel_categoria       ?? "",
               objeto:                 s.objeto                ?? "",
-              actividades:            s.actividades           ?? "",
-              responsabilidades:      s.responsabilidades     ?? "",
-              escolaridad:            s.escolaridad           ?? "",
-              compAdm:                s.comp_adm              ?? "",
-              compTec:                s.comp_tec              ?? "",
-              compSoc:                s.comp_soc              ?? "",
-              valores:                s.valores               ?? "",
-              areasExp:               s.areas_exp             ?? "",
+              actividades:            Array.isArray(s.actividades)       ? s.actividades.join("\n")       : (s.actividades       ?? ""),
+              responsabilidades:      Array.isArray(s.responsabilidades) ? s.responsabilidades.join("\n") : (s.responsabilidades ?? ""),
+              escolaridad:            Array.isArray(s.escolaridad)       ? s.escolaridad[0]               : (s.escolaridad       ?? ""),
+              compAdm:                Array.isArray(s.comp_adm)          ? s.comp_adm.join("\n")          : (s.comp_adm          ?? ""),
+              compTec:                Array.isArray(s.comp_tec)          ? s.comp_tec.join("\n")          : (s.comp_tec          ?? ""),
+              compSoc:                Array.isArray(s.comp_soc)          ? s.comp_soc.join("\n")          : (s.comp_soc          ?? ""),
+              valores:                Array.isArray(s.valores)           ? s.valores.join("\n")           : (s.valores           ?? ""),
+              areasExp:               Array.isArray(s.areas_exp)         ? s.areas_exp.join("\n")         : (s.areas_exp         ?? ""),
             }
           })
         setFoliosDB(folios)
@@ -2789,6 +2868,7 @@ export function NuevaSolicitudPage() {
     const exacta = todas.find((s) => norm(s) === norm(raiz))
     return exacta ?? raiz
   }, [user, secretariaFrescaTexto])
+
 
   const userUAOriginal = useMemo(() => {
     const texto = user?.secretariaTexto ?? secretariaFrescaTexto ?? null
@@ -2915,20 +2995,41 @@ export function NuevaSolicitudPage() {
     setGuardandoBorrador(true)
     setErrorBorrador(null)
     try {
+      if (esRenovacion !== "si") {
+        const faltantes = validarCamposCompletos(formData, tipo)
+        if (faltantes.length > 0) {
+          setErrorBorrador(`Campos obligatorios incompletos: ${faltantes.join(", ")}`)
+          setGuardandoBorrador(false)
+          return
+        }
+      }
       const usuarioId = (user as any)?.id ?? (user as any)?.uuid ?? null
       if (!usuarioId) { setErrorBorrador("No se pudo identificar al usuario."); setGuardandoBorrador(false); return }
-      const payload = { ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: false, esRenovacion, folioSeleccionado, formData }), estado_nombre: "Borrador" }
-      const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-      const json = await res.json()
-      if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al guardar el borrador."); setGuardandoBorrador(false); return }
-      setFolioBorradorGuardado(json.folio ?? json.data?.folio_recepcion ?? "")
+
+      if (editSolicitud?.id) {
+        const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: false, esRenovacion, folioSeleccionado, formData })
+        const res = await fetch("/api/solicitudes", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ solicitudId: Number(editSolicitud.id), ...campos }),
+        })
+        const json = await res.json()
+        if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al actualizar el borrador."); setGuardandoBorrador(false); return }
+        setFolioBorradorGuardado(json.data?.folio_justificacion ?? editSolicitud.id)
+      } else {
+        const payload = { ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: false, esRenovacion, folioSeleccionado, formData }), estado_nombre: "Borrador" }
+        const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+        const json = await res.json()
+        if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al guardar el borrador."); setGuardandoBorrador(false); return }
+        setFolioBorradorGuardado(json.folio ?? json.data?.folio_recepcion ?? "")
+      }
       setBorradorGuardado(true)
     } catch { setErrorBorrador("Error de conexión.") } finally { setGuardandoBorrador(false) }
-  }, [user, tipo, regimenPeriodo, esRenovacion, folioSeleccionado, formData])
+  }, [user, tipo, regimenPeriodo, esRenovacion, folioSeleccionado, formData, editSolicitud])
 
   const handleEnviarAValidacion = useCallback(
-    async (periodoStillValid: boolean, hasPermiso: boolean) => {
-      if (!periodoStillValid && !hasPermiso) return
+    async (periodoStillValid: boolean, hasPermiso: boolean, isEditingBorrador: boolean) => {
+      if (!periodoStillValid && !hasPermiso && !isEditingBorrador) return
       setEnviando(true); setErrorEnvio(null)
       try {
         if (!periodoStillValid && hasPermiso && user?.id && regimenPeriodo && periodoSeleccionado) {
@@ -2936,23 +3037,50 @@ export function NuevaSolicitudPage() {
         }
         const usuarioId = (user as any)?.id ?? (user as any)?.uuid ?? null
         if (!usuarioId) { setErrorEnvio("No se pudo identificar al usuario."); setEnviando(false); return }
-        const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
-        const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-        const json = await res.json()
-        if (!res.ok || !json.ok) { setErrorEnvio(json.error ?? "Error al registrar la solicitud."); setEnviando(false); return }
-        const solicitudId = json.data?.id
-        if (!solicitudId) { setErrorEnvio("No se pudo obtener el ID de la solicitud."); setEnviando(false); return }
+
+        let solicitudId: number | undefined
+
+        if (editSolicitud?.id) {
+          const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
+          const res = await fetch("/api/solicitudes", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ solicitudId: Number(editSolicitud.id), ...campos }),
+          })
+          const json = await res.json()
+          if (!res.ok || !json.ok) { setErrorEnvio(json.error ?? "Error al actualizar la solicitud."); setEnviando(false); return }
+          solicitudId = Number(editSolicitud.id)
+          setFolioGenerado(json.data?.folio_justificacion ?? editSolicitud.id)
+        } else {
+          const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
+          const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+          const json = await res.json()
+          if (!res.ok || !json.ok) { setErrorEnvio(json.error ?? "Error al registrar la solicitud."); setEnviando(false); return }
+          solicitudId = json.data?.id
+          if (!solicitudId) { setErrorEnvio("No se pudo obtener el ID de la solicitud."); setEnviando(false); return }
+          setFolioGenerado(json.folio ?? json.data?.folio_justificacion ?? json.data?.folio_recepcion ?? "")
+        }
+
+        if (archivoAdjunto && solicitudId) {
+          try {
+            const fd = new FormData()
+            fd.append("file", archivoAdjunto)
+            fd.append("solicitudId", String(solicitudId))
+            await fetch("/api/adjunto", { method: "POST", body: fd })
+          } catch { /* no bloquear el flujo si falla el adjunto */ }
+        }
+
         const patchRes = await fetch("/api/validacion", {
           method: "PATCH", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ solicitudId, nuevoEstado: "En Validacion Justificaciones", usuarioId, comentario: "Solicitud enviada a Validacion de Justificaciones por la URG" }),
         })
         const patchJson = await patchRes.json()
         if (!patchRes.ok || !patchJson.ok) console.warn("No se pudo cambiar el estado:", patchJson.error)
-        setFolioGenerado(json.folio ?? json.data?.folio_justificacion ?? json.data?.folio_recepcion ?? "")
+        if (patchJson.folio_dictamen) setFolioGenerado(patchJson.folio_dictamen)
         setEnviado(true)
       } catch { setErrorEnvio("Error de conexión.") } finally { setEnviando(false) }
     },
-    [user, regimenPeriodo, periodoSeleccionado, consumirPermiso, tipo, formData, esRenovacion, folioSeleccionado]
+    [user, regimenPeriodo, periodoSeleccionado, consumirPermiso, tipo, formData, archivoAdjunto, esRenovacion, folioSeleccionado, editSolicitud]
   )
 
   const handleReset = useCallback(() => {
@@ -3228,8 +3356,8 @@ export function NuevaSolicitudPage() {
                       <SelectContent className="max-h-72">
                         {foliosReales.map((f) => (
                           <SelectItem key={f.id} value={f.id}>
-                            <span className="font-medium">{f.folioJustificacion}</span>{" / "}
-                            <span className="font-medium">{f.folioDictamen}</span>
+                            <span className="font-medium">{formatFolioJustificacion(f.folioJustificacion)}</span>{" / "}
+                            <span className="font-medium">{formatFolioDictamen(f.folioDictamen)}</span>
                             {f.secretaria && <span className="text-muted-foreground"> - {f.secretaria}</span>}
                             {foliosDBIds.has(f.id) && <span className="ml-1.5 text-[10px] text-blue-500 font-semibold"> BD</span>}
                           </SelectItem>
@@ -3243,11 +3371,11 @@ export function NuevaSolicitudPage() {
                     <div className="grid gap-4 md:grid-cols-3">
                       <div className="flex flex-col gap-1">
                         <span className="text-xs text-muted-foreground">Folio de Justificación</span>
-                        <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.folioJustificacion}</span>
+                        <span className="text-sm font-medium text-card-foreground">{formatFolioJustificacion(folioSeleccionadoData.folioJustificacion)}</span>
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="text-xs text-muted-foreground">Folio de Dictamen/Opinión</span>
-                        <span className="text-sm font-medium text-card-foreground">{folioSeleccionadoData.folioDictamen}</span>
+                        <span className="text-sm font-medium text-card-foreground">{formatFolioDictamen(folioSeleccionadoData.folioDictamen)}</span>
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="text-xs text-muted-foreground">Secretaría</span>
@@ -3365,10 +3493,12 @@ export function NuevaSolicitudPage() {
               esRenovacion={esRenovacion === "si"}
               datosRenovacion={datosRenovacion}
               onFormChange={handleFormChange}
+              onArchivoChange={setArchivoAdjunto}
               secretariaFija={userSecretariaOriginal}
               unidadFija={userUAOriginal}
               claveReportePlazas={userClaveReporte}
               catalogoUAs={catalogoUAsDelUsuario}
+              initialData={editSolicitud?.formData}
             />
           ) : (
             <FormularioNombramiento
@@ -3377,24 +3507,27 @@ export function NuevaSolicitudPage() {
               excelRows={excelRows}
               datosRenovacion={datosRenovacion}
               onFormChange={handleFormChange}
+              onArchivoChange={setArchivoAdjunto}
               secretariaFija={userSecretariaOriginal}
               unidadFija={userUAOriginal}
               claveReportePlazas={userClaveReporte}
               catalogoUAs={catalogoUAsDelUsuario}
+              tipoAdministracionUsuario={user?.tipoAdministracion ?? "centralizada"}
             />
           )}
 
           {(() => {
-            // Usar el calendario real de la API (periodoInfo) en lugar del mock
             const periodoStillValid = periodoInfo?.enTiempo ?? false
             const hasPermiso = !!permisoActivo
-            // Con permiso especial relajamos la restricción de fecha pasada (captura extemporánea)
-            const vigenciaOk = hasPermiso
+            const isEditingBorrador = !!editSolicitud?.id
+            const vigenciaOk = hasPermiso || isEditingBorrador
               ? !!(formData.vigenciaInicio) && !!(formData.vigenciaFin)
               : !esFechaPasada(formData.vigenciaInicio ?? "") &&
                 !esFechaPasada(formData.vigenciaFin    ?? "") &&
                 !!(formData.vigenciaInicio) && !!(formData.vigenciaFin)
-            const canSend = (periodoStillValid || hasPermiso) && !enviando && !guardandoBorrador && vigenciaOk
+            const camposFaltantes = esRenovacion !== "si" ? validarCamposCompletos(formData, tipo) : []
+            const camposOk = camposFaltantes.length === 0
+            const canSend = (periodoStillValid || hasPermiso || isEditingBorrador) && !enviando && !guardandoBorrador && vigenciaOk && camposOk
 
             return (
               <div className="flex flex-col gap-3">
@@ -3410,6 +3543,19 @@ export function NuevaSolicitudPage() {
                     <span className="text-xs text-destructive">{errorEnvio}</span>
                   </div>
                 )}
+                {esRenovacion !== "si" && camposFaltantes.length > 0 && (
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                        Campos obligatorios pendientes ({camposFaltantes.length}):
+                      </span>
+                      <span className="text-xs text-amber-600 dark:text-amber-500">
+                        {camposFaltantes.join(" · ")}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
                   <Button variant="outline" onClick={handleBack} disabled={enviando || guardandoBorrador}>
                     <ArrowLeft className="mr-1.5 h-4 w-4" />Anterior
@@ -3422,7 +3568,7 @@ export function NuevaSolicitudPage() {
                       }
                     </Button>
                     <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
-                      disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso)}>
+                      disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
                       {enviando
                         ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
                         : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validación</>

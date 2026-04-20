@@ -8,8 +8,28 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const estadoNombre = searchParams.get("estado") ?? "En Captura"
     const usuarioId    = searchParams.get("usuarioId")
+    const viewerUserId = searchParams.get("viewerId")
 
     let where: any = {}
+
+    if (viewerUserId) {
+      const viewer = await prisma.usuario.findUnique({
+        where:  { id: viewerUserId },
+        select: { secretaria_id: true, organo_centralizado: { select: { id: true } } },
+      })
+      if (viewer) {
+        if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
+          // Usuario centralizado: ve su secretaría + todos los paraestatal (secretaria_id null)
+          where.OR = [
+            { usuario: { secretaria_id: viewer.secretaria_id } },
+            { usuario: { secretaria_id: null } },
+          ]
+        } else {
+          // Usuario paraestatal: ve solo paraestatal
+          where.usuario = { organo_centralizado: { is: null } }
+        }
+      }
+    }
 
     if (estadoNombre !== "todos") {
       const estado = await prisma.estado.findFirst({
@@ -54,14 +74,21 @@ export async function GET(req: NextRequest) {
             usuario: { select: { id: true, nombre: true, correo: true } },
           },
         },
+        adjunto: true,
       },
       orderBy: { fecha_creacion: "desc" },
     })
 
-    const enriched = solicitudes.map((sol) => {
+    const sorted = [...solicitudes].sort((a, b) => {
+      const ta = (a.fecha_envio ?? a.fecha_creacion ?? new Date(0)).getTime()
+      const tb = (b.fecha_envio ?? b.fecha_creacion ?? new Date(0)).getTime()
+      return tb - ta
+    })
+
+    const enriched = sorted.map((sol) => {
       const folioDictamen =
-        sol.dictamen?.folio ??
         (sol as any).folio_dictamen ??
+        sol.dictamen?.folio         ??
         (sol as any).folio_anterior ??
         null
 
@@ -104,7 +131,7 @@ export async function PATCH(req: NextRequest) {
 
     const solicitud = await prisma.solicitud.findUnique({
       where:   { id: idNum },
-      include: { estado: true },
+      include: { estado: true, usuario: { select: { secretaria_id: true } } },
     })
 
     if (!solicitud) {
@@ -123,23 +150,50 @@ export async function PATCH(req: NextRequest) {
       })
     }
 
-    // Al pasar a Revisor (filtro 1) generar folio_recepcion con formato MES-NNNN
+    const esEnvioAValidacion =
+      nuevoEstado.toLowerCase().includes("en validacion justificaciones") ||
+      nuevoEstado.toLowerCase().includes("enviada a validacion")
+
+    const esEnvioDGDO = nuevoEstado.toLowerCase() === "pendiente do"
+
+    // Generar folio_recepcion global (FREC, formato AB-001) al enviar a DGDO
     let folioRecepcionNuevo: string | undefined
-    if (nuevoEstado === "En Revision Revisor" && !solicitud.folio_recepcion) {
+    if (esEnvioDGDO && !solicitud.folio_recepcion) {
       const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
-      const now = new Date()
-      const mesCode  = MONTH_CODES[now.getMonth()]
-      folioRecepcionNuevo = `${mesCode}-${String(idNum).padStart(4, "0")}`
+      const now    = new Date()
+      const mesNum = now.getMonth() + 1
+      const anioNum = now.getFullYear()
+      const mesCode = MONTH_CODES[now.getMonth()]
+      const registro = await prisma.consecutivo_folio.upsert({
+        where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
+        update: { consecutivo: { increment: 1 } },
+        create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: 1 },
+      })
+      folioRecepcionNuevo = `${mesCode}-${String(registro.consecutivo ?? 1).padStart(3, "0")}`
+    }
+
+    // Si es un borrador enviado y aún no tiene folio, asignarlo ahora
+    let folioJustificacionNuevo: string | undefined
+    if (esEnvioAValidacion && !solicitud.folio_justificacion) {
+      const year = new Date().getFullYear()
+      const tipoFolio = solicitud.usuario?.secretaria_id
+        ? `JUST-${solicitud.usuario.secretaria_id}`
+        : "JUST-P"
+      const registro = await prisma.consecutivo_folio.upsert({
+        where:  { tipo_mes_anio: { tipo: tipoFolio, mes: 0, anio: year } },
+        update: { consecutivo: { increment: 1 } },
+        create: { tipo: tipoFolio, mes: 0, anio: year, consecutivo: 1 },
+      })
+      folioJustificacionNuevo = `JUST-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
     }
 
     const solicitudActualizada = await prisma.solicitud.update({
       where:   { id: idNum },
       data:    {
         estado_id: estadoNuevo.id,
-        ...((nuevoEstado === "En Validacion Justificaciones" || nuevoEstado === "Enviada a Validacion (UEFA)") && {
-          fecha_envio: new Date(),
-        }),
-        ...(folioRecepcionNuevo && { folio_recepcion: folioRecepcionNuevo }),
+        ...(esEnvioAValidacion && { fecha_envio: new Date() }),
+        ...(folioRecepcionNuevo    && { folio_recepcion:     folioRecepcionNuevo }),
+        ...(folioJustificacionNuevo && { folio_justificacion: folioJustificacionNuevo }),
         ...(revisorId && { revisor_asignado_id: revisorId }),
       },
       include: { estado: true, periodo: true },
@@ -155,7 +209,11 @@ export async function PATCH(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ ok: true, data: solicitudActualizada })
+    return NextResponse.json({
+      ok:    true,
+      data:  solicitudActualizada,
+      folio: folioJustificacionNuevo ?? solicitudActualizada.folio_justificacion ?? null,
+    })
   } catch (error: any) {
     console.error("[PATCH /api/validacion]", error)
     return NextResponse.json(

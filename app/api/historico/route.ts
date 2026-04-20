@@ -44,7 +44,6 @@ function cellValueToString(rawValue: unknown, cellObj: XLSX.CellObject | undefin
   return String(rawValue).trim()
 }
 
-// ── Función reutilizable para parsear un archivo ──────────────────────────────
 function parseXlsxFile(buffer: ArrayBuffer): {
   sheetNames: string[]
   sheets: Record<string, Record<string, string | undefined>[]>
@@ -117,7 +116,6 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
 
-    // ── Archivo 1 (obligatorio) ──────────────────────────────────────────────
     const file = formData.get("file") as File | null
     if (!file) return NextResponse.json({ error: "No file uploaded" }, { status: 400 })
     if (!file.name.toLowerCase().endsWith(".xlsx"))
@@ -125,7 +123,6 @@ export async function POST(req: NextRequest) {
 
     const { sheetNames, sheets } = parseXlsxFile(await file.arrayBuffer())
 
-    // ── Archivo 2 (opcional) ─────────────────────────────────────────────────
     const file2 = formData.get("file2") as File | null
     let nombreArchivo2: string | null = null
     let sheetNames2: string[] | null = null

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,15 +11,19 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PageLayout } from "@/components/page-layout"
 import {
   ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle,
   History, MessageSquare, ClipboardCheck, Info, MinusCircle,
   ChevronDown, ChevronRight, Send, Download, Lock, Stamp,
   Users, Shield, Loader2, GraduationCap, Brain, Wrench, Heart, Star, Briefcase,
+  UserCheck,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
+import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 
 const INICIALES_MES_MAP: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
@@ -38,12 +42,8 @@ function generarFolioTemporal(id: number, fecha: Date | null | undefined): strin
 
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio) return "---"
-  const match = folio.match(/^(\d+)\/(\d{1,2})\/\d{4}$/)
-  if (match) {
-    const num = match[1].padStart(3, "0")
-    const mes = match[2].padStart(2, "0")
-    return `${INICIALES_MES_MAP[mes] ?? "XX"}-${num}`
-  }
+  const match = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
+  if (match) return `${match[1]}/${match[2].padStart(2, "0")}/${match[3]}`
   return folio
 }
 
@@ -72,13 +72,15 @@ interface HistorialEntry {
   accion: string
   estadoAnterior: string | null
   estadoNuevo: string
+  comentario: string | null
 }
 
 interface SolicitudDetalle {
   id: number
-  folio: string
+  folio: string | null
   folioJustificacion: string
   folioDictamen: string | null
+  folioRecepcion: string | null
   tipo: string
   regimen: string
   tipoActividades: string
@@ -99,7 +101,7 @@ interface SolicitudDetalle {
   folioAnterior: string | null
   slaRestante: number | null
   historial: HistorialEntry[]
-  observacionesPrevias: string[]
+  observacionesPrevias: { fecha: string; usuario: string; estado: string; comentario: string }[]
   checklistDO: Record<string, { valor: "si" | "no" | "noAplica" | null; observacion: string }>
   _raw: any
 }
@@ -116,49 +118,65 @@ interface RevisionDOPageProps {
 interface ChecklistItem { key: string; num: number; label: string }
 
 const CHECKLIST_16: ChecklistItem[] = [
-  { key: "c1",  num: 1,  label: "Oficio de solicitud adjunto" },
-  { key: "c2",  num: 2,  label: "Secretaria/Subsecretaria/Dependencia correcta" },
-  { key: "c3",  num: 3,  label: "Unidad Administrativa de Adscripcion" },
-  { key: "c4",  num: 4,  label: "Unidad Responsable del Gasto" },
-  { key: "c5",  num: 5,  label: "Programa o Proyecto" },
-  { key: "c6",  num: 6,  label: "Regimen de contratacion correcto" },
-  { key: "c7",  num: 7,  label: "Tipo de Actividad especificado" },
-  { key: "c8",  num: 8,  label: "Numero de justificaciones" },
-  { key: "c9",  num: 9,  label: "Numero de prestadores de servicio" },
-  { key: "c10", num: 10, label: "Vigencia correcta (inicio y termino)" },
-  { key: "c11", num: 11, label: "Importe Bruto conforme al tabulador vigente" },
-  { key: "c12", num: 12, label: "Responsabilidades definidas" },
-  { key: "c13", num: 13, label: "Fecha de publicacion en periodico oficial" },
-  { key: "c14", num: 14, label: "Oficio de suficiencia presupuestal adjunto" },
-  { key: "c15", num: 15, label: "Convenio y anexos si aplica recurso federal" },
-  { key: "c16", num: 16, label: "Documentacion completa conforme a lineamientos" },
+  { key: "c1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
+  { key: "c2",  num: 2,  label: "Unidad Responsable del Gasto" },
+  { key: "c3",  num: 3,  label: "Programa o Proyecto" },
+  { key: "c4",  num: 4,  label: "Régimen de contratación correcto" },
+  { key: "c5",  num: 5,  label: "Tipo de actividad especificado" },
+  { key: "c6",  num: 6,  label: "Número de prestadores de servicio" },
+  { key: "c7",  num: 7,  label: "Vigencia correcta (inicio y término)" },
+  { key: "c8",  num: 8,  label: "Importe bruto conforme al tabulador vigente" },
+  { key: "c9",  num: 9,  label: "Ordenamientos legales y administrativos citados" },
+  { key: "c10", num: 10, label: "Oficio de suficiencia presupuestal adjunto" },
 ]
 
-const CHECKLIST_19: ChecklistItem[] = [
-  ...CHECKLIST_16,
-  { key: "c17", num: 17, label: "Denominacion del nombramiento" },
-  { key: "c18", num: 18, label: "Equivalencia conforme al Tabulador (Nivel/Categoria correcta)" },
-  { key: "c19", num: 19, label: "Clave presupuestal valida" },
+
+const CHECKLIST_NOMBRAMIENTO: ChecklistItem[] = [
+  { key: "n1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
+  { key: "n2",  num: 2,  label: "Unidad Responsable del Gasto" },
+  { key: "n3",  num: 3,  label: "Programa o Proyecto" },
+  { key: "n4",  num: 4,  label: "Régimen de contratación correcto" },
+  { key: "n5",  num: 5,  label: "Denominación del nombramiento" },
+  { key: "n6",  num: 6,  label: "Equivalencia de acuerdo al Tabulador de Sueldos del Poder Ejecutivo Estatal, vigente (Nivel/Categoría)" },
+  { key: "n7",  num: 7,  label: "Tipo de actividad especificado" },
+  { key: "n8",  num: 8,  label: "Número de personas a contratar" },
+  { key: "n9",  num: 9,  label: "Vigencia correcta (inicio y término)" },
+  { key: "n10", num: 10, label: "Importe neto mensual (conforme al tabulador vigente)" },
+  { key: "n11", num: 11, label: "Ordenamientos legales y administrativos citados" },
+  { key: "n12", num: 12, label: "Oficio de suficiencia presupuestal adjunto" },
 ]
 
-function getChecklistItems(filtro: 1 | 2 | 3): ChecklistItem[] {
-  return filtro === 2 ? CHECKLIST_19 : CHECKLIST_16
+const CHECKLIST_HONORARIOS: ChecklistItem[] = [
+  { key: "h1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
+  { key: "h2",  num: 2,  label: "Unidad Responsable del Gasto" },
+  { key: "h3",  num: 3,  label: "Programa o Proyecto" },
+  { key: "h4",  num: 4,  label: "Régimen de contratación correcto" },
+  { key: "h5",  num: 5,  label: "Tipo de actividad especificado" },
+  { key: "h6",  num: 6,  label: "Número de prestadores de servicio" },
+  { key: "h7",  num: 7,  label: "Vigencia correcta (inicio y término)" },
+  { key: "h8",  num: 8,  label: "Importe bruto conforme al tabulador vigente" },
+  { key: "h9",  num: 9,  label: "Ordenamientos legales y administrativos citados" },
+  { key: "h10", num: 10, label: "Oficio de suficiencia presupuestal adjunto" },
+]
+
+function getChecklistItems(filtro: 1 | 2 | 3, tipo?: string | null): ChecklistItem[] {
+  const t = (tipo ?? "").toLowerCase()
+  if (t.includes("honorarios") || t.includes("asimilados")) return CHECKLIST_HONORARIOS
+  if (t.includes("nombramiento"))                           return CHECKLIST_NOMBRAMIENTO
+  return CHECKLIST_16
 }
-
 function formatFecha(v: string | null | undefined): string {
   if (!v) return "—"
   const d = new Date(v)
   if (isNaN(d.getTime())) return v
   return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
-
 function formatFechaHora(v: string | null | undefined): string {
   if (!v) return "—"
   const d = new Date(v)
-  if (isNaN(d.getTime())) return v
+  if (isNaN(d.getTime())) return
   return d.toLocaleString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
 }
-
 function diasHabilesDesde(fechaStr: string | null): number | null {
   if (!fechaStr) return null
   const inicio = new Date(fechaStr)
@@ -208,9 +226,10 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
   const historial: HistorialEntry[] = (item.historial_solicitud ?? []).map((h: any) => ({
     fecha:          formatFechaHora(h.fecha),
     usuario:        h.usuario?.nombre ?? "Sistema",
-    accion:         h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? h.comentario ?? "—",
+    accion:         h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
     estadoAnterior: h.estado_historial_solicitud_estado_anterior_idToestado?.nombre ?? null,
     estadoNuevo:    h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+    comentario:     h.comentario ?? null,
   }))
 
   const observacionesPrevias = (item.historial_solicitud ?? [])
@@ -218,21 +237,24 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
       const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
       return /observad/i.test(nombre) && h.comentario
     })
-    .map((h: any) => h.comentario as string)
+    .map((h: any) => ({
+      fecha:      formatFechaHora(h.fecha),
+      usuario:    h.usuario?.nombre ?? "Sistema",
+      estado:     h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+      comentario: h.comentario as string,
+    }))
 
   const fechaEnvio = item.fecha_envio ?? item.fecha_recepcion ?? item.fecha_creacion ?? null
-
-  // Resolución robusta — busca en el item y en _raw
   const folioDictamen = resolverFolioDictamen(item)
-
   return {
     id:                   item.id,
-    folio:                resolverFolioRecepcion(item),
+    folio:                item.folio_recepcion ? formatearFolio(item.folio_recepcion) : null,
     folioJustificacion:   item.folio_justificacion
       ?? `SDTF-${new Date(item.fecha_creacion ?? Date.now()).getFullYear()}-${String(item.id).padStart(4, "0")}`,
     folioDictamen,
+    folioRecepcion:       item.folio_recepcion ?? null,
     tipo:                 item.tipo_solicitud ?? "—",
-    denominacion:         item.denominacion || item.tipo_solicitud || "—",
+    denominacion:         item.denominacion || "—",
     tipoActividades:      item.tipo_actividades ?? item.tipoActividades ?? "—",
     regimen:              item.regimen ?? "—",
     secretaria:           item.secretaria ?? item.usuario?.area?.nombre ?? "—",
@@ -258,7 +280,7 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
     _raw:                 item,
   }
 }
-// componentes
+
 function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) {
   return (
     <div className={`flex items-center gap-2 rounded-lg px-4 py-2.5 ${getSlaBackground(diasRestantes)}`}>
@@ -271,31 +293,79 @@ function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) 
   )
 }
 
+function ObservacionChecklist({ comentario }: { comentario: string }) {
+  const lineas = comentario.split("\n").filter(Boolean)
+  const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
+  const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
+  if (itemsChecklist.length === 0) {
+    return <p className="text-xs text-[#832B56]/90 leading-relaxed">{comentario}</p>
+  }
+  return (
+    <div className="flex flex-col gap-0 mt-1">
+      {comentarioGeneral && (
+        <p className="text-xs text-[#832B56]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
+      )}
+      {itemsChecklist.map((linea, idx) => {
+        const [titulo, obs] = linea.split("::")
+        const numMatch = titulo.match(/^(\d+)\./)
+        const num = numMatch ? numMatch[1] : String(idx + 1)
+        const label = titulo.replace(/^\d+\.\s*/, "").trim()
+        const isLast = idx === itemsChecklist.length - 1
+        return (
+          <div key={idx} className="flex gap-3">
+            <div className="flex flex-col items-center">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/60 bg-white text-[10px] font-bold text-[#832B56]">
+                {num}
+              </div>
+              {!isLast && <div className="w-px flex-1 bg-[#832B56]/20 my-0.5" />}
+            </div>
+            <div className={`flex flex-col gap-1 flex-1 ${!isLast ? "pb-3" : "pb-1"}`}>
+              <span className="text-xs font-semibold text-[#832B56]/90 leading-snug">{label}</span>
+              {obs?.trim() && (
+                <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                  {obs.trim()}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function HistorialTimeline({ historial }: { historial: HistorialEntry[] }) {
   if (!historial.length) return <p className="text-xs text-muted-foreground">Sin historial registrado.</p>
   return (
     <div className="flex flex-col gap-0">
-      {[...historial].reverse().map((entry, i) => (
-        <div key={i} className="flex gap-3">
-          <div className="flex flex-col items-center">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-secondary bg-card">
-              <div className="h-2 w-2 rounded-full bg-secondary" />
-            </div>
-            {i < historial.length - 1 && <div className="w-px flex-1 bg-border" />}
-          </div>
-          <div className="flex flex-col gap-0.5 pb-4">
-            <span className="text-xs font-medium text-card-foreground">{entry.accion}</span>
-            <span className="text-[10px] text-muted-foreground">{entry.fecha} — {entry.usuario}</span>
-            {entry.estadoAnterior && (
-              <div className="flex items-center gap-1 mt-0.5">
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{entry.estadoAnterior}</Badge>
-                <span className="text-[10px] text-muted-foreground">→</span>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{entry.estadoNuevo}</Badge>
+      {[...historial].reverse().map((entry, i) => {
+        const esObservacion = /observad/i.test(entry.estadoNuevo)
+        const esDotColor    = esObservacion ? "border-[#832B56]" : "border-secondary"
+        const eDotFill      = esObservacion ? "bg-[#832B56]"     : "bg-secondary"
+        return (
+          <div key={i} className="flex gap-3">
+            <div className="flex flex-col items-center">
+              <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${esDotColor} bg-card`}>
+                <div className={`h-2 w-2 rounded-full ${eDotFill}`} />
               </div>
-            )}
+              {i < historial.length - 1 && <div className="w-px flex-1 bg-border" />}
+            </div>
+            <div className="flex flex-col gap-1 pb-4 flex-1">
+              <span className={`text-xs font-semibold ${esObservacion ? "text-[#832B56]" : "text-card-foreground"}`}>
+                {entry.accion}
+              </span>
+              <span className="text-[10px] text-muted-foreground">{entry.fecha} — {entry.usuario}</span>
+              {entry.estadoAnterior && (
+                <div className="flex items-center gap-1">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{entry.estadoAnterior}</Badge>
+                  <span className="text-[10px] text-muted-foreground">→</span>
+                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${esObservacion ? "border-[#832B56]/40 text-[#832B56]" : ""}`}>{entry.estadoNuevo}</Badge>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -348,19 +418,20 @@ function ReadOnlyList({ items }: { items: string[] }) {
   )
 }
 
-function RadioOption({ value, selected, onChange, label, colorClass }: {
-  value: string; selected: boolean; onChange: () => void; label: string; colorClass: string
+function RadioOption({ value, selected, onChange, label, colorClass, style }: {
+  value: string; selected: boolean; onChange: () => void; label: string; colorClass: string; style?: React.CSSProperties
 }) {
   return (
     <button
       type="button"
       onClick={onChange}
+      style={selected ? style : undefined}
       className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-all ${
         selected
           ? `${colorClass} border-current`
           : "border-border text-muted-foreground hover:border-foreground/30 hover:text-card-foreground"
       }`}
-    >
+      >
       {value === "si"       && <CheckCircle2 className="h-3.5 w-3.5" />}
       {value === "no"       && <XCircle className="h-3.5 w-3.5" />}
       {value === "noAplica" && <MinusCircle className="h-3.5 w-3.5" />}
@@ -371,7 +442,7 @@ function RadioOption({ value, selected, onChange, label, colorClass }: {
 
 function PerfilList({ value }: { value: string }) {
   if (!value || value === "—") return <span className="text-sm text-muted-foreground">—</span>
-  const items = value.split(/[\n•·]+/).map(s => s.trim()).filter(Boolean)
+  const items = value.split(/[\n•·,]+/).map(s => s.trim()).filter(Boolean)
   if (items.length === 0) return <span className="text-sm text-muted-foreground">—</span>
   return (
     <ul className="flex flex-col gap-1">
@@ -396,20 +467,36 @@ function PerfilListField({ label, value }: { label: string; value: string }) {
 
 function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
   const raw = sol._raw
+  const esNombramiento = (sol.tipo ?? "").toLowerCase().includes("nombramiento")
+    || (raw?.tipo_solicitud ?? "").toLowerCase().includes("nombramiento")
   return (
     <SectionCard num="I" title="Datos Generales">
       <div className="grid gap-4 md:grid-cols-2">
-        <ReadOnlyField label="Secretaría"                            value={sol.secretaria} />
-        <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={raw?.unidad_administrativa ?? "—"} />
-        <ReadOnlyField label="Unidad Responsable del Gasto"          value={raw?.unidad_responsable ?? "—"} />
-        <ReadOnlyField label="Programa o Proyecto"                   value={raw?.programa_proyecto ?? "—"} />
-        <ReadOnlyField label="Régimen de Contratación"               value={sol.regimen} />
-        <ReadOnlyField label="Tipo de Actividades"                   value={sol.tipoActividades} />
-        <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
-        <ReadOnlyField label="Denominación"                          value={sol.denominacion} />
-        <ReadOnlyField label="Vigencia Inicio"                       value={sol.vigenciaInicio} />
-        <ReadOnlyField label="Vigencia Término"                      value={sol.vigenciaFin} />
-        <ReadOnlyField label="Importe Bruto"                         value={sol.importeBruto} />
+        <ReadOnlyField label="Secretaría / Dependencia / Organismo" value={sol.secretaria} />
+        <ReadOnlyField label="Unidad Administrativa de Adscripción" value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
+        <ReadOnlyField label="Unidad Responsable del Gasto"         value={getNombreForClave(raw?.unidad_responsable ?? "") || raw?.nombre_unidad_responsable || raw?.unidad_responsable_nombre || raw?.unidad_responsable || "—"} />
+        {esNombramiento ? (
+          <>
+            <ReadOnlyField label="Programa o Proyecto"              value={raw?.programa_proyecto ?? "—"} />
+            <ReadOnlyField label="Denominación del Nombramiento"    value={sol.denominacion} />
+            <ReadOnlyField label="Puesto del Jefe Inmediato"        value={raw?.puesto_jefe_inmediato ?? "—"} />
+            <ReadOnlyField label="Número de Personas a Contratar"   value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
+            <ReadOnlyField label="Tipo de Pago"                     value={raw?.tipo_importe || "Mensual"} />
+            <ReadOnlyField label="Vigencia Inicio"                  value={sol.vigenciaInicio} />
+            <ReadOnlyField label="Vigencia Término"                 value={sol.vigenciaFin} />
+            <ReadOnlyField label="Importe Neto"                     value={sol.importeBruto} />
+          </>
+        ) : (
+          <>
+            <ReadOnlyField label="Número de Prestadores de Servicios" value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
+            <ReadOnlyField label="Programa o Proyecto"                value={raw?.programa_proyecto ?? "—"} />
+            <ReadOnlyField label="Tipo de Actividades"                value={sol.tipoActividades} />
+            <ReadOnlyField label="Régimen de Contratación"            value={sol.regimen} />
+            <ReadOnlyField label="Vigencia Inicio"                    value={sol.vigenciaInicio} />
+            <ReadOnlyField label="Vigencia Término"                   value={sol.vigenciaFin} />
+            <ReadOnlyField label="Importe Bruto"                      value={sol.importeBruto} />
+          </>
+        )}
       </div>
     </SectionCard>
   )
@@ -421,8 +508,8 @@ function SeccionRenovacion({ sol }: { sol: SolicitudDetalle }) {
     resolverFolioDictamen(sol._raw) ??
     null
 
-  return (
-    <SectionCard title="Renovación">
+ return (
+     <SectionCard title="Renovación">
       <div className="grid gap-4 md:grid-cols-2">
         <ReadOnlyField label="¿Es Renovación?" value={sol.esRenovacion ? "SÍ" : "NO"} />
         <ReadOnlyField
@@ -456,11 +543,17 @@ function SeccionDocumentosAdjuntos({ raw }: { raw: any }) {
         <div className="flex flex-col gap-2">
           {(raw.adjunto as any[]).map((adj: any, i: number) => (
             <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-              <FileText className="h-8 w-8 text-secondary" />
-              <div>
-                <p className="text-sm font-medium text-card-foreground">{adj.nombre_archivo}</p>
+              <FileText className="h-8 w-8 text-secondary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</p>
                 <p className="text-xs text-muted-foreground">{adj.tipo ?? "PDF"} — {formatFecha(adj.fecha_subida)}</p>
               </div>
+              {adj.ruta && (
+                <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
+                  onClick={() => window.open(adj.ruta, "_blank")}>
+                  <Download className="h-3.5 w-3.5" />Ver
+                </Button>
+              )}
             </div>
           ))}
         </div>
@@ -475,10 +568,10 @@ function ExpedienteFiltro1({ sol }: { sol: SolicitudDetalle }) {
   const raw = sol._raw
   const actividades: string[]       = Array.isArray(raw?.actividades)      ? raw.actividades.filter(Boolean)      : []
   const responsabilidades: string[] = Array.isArray(raw?.responsabilidades) ? raw.responsabilidades.filter(Boolean) : []
+  const esNombramiento = (sol.regimen ?? "").toLowerCase().includes("nombramiento")
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
-      <SeccionRenovacion sol={sol} />
       <SectionCard title="I.1 Objeto de la Contratación">
         <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
@@ -490,7 +583,7 @@ function ExpedienteFiltro1({ sol }: { sol: SolicitudDetalle }) {
       <SectionCard title="I.3 Responsabilidades">
         {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
-      <SeccionPerfil raw={raw} />
+      {!esNombramiento && <SeccionPerfil raw={raw} />}
       <SeccionDocumentosAdjuntos raw={raw} />
     </div>
   )
@@ -503,10 +596,14 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
   const marcoNormativo: string[]     = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
   const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
   const resguardoActivos: string[]   = Array.isArray(raw?.resguardo_activos)   ? raw.resguardo_activos.filter(Boolean)   : []
+
+  const regimenNorm  = (sol.regimen ?? "").toLowerCase()
+  const esNombramientoTD = regimenNorm.includes("nombramiento") || regimenNorm.includes("tiempo determinado")
+  const mostrarI456      = esNombramientoTD
+
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
-      <SeccionRenovacion sol={sol} />
       <SectionCard title="Tabulador — Nivel y Categoría">
         {(() => {
           const nivel     = raw?._raw?.nivel_tabulador     ?? raw?.nivel_tabulador
@@ -524,22 +621,25 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
-      <SectionCard title="I.2 Funciones Principales">
+      <SectionCard title="I.2 Actividades a Realizar">
         {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
       <SectionCard title="I.3 Responsabilidades">
         {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
-      <SectionCard title="I.4 Marco Normativo">
-        {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
-      </SectionCard>
-      <SectionCard title="I.5 Condiciones y Riesgos">
-        {condicionesRiesgos.length > 0 ? <ReadOnlyList items={condicionesRiesgos} /> : <p className="text-sm text-muted-foreground">—</p>}
-      </SectionCard>
-      <SectionCard title="I.6 Resguardo Personalizado de Activos">
-        {resguardoActivos.length > 0 ? <ReadOnlyList items={resguardoActivos} /> : <p className="text-sm text-muted-foreground">—</p>}
-      </SectionCard>
-      <SeccionPerfil raw={raw} />
+      {mostrarI456 && (
+        <>
+          <SectionCard title="I.4 Marco Normativo">
+            {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
+          </SectionCard>
+          <SectionCard title="I.5 Condiciones y Riesgos">
+            {condicionesRiesgos.length > 0 ? <ReadOnlyList items={condicionesRiesgos} /> : <p className="text-sm text-muted-foreground">—</p>}
+          </SectionCard>
+          <SectionCard title="I.6 Resguardo Personalizado de Activos">
+            {resguardoActivos.length > 0 ? <ReadOnlyList items={resguardoActivos} /> : <p className="text-sm text-muted-foreground">—</p>}
+          </SectionCard>
+        </>
+      )}
       <SeccionDocumentosAdjuntos raw={raw} />
     </div>
   )
@@ -549,10 +649,10 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
   const raw = sol._raw
   const actividades: string[]       = Array.isArray(raw?.actividades)      ? raw.actividades.filter(Boolean)      : []
   const responsabilidades: string[] = Array.isArray(raw?.responsabilidades) ? raw.responsabilidades.filter(Boolean) : []
+  const esNombramiento = (sol.regimen ?? "").toLowerCase().includes("nombramiento")
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
-      <SeccionRenovacion sol={sol} />
       <SectionCard title="I.1 Objeto de la Contratación">
         <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
@@ -564,7 +664,7 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
       <SectionCard title="I.3 Responsabilidades">
         {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
-      <SeccionPerfil raw={raw} />
+      {!esNombramiento && <SeccionPerfil raw={raw} />}
       <SeccionDocumentosAdjuntos raw={raw} />
     </div>
   )
@@ -574,15 +674,36 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
 function FolioDictamenCard({
   folioDictamen,
   onAsignar,
+  esExtemporanea,
 }: {
   folioDictamen: string | null
   onAsignar: (folio: string) => Promise<void>
+  esExtemporanea: boolean
 }) {
   const today = new Date()
-  const [mes,         setMes]         = useState(String(today.getMonth() + 1).padStart(2, "0"))
-  const [anio,        setAnio]        = useState(String(today.getFullYear()))
+  const [mes,         ]               = useState(String(today.getMonth() + 1).padStart(2, "0"))
+  const [anio,        ]               = useState(String(today.getFullYear()))
   const [consecutivo, setConsecutivo] = useState("1")
   const [guardando,   setGuardando]   = useState(false)
+  const autoCalledRef = useRef(false)
+
+  useEffect(() => {
+    const mesNum  = today.getMonth() + 1
+    const anioNum = today.getFullYear()
+    fetch(`/api/folio-dictamen/siguiente?mes=${mesNum}&anio=${anioNum}`)
+      .then(r => r.json())
+      .then(async json => {
+        if (!json.ok) return
+        const sig = String(json.siguiente)
+        setConsecutivo(sig)
+        if (!esExtemporanea && !folioDictamen && !autoCalledRef.current) {
+          autoCalledRef.current = true
+          const folio = `${sig.padStart(2, "0")}/${mes}/${anio}`
+          await onAsignar(folio)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const folioPreview = `${String(consecutivo).padStart(2, "0")}/${mes}/${anio}`
 
@@ -607,6 +728,8 @@ function FolioDictamenCard({
     )
   }
 
+  if (!esExtemporanea) return null
+
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-3">
@@ -621,15 +744,15 @@ function FolioDictamenCard({
         <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Mes</Label>
-            <Input value={mes} onChange={e => setMes(e.target.value.replace(/\D/g, "").slice(0, 2))} placeholder="03" className="bg-background font-mono" maxLength={2} />
+            <Input readOnly value={mes} placeholder="03" className="bg-muted font-mono cursor-not-allowed select-none" maxLength={2} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Año</Label>
-            <Input value={anio} onChange={e => setAnio(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="2026" className="bg-background font-mono" maxLength={4} />
+            <Input readOnly value={anio} placeholder="2026" className="bg-muted font-mono cursor-not-allowed select-none" maxLength={4} />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Consecutivo</Label>
-            <Input type="number" min={1} value={consecutivo} onChange={e => setConsecutivo(e.target.value)} className="bg-background font-mono" />
+            <Input readOnly type="number" min={1} value={consecutivo} className="bg-muted font-mono cursor-not-allowed select-none" />
             <span className="text-[10px] text-muted-foreground">Auto-calculado</span>
           </div>
         </div>
@@ -647,6 +770,180 @@ function FolioDictamenCard({
   )
 }
 
+function FolioRecepcionCard({
+  folioRecepcion,
+  onAsignar,
+  esExtemporanea,
+}: {
+  folioRecepcion: string | null
+  onAsignar: (folio: string) => Promise<void>
+  esExtemporanea: boolean
+}) {
+  const today = new Date()
+  const mesNum  = today.getMonth() + 1
+  const mesCode = INICIALES_MES_MAP[String(mesNum).padStart(2, "0")] ?? "XX"
+  const [consecutivo, setConsecutivo] = useState("1")
+  const [guardando,   setGuardando]   = useState(false)
+  const autoCalledRef = useRef(false)
+
+  useEffect(() => {
+    fetch(`/api/folio-recepcion/siguiente?mes=${mesNum}&anio=${today.getFullYear()}`)
+      .then(r => r.json())
+      .then(async json => {
+        if (!json.ok) return
+        const sig = String(json.siguiente)
+        setConsecutivo(sig)
+        if (!esExtemporanea && !folioRecepcion && !autoCalledRef.current) {
+          autoCalledRef.current = true
+          const folio = `${mesCode}-${sig.padStart(3, "0")}`
+          await onAsignar(folio)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const folioPreview = `${mesCode}-${String(consecutivo).padStart(3, "0")}`
+
+  const handleAsignar = async () => {
+    if (!consecutivo) return
+    setGuardando(true)
+    await onAsignar(folioPreview)
+    setGuardando(false)
+  }
+
+  if (folioRecepcion) {
+    return (
+      <Card className="shadow-sm border-primary/30 border-2 bg-primary/[0.03]">
+        <CardContent className="flex items-center gap-3 p-4">
+          <FileText className="h-5 w-5 text-primary" />
+          <div>
+            <p className="text-sm font-semibold text-card-foreground">Folio de Recepción Asignado</p>
+            <p className="text-xs text-muted-foreground font-mono">{folioRecepcion}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!esExtemporanea) return null
+
+  return (
+    <Card className="shadow-sm border-border">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+          <FileText className="h-4 w-4 text-primary" />Asignar Folio de Recepción
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Asigne el número secuencial de recepción global.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Mes</Label>
+            <Input readOnly value={mesCode} className="bg-muted font-mono cursor-not-allowed select-none" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Consecutivo</Label>
+            <Input readOnly type="number" min={1} value={consecutivo} className="bg-muted font-mono cursor-not-allowed select-none" />
+            <span className="text-[10px] text-muted-foreground">Auto-calculado</span>
+          </div>
+        </div>
+        <div className="rounded-md bg-muted/50 px-3 py-2">
+          <span className="text-xs text-muted-foreground">Folio de recepción: </span>
+          <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview}</span>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Formato MES-NNN: clave de mes / número secuencial.</p>
+        </div>
+        <Button onClick={handleAsignar} disabled={guardando || !consecutivo} className="w-full gap-2">
+          {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+          Asignar Folio de Recepción
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface RevisorInfo { id: string; nombre: string; correo: string }
+function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
+  open: boolean
+  onClose: () => void
+  onConfirm: (revisorId: string) => void
+  folio: string
+  guardando: boolean
+}) {
+  const [revisores,  setRevisores]  = useState<RevisorInfo[]>([])
+  const [loading,    setLoading]    = useState(false)
+  const [selectedId, setSelectedId] = useState("")
+
+  useEffect(() => {
+    if (!open) return
+    setSelectedId("")
+    setLoading(true)
+    fetch("/api/usuarios?rol=Revisor")
+      .then(r => r.json())
+      .then(json => {
+        const lista: RevisorInfo[] = (Array.isArray(json) ? json : [])
+          .map((u: any) => ({ id: u.id, nombre: u.nombre, correo: u.correo }))
+        setRevisores(lista)
+      })
+      .catch(() => setRevisores([]))
+      .finally(() => setLoading(false))
+  }, [open])
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <UserCheck className="h-5 w-5 text-primary" />
+            Aprobar y Asignar Revisor
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 pt-2">
+          <p className="text-sm text-muted-foreground">
+            Solicitud <span className="font-semibold text-card-foreground">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
+          </p>
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+            </div>
+          ) : revisores.length === 0 ? (
+            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+          ) : (
+            <Select value={selectedId} onValueChange={setSelectedId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar revisor..." />
+              </SelectTrigger>
+              <SelectContent>
+                {revisores.map(r => (
+                  <SelectItem key={r.id} value={r.id}>
+                    <span className="font-medium">{r.nombre}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={!selectedId || guardando || loading}
+              onClick={() => onConfirm(selectedId)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+            >
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+              Aprobar y asignar
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 const AVAILABLE_DESTINATARIOS = [
   "URG-01 Oficina del Secretario", "URG-02 Dirección General", "URG-03 Coordinación Administrativa",
   "UEFA Sec. de Finanzas", "UEFA Sec. de Educación", "UEFA Sec. de Salud",
@@ -654,10 +951,8 @@ const AVAILABLE_DESTINATARIOS = [
   "Dir. Gral. de Administración y Finanzas", "Dir. Gral. de Profesionalización", "Dir. Gral. de Recursos Humanos",
 ]
 
-// Pagina Principal
 export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPageProps) {
   const { user } = useAuth()
-
   const [solicitud,  setSolicitud]  = useState<SolicitudDetalle | null>(null)
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
@@ -667,8 +962,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   const [observacionGeneral, setObservacionGeneral] = useState("")
   const [observacionError,   setObservacionError]   = useState("")
   const [sinObservacion,     setSinObservacion]     = useState(false)
-  const [showEmitConfirm,    setShowEmitConfirm]    = useState(false)
-  const [showConfirmacion,   setShowConfirmacion]   = useState<string | null>(null)
+  const [showEmitConfirm,         setShowEmitConfirm]         = useState(false)
+  const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
+  const [showConfirmacion,        setShowConfirmacion]        = useState<string | null>(null)
   const [checklistErrors,    setChecklistErrors]    = useState<Record<string, boolean>>({})
 
   const today = new Date().toISOString().slice(0, 10)
@@ -681,7 +977,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const res  = await fetch(`/api/filtro?filtro=${filtro}`)
+      const userId = (user as any)?.id ?? ""
+      const res  = await fetch(`/api/filtro?filtro=${filtro}&userId=${userId}`)
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar"); return }
 
@@ -699,7 +996,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
       const folioDictamenResuelto =
         resolverFolioDictamen(item) ??
         resolverFolioDictamen(rawBase)
-
       const merged = {
         ...rawBase,
         folioDictamen: folioDictamenResuelto,
@@ -718,9 +1014,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     } catch { setError("Error de conexión al servidor") }
     finally { setLoading(false) }
   }, [solicitudId, filtro])
-
   useEffect(() => { cargar() }, [cargar])
-
   const updateChecklist = useCallback((key: string, valor: ChecklistValor, obs?: string) => {
     setSolicitud(prev => {
       if (!prev) return prev
@@ -738,7 +1032,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     })
   }, [])
 
-  const checklistItems = useMemo(() => getChecklistItems(filtro), [filtro])
+  const checklistItems = useMemo(() => getChecklistItems(filtro, solicitud?.tipo), [filtro, solicitud?.tipo])
 
   const checklistStats = useMemo(() => {
     if (!solicitud) return { completed: 0, total: 0, hasNo: false, noCount: 0, allDone: false, noWithoutObs: 0 }
@@ -757,16 +1051,25 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     return solicitud.folioDictamen ?? resolverFolioDictamen(solicitud._raw) ?? null
   }, [solicitud])
 
+  const folioRecepcionResuelto = useMemo(() => {
+    if (!solicitud) return null
+    return solicitud.folioRecepcion ?? solicitud._raw?.folio_recepcion ?? null
+  }, [solicitud])
+
   const hasFolioDictamen    = !!folioDictamenResuelto
   const canApproveChecklist = checklistStats.allDone && !checklistStats.hasNo
   const canApprove =
     filtro === 3 ? sinObservacion
-    : filtro === 2 ? (canApproveChecklist && hasFolioDictamen)
+    : filtro === 2 ? (sinObservacion && hasFolioDictamen)
     : canApproveChecklist
-  const canObservar     = filtro === 3 ? !sinObservacion : checklistStats.hasNo
-  const observarBlocked = filtro !== 3 && checklistStats.noWithoutObs > 0
+  // Filtro 1: todos contestados + al menos un "No" + todos los "No" con comentario
+  const canObservar =
+    (filtro === 2 || filtro === 3)
+      ? !sinObservacion
+      : (checklistStats.allDone && checklistStats.hasNo && checklistStats.noWithoutObs === 0)
+  const observarBlocked = false
 
-  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string) => {
+  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string) => {
     if (!solicitud) return
     setGuardando(true)
     try {
@@ -779,6 +1082,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
           accion,
           usuarioId:     (user as any)?.id ?? "",
           observaciones: observaciones ? [observaciones] : undefined,
+          ...(revisorId ? { revisorId } : {}),
         }),
       })
       const json = await res.json()
@@ -793,12 +1097,21 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     finally { setGuardando(false) }
   }, [solicitud, filtro, user])
 
-  const handleAprobar = async () => {
+  const yaEstuvoEnRevisor = useMemo(() =>
+    (solicitud?.historial ?? []).some(h =>
+      h.estadoNuevo.toLowerCase().includes("en revision revisor")
+    )
+  , [solicitud])
+
+  const handleAprobar = async (revisorId?: string) => {
     if (filtro === 3) { setShowEmitConfirm(true); return }
-    const nuevoEstado = await patchEstado("aprobar")
+    if (filtro === 2 && !yaEstuvoEnRevisor && !revisorId) {
+      setShowAprobarAsignarModal(true)
+      return
+    }
+    const nuevoEstado = await patchEstado("aprobar", undefined, revisorId)
     if (nuevoEstado) {
-      const siguiente = filtro === 1 ? "Pendiente Firma Justificacion" : "Validación Final"
-      setShowConfirmacion(`Solicitud aprobada. Siguiente paso: ${siguiente}.`)
+      setShowConfirmacion("Solicitud aprobada.")
     }
   }
 
@@ -807,13 +1120,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     const nuevoEstado = await patchEstado("aprobar")
     if (nuevoEstado) {
       setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
-      setActiveTab("emision")
-      setShowConfirmacion("Solicitud aprobada por el Emisor. Proceda a la firma y emisión del dictamen.")
+      setShowConfirmacion("Solicitud aprobada.")
     }
   }
 
   const handleObservar = async () => {
-    if (filtro === 3) {
+    if (filtro === 2 || filtro === 3) {
       if (!observacionGeneral.trim()) { setObservacionError("Escribe una observación para devolver el expediente."); return }
       setObservacionError("")
       const nuevoEstado = await patchEstado("observar", observacionGeneral.trim())
@@ -829,9 +1141,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     if (hasErrors) { setChecklistErrors(errors); return }
     const resumen = checklistItems
       .filter(item => solicitud?.checklistDO[item.key]?.valor === "no")
-      .map(item => `${item.num}. ${item.label}: ${solicitud?.checklistDO[item.key]?.observacion}`)
-      .join(" | ")
-    const obs = [observacionGeneral.trim(), resumen].filter(Boolean).join(" — ")
+      .map(item => `${item.num}. ${item.label}::${solicitud?.checklistDO[item.key]?.observacion}`)
+      .join("\n")
+    const obs = [observacionGeneral.trim(), resumen].filter(Boolean).join("\n")
     const nuevoEstado = await patchEstado("observar", obs)
     if (nuevoEstado) { setObservacionGeneral(""); setChecklistErrors({}); setShowConfirmacion("Solicitud observada y regresada a URG.") }
   }
@@ -845,10 +1157,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         : "Dictamen emitido con firma autógrafa. Expediente bloqueado."
     )
   }
-
   const handleAsignarFolioDictamen = useCallback(async (folio: string) => {
     if (!solicitud) return
-    setSolicitud(prev => prev ? { ...prev, folioDictamen: folio } : prev)
     try {
       const res = await fetch("/api/filtro", {
         method:  "PATCH",
@@ -862,14 +1172,47 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) console.warn("[asignarFolio] API error:", json?.error)
+      if (!res.ok || !json.ok) {
+        console.warn("[asignarFolio] API error:", json?.error)
+        return
+      }
+      setSolicitud(prev => prev ? { ...prev, folioDictamen: folio } : prev)
     } catch (err) {
       console.error("[asignarFolio] Network error:", err)
     }
   }, [solicitud, filtro, user])
 
+  const handleAsignarFolioRecepcion = useCallback(async (folio: string) => {
+    if (!solicitud) return
+    try {
+      const res = await fetch("/api/filtro", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          solicitudId:   solicitud.id,
+          accion:        "asignarFolioRecepcion",
+          folioRecepcion: folio,
+          usuarioId:     (user as any)?.id ?? "",
+          filtro,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) {
+        console.warn("[asignarFolioRecepcion] API error:", json?.error)
+        return
+      }
+      setSolicitud(prev => prev ? { ...prev, folioRecepcion: folio, folio } : prev)
+    } catch (err) {
+      console.error("[asignarFolioRecepcion] Network error:", err)
+    }
+  }, [solicitud, filtro, user])
+
   const isEmitido      = solicitud?.estado === "Emitido"
   const isAprobado     = solicitud?.estado === "Pendiente Firma Dictamen"
+  const isAceptadoPorRevisor = filtro === 1 && (
+    solicitud?.estado?.toLowerCase() === "aceptado por revisor" ||
+    solicitud?.estado?.toLowerCase() === "aprobado por revisor"
+  )
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
     (modalidadFirma === "electronica" || (autografaDescargado && archivoSubido))
@@ -894,18 +1237,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   return (
     <PageLayout noContainer>
     <div className="flex flex-col gap-4 h-full">
-
       {showConfirmacion && !isEmitido && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
           <Card className="w-full max-w-md shadow-lg border-secondary/30 border-2">
             <CardContent className="flex flex-col items-center gap-4 p-8">
               <CheckCircle2 className="h-12 w-12 text-secondary" />
               <p className="text-base font-semibold text-card-foreground text-center">{showConfirmacion}</p>
-              {activeTab === "emision" ? (
-                <Button onClick={() => setShowConfirmacion(null)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">Continuar a Emisión</Button>
-              ) : (
-                <Button onClick={() => onBack(filtro)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">Regresar a bandeja</Button>
-              )}
+              <Button onClick={() => onBack(filtro)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+                Regresar a bandeja
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -935,7 +1275,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
               </div>
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-card-foreground">Confirmación</h3>
-                <p className="text-sm text-muted-foreground mt-2">¿Aprobar y pasar a emisión del dictamen?</p>
+                <p className="text-sm text-muted-foreground mt-2">¿Estas seguro de Aprobar ?</p>
               </div>
               <div className="flex items-center gap-3 w-full">
                 <Button variant="outline" className="flex-1" onClick={() => setShowEmitConfirm(false)}>Cancelar</Button>
@@ -948,6 +1288,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         </div>
       )}
 
+      <AprobarAsignarModal
+        open={showAprobarAsignarModal}
+        onClose={() => setShowAprobarAsignarModal(false)}
+        onConfirm={(revisorId) => { setShowAprobarAsignarModal(false); handleAprobar(revisorId) }}
+        folio={formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}
+        guardando={guardando}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
@@ -957,11 +1305,18 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
           <Separator orientation="vertical" className="h-6" />
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-semibold text-foreground">Expediente {solicitud.folio}</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                Expediente {solicitud.folio ?? <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>}
+              </h2>
               <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>
               {isEmitido && (
                 <Badge className="bg-primary text-primary-foreground border-0 text-xs gap-1">
                   <Lock className="h-3 w-3" />Emitido
+                </Badge>
+              )}
+              {solicitud.folio && (
+                <Badge className="bg-primary/15 text-primary border-0 text-xs gap-1">
+                  <FileText className="h-3 w-3" />Rec. {solicitud.folio}
                 </Badge>
               )}
               {folioDictamenResuelto && (
@@ -1001,25 +1356,39 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
 
       {/* Vista dividida */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
-
-        {/* Expediente */}
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
             {solicitud.observacionesPrevias.length > 0 && (
-              <Card className="shadow-sm border-destructive/30 border-2">
+              <Card className="shadow-sm border-[#832B56]/30 border-2 bg-[#832B56]/[0.02]">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#832B56]">
                     <AlertCircle className="h-4 w-4" />Observaciones Previas
+                    <span className="ml-auto text-[10px] font-normal bg-[#832B56]/10 text-[#832B56] rounded px-2 py-0.5">
+                      {solicitud.observacionesPrevias.length} {solicitud.observacionesPrevias.length === 1 ? "observación" : "observaciones"}
+                    </span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <ul className="flex flex-col gap-2">
-                    {solicitud.observacionesPrevias.map((obs, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-card-foreground whitespace-pre-line">
-                        <XCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />{obs}
-                      </li>
-                    ))}
-                  </ul>
+                <CardContent className="flex flex-col gap-0 pt-0">
+                  {solicitud.observacionesPrevias.map((obs, i) => {
+                    const isLast = i === solicitud.observacionesPrevias.length - 1
+                    return (
+                      <div key={i} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/50 bg-white">
+                            <XCircle className="h-3.5 w-3.5 text-[#832B56]" />
+                          </div>
+                          {!isLast && <div className="w-px flex-1 bg-[#832B56]/20 my-1" />}
+                        </div>
+                        <div className={`flex flex-col gap-1.5 flex-1 ${!isLast ? "pb-4" : "pb-1"}`}>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-semibold text-[#832B56] uppercase tracking-wide">{obs.estado}</span>
+                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
+                          </div>
+                          <ObservacionChecklist comentario={obs.comentario} />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </CardContent>
               </Card>
             )}
@@ -1028,11 +1397,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
             {filtro === 3 && <ExpedienteFiltro3 sol={solicitud} />}
           </div>
         </ScrollArea>
-
         {/* Panel revisión */}
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
-
             <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
               {!isEmitido && (
                 <button onClick={() => setActiveTab("review")}
@@ -1051,90 +1418,98 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                 <History className="mr-1.5 inline h-4 w-4" />Historial
               </button>
             </div>
-
             {activeTab === "review" && !isEmitido && (
               <>
                 {filtro !== 3 && (
                   <>
-                    {filtro === 2 && (
-                      <FolioDictamenCard folioDictamen={folioDictamenResuelto} onAsignar={handleAsignarFolioDictamen} />
+                    {filtro === 1 && (
+                      <FolioDictamenCard folioDictamen={folioDictamenResuelto} onAsignar={handleAsignarFolioDictamen} esExtemporanea={solicitud.esExtemporanea} />
                     )}
+                    {filtro === 1 && (
+                      <FolioRecepcionCard folioRecepcion={folioRecepcionResuelto} onAsignar={handleAsignarFolioRecepcion} esExtemporanea={solicitud.esExtemporanea} />
+                    )}
+                    {filtro === 1 && (
+                      <>
+                        <Card className={`shadow-sm border-2 ${checklistStats.hasNo ? "border-destructive/30 bg-destructive/[0.03]" : checklistStats.allDone ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <ClipboardCheck className="h-4 w-4 text-secondary" />
+                                <span className="text-sm font-semibold text-card-foreground">Checklist Normativo — Revisor</span>
+                              </div>
+                              <Badge variant="outline" className="text-xs font-mono">{checklistStats.total} items</Badge>
+                            </div>
+                            <div className="flex items-center gap-3 mb-3">
+                              <span className="text-sm font-medium text-card-foreground">
+                                {checklistStats.completed} de {checklistStats.total} verificaciones completas
+                              </span>
+                              <Badge className={`text-[10px] border-0 ${checklistStats.hasNo ? "bg-destructive/10 text-destructive" : checklistStats.allDone ? "bg-secondary/10 text-secondary" : "bg-muted text-muted-foreground"}`}>
+                                {checklistStats.hasNo ? `${checklistStats.noCount} observación(es)` : checklistStats.allDone ? "Completo" : "En progreso"}
+                              </Badge>
+                            </div>
+                            <div className="h-2 w-full rounded-full bg-muted">
+                              <div className={`h-2 rounded-full transition-all ${checklistStats.hasNo ? "bg-destructive" : checklistStats.allDone ? "bg-secondary" : "bg-primary"}`}
+                                style={{ width: `${checklistStats.total > 0 ? (checklistStats.completed / checklistStats.total) * 100 : 0}%` }} />
+                            </div>
+                          </CardContent>
+                        </Card>
 
-                    <Card className={`shadow-sm border-2 ${checklistStats.hasNo ? "border-destructive/30 bg-destructive/[0.03]" : checklistStats.allDone ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <ClipboardCheck className="h-4 w-4 text-secondary" />
-                            <span className="text-sm font-semibold text-card-foreground">Checklist Normativo — {filtro === 1 ? "Revisor" : filtro === 2 ? "Validación Final" : "Emisor"}</span>
-                          </div>
-                          <Badge variant="outline" className="text-xs font-mono">{checklistStats.total} items</Badge>
-                        </div>
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="text-sm font-medium text-card-foreground">
-                            {checklistStats.completed} de {checklistStats.total} verificaciones completas
-                          </span>
-                          <Badge className={`text-[10px] border-0 ${checklistStats.hasNo ? "bg-destructive/10 text-destructive" : checklistStats.allDone ? "bg-secondary/10 text-secondary" : "bg-muted text-muted-foreground"}`}>
-                            {checklistStats.hasNo ? `${checklistStats.noCount} observación(es)` : checklistStats.allDone ? "Completo" : "En progreso"}
-                          </Badge>
-                        </div>
-                        <div className="h-2 w-full rounded-full bg-muted">
-                          <div className={`h-2 rounded-full transition-all ${checklistStats.hasNo ? "bg-destructive" : checklistStats.allDone ? "bg-secondary" : "bg-primary"}`}
-                            style={{ width: `${checklistStats.total > 0 ? (checklistStats.completed / checklistStats.total) * 100 : 0}%` }} />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="shadow-sm border-border">
-                      <CardContent className="p-0">
-                        <div className="divide-y divide-border">
-                          {checklistItems.map(item => {
-                            const s       = solicitud.checklistDO[item.key]
-                            const valor   = s?.valor ?? null
-                            const itemObs = s?.observacion ?? ""
-                            const hasErr  = checklistErrors[item.key]
-                            const isExtra = item.num > 16
-                            return (
-                              <div key={item.key}>
-                                {item.num === 17 && (
-                                  <div className="border-t-2 border-primary/20 bg-primary/[0.05] px-4 py-2.5">
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                                      Campos adicionales — Tiempo Determinado
-                                    </span>
-                                  </div>
-                                )}
-                                <div className={`flex flex-col gap-3 p-4 ${isExtra ? "bg-primary/[0.03]" : ""} ${valor === "no" ? "bg-destructive/[0.04]" : ""}`}>
-                                  <div className="flex items-start gap-3">
-                                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold ${valor === "si" ? "bg-secondary/15 text-secondary" : valor === "no" ? "bg-destructive/15 text-destructive" : valor === "noAplica" ? "bg-muted text-muted-foreground" : "bg-border text-muted-foreground"}`}>
-                                      {item.num}
-                                    </span>
-                                    <div className="flex flex-1 flex-col gap-2">
-                                      <span className={`text-sm leading-snug ${valor === "no" ? "text-destructive font-medium" : "text-card-foreground"}`}>
-                                        {item.label}
-                                      </span>
-                                      <div className="flex flex-wrap gap-2">
-                                        <RadioOption value="si"       selected={valor === "si"}       onChange={() => updateChecklist(item.key, valor === "si"       ? null : "si")}       label="Sí"        colorClass="text-secondary bg-secondary/10" />
-                                        <RadioOption value="no"       selected={valor === "no"}       onChange={() => updateChecklist(item.key, valor === "no"       ? null : "no")}       label="No"        colorClass="text-destructive bg-destructive/10" />
-                                        <RadioOption value="noAplica" selected={valor === "noAplica"} onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica")} label="No Aplica" colorClass="text-muted-foreground bg-muted" />
-                                      </div>
-                                      {(valor === "no" || itemObs) && (
-                                        <div className="flex flex-col gap-1">
-                                          <Textarea value={itemObs} onChange={e => updateChecklist(item.key, valor, e.target.value)}
-                                            placeholder={valor === "no" ? "Obligatorio: describa la observación..." : "Observaciones de este punto..."}
-                                            className={`bg-background min-h-10 text-xs resize-none ${hasErr ? "border-destructive" : ""}`} rows={2} />
-                                          {hasErr && <span className="text-[10px] text-destructive font-medium">Debe escribir una observación para los puntos marcados como "No"</span>}
+                        <Card className="shadow-sm border-border">
+                          <CardContent className="p-0">
+                            <div className="divide-y divide-border">
+                              {checklistItems.map(item => {
+                                const s       = solicitud.checklistDO[item.key]
+                                const valor   = s?.valor ?? null
+                                const itemObs = s?.observacion ?? ""
+                                const hasErr  = checklistErrors[item.key]
+                                const noColor  = "#832B56"
+                                const rowBorder =
+                                  valor === "si"         ? "border-l-4 border-l-emerald-500 bg-emerald-500/10"
+                                  : valor === "no"       ? "border-l-4"
+                                  : valor === "noAplica" ? "border-l-4 border-l-yellow-400 bg-yellow-400/10"
+                                  : ""
+                                const rowStyle = valor === "no"
+                                  ? { borderLeftColor: noColor, backgroundColor: `${noColor}18` }
+                                  : undefined
+                                return (
+                                  <div key={item.key}>
+                                    <div className={`flex flex-col gap-3 p-4 transition-colors ${rowBorder}`} style={rowStyle}>
+                                      <div className="flex items-start gap-3">
+                                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold ${valor === "si" ? "bg-emerald-500/30 text-emerald-700" : valor === "noAplica" ? "bg-yellow-400/30 text-yellow-700" : "bg-border text-muted-foreground"}`}
+                                          style={valor === "no" ? { backgroundColor: `${noColor}30`, color: noColor } : undefined}>
+                                          {item.num}
+                                        </span>
+                                        <div className="flex flex-1 flex-col gap-2">
+                                          <span className={`text-sm leading-snug ${valor === "si" ? "text-emerald-800 font-medium" : valor === "noAplica" ? "text-yellow-800 font-medium" : "text-card-foreground"}`}
+                                            style={valor === "no" ? { color: noColor, fontWeight: 500 } : undefined}>
+                                            {item.label}
+                                          </span>
+                                          <div className="flex flex-wrap gap-2">
+                                            <RadioOption value="si"       selected={valor === "si"}       onChange={() => updateChecklist(item.key, valor === "si"       ? null : "si")}       label="Sí"        colorClass="text-secondary bg-secondary/10" />
+                                            <RadioOption value="no"       selected={valor === "no"}       onChange={() => updateChecklist(item.key, valor === "no"       ? null : "no")}       label="No"        colorClass={`bg-[#832B56]/10`} style={{ color: noColor }} />
+                                            <RadioOption value="noAplica" selected={valor === "noAplica"} onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica")} label="No Aplica" colorClass="text-muted-foreground bg-muted" />
+                                          </div>
+                                          {(valor === "no" || itemObs) && (
+                                            <div className="flex flex-col gap-1">
+                                              <Textarea value={itemObs} onChange={e => updateChecklist(item.key, valor, e.target.value)}
+                                                placeholder={valor === "no" ? "Obligatorio: describa la observación..." : "Observaciones de este punto..."}
+                                                className={`bg-background min-h-10 text-xs resize-none ${hasErr ? "border-destructive" : ""}`} rows={2} />
+                                              {hasErr && <span className="text-[10px] text-destructive font-medium">Debe escribir una observación para los puntos marcados como "No"</span>}
+                                            </div>
+                                          )}
                                         </div>
-                                      )}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
+                                )
+                              })}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </>
+                    )}
 
-                    {filtro === 2 && canApproveChecklist && !hasFolioDictamen && (
+                    {filtro === 2 && !hasFolioDictamen && (
                       <Card className="shadow-sm border-primary/40 border-2 bg-primary/[0.04]">
                         <CardContent className="flex items-start gap-3 p-4">
                           <Stamp className="h-5 w-5 shrink-0 text-primary mt-0.5" />
@@ -1146,22 +1521,24 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                       </Card>
                     )}
 
-                    <Card className="shadow-sm border-border">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                          <MessageSquare className="h-4 w-4 text-secondary" />Observación General
-                          <span className="text-[10px] font-normal text-muted-foreground ml-1">(opcional)</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <Textarea value={observacionGeneral} onChange={e => setObservacionGeneral(e.target.value)}
-                          placeholder="Comentarios adicionales sobre la solicitud..." className="bg-background min-h-20" />
-                      </CardContent>
-                    </Card>
+                    {filtro === 1 && (
+                      <Card className="shadow-sm border-border">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+                            <MessageSquare className="h-4 w-4 text-secondary" />Observación General
+                            <span className="text-[10px] font-normal text-muted-foreground ml-1">(opcional)</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <Textarea value={observacionGeneral} onChange={e => setObservacionGeneral(e.target.value)}
+                            placeholder="Comentarios adicionales sobre la solicitud..." className="bg-background min-h-20" />
+                        </CardContent>
+                      </Card>
+                    )}
                   </>
                 )}
 
-                {filtro === 3 && (
+                {(filtro === 2 || filtro === 3) && (
                   <Card className={`shadow-sm border-2 ${sinObservacion ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1176,7 +1553,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                         <div className="flex flex-col gap-0.5">
                           <Label htmlFor="sin-obs-dg" className="text-sm font-medium cursor-pointer">No hay ninguna observación</Label>
                           <span className="text-xs text-muted-foreground">
-                            {sinObservacion ? "El expediente está listo para emisión." : "Desmarque para agregar observaciones y devolver el expediente."}
+                            {sinObservacion ? "El expediente está listo para continuar." : "Desmarque para agregar observaciones y devolver el expediente."}
                           </span>
                         </div>
                       </div>
@@ -1194,18 +1571,18 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                   </Card>
                 )}
 
-                {canObservar && observarBlocked && (
+                {filtro === 1 && !canApprove && !canObservar && checklistStats.completed === checklistStats.total && checklistStats.hasNo && checklistStats.noWithoutObs > 0 && (
                   <Card className="shadow-sm border-destructive/40 border-2 bg-destructive/[0.04]">
                     <CardContent className="flex items-start gap-3 p-4">
                       <Info className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
                       <div>
                         <span className="text-sm font-medium text-destructive">Observaciones incompletas</span>
-                        <p className="text-xs text-muted-foreground">{checklistStats.noWithoutObs} punto(s) marcado(s) como "No" requieren observación obligatoria.</p>
+                        <p className="text-xs text-muted-foreground">{checklistStats.noWithoutObs} punto(s) marcado(s) como "No" requieren comentario obligatorio antes de observar.</p>
                       </div>
                     </CardContent>
                   </Card>
                 )}
-                {!canApprove && !canObservar && filtro !== 3 && checklistStats.completed < checklistStats.total && (
+                {!isAceptadoPorRevisor && !canApprove && !canObservar && filtro !== 3 && checklistStats.completed < checklistStats.total && (
                   <Card className="shadow-sm border-border bg-muted/30">
                     <CardContent className="flex items-start gap-3 p-4">
                       <Info className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
@@ -1217,23 +1594,39 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                   </Card>
                 )}
 
-                <Card className="shadow-sm border-border sticky bottom-0">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <Button variant="outline" onClick={handleObservar}
-                      disabled={!canObservar || observarBlocked || guardando}
-                      className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
-                      {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}Observar
-                    </Button>
-                    <Button onClick={handleAprobar} disabled={!canApprove || guardando}
-                      className={`gap-1.5 ${canApprove ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
-                      {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                      {filtro === 1 ? "Aprobar → Pendiente Firma" : filtro === 2 ? "Aprobar → Emisor" : "Aprobar (Emisor)"}
-                    </Button>
-                  </CardContent>
-                </Card>
+                {isAceptadoPorRevisor ? (
+                  <Card className="shadow-sm border-border sticky bottom-0">
+                    <CardContent className="flex items-center justify-between p-4">
+                      <Button variant="outline" onClick={handleObservar}
+                        disabled={!canObservar || observarBlocked || guardando}
+                        className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
+                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}Observar
+                      </Button>
+                      <Button onClick={() => handleAprobar()} disabled={!canApprove || guardando}
+                        className={`gap-1.5 ${canApprove ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
+                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        Aprobar
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="shadow-sm border-border sticky bottom-0">
+                    <CardContent className="flex items-center justify-between p-4">
+                      <Button variant="outline" onClick={handleObservar}
+                        disabled={!canObservar || observarBlocked || guardando}
+                        className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
+                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}Observar
+                      </Button>
+                      <Button onClick={() => handleAprobar()} disabled={!canApprove || guardando}
+                        className={`gap-1.5 ${canApprove ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
+                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        {filtro === 1 ? "Aprobar " : filtro === 2 ? "Aprobar" : "Aprobar"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
-
             {activeTab === "emision" && (
               isEmitido ? (
                 <Card className="shadow-sm border-primary border-2 bg-primary/5">

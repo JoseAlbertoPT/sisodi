@@ -20,35 +20,32 @@ export async function GET(req: NextRequest) {
         "Borrador",
         "En Captura",
       ],
-      "En Validacion": [
+      "En aprobación": [
         "En Validacion Justificaciones",
         "Enviada a Validacion (UEFA)",
         "Enviada a Validacion",
+        "Pendiente Firma Justificacion",
+      ],
+      "Observadas / Devueltas": [
         "Observado por Validacion",
         "Observada por UEFA",
         "Observado por UEFA",
-        "Pendiente Firma Justificacion",
-      ],
-      "Observadas/Devueltas": [
-        // Solo "Observado por Revisor" requiere acción del Capturista
         "Observado por Revisor",
+        "Observado por DO",
+        "Observado por Emisor",
+        "Observado por Validacion Final",
         "Devuelta por DO",
         "Observado DO Filtro 1",
         "Observado DO Filtro 2",
         "Observado DO Filtro 3",
-        // Legado
-        "Observado por Validacion Final",
       ],
-      "En Proceso": [
-        // Flujo nuevo (12 pasos)
-        "Pendiente DO",       // UEFA aprobó, DO asignará al Revisor
+      "En proceso DGDO": [
+        "Pendiente DO",
         "En Revision Revisor",
-        "Aprobado por Revisor", // DO tiene para aprobar/enviar a Emisor
-        "Observado por DO",     // DO devolvió al Revisor, sin acción del Capturista
+        "Aceptado por Revisor",
+        "Aprobado por Revisor",
         "En Revision Emisor",
-        "Observado por Emisor", // Emisor devolvió al Revisor, sin acción del Capturista
         "Pendiente Firma Dictamen",
-        // Flujo legado
         "En Validacion Final",
         "En revision DO Filtro 1",
         "En revision DO Filtro 2",
@@ -67,7 +64,7 @@ export async function GET(req: NextRequest) {
     const where: Parameters<typeof prisma.solicitud.findMany>[0]["where"] = {
       usuario_id: usuarioId,
       ...(estadoNames.length > 0 && {
-        estado: { nombre: { in: estadoNames } },
+        estado: { nombre: { in: estadoNames, mode: "insensitive" } },
       }),
       ...(secretaria && {
         secretaria: { contains: secretaria.split(" > ")[0], mode: "insensitive" },
@@ -82,7 +79,7 @@ export async function GET(req: NextRequest) {
       }),
     }
 
-    const [total, solicitudes] = await Promise.all([
+    const [total, solicitudesRaw] = await Promise.all([
       prisma.solicitud.count({ where }),
       prisma.solicitud.findMany({
         where,
@@ -109,6 +106,12 @@ export async function GET(req: NextRequest) {
         },
       }),
     ])
+
+    const solicitudes = [...solicitudesRaw].sort((a, b) => {
+      const ta = (a.fecha_envio ?? a.fecha_creacion ?? new Date(0)).getTime()
+      const tb = (b.fecha_envio ?? b.fecha_creacion ?? new Date(0)).getTime()
+      return tb - ta
+    })
 
     const items = solicitudes.map((s) => ({
       id:                    s.id,
@@ -140,6 +143,11 @@ export async function GET(req: NextRequest) {
       comp_soc:              s.comp_soc,
       valores:               s.valores,
       areas_exp:             s.areas_exp,
+      puesto_jefe_inmediato: s.puesto_jefe_inmediato ?? null,
+      marco_normativo:       s.marco_normativo ?? [],
+      condiciones_riesgos:   s.condiciones_riesgos ?? [],
+      resguardo_activos:     s.resguardo_activos ?? null,
+      tipo_importe:          s.tipo_importe ?? null,
       es_extemporanea:       s.es_extemporanea,
       fecha_creacion:        s.fecha_creacion,
       fecha_envio:           s.fecha_envio,
@@ -185,12 +193,12 @@ export async function GET(req: NextRequest) {
     const estadoMap  = Object.fromEntries(allEstados.map((e) => [e.id, e.nombre]))
 
     const tabCountMap: Record<string, number> = {
-      Borradores:             0,
-      "En Validacion":        0,
-      "Observadas/Devueltas": 0,
-      "En Proceso":           0,
-      Emitidas:               0,
-      Todas:                  0,
+      Borradores:               0,
+      "En aprobación":          0,
+      "Observadas / Devueltas": 0,
+      "En proceso DGDO":        0,
+      Emitidas:                 0,
+      Todas:                    0,
     }
 
     for (const row of counts) {
@@ -202,35 +210,28 @@ export async function GET(req: NextRequest) {
 
       if (n === "borrador" || n === "en captura") {
         tabCountMap["Borradores"] += cnt
+      } else if (n.includes("observad") || n.includes("devuelta por do")) {
+
+        tabCountMap["Observadas / Devueltas"] += cnt
       } else if (
         n.includes("en validacion justificaciones") ||
         n.includes("enviada a validacion")          ||
-        n.includes("pendiente firma justificacion") ||
-        (n.includes("observad") && (n.includes("uefa") || n === "observado por validacion"))
+        n.includes("pendiente firma justificacion")
       ) {
-        tabCountMap["En Validacion"] += cnt
+        tabCountMap["En aprobación"] += cnt
       } else if (
-        // Solo estados que requieren acción del Capturista
-        n === "observado por revisor"          ||
-        n.includes("devuelta por do")          ||
-        n.includes("observado por validacion final") || // legado
-        (n.includes("observad") && n.includes("filtro"))
-      ) {
-        tabCountMap["Observadas/Devueltas"] += cnt
-      } else if (
-        n === "pendiente do"             ||
-        n.includes("en revision revisor")  ||
-        n === "aprobado por revisor"     ||
-        n === "observado por do"         ||
-        n.includes("en revision emisor") ||
-        n === "observado por emisor"     ||
+        n === "pendiente do"                   ||
+        n.includes("en revision revisor")      ||
+        n === "aprobado por revisor"           ||
+        n === "aceptado por revisor"           ||
+        n.includes("en revision emisor")       ||
         n.includes("pendiente firma dictamen") ||
-        n.includes("en validacion final")  ||
-        n.includes("en revision do")       ||
-        n === "en proceso do"              ||
+        n.includes("en validacion final")      ||
+        n.includes("en revision do")           ||
+        n === "en proceso do"                  ||
         n === "aprobado"
       ) {
-        tabCountMap["En Proceso"] += cnt
+        tabCountMap["En proceso DGDO"] += cnt
       } else if (n === "emitido") {
         tabCountMap["Emitidas"] += cnt
       }
