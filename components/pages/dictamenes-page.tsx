@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
+import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -290,6 +291,7 @@ function DictamenViewModal({
 }
 // pagina Principal
 export function DictamenesPage() {
+  const { user } = useAuth()
   const [dictamenes, setDictamenes] = useState<DictamenEmitido[]>([])
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
@@ -304,7 +306,8 @@ export function DictamenesPage() {
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const res  = await fetch("/api/emision?vista=emitidos")
+      const userId = (user as any)?.id ?? ""
+      const res  = await fetch(`/api/emision?vista=emitidos&userId=${userId}`)
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar dictámenes"); return }
       setDictamenes((json.data ?? []).map(mapearDictamen))
@@ -313,7 +316,7 @@ export function DictamenesPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user])
 
   useEffect(() => { cargar() }, [cargar])
 

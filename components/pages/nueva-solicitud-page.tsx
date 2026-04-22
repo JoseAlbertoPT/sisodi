@@ -1810,7 +1810,6 @@ function FormularioPrestacion({
           </div>
         </CardContent>
       </Card>
-
       {/* Perfil */}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
@@ -1936,6 +1935,12 @@ function FormularioNombramiento({
   const [condiciones, setCondiciones]               = useState<Record<string, string>>({})
   const [riesgos,     setRiesgos]                   = useState<Record<string, string>>({})
   const [resguardoActivos, setResguardoActivos]     = useState("")
+  const [escolaridad, setEscolaridad] = useState<string[]>(splitTags(datosRenovacion?.escolaridad))
+  const [compAdm,     setCompAdm]     = useState<string[]>(splitTags(datosRenovacion?.compAdm))
+  const [compTec,     setCompTec]     = useState<string[]>(splitTags(datosRenovacion?.compTec))
+  const [compSoc,     setCompSoc]     = useState<string[]>(splitTags(datosRenovacion?.compSoc))
+  const [valores,     setValores]     = useState<string[]>(splitTags(datosRenovacion?.valores))
+  const [areasExp,    setAreasExp]    = useState<string[]>(splitTags(datosRenovacion?.areasExp))
   const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
     datosRenovacion?.tipoActividad
       ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
@@ -2012,7 +2017,12 @@ function FormularioNombramiento({
           .map(([k, v]) => `${formatKey(k)}: ${v.charAt(0).toUpperCase() + v.slice(1)}`),
       ],
       resguardoActivos: resguardoActivos || undefined,
-      escolaridad: "", compAdm: "", compTec: "", compSoc: "", valores: "", areasExp: "",
+      escolaridad: escolaridad.join(", "),
+      compAdm:     compAdm.join("\n"),
+      compTec:     compTec.join("\n"),
+      compSoc:     compSoc.join("\n"),
+      valores:     valores.join("\n"),
+      areasExp:    areasExp.join("\n"),
     })
   }, [
     secretariaConfirmada, secretariaInput, claveUA, unidadAdscripcion, urgSeleccionada,
@@ -2021,7 +2031,8 @@ function FormularioNombramiento({
     vigenciaInicio, vigenciaFin, importeNeto, tipoImporte,
     nivelTabulador, categoriaTabulador, objetoNombramiento,
     tipoActividadSeleccionado, tipoActividadNomLabel,
-    funciones, responsabilidades, marcoNormativo, condiciones, riesgos, resguardoActivos, onFormChange,
+    funciones, responsabilidades, marcoNormativo, condiciones, riesgos, resguardoActivos,
+    escolaridad, compAdm, compTec, compSoc, valores, areasExp, onFormChange,
   ])
 
   return (
@@ -2175,7 +2186,6 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {/* Denominación, Puesto y Número — todos los regímenes de nombramiento */}
             <>
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
@@ -2538,6 +2548,61 @@ function FormularioNombramiento({
           </RadioGroup>
         </CardContent>
       </Card>
+
+      {/* VIII. Perfil */}
+      <Card className="shadow-sm border-border">
+        <CardHeader className="px-4 pt-3 pb-1">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+            <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">VIII</span>
+            Perfil
+            {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground italic">
+            SE REFIERE A LA ESCOLARIDAD, COMPETENCIAS Y EXPERIENCIA.
+          </p>
+        </CardHeader>
+        <CardContent className="grid gap-x-6 gap-y-5 px-4 pb-4 pt-0 md:grid-cols-2">
+          <div className="md:col-span-2 flex flex-col gap-2">
+            <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+              Escolaridad Mínima
+              {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+            </span>
+            <DynamicList
+              label="" items={escolaridad.length > 0 ? escolaridad : [""]}
+              onChange={setEscolaridad}
+              readonly={bloqueadoPorRenovacion}
+              minRequired={1}
+              max={1}
+            />
+          </div>
+          {[
+            { sub: "VIII.1", label: "Competencias Administrativas", items: compAdm,  onChange: setCompAdm },
+            { sub: "VIII.2", label: "Competencias Técnicas",        items: compTec,  onChange: setCompTec },
+            { sub: "VIII.3", label: "Competencias Sociales",        items: compSoc,  onChange: setCompSoc },
+            { sub: null,     label: "Áreas de Experiencia",         items: areasExp, onChange: setAreasExp },
+            { sub: null,     label: "Valores",                      items: valores,  onChange: setValores },
+          ].map(({ sub, label, items, onChange }) => (
+            <div key={label} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                {sub && (
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
+                )}
+                <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+                  {label}
+                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </span>
+              </div>
+              <DynamicList
+                label="" items={items.length > 0 ? items : [""]}
+                onChange={onChange}
+                readonly={bloqueadoPorRenovacion}
+                minRequired={3}
+                max={5}
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -2751,7 +2816,6 @@ export type EditSolicitudPayload = {
   periodo: string
   formData: Partial<FormularioData>
 }
-
 export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSolicitudPayload }) {
   const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
   const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")

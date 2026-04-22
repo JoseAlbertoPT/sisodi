@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
     const nombramiento = countRegimen("nombramiento")
 
     const emitidas = await prisma.solicitud.count({
-      where: { ...baseWhere, dictamen: { isNot: null } },
+      where: { ...baseWhere, estado: { nombre: { equals: "Emitido", mode: "insensitive" } } },
     })
 
     const enProceso = totalRecibidas - emitidas
@@ -114,9 +114,12 @@ export async function GET(req: NextRequest) {
     // ── Gráfica: emisiones por secretaría (dictamen vs opinión) ───────────────
     // Dictamen = centralizada (usuario.secretaria_id != null)
     // Opinión  = paraestatal  (usuario.secretaria_id == null)
-    // Solo solicitudes que tienen registro en la tabla dictamen (igual que página Dictámenes)
+    // Solo solicitudes en estado "Emitido" (proceso completo, igual que página Dictámenes)
     const emisionRows = await prisma.solicitud.findMany({
-      where: { ...baseWhere, dictamen: { isNot: null } },
+      where: {
+        ...baseWhere,
+        estado: { nombre: { equals: "Emitido", mode: "insensitive" } },
+      },
       select: {
         secretaria: true,
         usuario:    { select: { secretaria_id: true } },

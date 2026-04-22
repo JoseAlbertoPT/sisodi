@@ -677,7 +677,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Renovación" defaultOpen={solicitud.esRenovacion}>
+      {/*<SectionCard title="Renovación" defaultOpen={solicitud.esRenovacion}>
         {solicitud.esRenovacion ? (
           <div className="grid gap-4 md:grid-cols-2">
             <ReadOnlyField label="Es Renovación"              value="Sí" />
@@ -686,7 +686,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
         ) : (
           <ReadOnlyField label="Es Renovación" value="No" />
         )}
-      </SectionCard>
+      </SectionCard> */}
 
       <SectionCard num="III" title="Objeto del Nombramiento">
         <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
@@ -717,6 +717,17 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Resguardo de Activos" value={solicitud.resguardoActivos === "si" ? "Sí" : solicitud.resguardoActivos === "no" ? "No" : solicitud.resguardoActivos} />
         </SectionCard>
       )}
+
+      <SectionCard num="IX" title="Perfil">
+        <div className="grid gap-5 md:grid-cols-2">
+          <ReadOnlyList label="Escolaridad Mínima"            value={solicitud.escolaridad} />
+          <ReadOnlyList sub="VIII.1" label="Competencias Administrativas" value={solicitud.compAdm} />
+          <ReadOnlyList sub="VIII.2" label="Competencias Técnicas"        value={solicitud.compTec} />
+          <ReadOnlyList sub="VIII.3" label="Competencias Sociales"        value={solicitud.compSoc} />
+          <ReadOnlyList label="Áreas de Experiencia"          value={solicitud.areasExp} />
+          <ReadOnlyList label="Valores"                       value={solicitud.valores} />
+        </div>
+      </SectionCard>
 
       <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
         <AdjuntosSection bitacora={solicitud.bitacora} />
@@ -941,14 +952,7 @@ function DetalleView({
           )}
           {isEmitido && (
             <>
-              <Button variant="outline" size="sm" className="gap-1.5"
-                onClick={() => handleDemoAction("Ver dictamen")}>
-                <FileCheck className="h-4 w-4" />Ver Dictamen
-              </Button>
-              <Button variant="outline" size="sm" className="gap-1.5"
-                onClick={() => handleDemoAction("Descargar")}>
-                <Download className="h-4 w-4" />Descargar
-              </Button>
+
             </>
           )}
           {isReadOnly && (
@@ -1143,7 +1147,6 @@ function DetalleView({
           </CardContent>
         </Card>
       )}
-
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {sol.tipo === "Prestacion de Servicios"
@@ -1372,7 +1375,6 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
           className="pl-10 bg-card"
         />
       </div>
-
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">
@@ -1490,14 +1492,7 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
                             className="text-secondary hover:text-primary gap-1.5">
                             <Eye className="h-4 w-4" />Ver
                           </Button>
-                          {isEmitida && (
-                            <Button variant="ghost" size="sm"
-                              onClick={() => setSelectedId(sol.id)}
-                              className="text-emerald-600 hover:text-emerald-700 gap-1.5"
-                              title="Ver y descargar dictamen">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          )}
+
                         </div>
                       </td>
                     </tr>

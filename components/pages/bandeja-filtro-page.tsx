@@ -271,6 +271,9 @@ function ListaItems({ items }: { items: string[] }) {
 }
 
 function ExpedienteCompleto({ raw }: { raw: any }) {
+  const esNombramiento = (raw?.regimen ?? raw?.tipo_solicitud ?? "").toLowerCase().includes("nombramiento")
+  const marcoNormativo: string[] = Array.isArray(raw?.marco_normativo) ? raw.marco_normativo.filter(Boolean) : []
+  const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
   return (
     <div className="flex flex-col gap-4">
       <SectionCard num="I" title="Datos Generales">
@@ -281,7 +284,7 @@ function ExpedienteCompleto({ raw }: { raw: any }) {
           <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(raw?.regimen)} />
           <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
           <ReadOnlyField label="Programa o Proyecto"                   value={raw?.programa_proyecto ?? "—"} />
-          <ReadOnlyField label="Tipo de Actividad"                   value={raw?.tipo_actividades ?? "—"} />
+          <ReadOnlyField label="Tipo de Actividades"                   value={raw?.tipo_actividades ?? "—"} />
           <ReadOnlyField label="Vigencia Inicio"                       value={formatFecha(raw?.vigencia_inicio)} />
           <ReadOnlyField label="Vigencia Término"                      value={formatFecha(raw?.vigencia_fin)} />
           <ReadOnlyField label="Importe Bruto"                         value={raw?.importe_bruto != null ? `$${Number(raw.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"} />
@@ -298,6 +301,34 @@ function ExpedienteCompleto({ raw }: { raw: any }) {
       <SectionCard title="I.3 Responsabilidades">
         <ListaItems items={Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : []} />
       </SectionCard>
+
+      {esNombramiento && (raw?.nivel_tabulador || raw?.categoria_tabulador) && (
+        <SectionCard title="Tabulador — Nivel y Categoría">
+          <div className="grid gap-4 md:grid-cols-2">
+            <ReadOnlyField label="Nivel de Tabulador"  value={raw?.nivel_tabulador ?? "—"} />
+            <ReadOnlyField label="Categoría Tabulador" value={raw?.categoria_tabulador ?? "—"} />
+          </div>
+        </SectionCard>
+      )}
+
+      {esNombramiento && marcoNormativo.length > 0 && (
+        <SectionCard title="V. Marco Normativo">
+          <ListaItems items={marcoNormativo} />
+        </SectionCard>
+      )}
+
+      {esNombramiento && condicionesRiesgos.length > 0 && (
+        <SectionCard title="VI. Condiciones y Riesgos">
+          <ListaItems items={condicionesRiesgos} />
+        </SectionCard>
+      )}
+
+      {esNombramiento && raw?.resguardo_activos && (
+        <SectionCard title="VII. Resguardo Personalizado de Activos">
+          <ReadOnlyField label="Resguardo de Activos" value={raw.resguardo_activos === "si" ? "Sí" : raw.resguardo_activos === "no" ? "No" : raw.resguardo_activos} />
+        </SectionCard>
+      )}
+
       <SectionCard num="II" title="Perfil">
         <div className="grid gap-4 md:grid-cols-2">
           <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(raw?.escolaridad)} />
@@ -1211,7 +1242,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-semibold text-foreground">
-            {filtro === 1 ? "Bandeja en Revisión" : filtro === 2 ? "Bandeja en Validación" : "Bandeja en Emisión"}
+            {filtro === 1 ? "Bandeja en revisión" : filtro === 2 ? "Bandeja en validación" : "Bandeja en emisión"}
           </h2>
           <p className="text-sm text-muted-foreground">
             {filtro === 1
@@ -1451,6 +1482,14 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                                   className="text-primary hover:text-primary/80 gap-1.5 font-medium"
                                 >
                                   <UserCheck className="h-4 w-4" />Asignar Revisor
+                                </Button>
+                              ) : tab === "observadas" ? (
+                                <Button
+                                  variant="ghost" size="sm"
+                                  onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
+                                  className="text-muted-foreground hover:text-card-foreground gap-1.5"
+                                >
+                                  <Eye className="h-4 w-4" />Ver
                                 </Button>
                               ) : (
                                 <Button

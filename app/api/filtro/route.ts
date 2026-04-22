@@ -43,7 +43,6 @@ async function generarFolioDictamen(tipo: "dictamen" | "opinion"): Promise<strin
   return `${ini}-${num}-${anio}`
 }
 
-// ── Resolver folio dictamen desde TODAS las fuentes posibles ─────────────────
 function resolverFolioDictamen(item: any): string | null {
   return (
     item?.folioDictamen         ??
@@ -71,17 +70,17 @@ export async function GET(req: NextRequest) {
 
     const estadosNombres = [
       estadoEnRevision(filtro),
-      ...(filtro === 3 ? [estadoObservado(filtro)] : []),  // solo filtro 3 (Emisor) ve sus propias observadas
+      ...(filtro === 3 ? [estadoObservado(filtro)] : []),
       ...(filtro === 3 ? ["Pendiente Firma Dictamen"] : []),
       ...(filtro === 1 ? [
         "Aceptado por Revisor",
-        "Observado por Validacion Final",  // regresada desde Validacion Final → solo la ve el Revisor
+        "Observado por Validacion Final",
       ] : []),
       ...(filtro === 2 ? [
-        "Pendiente DO",           // llega de UEFA → tab: Pendientes de asignación
-        "Observado por Emisor",   // regresada desde Emisor → tab: Observadas
-        "Observado por DO",       // regresada desde Jefe DO → tab: Observadas en UEFA
-        "Observado por Revisor",  // regresada por Revisor → tab: Observadas
+        "Pendiente DO",
+        "Observado por Emisor",
+        "Observado por DO",
+        "Observado por Revisor",
       ] : []),
     ]
 
@@ -116,10 +115,13 @@ export async function GET(req: NextRequest) {
       })
       if (viewer) {
         esRolRevisor = viewer.rol?.nombre?.toLowerCase() === "revisor"
-        // Revisores ven todas las solicitudes asignadas a ellos sin importar tipo ni secretaría
+
+        if (esRolRevisor && filtro !== 1) {
+          return NextResponse.json({ ok: true, data: [] })
+        }
+
         if (!esRolRevisor) {
           if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
-            // Usuario centralizado: solo solicitudes de su misma secretaría
             organoFilter = {
               usuario: {
                 organo_centralizado: { isNot: null },
@@ -127,7 +129,6 @@ export async function GET(req: NextRequest) {
               },
             }
           } else {
-            // Usuario paraestatal: ve solo paraestatal (sin filtro de secretaría)
             organoFilter = { usuario: { organo_centralizado: { is: null } } }
           }
         }
@@ -136,7 +137,6 @@ export async function GET(req: NextRequest) {
 
     const whereClause: any = { estado_id: { in: estadoIds }, ...organoFilter }
 
-    // Revisor solo ve solicitudes asignadas a él, sin importar el filtro
     if (esRolRevisor && viewerUserId) {
       whereClause.revisor_asignado_id = viewerUserId
     } else if (filtro === 1 && revisorId) {
@@ -239,11 +239,9 @@ export async function GET(req: NextRequest) {
       const isNuevaEnFiltro = !fueObservadaEnEsteFiltro && !openedInFiltro
       const fechaParaFolio  = sol.fecha_envio ?? sol.fecha_creacion
 
-      // Extraer número base y sufijo del folio JUST-YYYY-NNNN o JUST-YYYY-NNNN-S
       const { numParaFolioTemp, sufijoFolio } = (() => {
         if ((sol as any).folio_justificacion) {
           const partes = String((sol as any).folio_justificacion).split("-")
-          // Formato: JUST(0) - YYYY(1) - NNNN(2) - [S(3)]
           if (partes.length >= 3) {
             const base = parseInt(partes[2], 10)
             const sufijo = partes.length === 4 ? parseInt(partes[3], 10) : undefined
@@ -383,10 +381,8 @@ export async function PATCH(req: NextRequest) {
           data:  { folio_dictamen: folioDictamen } as any,
         })
       } catch {
-        // campo puede no existir en el esquema aún — ignorar silenciosamente
       }
 
-      // Actualizar consecutivo para que el siguiente folio sea auto-calculado
       try {
         const partes = folioDictamen.split("/")
         if (partes.length === 3) {
@@ -428,7 +424,6 @@ export async function PATCH(req: NextRequest) {
         data:  { folio_recepcion: folioRecepcion },
       })
 
-      // Actualizar consecutivo FREC — formato AB-001 o AB-001-1 (extemporánea)
       try {
         const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
         const anioNum = new Date().getFullYear()
@@ -585,7 +580,6 @@ export async function PATCH(req: NextRequest) {
       }
     } else {
       const estadoActualNorm = solicitud.estado.nombre.toLowerCase()
-      // Jefe DO observa desde "Aceptado por Revisor" → regresa a UEFA como "Observado por DO"
       if (filtro === 1 && estadoActualNorm.includes("aceptado por revisor")) {
         nombreEstadoNuevo = "Observado por DO"
       } else {

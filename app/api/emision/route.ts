@@ -37,6 +37,8 @@ export async function GET(req: NextRequest) {
     }
 
 
+    const userId = searchParams.get("userId")
+
     const estadoEmitido = await prisma.estado.findFirst({
       where: { nombre: { equals: "Emitido", mode: "insensitive" } },
     })
@@ -45,8 +47,31 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, data: [] })
     }
 
+    let organoFilter: any = {}
+    if (userId) {
+      const viewer = await prisma.usuario.findUnique({
+        where:  { id: userId },
+        select: {
+          secretaria_id:       true,
+          organo_centralizado: { select: { id: true } },
+        },
+      })
+      if (viewer) {
+        if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
+          organoFilter = {
+            usuario: {
+              organo_centralizado: { isNot: null },
+              secretaria_id: viewer.secretaria_id,
+            },
+          }
+        } else {
+          organoFilter = { usuario: { organo_centralizado: { is: null } } }
+        }
+      }
+    }
+
     const solicitudes = await prisma.solicitud.findMany({
-      where: { estado_id: estadoEmitido.id },
+      where: { estado_id: estadoEmitido.id, ...organoFilter },
       include: {
         estado:   true,
         periodo:  true,

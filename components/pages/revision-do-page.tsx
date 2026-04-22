@@ -589,24 +589,48 @@ function SeccionDocumentosAdjuntos({ raw }: { raw: any }) {
 
 function ExpedienteFiltro1({ sol }: { sol: SolicitudDetalle }) {
   const raw = sol._raw
-  const actividades: string[]       = Array.isArray(raw?.actividades)      ? raw.actividades.filter(Boolean)      : []
-  const responsabilidades: string[] = Array.isArray(raw?.responsabilidades) ? raw.responsabilidades.filter(Boolean) : []
+  const actividades: string[]        = Array.isArray(raw?.actividades)        ? raw.actividades.filter(Boolean)        : []
+  const responsabilidades: string[]  = Array.isArray(raw?.responsabilidades)   ? raw.responsabilidades.filter(Boolean)   : []
+  const marcoNormativo: string[]     = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
+  const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
+  const resguardoActivos             = raw?.resguardo_activos as string | null | undefined
   const esNombramiento = (sol.regimen ?? "").toLowerCase().includes("nombramiento")
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
-      <SectionCard title="I.1 Objeto de la Contratación">
+      {esNombramiento && (
+        <SectionCard title="II. Tabulador — Nivel y Categoría">
+          <div className="grid gap-4 md:grid-cols-2">
+            <ReadOnlyField label="Nivel"     value={raw?.nivel_tabulador ?? "—"} />
+            <ReadOnlyField label="Categoría" value={raw?.categoria_tabulador ?? "—"} />
+          </div>
+        </SectionCard>
+      )}
+      <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
         <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
-      <SectionCard title="I.2 Actividades a Realizar">
+      <SectionCard title={esNombramiento ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}>
         {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
-      <SectionCard title="I.3 Responsabilidades">
+      <SectionCard title={esNombramiento ? "V. Responsabilidades" : "I.3 Responsabilidades"}>
         {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
-      {!esNombramiento && <SeccionPerfil raw={raw} />}
+      {esNombramiento && (
+        <>
+          <SectionCard title="VI. Marco Normativo">
+            {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
+          </SectionCard>
+          <SectionCard title="VII. Condiciones y Riesgos">
+            {condicionesRiesgos.length > 0 ? <ReadOnlyList items={condicionesRiesgos} /> : <p className="text-sm text-muted-foreground">—</p>}
+          </SectionCard>
+          <SectionCard title="VIII. Resguardo Personalizado de Activos">
+            <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
+          </SectionCard>
+        </>
+      )}
+      {esNombramiento && <SeccionPerfil raw={raw} />}
       <SeccionDocumentosAdjuntos raw={raw} />
     </div>
   )
@@ -618,73 +642,93 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
   const responsabilidades: string[]  = Array.isArray(raw?.responsabilidades)   ? raw.responsabilidades.filter(Boolean)   : []
   const marcoNormativo: string[]     = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
   const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
-  const resguardoActivos: string[]   = Array.isArray(raw?.resguardo_activos)   ? raw.resguardo_activos.filter(Boolean)   : []
-  const regimenNorm  = (sol.regimen ?? "").toLowerCase()
+  const resguardoActivos             = raw?.resguardo_activos as string | null | undefined
+  const regimenNorm      = (sol.regimen ?? "").toLowerCase()
   const esNombramientoTD = regimenNorm.includes("nombramiento") || regimenNorm.includes("tiempo determinado")
-  const mostrarI456      = esNombramientoTD
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
-      <SectionCard title="Tabulador — Nivel y Categoría">
-        {(() => {
-          const nivel     = raw?._raw?.nivel_tabulador     ?? raw?.nivel_tabulador
-          const categoria = raw?._raw?.categoria_tabulador ?? raw?.categoria_tabulador
-          return (
-            <div className="grid gap-4 md:grid-cols-2">
-              <ReadOnlyField label="Nivel"     value={nivel ?? "—"} />
-              <ReadOnlyField label="Categoría" value={categoria ?? "—"} />
-            </div>
-          )
-        })()}
-      </SectionCard>
-      <SectionCard title="I.1 Objeto del Nombramiento">
+      {esNombramientoTD && (
+        <SectionCard title="II. Tabulador — Nivel y Categoría">
+          <div className="grid gap-4 md:grid-cols-2">
+            <ReadOnlyField label="Nivel"     value={raw?.nivel_tabulador ?? "—"} />
+            <ReadOnlyField label="Categoría" value={raw?.categoria_tabulador ?? "—"} />
+          </div>
+        </SectionCard>
+      )}
+      <SectionCard title={esNombramientoTD ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
         <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
-      <SectionCard title="I.2 Actividades a Realizar">
+      <SectionCard title={esNombramientoTD ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}>
         {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
-      <SectionCard title="I.3 Responsabilidades">
+      <SectionCard title={esNombramientoTD ? "V. Responsabilidades" : "I.3 Responsabilidades"}>
         {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
-      {mostrarI456 && (
+      {esNombramientoTD && (
         <>
-          <SectionCard title="I.4 Marco Normativo">
+          <SectionCard title="VI. Marco Normativo">
             {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
           </SectionCard>
-          <SectionCard title="I.5 Condiciones y Riesgos">
+          <SectionCard title="VII. Condiciones y Riesgos">
             {condicionesRiesgos.length > 0 ? <ReadOnlyList items={condicionesRiesgos} /> : <p className="text-sm text-muted-foreground">—</p>}
           </SectionCard>
-          <SectionCard title="I.6 Resguardo Personalizado de Activos">
-            {resguardoActivos.length > 0 ? <ReadOnlyList items={resguardoActivos} /> : <p className="text-sm text-muted-foreground">—</p>}
+          <SectionCard title="VIII. Resguardo Personalizado de Activos">
+            <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
           </SectionCard>
         </>
       )}
+      {esNombramientoTD && <SeccionPerfil raw={raw} />}
       <SeccionDocumentosAdjuntos raw={raw} />
     </div>
   )
 }
 function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
   const raw = sol._raw
-  const actividades: string[]       = Array.isArray(raw?.actividades)      ? raw.actividades.filter(Boolean)      : []
-  const responsabilidades: string[] = Array.isArray(raw?.responsabilidades) ? raw.responsabilidades.filter(Boolean) : []
+  const actividades: string[]        = Array.isArray(raw?.actividades)        ? raw.actividades.filter(Boolean)        : []
+  const responsabilidades: string[]  = Array.isArray(raw?.responsabilidades)   ? raw.responsabilidades.filter(Boolean)   : []
+  const marcoNormativo: string[]     = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
+  const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
+  const resguardoActivos             = raw?.resguardo_activos as string | null | undefined
   const esNombramiento = (sol.regimen ?? "").toLowerCase().includes("nombramiento")
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
-      <SectionCard title="I.1 Objeto de la Contratación">
+      {esNombramiento && (
+        <SectionCard title="II. Tabulador — Nivel y Categoría">
+          <div className="grid gap-4 md:grid-cols-2">
+            <ReadOnlyField label="Nivel"     value={raw?.nivel_tabulador ?? "—"} />
+            <ReadOnlyField label="Categoría" value={raw?.categoria_tabulador ?? "—"} />
+          </div>
+        </SectionCard>
+      )}
+      <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
         <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
-      <SectionCard title="I.2 Actividades a Realizar">
+      <SectionCard title={esNombramiento ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}>
         {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
-      <SectionCard title="I.3 Responsabilidades">
+      <SectionCard title={esNombramiento ? "V. Responsabilidades" : "I.3 Responsabilidades"}>
         {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
       </SectionCard>
-      {!esNombramiento && <SeccionPerfil raw={raw} />}
+      {esNombramiento && (
+        <>
+          <SectionCard title="VI. Marco Normativo">
+            {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
+          </SectionCard>
+          <SectionCard title="VII. Condiciones y Riesgos">
+            {condicionesRiesgos.length > 0 ? <ReadOnlyList items={condicionesRiesgos} /> : <p className="text-sm text-muted-foreground">—</p>}
+          </SectionCard>
+          <SectionCard title="VIII. Resguardo Personalizado de Activos">
+            <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
+          </SectionCard>
+        </>
+      )}
+      {esNombramiento && <SeccionPerfil raw={raw} />}
       <SeccionDocumentosAdjuntos raw={raw} />
     </div>
   )
@@ -1341,6 +1385,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
 
   const isEmitido      = solicitud?.estado === "Emitido"
   const isAprobado     = solicitud?.estado === "Pendiente Firma Dictamen"
+  const isObservadaFiltro2 = filtro === 2 && /observad/i.test(solicitud?.estado ?? "")
   const isAceptadoPorRevisor = filtro === 1 && (
     solicitud?.estado?.toLowerCase() === "aceptado por revisor" ||
     solicitud?.estado?.toLowerCase() === "aprobado por revisor"
@@ -1744,19 +1789,25 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                 )}
 
                 {(filtro === 2 || filtro === 3) && (
-                  <Card className={`shadow-sm border-2 ${sinObservacion ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
+                  <Card className={`shadow-sm border-2 ${isObservadaFiltro2 ? "border-border bg-muted/30 opacity-60" : sinObservacion ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
                         <Shield className="h-4 w-4 text-primary" />Revisión de Dirección General
+                        {isObservadaFiltro2 && <Lock className="h-3.5 w-3.5 text-muted-foreground ml-1" />}
                       </CardTitle>
-                      <CardDescription className="text-xs">Determine si procede la emisión o requiere observaciones.</CardDescription>
+                      <CardDescription className="text-xs">
+                        {isObservadaFiltro2
+                          ? "Solicitud en estado observado — no disponible para edición."
+                          : "Determine si procede la emisión o requiere observaciones."}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-4">
                       <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3">
                         <Checkbox id="sin-obs-dg" checked={sinObservacion}
-                          onCheckedChange={v => { setSinObservacion(!!v); if (v) { setObservacionGeneral(""); setObservacionError("") } }} />
+                          disabled={isObservadaFiltro2}
+                          onCheckedChange={v => { if (isObservadaFiltro2) return; setSinObservacion(!!v); if (v) { setObservacionGeneral(""); setObservacionError("") } }} />
                         <div className="flex flex-col gap-0.5">
-                          <Label htmlFor="sin-obs-dg" className="text-sm font-medium cursor-pointer">No hay ninguna observación</Label>
+                          <Label htmlFor="sin-obs-dg" className={`text-sm font-medium ${isObservadaFiltro2 ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer"}`}>No hay ninguna observación</Label>
                           <span className="text-xs text-muted-foreground">
                             {sinObservacion ? "El expediente está listo para continuar." : "Desmarque para agregar observaciones y devolver el expediente."}
                           </span>
@@ -1766,7 +1817,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                         <div className="flex flex-col gap-2">
                           <Label className="text-sm font-medium text-card-foreground">Observación</Label>
                           <Textarea value={observacionGeneral}
-                            onChange={e => { setObservacionGeneral(e.target.value); if (e.target.value.trim()) setObservacionError("") }}
+                            disabled={isObservadaFiltro2}
+                            onChange={e => { if (isObservadaFiltro2) return; setObservacionGeneral(e.target.value); if (e.target.value.trim()) setObservacionError("") }}
                             placeholder="Describa las observaciones para devolver el expediente..."
                             className={`bg-background min-h-24 ${observacionError ? "border-destructive" : ""}`} />
                           {observacionError && <span className="text-xs text-destructive">{observacionError}</span>}
