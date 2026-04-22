@@ -1,0 +1,99 @@
+--- components/plantillas/PlantillaJustificacionServicios.tsx
++++ components/plantillas/PlantillaJustificacionServicios.tsx
+@@ -13,6 +13,7 @@
+    INTERFACE EXACTA DE TUS DATOS
+    ═══════════════════════════════════════════════════════════ */
+ export interface JustificacionData {
++  tipoAdministracion: 'centralizada' | 'paraestatal';
+   secretaria: string;
+   unidadAdministrativa: string;
+   unidadResponsable: string;
+@@ -210,9 +211,9 @@
+ 
+   /* --- Listas Dinámicas (Wraps) --- */
+-  listItemContainer: { flexDirection: "row", marginBottom: 4, paddingLeft: 10 },
++  listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10, marginTop: 4 },
+   listNum: { width: 15, fontFamily: "Helvetica-Bold" },
+   listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.3 },
+-  bulletItemContainer: { flexDirection: "row", marginBottom: 2, paddingLeft: 20 },
++  bulletItemContainer: { flexDirection: "row", marginBottom: 4, paddingLeft: 20, marginTop: 2 },
+   bulletSign: { width: 15, fontFamily: "Helvetica" },
+ 
+   /* --- Bloque de Firmas (Elaboró / Revisó) --- */
+   firmasWrapper: {
+     flexDirection: "row",
+     justifyContent: "space-between",
+-    marginTop: 60,
++    marginTop: "auto",
+     paddingHorizontal: 10,
+   },
+@@ -242,13 +243,44 @@
+ 
+-  /* --- Footer Fijo (se repite en cada página) --- */
+-  fixedFooter: {
+-    position: "absolute",
+-    bottom: 15,
+-    left: 40,
+-    right: 40,
+-    borderTopWidth: 0.5,
+-    borderTopColor: "#000",
+-    paddingTop: 4,
+-    flexDirection: "row",
+-    fontSize: 6.5,
++  /* --- Estilos para Dictaminacion --- */
++  dictTitle: {
++    fontFamily: "Helvetica-Bold",
++    fontSize: 10,
++    textAlign: "center",
++    marginBottom: 15,
++    marginTop: 5,
++  },
++  dictP: {
++    fontSize: 9,
++    textAlign: "justify",
++    lineHeight: 1.4,
++    marginBottom: 20,
++  },
++  dictRow: {
++    flexDirection: "row",
++    justifyContent: "center",
++    alignItems: "center",
++    marginBottom: 15,
++  },
++  dictBox: {
++    borderWidth: 1,
++    borderColor: "#000",
++    flex: 1,
++  },
++  dictBoxRow1: {
++    flexDirection: "row",
++    borderBottomWidth: 1,
++    borderBottomColor: "#000",
++    flex: 1,
++  },
++  dictBoxLeft: {
++    width: "35%",
++    padding: 8,
++    borderRightWidth: 1,
++    borderRightColor: "#000",
++  },
++  dictBoxRight: {
++    width: "65%",
++    padding: 8,
++    flexDirection: "column",
++  },
++  dictBoxRow2: {
++    padding: 8,
++    height: 80,
++  },
++  firmasDictWrapper: {
++    flexDirection: "row",
++    justifyContent: "space-between",
++    marginTop: "auto",
++    paddingHorizontal: 10,
++    width: "100%",
++  },
++  firmaDictBox: {
++    width: "30%",
++    alignItems: "center",
+   },

@@ -1514,15 +1514,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" className="gap-1.5"
-            onClick={() => generateJustificacionPDF({
-              folio: solicitud.folioJustificacion, tipo: solicitud.tipo as any,
-              secretaria: solicitud.secretaria, unidadAdministrativa: solicitud.unidadAdministrativa,
-              denominacion: solicitud.denominacion !== "—" ? solicitud.denominacion : solicitud.tipo,
-              vigenciaInicio: solicitud.vigenciaInicio, vigenciaFin: solicitud.vigenciaFin,
-              importeBruto: solicitud.importeBruto, esRenovacion: solicitud.esRenovacion,
-              folioAnterior: solicitud.folioAnterior ?? undefined,
-              fecha: solicitud.fechaCreacion, firmadoDigitalmente: true,
-            })}
+            onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>

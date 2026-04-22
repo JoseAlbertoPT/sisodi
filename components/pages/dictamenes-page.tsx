@@ -106,13 +106,16 @@ function mapearDictamen(raw: any): DictamenEmitido {
   }
 }
 
-// Modal de vista Dictamen
 function DictamenViewModal({
   dictamen,
   onClose,
+  isDownloading,
+  onDownload,
 }: {
   dictamen: DictamenEmitido
   onClose: () => void
+  isDownloading: boolean
+  onDownload: () => void
 }) {
   const titulo =
     dictamen.tipoDoc === "dictamen"
@@ -122,52 +125,7 @@ function DictamenViewModal({
   const folioRecepcionFormateado = formatearFolio(dictamen.folioRecepcion)
 
   const handlePrint = () => {
-    const pw = window.open("", "_blank")
-    if (!pw) return
-    pw.document.write(`
-      <!DOCTYPE html><html><head><title>${titulo}</title>
-      <style>
-        body { font-family: sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; font-size: 11pt; line-height: 1.5 }
-        h2   { font-size: 12pt; margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 4px }
-        .header { text-align: center; border-bottom: 2px solid #283c2a; padding-bottom: 16px; margin-bottom: 20px }
-        .header p { margin: 2px 0; font-size: 9pt; color: #555 }
-        .header h1 { font-size: 14pt; margin-bottom: 4px; letter-spacing: 1px }
-        .sello { text-align: center; margin-top: 30px; padding: 12px; border: 2px solid #283c2a;
-                 color: #283c2a; font-weight: bold; letter-spacing: 3px; font-size: 14pt }
-        .firmas { display: flex; justify-content: space-between; margin-top: 60px }
-        .firma-block { text-align: center; width: 200px }
-        .firma-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 4px }
-        .firma-role { font-size: 9pt; color: #666 }
-      </style></head><body>
-      <div class="header">
-        <p>GOBIERNO DEL ESTADO</p>
-        <p>SECRETARÍA DE ADMINISTRACIÓN</p>
-        <p>DIRECCIÓN DE ORGANIZACIÓN</p>
-        <h1>${titulo}</h1>
-      </div>
-      <p><strong>Número:</strong> ${dictamen.folioDictamen ?? "—"}</p>
-      <p><strong>Folio Recepción:</strong> ${folioRecepcionFormateado}</p>
-      <p><strong>Fecha:</strong> ${dictamen.fechaEmision ? new Date(dictamen.fechaEmision).toLocaleDateString("es-MX") : "—"}</p>
-      <p><strong>Modalidad:</strong> ${dictamen.tipoFirma === "electronica" ? "Firma Electrónica" : "Firma Autógrafa"}</p>
-      <h2>Destinatarios</h2>
-      <ul>${dictamen.destinatarios.length > 0
-        ? dictamen.destinatarios.map((d) => `<li>${d}</li>`).join("")
-        : "<li>—</li>"
-      }</ul>
-      <h2>Datos del Solicitante</h2>
-      <p><strong>Secretaría:</strong> ${dictamen.secretaria} &nbsp;|&nbsp; <strong>Denominación:</strong> ${dictamen.denominacion ?? "—"}</p>
-      <p><strong>Vigencia:</strong> ${dictamen.vigenciaInicio ?? "—"} — ${dictamen.vigenciaFin ?? "—"} &nbsp;|&nbsp; <strong>Importe:</strong> ${dictamen.importeBruto ?? "—"}</p>
-      <div class="firmas">
-        <div class="firma-block"><div class="firma-line"><p>${dictamen.firmadoPor?.reviso ?? "—"}</p><p class="firma-role">Revisó</p></div></div>
-        <div class="firma-block"><div class="firma-line"><p>${dictamen.firmadoPor?.valido ?? "—"}</p><p class="firma-role">Validó</p></div></div>
-        <div class="firma-block"><div class="firma-line"><p>${dictamen.firmadoPor?.emitio ?? "—"}</p><p class="firma-role">Emitió</p></div></div>
-      </div>
-      <div class="sello">DICTAMINADO</div>
-      </body></html>
-    `)
-    pw.document.close()
-    pw.focus()
-    setTimeout(() => pw.print(), 500)
+    onDownload()
   }
 
   return (
@@ -183,106 +141,21 @@ function DictamenViewModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5">
-              <Printer className="h-4 w-4" />Descargar PDF
+            <Button variant="outline" size="sm" onClick={handlePrint} disabled={isDownloading} className="gap-1.5 min-w-[140px]">
+              {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {isDownloading ? "Generando..." : "Descargar PDF"}
             </Button>
             <Button variant="ghost" size="sm" onClick={onClose}>Cerrar</Button>
           </div>
         </CardHeader>
 
         <ScrollArea className="flex-1 px-6 pb-6">
-          <div className="bg-card rounded-lg p-6 border border-border flex flex-col gap-4">
-            <div className="text-center border-b-2 border-primary pb-4">
-              <p className="text-xs text-muted-foreground">GOBIERNO DEL ESTADO</p>
-              <p className="text-xs text-muted-foreground">SECRETARÍA DE ADMINISTRACIÓN</p>
-              <p className="text-xs text-muted-foreground">DIRECCIÓN DE ORGANIZACIÓN</p>
-              <p className="text-base font-bold text-card-foreground mt-2 tracking-wide">{titulo}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-xs text-muted-foreground block">Número</span>
-                <span className="text-sm font-semibold text-card-foreground font-mono">
-                  {dictamen.folioDictamen ?? "—"}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Folio Recepción</span>
-                <span className="text-sm font-semibold text-card-foreground font-mono">
-                  {folioRecepcionFormateado}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Fecha Dict.</span>
-                <span className="text-sm font-semibold text-card-foreground">
-                  {dictamen.fechaEmision
-                    ? new Date(dictamen.fechaEmision).toLocaleDateString("es-MX")
-                    : "—"}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Modalidad</span>
-                <span className="text-sm font-semibold text-card-foreground">
-                  {dictamen.tipoFirma === "electronica" ? "Firma Electrónica" : "Firma Autógrafa"}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <span className="text-xs text-muted-foreground block mb-1">Destinatarios</span>
-              {dictamen.destinatarios.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {dictamen.destinatarios.map((d, i) => (
-                    <Badge key={i} variant="outline" className="text-xs">{d}</Badge>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-xs text-muted-foreground">—</span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-xs text-muted-foreground block">Secretaría</span>
-                <span className="text-sm text-card-foreground">{dictamen.secretaria}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Denominación</span>
-                <span className="text-sm text-card-foreground">{dictamen.denominacion ?? "—"}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Vigencia</span>
-                <span className="text-sm text-card-foreground">
-                  {dictamen.vigenciaInicio
-                    ? new Date(dictamen.vigenciaInicio).toLocaleDateString("es-MX")
-                    : "—"}{" "}—{" "}
-                  {dictamen.vigenciaFin
-                    ? new Date(dictamen.vigenciaFin).toLocaleDateString("es-MX")
-                    : "—"}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Importe</span>
-                <span className="text-sm text-card-foreground">{dictamen.importeBruto ?? "—"}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 mt-4">
-              {(["reviso", "valido", "emitio"] as const).map((rol) => (
-                <div key={rol} className="flex flex-col items-center gap-1 rounded-lg border border-border p-3">
-                  <span className="text-[10px] text-muted-foreground">
-                    {rol === "reviso" ? "Revisó" : rol === "valido" ? "Validó" : "Emitió"}
-                  </span>
-                  <span className="text-xs font-medium text-card-foreground">
-                    {dictamen.firmadoPor?.[rol] ?? "—"}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="text-center mt-4 py-3 border-2 border-primary text-primary font-bold tracking-widest text-lg">
-              DICTAMINADO
-            </div>
+          <div className="w-full h-[70vh] bg-muted rounded-md border border-border overflow-hidden">
+            <iframe 
+              src={`/api/pdf/justificacion?id=${dictamen.id}#toolbar=0&view=FitH`} 
+              className="w-full h-full border-0" 
+              title={`Vista previa Dictamen ${dictamen.folioDictamen ?? dictamen.id}`}
+            />
           </div>
         </ScrollArea>
       </Card>
@@ -296,12 +169,45 @@ export function DictamenesPage() {
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
   const [viewing,    setViewing]    = useState<DictamenEmitido | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const [searchTerm,       setSearchTerm]       = useState("")
   const [filterAnio,       setFilterAnio]       = useState("todos")
   const [filterMes,        setFilterMes]        = useState("todos")
   const [filterSecretaria, setFilterSecretaria] = useState("todas")
   const [filterTipo,       setFilterTipo]       = useState("todos")
+
+  const descargarPdfDictamen = async (solicitudId: string, folio: string | null) => {
+    setDownloadingId(solicitudId)
+    try {
+      const res = await fetch("/api/pdf/justificacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solicitudId })
+      })
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.error || "Ocurrió un error al generar el PDF")
+      }
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      const folioName = folio ? folio.replace(/\//g, "-") : solicitudId
+      a.download = `Dictamen_${folioName}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err: any) {
+      console.error(err)
+      alert(err.message || "Error al descargar el PDF")
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
@@ -370,7 +276,14 @@ export function DictamenesPage() {
       title="Dictámenes y opiniones emitidas"
       description="Consulta el registro de dictámenes y opiniones técnicas emitidos."
     >
-      {viewing && <DictamenViewModal dictamen={viewing} onClose={() => setViewing(null)} />}
+      {viewing && (
+        <DictamenViewModal 
+          dictamen={viewing} 
+          onClose={() => setViewing(null)} 
+          isDownloading={downloadingId === viewing.id}
+          onDownload={() => descargarPdfDictamen(viewing.id, viewing.folioDictamen)}
+        />
+      )}
 
       <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={cargar} disabled={loading} className="gap-1.5">
@@ -561,22 +474,21 @@ export function DictamenesPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {d.archivoPdf ? (
-                            <a href={d.archivoPdf} target="_blank" rel="noreferrer">
-                              <Button variant="ghost" size="sm" className="text-secondary hover:text-primary" title="Descargar PDF">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </a>
-                          ) : (
-                            <Button
-                              variant="ghost" size="sm"
-                              onClick={() => setViewing(d)}
-                              className="text-secondary hover:text-primary"
-                              title="Imprimir dictamen"
-                            >
+                          
+                          <Button
+                            variant="ghost" size="sm"
+                            onClick={() => descargarPdfDictamen(d.id, d.folioDictamen)}
+                            disabled={downloadingId === d.id}
+                            className="text-secondary hover:text-primary min-w-[32px]"
+                            title="Descargar PDF"
+                          >
+                            {downloadingId === d.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
                               <Download className="h-4 w-4" />
-                            </Button>
-                          )}
+                            )}
+                          </Button>
+                          
                         </div>
                       </td>
                     </tr>
