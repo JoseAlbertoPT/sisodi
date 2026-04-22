@@ -442,7 +442,7 @@ export function CalendarioPage() {
 
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
-                      <th className="px-5 py-3 text-left font-semibold w-48">Mes de aplicación</th>
+                      <th className="px-5 py-3 text-left font-semibold w-48">Mes de Aplicacion </th>
                       <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)</th>
                       <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
                     </tr>

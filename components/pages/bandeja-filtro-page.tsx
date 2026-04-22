@@ -122,16 +122,25 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   if (filtro === 2) return classifyDO(s)
   const estadoEnRevision = getEstadoEnRevision(filtro)
   const estadoObservado  = getEstadoObservado(filtro)
-  const estadoExtra      = filtro === 3 ? "Pendiente Firma Dictamen" : null
   const estadoNorm       = s.estado.toLowerCase()
+
   if (estadoNorm === estadoObservado.toLowerCase() || estadoNorm === "observado por validacion final") return "observadas"
-  if (filtro === 1 && (estadoNorm === "aceptado por revisor" || estadoNorm === "aprobado por revisor")) return "revision"
-  if (estadoNorm === estadoEnRevision.toLowerCase() || s.estado === estadoExtra) {
-    if (s.openedInFiltro[filtro] || !!s.folioDictamen) return "revision"
-    if (s.reingresoCount > 0) return "correcciones"
-    if (s.isNuevaEnFiltro[filtro]) return "nuevas"
-    return "nuevas"
+
+  if (filtro === 1) {
+    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion") return "pendientes_firma"
+    if (estadoNorm === "aceptado por revisor" || estadoNorm === "aprobado por revisor") return "revision"
+    if (estadoNorm === estadoEnRevision.toLowerCase()) {
+      return s.openedInFiltro[filtro] ? "revision" : "nuevas"
+    }
   }
+
+  if (filtro === 3) {
+    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion") return "pendientes_firma"
+    if (estadoNorm === estadoEnRevision.toLowerCase()) {
+      return (s.openedInFiltro[filtro] || !!s.folioDictamen) ? "revision" : "nuevas"
+    }
+  }
+
   return "todas"
 }
 function getSlaColor(dias: number | null) {
@@ -153,14 +162,22 @@ function getSlaLabel(dias: number | null) {
   if (dias <= 0) return `Vencido ${Math.abs(dias)}d`
   return `${dias} día${dias !== 1 ? "s" : ""}`
 }
-const TAB_CONFIG: Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
-  nuevas:       { label: "Asignadas",    icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
-  correcciones: { label: "Correcciones", icon: <RotateCcw className="h-3.5 w-3.5" />,    activeBg: "bg-accent/10",      activeText: "text-accent-foreground" },
-  revision:     { label: "En revisión",  icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
-  observadas:   { label: "Observadas",   icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
-  todas:        { label: "Todas",        icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
+type TabCfg = Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }>
+const TAB_CONFIG_REVISION: TabCfg = {
+  nuevas:          { label: "Asignadas",          icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+  revision:        { label: "En revisión",         icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
+  observadas:      { label: "Observadas",          icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
+  pendientes_firma:{ label: "Pendiente de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+  todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
 }
-const TAB_CONFIG_DO: Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
+const TAB_CONFIG_EMISION: TabCfg = {
+  nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+  revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
+  observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
+  pendientes_firma:{ label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+  todas:           { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
+}
+const TAB_CONFIG_DO: TabCfg = {
   pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600" },
   en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary" },
   observadas:            { label: "Observadas",               icon: <AlertTriangle className="h-3.5 w-3.5" />,  activeBg: "bg-destructive/10", activeText: "text-destructive" },
@@ -264,7 +281,7 @@ function ExpedienteCompleto({ raw }: { raw: any }) {
           <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(raw?.regimen)} />
           <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
           <ReadOnlyField label="Programa o Proyecto"                   value={raw?.programa_proyecto ?? "—"} />
-          <ReadOnlyField label="Tipo de Actividades"                   value={raw?.tipo_actividades ?? "—"} />
+          <ReadOnlyField label="Tipo de Actividad"                   value={raw?.tipo_actividades ?? "—"} />
           <ReadOnlyField label="Vigencia Inicio"                       value={formatFecha(raw?.vigencia_inicio)} />
           <ReadOnlyField label="Vigencia Término"                      value={formatFecha(raw?.vigencia_fin)} />
           <ReadOnlyField label="Importe Bruto"                         value={raw?.importe_bruto != null ? `$${Number(raw.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"} />
@@ -559,6 +576,14 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
   )
 }
 
+const MESES_DICT = [
+  { value: "01", label: "ENERO(01)" }, { value: "02", label: "FEBRERO(02)" },
+  { value: "03", label: "MARZO(03)" }, { value: "04", label: "ABRIL(04)" },
+  { value: "05", label: "MAYO(05)" }, { value: "06", label: "JUNIO(06)" },
+  { value: "07", label: "JULIO(07)" }, { value: "08", label: "AGOSTO(08)" },
+  { value: "09", label: "SEPTIEMBRE(09)" }, { value: "10", label: "OCTUBRE(10)" },
+  { value: "11", label: "NOVIEMBRE(11)" }, { value: "12", label: "DICIEMBRE(12)" },
+]
 function FolioDictamenCard({
   folioDictamen,
   onAsignar,
@@ -570,16 +595,20 @@ function FolioDictamenCard({
   const [mes,         setMes]         = useState(String(today.getMonth() + 1).padStart(2, "0"))
   const [anio,        setAnio]        = useState(String(today.getFullYear()))
   const [consecutivo, setConsecutivo] = useState("1")
+  const [cargando,    setCargando]    = useState(false)
   const [guardando,   setGuardando]   = useState(false)
 
   useEffect(() => {
-    const mesNum  = today.getMonth() + 1
-    const anioNum = today.getFullYear()
+    const mesNum  = parseInt(mes,  10)
+    const anioNum = parseInt(anio, 10)
+    if (!mesNum || !anioNum || anioNum < 2020) return
+    setCargando(true)
     fetch(`/api/folio-dictamen/siguiente?mes=${mesNum}&anio=${anioNum}`)
       .then(r => r.json())
       .then(json => { if (json.ok) setConsecutivo(String(json.siguiente)) })
       .catch(() => {})
-  }, [])
+      .finally(() => setCargando(false))
+  }, [mes, anio])
 
   const folioPreview = `${String(consecutivo).padStart(2, "0")}/${mes}/${anio}`
 
@@ -611,31 +640,49 @@ function FolioDictamenCard({
           <Stamp className="h-4 w-4 text-secondary" />Asignar Folio de Dictamen
         </CardTitle>
         <CardDescription className="text-xs">
-          Asigne el número secuencial de dictamen.
+          Selecciona mes y año — el consecutivo se calcula automáticamente.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Mes</Label>
-            <Input value={mes} onChange={e => setMes(e.target.value.replace(/\D/g, "").slice(0, 2))} placeholder="03" className="bg-background font-mono" maxLength={2} />
+            <Select value={mes} onValueChange={setMes}>
+              <SelectTrigger className="bg-background font-mono">
+                <SelectValue placeholder="Mes" />
+              </SelectTrigger>
+              <SelectContent>
+                {MESES_DICT.map(m => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Año</Label>
-            <Input value={anio} onChange={e => setAnio(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="2026" className="bg-background font-mono" maxLength={4} />
+            <Input
+              value={anio}
+              onChange={e => setAnio(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="2026"
+              className="bg-background font-mono"
+              maxLength={4}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Consecutivo</Label>
-            <Input type="number" min={1} value={consecutivo} onChange={e => setConsecutivo(e.target.value)} className="bg-background font-mono" />
+            <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3 font-mono text-sm text-card-foreground">
+              {cargando ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : consecutivo}
+            </div>
           </div>
         </div>
-        <div className="rounded-md bg-muted/50 px-3 py-2">
+        <div className="rounded-md bg-muted/50 px-3 py-2 flex items-center gap-2">
+          {cargando && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
           <span className="text-xs text-muted-foreground">Folio de dictamen: </span>
           <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview}</span>
         </div>
         <Button
           onClick={handleAsignar}
-          disabled={guardando || !consecutivo || !mes || !anio}
+          disabled={guardando || cargando || !consecutivo || !mes || !anio}
           className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
         >
           {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
@@ -1164,10 +1211,14 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-semibold text-foreground">
-            Bandeja DO — {FILTRO_LABELS[filtro]}
+            {filtro === 1 ? "Bandeja en Revisión" : filtro === 2 ? "Bandeja en Validación" : "Bandeja en Emisión"}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Solicitudes asignadas al {FILTRO_LABELS[filtro]} para revisión y dictaminación
+            {filtro === 1
+              ? "Revisa y analiza las solicitudes asignadas, realizando el primer filtro de revisión y observaciones."
+              : filtro === 2
+              ? "Valida y asigna las solicitudes, realizando el segundo filtro de revisión y observaciones."
+              : "Gestiona la emisión de las solicitudes, realizando la dictaminación final y la generación de dictámenes u opiniones técnicas."}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={cargar} disabled={loading} className="gap-1.5">
@@ -1219,11 +1270,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       <FilterTabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as TabKey)}
-        items={(filtro === 2
-          ? Object.keys(TAB_CONFIG_DO)
-          : Object.keys(TAB_CONFIG)
+        items={Object.keys(
+          filtro === 2 ? TAB_CONFIG_DO : filtro === 3 ? TAB_CONFIG_EMISION : TAB_CONFIG_REVISION
         ).map((tabKey) => {
-          const cfg = filtro === 2 ? TAB_CONFIG_DO[tabKey] : TAB_CONFIG[tabKey]
+          const cfg = (filtro === 2 ? TAB_CONFIG_DO : filtro === 3 ? TAB_CONFIG_EMISION : TAB_CONFIG_REVISION)[tabKey]
           return {
             value: tabKey,
             label: cfg.label,
@@ -1329,7 +1379,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
                     </tr>
                   ) : filtered.map(sol => {
                     const tab    = classifySolicitud(sol, filtro)
-                    const config = (filtro === 2 ? TAB_CONFIG_DO : TAB_CONFIG)[tab]
+                    const config = (filtro === 2 ? TAB_CONFIG_DO : filtro === 3 ? TAB_CONFIG_EMISION : TAB_CONFIG_REVISION)[tab]
                     return (
                       <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
 

@@ -364,8 +364,8 @@ export function DictamenesPage() {
 
   return (
     <PageLayout
-      title="Dictámenes Emitidos"
-      description="Registro de dictámenes y opiniones técnicas emitidos"
+      title="Dictámenes y opiniones emitidas"
+      description="Consulta el registro de dictámenes y opiniones técnicas emitidos."
     >
       {viewing && <DictamenViewModal dictamen={viewing} onClose={() => setViewing(null)} />}
 

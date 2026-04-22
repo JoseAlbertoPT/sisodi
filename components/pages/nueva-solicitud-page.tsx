@@ -1601,7 +1601,7 @@ function FormularioPrestacion({
             {/* Tipo actividad */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Tipo de Actividades
+                Tipo de Actividad
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -1936,7 +1936,24 @@ function FormularioNombramiento({
   const [condiciones, setCondiciones]               = useState<Record<string, string>>({})
   const [riesgos,     setRiesgos]                   = useState<Record<string, string>>({})
   const [resguardoActivos, setResguardoActivos]     = useState("")
+  const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
+    datosRenovacion?.tipoActividad
+      ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
+      : ""
+  )
   const tipoAdministracion = tipoAdministracionUsuario
+  const tiposActividadNomPorPrograma = useTiposActividadPorPrograma(
+    programaInput, "nombramiento", excelRows, tipoAdministracion, secretariaConfirmada
+  )
+  const tiposActividadNomPorRegimen = useTiposActividad(
+    "nombramiento", excelRows, tipoAdministracion, secretariaConfirmada
+  )
+  const tiposActividadNom = programaInput && tiposActividadNomPorPrograma.length > 0
+    ? tiposActividadNomPorPrograma : tiposActividadNomPorRegimen
+  const tipoActividadNomLabel = tipoActividadSeleccionado
+    ? tiposActividadNom.find(t => t.value === tipoActividadSeleccionado)?.label
+    : undefined
+
   const sugerencias = useMemo(() => {
     if (esRenovacion) {
       if (!secretariaInput) return SECRETARIAS_CATALOGO
@@ -1971,7 +1988,7 @@ function FormularioNombramiento({
       unidadResponsable:    urgSeleccionada,
       programaProyecto:     programaInput,
       regimen:              "nombramiento",
-      tipoActividades:      "",
+      tipoActividades:      tipoActividadNomLabel ?? tipoActividadSeleccionado,
       numeroPrestadores,
       denominacion,
       puestoJefeInmediato,
@@ -2003,6 +2020,7 @@ function FormularioNombramiento({
     tipoAdministracion,
     vigenciaInicio, vigenciaFin, importeNeto, tipoImporte,
     nivelTabulador, categoriaTabulador, objetoNombramiento,
+    tipoActividadSeleccionado, tipoActividadNomLabel,
     funciones, responsabilidades, marcoNormativo, condiciones, riesgos, resguardoActivos, onFormChange,
   ])
 
@@ -2187,6 +2205,37 @@ function FormularioNombramiento({
                 />
               </div>
 
+              {/* Tipo de Actividad */}
+              <div className="flex flex-col gap-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  Tipo de Actividad
+                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </Label>
+                {bloqueadoPorRenovacion ? (
+                  <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                    <span className="text-sm text-muted-foreground">
+                      {datosRenovacion?.tipoActividad || tipoActividadNomLabel || "—"}
+                    </span>
+                  </div>
+                  ) : (
+                  <Select
+                    value={tipoActividadSeleccionado}
+                    onValueChange={setTipoActividadSeleccionado}
+                  >
+                    <SelectTrigger className="bg-background w-full">
+                      <span className="block truncate text-sm pr-1">
+                        {tipoActividadNomLabel ?? <span className="text-muted-foreground">Seleccione tipo de actividad</span>}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposActividadNom.length === 0
+                        ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones disponibles</div>
+                        : tiposActividadNom.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
+                      }
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Número de Personas a Contratar
@@ -2582,7 +2631,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RadioGroup value={subTipo} onValueChange={(v) => setSubTipo(v as "captura" | "regularizacion")} className="flex flex-col gap-3">
+          <RadioGroup value={subTipo} onValueChange={() => setSubTipo(v as "captura" | "regularizacion")} className="flex flex-col gap-3">
             <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${subTipo === "captura" ? "border-accent bg-accent/5" : "border-border hover:border-secondary/50"}`}>
               <RadioGroupItem value="captura" id="sub-captura" className="mt-0.5" />
               <div className="flex flex-col gap-1">
@@ -2637,7 +2686,7 @@ function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSol
   check(formData.responsabilidades,    "Responsabilidades")
   if (tipo === "prestacion") {
     check(formData.regimen,       "Régimen de Contratación")
-    check(formData.tipoActividades, "Tipo de Actividades")
+    check(formData.tipoActividades, "Tipo de Actividad")
     check(formData.escolaridad,   "Escolaridad")
     check(formData.compAdm,       "Competencias Administrativas")
     check(formData.compTec,       "Competencias Técnicas")
@@ -3144,7 +3193,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
     )
   }
   return (
-    <PageLayout title="Nueva Solicitud" description="Registre una nueva solicitud de dictaminación técnica funcional">
+    <PageLayout title="Nueva solicitud" description="Inicia el registro de una solicitud para su análisis y emisión de dictamen u opinión técnica funcional.">
       <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <StepIndicator step={step} tipo={tipo} />
       </div>
@@ -3154,7 +3203,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
             <Card className="shadow-sm border-border">
               <CardContent className="flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                Verificando calendario de recepción...
+                Verificando Calendario de Recepción...
               </CardContent>
             </Card>
           )}
@@ -3256,8 +3305,8 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
                       <div className="flex items-start gap-2 w-full">
                         <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold text-destructive">Período vencido — no se puede registrar</span>
-                          <span className="text-xs text-muted-foreground">La fecha límite DO ({periodoInfo.row.limiteDO}) ya pasó.</span>
+                          <span className="text-sm font-semibold text-destructive">Período vencido — No se puede Registrar</span>
+                          <span className="text-xs text-muted-foreground">La Fecha límite DO ({periodoInfo.row.limiteDO}) ya Expiro .</span>
                         </div>
                       </div>
                     )}

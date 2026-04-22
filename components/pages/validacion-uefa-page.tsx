@@ -54,6 +54,7 @@ interface UefaSolicitud {
   vigenciaFin: string
   importeBruto: string
   esRenovacion: boolean
+  esExtemporanea: boolean
   folioAnterior?: string
   historial: HistorialEntry[]
   observacionesUefa: string
@@ -224,8 +225,9 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     regimen:              item.regimen ?? "—",
     tipoActividades:      item.tipo_actividades ?? "—",
     numeroPrestadores:    item.numero_prestadores?.toString() ?? "—",
-    esRenovacion:         item.es_renovacion ?? false,
-    folioAnterior:        item.folio_anterior ?? undefined,
+    esRenovacion:         item.es_renovacion    ?? false,
+    esExtemporanea:       item.es_extemporanea  ?? false,
+    folioAnterior:        item.folio_anterior   ?? undefined,
     objeto:               item.objeto ?? "—",
     actividades:          Array.isArray(item.actividades) ? item.actividades.filter(Boolean) : [],
     responsabilidades:    Array.isArray(item.responsabilidades) ? item.responsabilidades.filter(Boolean) : [],
@@ -578,9 +580,7 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
             <ReadOnlyField label="Puesto del Jefe Inmediato"          value={raw?.puesto_jefe_inmediato ?? "—"} />
           )}
           <ReadOnlyField label="Número de Prestadores de Servicio"    value={solicitud.numeroPrestadores} />
-          {!esNombramiento && (
-            <ReadOnlyField label="Tipo de Actividades"                value={solicitud.tipoActividades} />
-          )}
+          <ReadOnlyField label="Tipo de Actividad"                value={solicitud.tipoActividades} />
           <ReadOnlyField label="Tipo de Pago"    value={raw?.tipo_importe || "Mensual"} />
           <ReadOnlyField label="Vigencia Inicio"                      value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                     value={solicitud.vigenciaFin} />
@@ -1052,7 +1052,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
   )
 }
 
-// pagina principla
 export function ValidacionUefaPage() {
   const { user } = useAuth()
 
@@ -1240,8 +1239,8 @@ export function ValidacionUefaPage() {
 
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Bandeja de Validacion de Justificaciones</h2>
-          <p className="text-sm text-muted-foreground">Revisión, firma y seguimiento de justificaciones enviadas por las URG</p>
+          <h2 className="text-xl font-semibold text-foreground">Bandeja de validación de justificaciones</h2>
+          <p className="text-sm text-muted-foreground">Gestiona y da seguimiento a las justificaciones durante su proceso de validación y emisión.</p>
         </div>
         <Button variant="outline" size="sm" onClick={cargarSolicitudes} disabled={loading} className="gap-1.5">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
@@ -1308,6 +1307,11 @@ export function ValidacionUefaPage() {
                       <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                         <td className="px-4 py-3 font-medium text-card-foreground">
                           <span>{folioPrincipal}</span>
+                          {sol.esExtemporanea && folioRecepcion && (
+                            <span className="block text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 mt-0.5 w-fit">
+                              Folio temporal
+                            </span>
+                          )}
                           {folioSecundario && (
                             <span className="block text-xs text-muted-foreground mt-0.5">{folioSecundario}</span>
                           )}

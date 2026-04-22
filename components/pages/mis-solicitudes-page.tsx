@@ -590,7 +590,7 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Unidad Responsable del Gasto"           value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
           <ReadOnlyField label="Número de Prestadores de Servicios"     value={solicitud.numeroPrestadores} />
           <ReadOnlyField label="Programa o Proyecto"                    value={solicitud.programaProyecto} />
-          <ReadOnlyField label="Tipo de Actividades"                    value={solicitud.tipoActividades} />
+          <ReadOnlyField label="Tipo de Actividad"                    value={solicitud.tipoActividades} />
           <ReadOnlyField label="Régimen de Contratación"                value={formatRegimen(solicitud.regimen)} />
          {/* <ReadOnlyField label="Denominación"                           value={solicitud.denominacion} /> */}
           <ReadOnlyField label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
@@ -661,6 +661,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(solicitud.regimen)} />
           <ReadOnlyField label="Denominación del Nombramiento"         value={solicitud.denominacion} />
           <ReadOnlyField label="Puesto del Jefe Inmediato"             value={solicitud.puestoJefeInmediato} />
+          <ReadOnlyField label="Tipo de Actividad"                   value={solicitud.tipoActividades} />
           <ReadOnlyField label="Número de Personas a Contratar"        value={solicitud.numeroPrestadores} />
           <ReadOnlyField label="Tipo de Pago"    value={solicitud.tipoImporte || "Mensual"} />
           <ReadOnlyField label="Importe Neto"  value={solicitud.importeBruto} />
@@ -1211,8 +1212,9 @@ function checkVigenteFromCal(
     row = cal.nombramiento.find((r) => r.quincena === periodo)
   }
   if (!row) return { vigente: false, limiteDO: null }
-  const limite = parseDateDMY(row.limiteDO)
-  return { vigente: today <= limite, limiteDO: row.limiteDO }
+  const fechaFin = getPeriodoEndDate(regimen, periodo)
+  const vigente = fechaFin !== null ? today <= fechaFin : today <= parseDateDMY(row.limiteDO)
+  return { vigente, limiteDO: row.limiteDO }
 }
 
 export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (payload: EditSolicitudPayload) => void }) {
@@ -1351,8 +1353,8 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
 
   return (
     <PageLayout
-      title="Bandeja URG - Mis Justificaciones"
-      description="Solicitudes capturadas por mi área, con seguimiento de validación de justificaciones y emisión de dictamen."
+      title="Bandeja de mis justificaciones"
+      description="Consulta y da seguimiento al estado de tus solicitudes."
     >
 
       <FilterTabs
@@ -1421,7 +1423,6 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
                     </tr>
                   ))
                 }
-
                 {filtered.map((sol) => {
                   const observador  = getObservador(sol.estado)
                   const subEstado   = getSubEstadoDGDO(sol.estado)

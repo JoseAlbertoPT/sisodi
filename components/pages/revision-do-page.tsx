@@ -15,21 +15,52 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PageLayout } from "@/components/page-layout"
 import {
+
   ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle,
   History, MessageSquare, ClipboardCheck, Info, MinusCircle,
   ChevronDown, ChevronRight, Send, Download, Lock, Stamp,
   Users, Shield, Loader2, GraduationCap, Brain, Wrench, Heart, Star, Briefcase,
   UserCheck,
+
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 
+const COLOR_SI        = "#6E795A"
+const COLOR_SI_TEXT   = "#283c2a"
+const COLOR_NO        = "#832B56"
+const COLOR_NO_APLICA = "#B8860B"
+
 const INICIALES_MES_MAP: Record<string, string> = {
-  "01": "EN", "02": "FE", "03": "MR", "04": "AB",
-  "05": "MY", "06": "JN", "07": "JL", "08": "AG",
-  "09": "SE", "10": "OC", "11": "NO", "12": "DI",
+  "01": "EN",
+  "02": "FE",
+  "03": "MR",
+  "04": "AB",
+  "05": "MY",
+  "06": "JN",
+  "07": "JL",
+  "08": "AG",
+  "09": "SE",
+  "10": "OC",
+  "11": "NO",
+  "12": "DI",
 }
+
+const MESES_RECEPCION = [
+  { num: 1,  code: "EN", label: "Enero"      },
+  { num: 2,  code: "FE", label: "Febrero"    },
+  { num: 3,  code: "MR", label: "Marzo"      },
+  { num: 4,  code: "AB", label: "Abril"      },
+  { num: 5,  code: "MY", label: "Mayo"       },
+  { num: 6,  code: "JN", label: "Junio"      },
+  { num: 7,  code: "JL", label: "Julio"      },
+  { num: 8,  code: "AG", label: "Agosto"     },
+  { num: 9,  code: "SE", label: "Septiembre" },
+  { num: 10, code: "OC", label: "Octubre"    },
+  { num: 11, code: "NO", label: "Noviembre"  },
+  { num: 12, code: "DI", label: "Diciembre"  },
+]
 
 function generarFolioTemporal(id: number, fecha: Date | null | undefined): string {
   const f      = fecha ?? new Date()
@@ -65,7 +96,6 @@ function resolverFolioDictamen(item: any): string | null {
     null
   )
 }
-
 interface HistorialEntry {
   fecha: string
   usuario: string
@@ -74,7 +104,6 @@ interface HistorialEntry {
   estadoNuevo: string
   comentario: string | null
 }
-
 interface SolicitudDetalle {
   id: number
   folio: string | null
@@ -108,15 +137,12 @@ interface SolicitudDetalle {
 
 type ChecklistValor = "si" | "no" | "noAplica" | null
 type ActiveTab = "review" | "emision" | "historial"
-
 interface RevisionDOPageProps {
   solicitudId: string
   filtro: 1 | 2 | 3
   onBack: (filtro: 1 | 2 | 3) => void
 }
-
 interface ChecklistItem { key: string; num: number; label: string }
-
 const CHECKLIST_16: ChecklistItem[] = [
   { key: "c1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
   { key: "c2",  num: 2,  label: "Unidad Responsable del Gasto" },
@@ -129,7 +155,6 @@ const CHECKLIST_16: ChecklistItem[] = [
   { key: "c9",  num: 9,  label: "Ordenamientos legales y administrativos citados" },
   { key: "c10", num: 10, label: "Oficio de suficiencia presupuestal adjunto" },
 ]
-
 
 const CHECKLIST_NOMBRAMIENTO: ChecklistItem[] = [
   { key: "n1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
@@ -145,7 +170,6 @@ const CHECKLIST_NOMBRAMIENTO: ChecklistItem[] = [
   { key: "n11", num: 11, label: "Ordenamientos legales y administrativos citados" },
   { key: "n12", num: 12, label: "Oficio de suficiencia presupuestal adjunto" },
 ]
-
 const CHECKLIST_HONORARIOS: ChecklistItem[] = [
   { key: "h1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
   { key: "h2",  num: 2,  label: "Unidad Responsable del Gasto" },
@@ -158,7 +182,6 @@ const CHECKLIST_HONORARIOS: ChecklistItem[] = [
   { key: "h9",  num: 9,  label: "Ordenamientos legales y administrativos citados" },
   { key: "h10", num: 10, label: "Oficio de suficiencia presupuestal adjunto" },
 ]
-
 function getChecklistItems(filtro: 1 | 2 | 3, tipo?: string | null): ChecklistItem[] {
   const t = (tipo ?? "").toLowerCase()
   if (t.includes("honorarios") || t.includes("asimilados")) return CHECKLIST_HONORARIOS
@@ -174,7 +197,7 @@ function formatFecha(v: string | null | undefined): string {
 function formatFechaHora(v: string | null | undefined): string {
   if (!v) return "—"
   const d = new Date(v)
-  if (isNaN(d.getTime())) return
+  if (isNaN(d.getTime())) return v
   return d.toLocaleString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
 }
 function diasHabilesDesde(fechaStr: string | null): number | null {
@@ -431,7 +454,7 @@ function RadioOption({ value, selected, onChange, label, colorClass, style }: {
           ? `${colorClass} border-current`
           : "border-border text-muted-foreground hover:border-foreground/30 hover:text-card-foreground"
       }`}
-      >
+    >
       {value === "si"       && <CheckCircle2 className="h-3.5 w-3.5" />}
       {value === "no"       && <XCircle className="h-3.5 w-3.5" />}
       {value === "noAplica" && <MinusCircle className="h-3.5 w-3.5" />}
@@ -480,6 +503,7 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
             <ReadOnlyField label="Programa o Proyecto"              value={raw?.programa_proyecto ?? "—"} />
             <ReadOnlyField label="Denominación del Nombramiento"    value={sol.denominacion} />
             <ReadOnlyField label="Puesto del Jefe Inmediato"        value={raw?.puesto_jefe_inmediato ?? "—"} />
+            <ReadOnlyField label="Tipo de Actividad"              value={raw?.tipo_actividades ?? "—"} />
             <ReadOnlyField label="Número de Personas a Contratar"   value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
             <ReadOnlyField label="Tipo de Pago"                     value={raw?.tipo_importe || "Mensual"} />
             <ReadOnlyField label="Vigencia Inicio"                  value={sol.vigenciaInicio} />
@@ -490,7 +514,7 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
           <>
             <ReadOnlyField label="Número de Prestadores de Servicios" value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
             <ReadOnlyField label="Programa o Proyecto"                value={raw?.programa_proyecto ?? "—"} />
-            <ReadOnlyField label="Tipo de Actividades"                value={sol.tipoActividades} />
+            <ReadOnlyField label="Tipo de Actividad"                value={sol.tipoActividades} />
             <ReadOnlyField label="Régimen de Contratación"            value={sol.regimen} />
             <ReadOnlyField label="Vigencia Inicio"                    value={sol.vigenciaInicio} />
             <ReadOnlyField label="Vigencia Término"                   value={sol.vigenciaFin} />
@@ -508,8 +532,8 @@ function SeccionRenovacion({ sol }: { sol: SolicitudDetalle }) {
     resolverFolioDictamen(sol._raw) ??
     null
 
- return (
-     <SectionCard title="Renovación">
+  return (
+    <SectionCard title="Renovación">
       <div className="grid gap-4 md:grid-cols-2">
         <ReadOnlyField label="¿Es Renovación?" value={sol.esRenovacion ? "SÍ" : "NO"} />
         <ReadOnlyField
@@ -535,7 +559,6 @@ function SeccionPerfil({ raw }: { raw: any }) {
     </SectionCard>
   )
 }
-
 function SeccionDocumentosAdjuntos({ raw }: { raw: any }) {
   return (
     <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
@@ -596,11 +619,9 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
   const marcoNormativo: string[]     = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
   const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
   const resguardoActivos: string[]   = Array.isArray(raw?.resguardo_activos)   ? raw.resguardo_activos.filter(Boolean)   : []
-
   const regimenNorm  = (sol.regimen ?? "").toLowerCase()
   const esNombramientoTD = regimenNorm.includes("nombramiento") || regimenNorm.includes("tiempo determinado")
   const mostrarI456      = esNombramientoTD
-
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
@@ -644,7 +665,6 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
     </div>
   )
 }
-
 function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
   const raw = sol._raw
   const actividades: string[]       = Array.isArray(raw?.actividades)      ? raw.actividades.filter(Boolean)      : []
@@ -669,8 +689,6 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
     </div>
   )
 }
-
-
 function FolioDictamenCard({
   folioDictamen,
   onAsignar,
@@ -681,11 +699,12 @@ function FolioDictamenCard({
   esExtemporanea: boolean
 }) {
   const today = new Date()
-  const [mes,         ]               = useState(String(today.getMonth() + 1).padStart(2, "0"))
-  const [anio,        ]               = useState(String(today.getFullYear()))
+  const [mes,         setMes]         = useState<number>(today.getMonth() + 1)
+  const [anio,        setAnio]        = useState(String(today.getFullYear()))
   const [consecutivo, setConsecutivo] = useState("1")
   const [guardando,   setGuardando]   = useState(false)
   const autoCalledRef = useRef(false)
+  const hasFetchedRef = useRef(false)
 
   useEffect(() => {
     const mesNum  = today.getMonth() + 1
@@ -695,26 +714,33 @@ function FolioDictamenCard({
       .then(async json => {
         if (!json.ok) return
         const sig = String(json.siguiente)
+        hasFetchedRef.current = true
         setConsecutivo(sig)
         if (!esExtemporanea && !folioDictamen && !autoCalledRef.current) {
           autoCalledRef.current = true
-          const folio = `${sig.padStart(2, "0")}/${mes}/${anio}`
-          await onAsignar(folio)
+          await onAsignar(`${sig.padStart(2, "0")}/${String(mesNum).padStart(2, "0")}/${anioNum}`)
         }
       })
       .catch(() => {})
   }, [])
-
-  const folioPreview = `${String(consecutivo).padStart(2, "0")}/${mes}/${anio}`
-
+  useEffect(() => {
+    if (!esExtemporanea || folioDictamen || !hasFetchedRef.current) return
+    const anioNum = parseInt(anio, 10)
+    if (isNaN(anioNum) || anioNum < 2000) return
+    fetch(`/api/folio-dictamen/siguiente?mes=${mes}&anio=${anioNum}`)
+      .then(r => r.json())
+      .then(json => { if (json.ok) setConsecutivo(String(json.siguiente)) })
+      .catch(() => {})
+  }, [mes, anio])
+  const mesStr      = String(mes).padStart(2, "0")
+  const folioPreview = `${String(consecutivo).padStart(2, "0")}/${mesStr}/${anio}`
   const handleAsignar = async () => {
     if (!consecutivo || !mes || !anio) return
     setGuardando(true)
     await onAsignar(folioPreview)
     setGuardando(false)
   }
-
-  if (folioDictamen) {
+  if (folioDictamen && !esExtemporanea) {
     return (
       <Card className="shadow-sm border-secondary/30 border-2 bg-secondary/[0.03]">
         <CardContent className="flex items-center gap-3 p-4">
@@ -727,33 +753,56 @@ function FolioDictamenCard({
       </Card>
     )
   }
-
   if (!esExtemporanea) return null
-
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-          <Stamp className="h-4 w-4 text-secondary" />Asignar Folio de Dictamen
+          <Stamp className="h-4 w-4 text-secondary" />
+          {folioDictamen ? "Reasignar Folio de Dictamen" : "Asignar Folio de Dictamen"}
         </CardTitle>
         <CardDescription className="text-xs">
-          Asigne el número secuencial de dictamen antes de aprobar.
+          {folioDictamen
+            ? `Folio actual: ${formatearFolio(folioDictamen)}. Asigne el folio definitivo.`
+            : "Asigne el número secuencial de dictamen antes de aprobar."}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Mes</Label>
-            <Input readOnly value={mes} placeholder="03" className="bg-muted font-mono cursor-not-allowed select-none" maxLength={2} />
+            <Select value={String(mes)} onValueChange={v => setMes(Number(v))}>
+              <SelectTrigger className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MESES_RECEPCION.map(m => (
+                  <SelectItem key={m.num} value={String(m.num)}>
+                    {m.label} ({String(m.num).padStart(2, "0")})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Año</Label>
-            <Input readOnly value={anio} placeholder="2026" className="bg-muted font-mono cursor-not-allowed select-none" maxLength={4} />
+            <Input
+              value={anio}
+              onChange={e => setAnio(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="2026"
+              className="bg-background font-mono"
+              maxLength={4}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Consecutivo</Label>
-            <Input readOnly type="number" min={1} value={consecutivo} className="bg-muted font-mono cursor-not-allowed select-none" />
-            <span className="text-[10px] text-muted-foreground">Auto-calculado</span>
+            <Input
+              type="number"
+              value={consecutivo}
+              readOnly
+              disabled
+              className="bg-muted font-mono cursor-not-allowed opacity-70"
+            />
           </div>
         </div>
         <div className="rounded-md bg-muted/50 px-3 py-2">
@@ -769,7 +818,6 @@ function FolioDictamenCard({
     </Card>
   )
 }
-
 function FolioRecepcionCard({
   folioRecepcion,
   onAsignar,
@@ -780,38 +828,71 @@ function FolioRecepcionCard({
   esExtemporanea: boolean
 }) {
   const today = new Date()
-  const mesNum  = today.getMonth() + 1
-  const mesCode = INICIALES_MES_MAP[String(mesNum).padStart(2, "0")] ?? "XX"
-  const [consecutivo, setConsecutivo] = useState("1")
-  const [guardando,   setGuardando]   = useState(false)
+  const mesNumHoy  = today.getMonth() + 1
+  const anioNum    = today.getFullYear()
+  const mesCodeHoy = INICIALES_MES_MAP[String(mesNumHoy).padStart(2, "0")] ?? "XX"
+
+  const [siguienteFrec, setSiguienteFrec] = useState<number | null>(null)
+  const [ultimoFrec,    setUltimoFrec]    = useState<number | null>(null)
+  const [siguienteExt,  setSiguienteExt]  = useState<number | null>(null)
+
+  const [mesDefinitivo,      setMesDefinitivo]      = useState<number>(mesNumHoy)
+  const [anioDefinitivo,     setAnioDefinitivo]     = useState<string>(String(anioNum))
+  const [siguienteDefinitivo, setSiguienteDefinitivo] = useState<number | null>(null)
+  const [cargandoDefinitivo,  setCargandoDefinitivo]  = useState(false)
+
+  const [guardando,    setGuardando]    = useState(false)
   const autoCalledRef = useRef(false)
 
   useEffect(() => {
-    fetch(`/api/folio-recepcion/siguiente?mes=${mesNum}&anio=${today.getFullYear()}`)
+    fetch(`/api/folio-recepcion/siguiente?mes=${mesNumHoy}&anio=${anioNum}`)
       .then(r => r.json())
       .then(async json => {
         if (!json.ok) return
-        const sig = String(json.siguiente)
-        setConsecutivo(sig)
+        setSiguienteFrec(json.siguiente)
+        setUltimoFrec(json.ultimo)
         if (!esExtemporanea && !folioRecepcion && !autoCalledRef.current) {
           autoCalledRef.current = true
-          const folio = `${mesCode}-${sig.padStart(3, "0")}`
+          const folio = `${mesCodeHoy}-${String(json.siguiente).padStart(3, "0")}`
           await onAsignar(folio)
         }
       })
       .catch(() => {})
+
+    if (esExtemporanea) {
+      fetch(`/api/folio-recepcion/siguiente?mes=${mesNumHoy}&anio=${anioNum}&ext=true`)
+        .then(r => r.json())
+        .then(json => { if (json.ok) setSiguienteExt(json.siguiente) })
+        .catch(() => {})
+    }
   }, [])
 
-  const folioPreview = `${mesCode}-${String(consecutivo).padStart(3, "0")}`
+  useEffect(() => {
+    if (!esExtemporanea || !folioRecepcion) return
+    const anio = parseInt(anioDefinitivo, 10)
+    if (isNaN(anio) || anio < 2000) return
+    setCargandoDefinitivo(true)
+    fetch(`/api/folio-recepcion/siguiente?mes=${mesDefinitivo}&anio=${anio}`)
+      .then(r => r.json())
+      .then(json => { if (json.ok) setSiguienteDefinitivo(json.siguiente) })
+      .catch(() => {})
+      .finally(() => setCargandoDefinitivo(false))
+  }, [mesDefinitivo, anioDefinitivo, esExtemporanea, folioRecepcion])
 
-  const handleAsignar = async () => {
-    if (!consecutivo) return
+  const mesCodeDefinitivo = INICIALES_MES_MAP[String(mesDefinitivo).padStart(2, "0")] ?? "XX"
+  const folioDefinitivo   = siguienteDefinitivo !== null
+    ? `${mesCodeDefinitivo}-${String(siguienteDefinitivo).padStart(3, "0")}`
+    : null
+
+  const folioTemporalPreview = `${mesCodeHoy}-${String(ultimoFrec ?? 0).padStart(3, "0")}-${siguienteExt ?? 1}`
+
+  const handleAsignar = async (folio: string) => {
     setGuardando(true)
-    await onAsignar(folioPreview)
+    await onAsignar(folio)
     setGuardando(false)
   }
 
-  if (folioRecepcion) {
+  if (folioRecepcion && !esExtemporanea) {
     return (
       <Card className="shadow-sm border-primary/30 border-2 bg-primary/[0.03]">
         <CardContent className="flex items-center gap-3 p-4">
@@ -826,7 +907,79 @@ function FolioRecepcionCard({
   }
 
   if (!esExtemporanea) return null
+  if (folioRecepcion) {
+    return (
+      <Card className="shadow-sm border-amber-300 border-2 bg-amber-50/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+            <FileText className="h-4 w-4 text-amber-600" />Folio de Recepción
+            <span className="text-[10px] font-semibold text-amber-600 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5">
+              Temporal
+            </span>
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Folio temporal asignado. Elija el mes y asigne el folio de recepción definitivo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <div className="rounded-md bg-muted/50 px-3 py-2">
+            <span className="text-xs text-muted-foreground">Folio temporal: </span>
+            <span className="text-sm font-semibold font-mono text-amber-700">{folioRecepcion}</span>
+          </div>
 
+          {/* Selectores de mes y año */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">Mes del folio definitivo</Label>
+              <Select
+                value={String(mesDefinitivo)}
+                onValueChange={v => setMesDefinitivo(Number(v))}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MESES_RECEPCION.map(m => (
+                    <SelectItem key={m.num} value={String(m.num)}>
+                      {m.label} ({m.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">Año</Label>
+              <Input
+                value={anioDefinitivo}
+                onChange={e => setAnioDefinitivo(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                placeholder="2026"
+                className="bg-background font-mono"
+                maxLength={4}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-md bg-muted/50 px-3 py-2">
+            <span className="text-xs text-muted-foreground">Folio definitivo: </span>
+            <span className="text-sm font-semibold font-mono text-card-foreground">
+              {cargandoDefinitivo ? "Cargando…" : (folioDefinitivo ?? "—")}
+            </span>
+          </div>
+
+          <Button
+            onClick={() => folioDefinitivo && handleAsignar(folioDefinitivo)}
+            disabled={guardando || cargandoDefinitivo || !folioDefinitivo}
+            className="w-full gap-2"
+          >
+            {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+            Asignar Folio Definitivo
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const listoTemporal = ultimoFrec !== null && siguienteExt !== null
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-3">
@@ -834,27 +987,17 @@ function FolioRecepcionCard({
           <FileText className="h-4 w-4 text-primary" />Asignar Folio de Recepción
         </CardTitle>
         <CardDescription className="text-xs">
-          Asigne el número secuencial de recepción global.
+          Folio de extemporánea: último folio asignado + número de extemporánea (ej. AB-001-1).
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Mes</Label>
-            <Input readOnly value={mesCode} className="bg-muted font-mono cursor-not-allowed select-none" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Consecutivo</Label>
-            <Input readOnly type="number" min={1} value={consecutivo} className="bg-muted font-mono cursor-not-allowed select-none" />
-            <span className="text-[10px] text-muted-foreground">Auto-calculado</span>
-          </div>
-        </div>
         <div className="rounded-md bg-muted/50 px-3 py-2">
           <span className="text-xs text-muted-foreground">Folio de recepción: </span>
-          <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview}</span>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Formato MES-NNN: clave de mes / número secuencial.</p>
+          <span className="text-sm font-semibold font-mono text-card-foreground">
+            {listoTemporal ? folioTemporalPreview : "Cargando…"}
+          </span>
         </div>
-        <Button onClick={handleAsignar} disabled={guardando || !consecutivo} className="w-full gap-2">
+        <Button onClick={() => handleAsignar(folioTemporalPreview)} disabled={guardando || !listoTemporal} className="w-full gap-2">
           {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
           Asignar Folio de Recepción
         </Button>
@@ -991,7 +1134,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         setError("Solicitud no encontrada en este filtro")
         return
       }
-
       const rawBase = item._raw ?? item
       const folioDictamenResuelto =
         resolverFolioDictamen(item) ??
@@ -1002,7 +1144,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         dictamen:      rawBase.dictamen ?? item.dictamen ?? null,
         _raw:          rawBase,
       }
-
       const mapped = mapBDtoDetalle(merged)
       setSolicitud(mapped)
 
@@ -1031,9 +1172,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
       }
     })
   }, [])
-
   const checklistItems = useMemo(() => getChecklistItems(filtro, solicitud?.tipo), [filtro, solicitud?.tipo])
-
   const checklistStats = useMemo(() => {
     if (!solicitud) return { completed: 0, total: 0, hasNo: false, noCount: 0, allDone: false, noWithoutObs: 0 }
     const total = checklistItems.length
@@ -1045,30 +1184,25 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     })
     return { completed, total, hasNo: noCount > 0, noCount, allDone: completed === total, noWithoutObs }
   }, [solicitud, checklistItems])
-
   const folioDictamenResuelto = useMemo(() => {
     if (!solicitud) return null
     return solicitud.folioDictamen ?? resolverFolioDictamen(solicitud._raw) ?? null
   }, [solicitud])
-
   const folioRecepcionResuelto = useMemo(() => {
     if (!solicitud) return null
     return solicitud.folioRecepcion ?? solicitud._raw?.folio_recepcion ?? null
   }, [solicitud])
-
   const hasFolioDictamen    = !!folioDictamenResuelto
   const canApproveChecklist = checklistStats.allDone && !checklistStats.hasNo
   const canApprove =
     filtro === 3 ? sinObservacion
     : filtro === 2 ? (sinObservacion && hasFolioDictamen)
     : canApproveChecklist
-  // Filtro 1: todos contestados + al menos un "No" + todos los "No" con comentario
   const canObservar =
     (filtro === 2 || filtro === 3)
       ? !sinObservacion
       : (checklistStats.allDone && checklistStats.hasNo && checklistStats.noWithoutObs === 0)
   const observarBlocked = false
-
   const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string) => {
     if (!solicitud) return
     setGuardando(true)
@@ -1102,7 +1236,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
       h.estadoNuevo.toLowerCase().includes("en revision revisor")
     )
   , [solicitud])
-
   const handleAprobar = async (revisorId?: string) => {
     if (filtro === 3) { setShowEmitConfirm(true); return }
     if (filtro === 2 && !yaEstuvoEnRevisor && !revisorId) {
@@ -1114,7 +1247,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
       setShowConfirmacion("Solicitud aprobada.")
     }
   }
-
   const handleConfirmEmit = async () => {
     setShowEmitConfirm(false)
     const nuevoEstado = await patchEstado("aprobar")
@@ -1123,7 +1255,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
       setShowConfirmacion("Solicitud aprobada.")
     }
   }
-
   const handleObservar = async () => {
     if (filtro === 2 || filtro === 3) {
       if (!observacionGeneral.trim()) { setObservacionError("Escribe una observación para devolver el expediente."); return }
@@ -1157,6 +1288,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         : "Dictamen emitido con firma autógrafa. Expediente bloqueado."
     )
   }
+
   const handleAsignarFolioDictamen = useCallback(async (folio: string) => {
     if (!solicitud) return
     try {
@@ -1189,10 +1321,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          solicitudId:   solicitud.id,
-          accion:        "asignarFolioRecepcion",
+          solicitudId:    solicitud.id,
+          accion:         "asignarFolioRecepcion",
           folioRecepcion: folio,
-          usuarioId:     (user as any)?.id ?? "",
+          usuarioId:      (user as any)?.id ?? "",
           filtro,
         }),
       })
@@ -1265,7 +1397,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
           </Card>
         </div>
       )}
-
       {showEmitConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
           <Card className="w-full max-w-md shadow-lg border-primary/30 border-2">
@@ -1397,6 +1528,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
             {filtro === 3 && <ExpedienteFiltro3 sol={solicitud} />}
           </div>
         </ScrollArea>
+
         {/* Panel revisión */}
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
@@ -1418,6 +1550,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                 <History className="mr-1.5 inline h-4 w-4" />Historial
               </button>
             </div>
+
             {activeTab === "review" && !isEmitido && (
               <>
                 {filtro !== 3 && (
@@ -1430,6 +1563,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                     )}
                     {filtro === 1 && (
                       <>
+                        {/* ── Barra de progreso del checklist ── */}
                         <Card className={`shadow-sm border-2 ${checklistStats.hasNo ? "border-destructive/30 bg-destructive/[0.03]" : checklistStats.allDone ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-3">
@@ -1448,12 +1582,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                               </Badge>
                             </div>
                             <div className="h-2 w-full rounded-full bg-muted">
-                              <div className={`h-2 rounded-full transition-all ${checklistStats.hasNo ? "bg-destructive" : checklistStats.allDone ? "bg-secondary" : "bg-primary"}`}
-                                style={{ width: `${checklistStats.total > 0 ? (checklistStats.completed / checklistStats.total) * 100 : 0}%` }} />
+                              <div
+                                className={`h-2 rounded-full transition-all ${checklistStats.hasNo ? "bg-destructive" : checklistStats.allDone ? "bg-secondary" : "bg-primary"}`}
+                                style={{ width: `${checklistStats.total > 0 ? (checklistStats.completed / checklistStats.total) * 100 : 0}%` }}
+                              />
                             </div>
                           </CardContent>
                         </Card>
 
+                        {/* ── Ítems del checklist ── */}
                         <Card className="shadow-sm border-border">
                           <CardContent className="p-0">
                             <div className="divide-y divide-border">
@@ -1462,39 +1599,107 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                                 const valor   = s?.valor ?? null
                                 const itemObs = s?.observacion ?? ""
                                 const hasErr  = checklistErrors[item.key]
-                                const noColor  = "#832B56"
-                                const rowBorder =
-                                  valor === "si"         ? "border-l-4 border-l-emerald-500 bg-emerald-500/10"
-                                  : valor === "no"       ? "border-l-4"
-                                  : valor === "noAplica" ? "border-l-4 border-l-yellow-400 bg-yellow-400/10"
-                                  : ""
-                                const rowStyle = valor === "no"
-                                  ? { borderLeftColor: noColor, backgroundColor: `${noColor}18` }
-                                  : undefined
+
+                                const rowStyle: React.CSSProperties | undefined =
+                                  valor === "si"
+                                    ? { borderLeftColor: COLOR_SI,        backgroundColor: `${COLOR_SI}55` }
+                                    : valor === "no"
+                                    ? { borderLeftColor: COLOR_NO,        backgroundColor: `${COLOR_NO}20` }
+                                    : valor === "noAplica"
+                                    ? { borderLeftColor: COLOR_NO_APLICA, backgroundColor: `${COLOR_NO_APLICA}20` }
+                                    : undefined
+
+                                const rowBorderClass = valor ? "border-l-4" : ""
+
+                                const badgeStyle: React.CSSProperties | undefined =
+                                  valor === "si"
+                                    ? { backgroundColor: `${COLOR_SI}30`,        color: COLOR_SI_TEXT }
+                                    : valor === "no"
+                                    ? { backgroundColor: `${COLOR_NO}30`,        color: COLOR_NO }
+                                    : valor === "noAplica"
+                                    ? { backgroundColor: `${COLOR_NO_APLICA}50`, color: COLOR_NO_APLICA }
+                                    : undefined
+
+                                const labelStyle: React.CSSProperties | undefined =
+                                  valor === "si"
+                                    ? { color: COLOR_SI_TEXT }
+                                    : valor === "no"
+                                    ? { color: COLOR_NO }
+                                    : valor === "noAplica"
+                                    ? { color: COLOR_NO_APLICA }
+                                    : undefined
+
                                 return (
                                   <div key={item.key}>
-                                    <div className={`flex flex-col gap-3 p-4 transition-colors ${rowBorder}`} style={rowStyle}>
+                                    <div
+                                      className={`flex flex-col gap-3 p-4 transition-colors ${rowBorderClass}`}
+                                      style={rowStyle}
+                                    >
                                       <div className="flex items-start gap-3">
-                                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold ${valor === "si" ? "bg-emerald-500/30 text-emerald-700" : valor === "noAplica" ? "bg-yellow-400/30 text-yellow-700" : "bg-border text-muted-foreground"}`}
-                                          style={valor === "no" ? { backgroundColor: `${noColor}30`, color: noColor } : undefined}>
+                                        {/* Número del ítem */}
+                                        <span
+                                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold"
+                                          style={
+                                            valor
+                                              ? badgeStyle
+                                              : { backgroundColor: "var(--border)", color: "var(--muted-foreground)" }
+                                          }
+                                        >
                                           {item.num}
                                         </span>
+
                                         <div className="flex flex-1 flex-col gap-2">
-                                          <span className={`text-sm leading-snug ${valor === "si" ? "text-emerald-800 font-medium" : valor === "noAplica" ? "text-yellow-800 font-medium" : "text-card-foreground"}`}
-                                            style={valor === "no" ? { color: noColor, fontWeight: 500 } : undefined}>
+                                          {/* Label del ítem */}
+                                          <span
+                                            className={`text-sm leading-snug ${valor ? "font-medium" : "text-card-foreground"}`}
+                                            style={labelStyle}
+                                          >
                                             {item.label}
                                           </span>
+
+                                          {/* Botones de opción */}
                                           <div className="flex flex-wrap gap-2">
-                                            <RadioOption value="si"       selected={valor === "si"}       onChange={() => updateChecklist(item.key, valor === "si"       ? null : "si")}       label="Sí"        colorClass="text-secondary bg-secondary/10" />
-                                            <RadioOption value="no"       selected={valor === "no"}       onChange={() => updateChecklist(item.key, valor === "no"       ? null : "no")}       label="No"        colorClass={`bg-[#832B56]/10`} style={{ color: noColor }} />
-                                            <RadioOption value="noAplica" selected={valor === "noAplica"} onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica")} label="No Aplica" colorClass="text-muted-foreground bg-muted" />
+                                            <RadioOption
+                                              value="si"
+                                              selected={valor === "si"}
+                                              onChange={() => updateChecklist(item.key, valor === "si" ? null : "si")}
+                                              label="Sí"
+                                              colorClass=""
+                                              style={{ color: COLOR_SI_TEXT, backgroundColor: `${COLOR_SI}15`, borderColor: COLOR_SI }}
+                                            />
+                                            <RadioOption
+                                              value="no"
+                                              selected={valor === "no"}
+                                              onChange={() => updateChecklist(item.key, valor === "no" ? null : "no")}
+                                              label="No"
+                                              colorClass=""
+                                              style={{ color: COLOR_NO, backgroundColor: `${COLOR_NO}15`, borderColor: COLOR_NO }}
+                                            />
+                                            <RadioOption
+                                              value="noAplica"
+                                              selected={valor === "noAplica"}
+                                              onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica")}
+                                              label="No Aplica"
+                                              colorClass=""
+                                              style={{ color: COLOR_NO_APLICA, backgroundColor: `${COLOR_NO_APLICA}15`, borderColor: COLOR_NO_APLICA }}
+                                            />
                                           </div>
+
+                                          {/* Textarea de observación */}
                                           {(valor === "no" || itemObs) && (
                                             <div className="flex flex-col gap-1">
-                                              <Textarea value={itemObs} onChange={e => updateChecklist(item.key, valor, e.target.value)}
+                                              <Textarea
+                                                value={itemObs}
+                                                onChange={e => updateChecklist(item.key, valor, e.target.value)}
                                                 placeholder={valor === "no" ? "Obligatorio: describa la observación..." : "Observaciones de este punto..."}
-                                                className={`bg-background min-h-10 text-xs resize-none ${hasErr ? "border-destructive" : ""}`} rows={2} />
-                                              {hasErr && <span className="text-[10px] text-destructive font-medium">Debe escribir una observación para los puntos marcados como "No"</span>}
+                                                className={`bg-background min-h-10 text-xs resize-none ${hasErr ? "border-destructive" : ""}`}
+                                                rows={2}
+                                              />
+                                              {hasErr && (
+                                                <span className="text-[10px] text-destructive font-medium">
+                                                  Debe escribir una observación para los puntos marcados como "No"
+                                                </span>
+                                              )}
                                             </div>
                                           )}
                                         </div>
@@ -1594,6 +1799,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                   </Card>
                 )}
 
+                {/* Botones Observar / Aprobar */}
                 {isAceptadoPorRevisor ? (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
@@ -1620,13 +1826,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                       <Button onClick={() => handleAprobar()} disabled={!canApprove || guardando}
                         className={`gap-1.5 ${canApprove ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
                         {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                        {filtro === 1 ? "Aprobar " : filtro === 2 ? "Aprobar" : "Aprobar"}
+                        {filtro === 1 ? "Aprobar" : filtro === 2 ? "Aprobar" : "Aprobar"}
                       </Button>
                     </CardContent>
                   </Card>
                 )}
               </>
             )}
+
             {activeTab === "emision" && (
               isEmitido ? (
                 <Card className="shadow-sm border-primary border-2 bg-primary/5">
@@ -1724,7 +1931,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                 </CardContent>
               </Card>
             )}
-
           </div>
         </ScrollArea>
       </div>

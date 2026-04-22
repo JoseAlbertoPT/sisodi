@@ -109,21 +109,27 @@ export async function GET(req: NextRequest) {
       const viewer = await prisma.usuario.findUnique({
         where:  { id: viewerUserId },
         select: {
+          secretaria_id:       true,
           organo_centralizado: { select: { id: true } },
-          rol: { select: { nombre: true } },
+          rol:                 { select: { nombre: true } },
         },
       })
       if (viewer) {
         esRolRevisor = viewer.rol?.nombre?.toLowerCase() === "revisor"
-        if (viewer.organo_centralizado !== null) {
-          organoFilter = {
-            OR: [
-              { usuario: { organo_centralizado: { isNot: null } } },
-              { usuario: { secretaria_id: null } },
-            ],
+        // Revisores ven todas las solicitudes asignadas a ellos sin importar tipo ni secretaría
+        if (!esRolRevisor) {
+          if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
+            // Usuario centralizado: solo solicitudes de su misma secretaría
+            organoFilter = {
+              usuario: {
+                organo_centralizado: { isNot: null },
+                secretaria_id: viewer.secretaria_id,
+              },
+            }
+          } else {
+            // Usuario paraestatal: ve solo paraestatal (sin filtro de secretaría)
+            organoFilter = { usuario: { organo_centralizado: { is: null } } }
           }
-        } else {
-          organoFilter = { usuario: { organo_centralizado: { is: null } } }
         }
       }
     }
@@ -422,20 +428,42 @@ export async function PATCH(req: NextRequest) {
         data:  { folio_recepcion: folioRecepcion },
       })
 
-      // Actualizar consecutivo FREC — formato AB-001
+      // Actualizar consecutivo FREC — formato AB-001 o AB-001-1 (extemporánea)
       try {
-        const matchFrec = folioRecepcion.match(/^([A-Z]{2})-(\d+)$/)
-        if (matchFrec) {
-          const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
-          const mesNum         = MONTH_CODES.indexOf(matchFrec[1]) + 1
-          const consecutivoNum = parseInt(matchFrec[2], 10)
-          const anioNum        = new Date().getFullYear()
+        const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
+        const anioNum = new Date().getFullYear()
+
+        const matchFrecExt = folioRecepcion.match(/^([A-Z]{2})-(\d+)-(\d+)$/)
+        if (matchFrecExt) {
+          const mesNum         = MONTH_CODES.indexOf(matchFrecExt[1]) + 1
+          const consecutivoNum = parseInt(matchFrecExt[2], 10)
+          const extNum         = parseInt(matchFrecExt[3], 10)
           if (mesNum > 0 && !isNaN(consecutivoNum)) {
             await prisma.consecutivo_folio.upsert({
               where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
               update: { consecutivo: consecutivoNum },
               create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: consecutivoNum },
             })
+          }
+          if (mesNum > 0 && !isNaN(extNum)) {
+            await prisma.consecutivo_folio.upsert({
+              where:  { tipo_mes_anio: { tipo: "FREC_EXT", mes: mesNum, anio: anioNum } },
+              update: { consecutivo: extNum },
+              create: { tipo: "FREC_EXT", mes: mesNum, anio: anioNum, consecutivo: extNum },
+            })
+          }
+        } else {
+          const matchFrec = folioRecepcion.match(/^([A-Z]{2})-(\d+)$/)
+          if (matchFrec) {
+            const mesNum         = MONTH_CODES.indexOf(matchFrec[1]) + 1
+            const consecutivoNum = parseInt(matchFrec[2], 10)
+            if (mesNum > 0 && !isNaN(consecutivoNum)) {
+              await prisma.consecutivo_folio.upsert({
+                where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
+                update: { consecutivo: consecutivoNum },
+                create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: consecutivoNum },
+              })
+            }
           }
         }
       } catch { /* ignorar */ }
