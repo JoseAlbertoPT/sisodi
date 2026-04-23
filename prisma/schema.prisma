@@ -191,7 +191,7 @@ model solicitud {
   condicion_cambio_domicilio Boolean?              @default(false)
   condicion_horario          Boolean?              @default(false)
   condicion_viajar           Boolean?              @default(false)
-  resguardo_activos          Boolean?              @default(false)
+  resguardo_activos          String?               @db.VarChar(10)
   escolaridad                String?               @db.VarChar(100)
   comp_adm              String?
   comp_tec              String?

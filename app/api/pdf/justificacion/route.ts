@@ -58,11 +58,12 @@ async function generatePDFResponse(solicitudId: string | null) {
         programaProyecto: sol.programa_proyecto ?? "",
         denominacionNombramiento: sol.denominacion ?? "",
         tipoActividad: sol.tipo_actividades ?? "",
-        puestoJefeInmediato: "",
+        puestoJefeInmediato: sol.puesto_jefe_inmediato ?? "",
         numeroPersonas: sol.numero_prestadores ?? 1,
         importeNetoMensual: sol.importe_bruto
           ? `$${Number(sol.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
           : "",
+        tipoPago: (sol.tipo_importe ?? "").replace(/_/g, " "),
         equivalenciaNivel: `${sol.nivel_tabulador ?? ""} - ${sol.categoria_tabulador ?? ""}`.trim() === "-" ? "" : `${sol.nivel_tabulador ?? ""} ${sol.categoria_tabulador ?? ""}`,
         vigenciaInicio: sol.vigencia_inicio
           ? sol.vigencia_inicio.toISOString().split("T")[0]
@@ -90,7 +91,7 @@ async function generatePDFResponse(solicitudId: string | null) {
           golpes: (sol.riesgo_golpes as "Bajo" | "Medio" | "Alto" | "") || "",
           otros: (sol.riesgo_otros as "Bajo" | "Medio" | "Alto" | "") || "",
         },
-        resguardoActivos: sol.resguardo_activos ?? false,
+        resguardoActivos: sol.resguardo_activos === "si",
 
         perfil: {
           escolaridadMinima: splitToArray(sol.escolaridad),
@@ -128,6 +129,7 @@ async function generatePDFResponse(solicitudId: string | null) {
               minimumFractionDigits: 2,
             })}`
           : "",
+        tipoPago:           (sol.tipo_importe ?? "").replace(/_/g, " "),
         esRenovacion:       sol.es_renovacion ?? false,
         folioAnterior:      sol.folio_anterior ?? "",
 

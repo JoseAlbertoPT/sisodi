@@ -24,6 +24,7 @@ export interface JustificacionData {
   vigenciaInicio: string;
   vigenciaTermino: string;
   importeBruto: string;
+  tipoPago: string;
   esRenovacion: boolean;
   folioAnterior: string;
   objetoContratacion: string;
@@ -67,7 +68,7 @@ const s = StyleSheet.create({
     display: 'flex',
     alignItems: "center",
     justifyContent: "center",
-    opacity: 0.80, // Colores vivos
+    opacity: 0.08, // Colores vivos
     zIndex: -1, // Detrás del texto
   },
 watermarkImage: { 
@@ -376,45 +377,38 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <Text style={s.sectionTitle}>I.    DATOS GENERALES:</Text>
 
-        {/* Campo 1: Oficio de solicitud */}
+        {/* Campo 1: Secretaría */}
         <View style={s.row}>
           <Text style={s.numLabel}>1.</Text>
-          <Text style={s.marginLabel}>Oficio de solicitud:</Text>
-          <Text style={s.valueText}></Text>
-        </View>
-
-        {/* Campo 2: Secretaría */}
-        <View style={s.row}>
-          <Text style={s.numLabel}>2.</Text>
           <Text style={s.marginLabel}>Secretaría/Subsecretaría/Dependencia/Organismo Auxiliar:</Text>
           <Text style={s.valueText}>{data.secretaria}</Text>
         </View>
 
-        {/* Campo 3: Unidad Administrativa */}
+        {/* Campo 2: Unidad Administrativa */}
         <View style={s.row}>
-          <Text style={s.numLabel}>3.</Text>
+          <Text style={s.numLabel}>2.</Text>
           <Text style={s.marginLabel}>Unidad Administrativa de Adscripción:</Text>
           <Text style={{ fontSize: 7, marginRight: 5 }}>(área donde se prestará el servicio)</Text>
           <Text style={s.valueText}>{data.unidadAdministrativa}</Text>
         </View>
 
-        {/* Campo 4: Unidad Responsable */}
+        {/* Campo 3: Unidad Responsable */}
         <View style={s.row}>
-          <Text style={s.numLabel}>4.</Text>
+          <Text style={s.numLabel}>3.</Text>
           <Text style={s.marginLabel}>Unidad Responsable del Gasto:</Text>
           <Text style={s.valueText}>{data.unidadResponsable}</Text>
         </View>
 
-        {/* Campo 5: Programa */}
+        {/* Campo 4: Programa */}
         <View style={s.row}>
-          <Text style={s.numLabel}>5.</Text>
+          <Text style={s.numLabel}>4.</Text>
           <Text style={s.marginLabel}>Programa o Proyecto:</Text>
           <Text style={s.valueText}>{data.programaProyecto}</Text>
         </View>
 
-        {/* Campo 6: Régimen con checkboxes */}
+        {/* Campo 5: Régimen con checkboxes */}
         <View style={{ ...s.row, alignItems: "center" }}>
-          <Text style={s.numLabel}>6.</Text>
+          <Text style={s.numLabel}>5.</Text>
           <Text style={s.marginLabel}>Régimen de Contratación:</Text>
           <View style={s.checkboxRect}>{isHonorarios && <Text style={s.checkText}>X</Text>}</View>
           <Text style={{ marginRight: 20 }}>Honorarios</Text>
@@ -422,23 +416,23 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text>Honorarios Asimilados a Salarios</Text>
         </View>
 
-        {/* Campo 7: Tipo de Actividades */}
+        {/* Campo 6: Tipo de Actividades */}
         <View style={s.row}>
-          <Text style={s.numLabel}>7.</Text>
+          <Text style={s.numLabel}>6.</Text>
           <Text style={s.marginLabel}>Tipo de Actividades:</Text>
           <Text style={s.valueText}>{data.tipoActividades}</Text>
         </View>
 
-        {/* Campo 8: Número de Prestadores */}
+        {/* Campo 7: Número de Prestadores */}
         <View style={s.row}>
-          <Text style={s.numLabel}>8.</Text>
+          <Text style={s.numLabel}>7.</Text>
           <Text style={s.marginLabel}>Número de Prestadores de Servicios:</Text>
           <Text style={s.valueText}>{data.numeroPrestadores}</Text>
         </View>
 
-        {/* Campo 9: Vigencia con Cajas */}
+        {/* Campo 8: Vigencia con Cajas */}
         <View style={{ ...s.row, alignItems: "flex-end", marginTop: 5 }}>
-          <Text style={s.numLabel}>9.</Text>
+          <Text style={s.numLabel}>8.</Text>
           <Text style={s.marginLabel}>Vigencia (inicio-término):</Text>
           <View style={s.vigenciaBoxWrap}>
             <View style={s.vigCellColumn}><Text style={s.vigCellLabel}>Día</Text><View style={s.vigCellBorder}><Text>{inD.d}</Text></View></View>
@@ -451,89 +445,71 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         </View>
 
-        {/* Campo 10: Importe */}
+        {/* Campo 9: Importe Bruto */}
         <View style={{ ...s.row, marginTop: 5 }}>
-          <Text style={s.numLabel}>10.</Text>
-          <Text style={s.marginLabel}>Importe Bruto (mensual/por día/por hora):</Text>
+          <Text style={s.numLabel}>9.</Text>
+          <Text style={s.marginLabel}>Importe Bruto:</Text>
           <Text style={s.valueText}>{data.importeBruto}</Text>
         </View>
 
-        {/* Campo 11: Renovación Sí/No */}
-        <View style={{ ...s.row, alignItems: "center", marginTop: 5 }}>
-          <Text style={s.numLabel}>11.</Text>
-          <Text style={s.marginLabel}>Renovación de Dictamen/Opinión:</Text>
-          <Text style={{ marginLeft: 30, marginRight: 5 }}>Sí</Text>
-          <View style={s.checkboxRect}>{data.esRenovacion && <Text style={s.checkText}>X</Text>}</View>
-          <Text style={{ marginLeft: 20, marginRight: 5 }}>No</Text>
-          <View style={s.checkboxRect}>{!data.esRenovacion && <Text style={s.checkText}>X</Text>}</View>
-        </View>
-
-        {/* ── Tabla de Renovación (fondo gris como en la captura) ── */}
-        <View style={s.renovContainer}>
-          <View style={s.renovHeader}>
-            <Text style={s.renovHeaderText}>Renovación de la dictaminación (en caso de aplicar)</Text>
-          </View>
-          {/* Fila 1: Folio anterior + Fecha emisión */}
-          <View style={s.renovRow}>
-            <Text style={{ fontSize: 8 }}>Folio del Dictamen/Opinión anterior:</Text>
-            <Text style={s.renovFieldLine}>{data.esRenovacion ? data.folioAnterior : ""}</Text>
-            <Text style={{ fontSize: 8, marginLeft: 10 }}>Fecha de emisión:</Text>
-            <Text style={s.renovFieldLine}></Text>
-          </View>
-          {/* Fila 2: Vigencia anterior + Fecha vencimiento */}
-          <View style={s.renovRow}>
-            <Text style={{ fontSize: 8 }}>Vigencia del Dictamen/Opinión anterior:</Text>
-            <Text style={s.renovFieldLine}></Text>
-            <Text style={{ fontSize: 8, marginLeft: 10 }}>Fecha de vencimiento:</Text>
-            <Text style={s.renovFieldLine}></Text>
-          </View>
-          {/* Fila 3: Checkbox mismas condiciones */}
-          <View style={{ ...s.renovRow, marginTop: 4 }}>
-            <View style={s.checkboxSquare}></View>
-            <Text style={{ fontSize: 8, flex: 1 }}>
-              Se solicita la renovación bajo las mismas condiciones técnicas y funcionales previamente solicitadas:
-            </Text>
-          </View>
-          {/* Fila 4: Checkbox modificaciones */}
-          <View style={s.renovRow}>
-            <View style={s.checkboxSquare}></View>
-            <Text style={{ fontSize: 8, flex: 1 }}>
-              Se solicita la renovación con modificaciones (Especificar):
-            </Text>
-          </View>
+        {/* Campo 10: Tipo de Pago */}
+        <View style={{ ...s.row, marginTop: 5 }}>
+          <Text style={s.numLabel}>10.</Text>
+          <Text style={s.marginLabel}>Tipo de Pago:</Text>
+          <Text style={s.valueText}>{data.tipoPago}</Text>
         </View>
 
         {/* ══════════════════════════════════════════════
            I.1 OBJETO DE LA CONTRATACIÓN
            ══════════════════════════════════════════════ */}
-        <Text style={{ ...s.sectionTitle, marginTop: 15 }}>I.1.    OBJETO DE LA CONTRATACIÓN:</Text>
-        <Text style={{ textAlign: "justify", lineHeight: 1.3, marginBottom: 10, marginTop: 5 }}>{data.objetoContratacion}</Text>
+        <View wrap={false}>
+          <Text style={{ ...s.sectionTitle, marginTop: 15 }}>I.1.    OBJETO DE LA CONTRATACIÓN:</Text>
+          <Text style={{ textAlign: "justify", lineHeight: 1.3, marginBottom: 10, marginTop: 5 }}>{data.objetoContratacion}</Text>
+        </View>
 
         {/* ══════════════════════════════════════════════
            PÁGINA 2: ACTIVIDADES + RESPONSABILIDADES + PERFIL
            ══════════════════════════════════════════════ */}
 
         {/* I.2 ACTIVIDADES — mapeado dinámico con .map() */}
-        <Text style={s.sectionTitle}>I.2.    ACTIVIDADES A REALIZAR POR EL PRESTADOR DE SERVICIOS:</Text>
-        {data.actividades?.map((act, index) => (
-          <View key={`act-${index}`} style={s.listItemContainer} wrap={false}>
-            <Text style={s.listNum}>{index + 1}.</Text>
+        <View wrap={false}>
+          <Text style={s.sectionTitle}>I.2.    ACTIVIDADES A REALIZAR POR EL PRESTADOR DE SERVICIOS:</Text>
+          {data.actividades?.slice(0, 1).map((act, index) => (
+            <View key={`act-${index}`} style={s.listItemContainer}>
+              <Text style={s.listNum}>{index + 1}.</Text>
+              <Text style={s.listTextWrap}>{act}</Text>
+            </View>
+          ))}
+        </View>
+        {data.actividades?.slice(1).map((act, index) => (
+          <View key={`act-${index + 1}`} style={s.listItemContainer} wrap={false}>
+            <Text style={s.listNum}>{index + 2}.</Text>
             <Text style={s.listTextWrap}>{act}</Text>
           </View>
         ))}
 
         {/* I.3 RESPONSABILIDADES — mapeado dinámico con .map() */}
-        <Text style={s.sectionTitle}>I.3.    RESPONSABILIDADES A CUMPLIR POR EL PRESTADOR DE SERVICIOS:</Text>
-        {data.responsabilidades?.map((resp, index) => (
-          <View key={`resp-${index}`} style={s.listItemContainer} wrap={false}>
-            <Text style={s.listNum}>{index + 1}.</Text>
+        <View wrap={false}>
+          <Text style={s.sectionTitle}>I.3.    RESPONSABILIDADES A CUMPLIR POR EL PRESTADOR DE SERVICIOS:</Text>
+          {data.responsabilidades?.slice(0, 1).map((resp, index) => (
+            <View key={`resp-${index}`} style={s.listItemContainer}>
+              <Text style={s.listNum}>{index + 1}.</Text>
+              <Text style={s.listTextWrap}>{resp}</Text>
+            </View>
+          ))}
+        </View>
+        {data.responsabilidades?.slice(1).map((resp, index) => (
+          <View key={`resp-${index + 1}`} style={s.listItemContainer} wrap={false}>
+            <Text style={s.listNum}>{index + 2}.</Text>
             <Text style={s.listTextWrap}>{resp}</Text>
           </View>
         ))}
 
         {/* ── II. PERFIL ── */}
-        <Text style={{ ...s.sectionTitle, marginTop: 15 }}>II.  PERFIL A CUBRIR POR EL PRESTADOR DE SERVICIOS:</Text>
-        <Text style={{ marginBottom: 5, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia)</Text>
+        <View wrap={false}>
+          <Text style={{ ...s.sectionTitle, marginTop: 15 }}>II.  PERFIL A CUBRIR POR EL PRESTADOR DE SERVICIOS:</Text>
+          <Text style={{ marginBottom: 5, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia)</Text>
+        </View>
 
         {/* II.1 Escolaridad — mapeado dinámico */}
         <Text style={s.bold}>II. 1.  ESCOLARIDAD MÍNIMA:</Text>

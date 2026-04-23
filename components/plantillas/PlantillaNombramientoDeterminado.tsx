@@ -24,6 +24,7 @@ export interface JustificacionNombramientoData {
   puestoJefeInmediato: string;
   numeroPersonas: number;
   importeNetoMensual: string;
+  tipoPago: string;
   equivalenciaNivel: string;
   vigenciaInicio: string;
   vigenciaTermino: string;
@@ -92,7 +93,7 @@ const s = StyleSheet.create({
     display: 'flex',
     alignItems: "center",
     justifyContent: "center",
-    opacity: 0.80,
+    opacity: 0.15,
     zIndex: -1,
   },
   watermarkImage: { 
@@ -428,74 +429,74 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
         <Text style={s.sectionTitle}>I.    DATOS GENERALES:</Text>
 
-        {/* Campo 1 */}
+        {/* Campo 1: Secretaría */}
         <View style={s.row}>
           <Text style={s.numLabel}>1.</Text>
-          <Text style={s.marginLabel}>Oficio de solicitud:</Text>
-          <Text style={s.valueText}>{data.oficioSolicitud}</Text>
-        </View>
-
-        {/* Campo 2 */}
-        <View style={s.row}>
-          <Text style={s.numLabel}>2.</Text>
           <Text style={s.marginLabel}>Secretaría/Subsecretaría/Dependencia/Organismo Auxiliar:</Text>
           <Text style={s.valueText}>{data.secretaria}</Text>
         </View>
 
-        {/* Campo 3 */}
+        {/* Campo 2: Unidad Administrativa */}
         <View style={s.row}>
-          <Text style={s.numLabel}>3.</Text>
+          <Text style={s.numLabel}>2.</Text>
           <Text style={s.marginLabel}>Unidad Administrativa de adscripción:</Text>
           <Text style={s.valueText}>{data.unidadAdministrativa}</Text>
         </View>
 
-        {/* Campo 4 */}
+        {/* Campo 3: Unidad Responsable */}
         <View style={s.row}>
-          <Text style={s.numLabel}>4.</Text>
+          <Text style={s.numLabel}>3.</Text>
           <Text style={s.marginLabel}>Unidad Responsable del Gasto:</Text>
           <Text style={s.valueText}>{data.unidadResponsable}</Text>
         </View>
 
-        {/* Campo 5 */}
+        {/* Campo 4: Programa */}
         <View style={s.row}>
-          <Text style={s.numLabel}>5.</Text>
+          <Text style={s.numLabel}>4.</Text>
           <Text style={s.marginLabel}>Programa o Proyecto:</Text>
           <Text style={s.valueText}>{data.programaProyecto}</Text>
         </View>
 
-        {/* Campo 6 */}
+        {/* Campo 5: Denominación */}
         <View style={s.row}>
-          <Text style={s.numLabel}>6.</Text>
+          <Text style={s.numLabel}>5.</Text>
           <Text style={s.marginLabel}>Denominación del Nombramiento:</Text>
           <Text style={s.valueText}>{data.denominacionNombramiento}</Text>
         </View>
 
-        {/* Campo 7 */}
+        {/* Campo 6: Tipo de Actividad */}
         <View style={s.row}>
-          <Text style={s.numLabel}>7.</Text>
+          <Text style={s.numLabel}>6.</Text>
           <Text style={s.marginLabel}>Tipo de Actividad:</Text>
           <Text style={s.valueText}>{data.tipoActividad}</Text>
         </View>
 
-        {/* Campo 8 */}
+        {/* Campo 7: Puesto del Jefe Inmediato */}
         <View style={s.row}>
-          <Text style={s.numLabel}>8.</Text>
+          <Text style={s.numLabel}>7.</Text>
           <Text style={s.marginLabel}>Puesto del Jefe Inmediato:</Text>
           <Text style={s.valueText}>{data.puestoJefeInmediato}</Text>
         </View>
 
-        {/* Campo 9 */}
+        {/* Campo 8: Número de personas */}
         <View style={s.row}>
-          <Text style={s.numLabel}>9.</Text>
+          <Text style={s.numLabel}>8.</Text>
           <Text style={s.marginLabel}>Número de personas a contratar:</Text>
           <Text style={s.valueText}>{data.numeroPersonas || ""}</Text>
         </View>
         
-        {/* Campo 10 */}
+        {/* Campo 9: Importe Neto */}
+        <View style={s.row}>
+          <Text style={s.numLabel}>9.</Text>
+          <Text style={s.marginLabel}>Importe Neto:</Text>
+          <Text style={s.valueText}>{data.importeNetoMensual}</Text>
+        </View>
+
+        {/* Campo 10: Tipo de Pago */}
         <View style={s.row}>
           <Text style={s.numLabel}>10.</Text>
-          <Text style={s.marginLabel}>Importe Neto Mensual:</Text>
-          <Text style={s.valueText}>{data.importeNetoMensual}</Text>
+          <Text style={s.marginLabel}>Tipo de Pago:</Text>
+          <Text style={s.valueText}>{data.tipoPago}</Text>
         </View>
 
         {/* Campo 11 - Equivalencia (Dos líneas) */}
@@ -523,162 +524,151 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         </View>
 
-        {/* Campo 13: Clave Presupuestal */}
-        <View style={{ ...s.row, marginTop: 5 }}>
-          <Text style={s.numLabel}>13.</Text>
-          <Text style={s.marginLabel}>Clave Presupuestal:</Text>
-          <Text style={s.valueText}>{data.clavePresupuestal}</Text>
-        </View>
-
-        {/* Campo 14: Renovación Sí/No */}
-        <View style={{ ...s.row, alignItems: "center", marginTop: 5 }}>
-          <Text style={s.numLabel}>14.</Text>
-          <Text style={s.marginLabel}>Renovación de Dictamen /Opinión:</Text>
-          <Text style={{ marginLeft: 30, marginRight: 5 }}>Si</Text>
-          <View style={s.checkboxRect}>{data.renovacion && <Text style={s.checkText}>X</Text>}</View>
-          <Text style={{ marginLeft: 20, marginRight: 5 }}>No</Text>
-          <View style={s.checkboxRect}>{!data.renovacion && <Text style={s.checkText}>X</Text>}</View>
-        </View>
-
-        {/* ── Tabla de Renovación (fondo gris) ── */}
-        <View style={s.renovContainer} wrap={false}>
-          <View style={s.renovHeader}>
-            <Text style={s.renovHeaderText}>Renovación de la dictaminación (en caso de aplicar)</Text>
-          </View>
-          <View style={s.renovRow}>
-            <Text style={{ fontSize: 8 }}>Folio del Dictamen/Opinión anterior:</Text>
-            <Text style={s.renovFieldLine}>{data.renovacion ? data.folioAnterior : ""}</Text>
-            <Text style={{ fontSize: 8, marginLeft: 10 }}>Fecha de emisión:</Text>
-            <Text style={s.renovFieldLine}></Text>
-          </View>
-          <View style={s.renovRow}>
-            <Text style={{ fontSize: 8 }}>Vigencia del Dictamen/Opinión anterior:</Text>
-            <Text style={s.renovFieldLine}></Text>
-            <Text style={{ fontSize: 8, marginLeft: 10 }}>Fecha de vencimiento:</Text>
-            <Text style={s.renovFieldLine}></Text>
-          </View>
-          <View style={{ ...s.renovRow, marginTop: 4 }}>
-            <View style={s.checkboxSquare}></View>
-            <Text style={{ fontSize: 8, flex: 1 }}>
-              Se solicita la renovación bajo las mismas condiciones técnicas y funcionales previamente solicitadas:
-            </Text>
-          </View>
-          <View style={s.renovRow}>
-            <View style={s.checkboxSquare}></View>
-            <Text style={{ fontSize: 8, flex: 1 }}>
-              Se solicita la renovación con modificaciones (Especificar):
-            </Text>
-          </View>
-          <View style={{...s.renovRow, marginTop: 4, marginBottom: 4}}>
-            <Text style={s.renovFieldLine}></Text>
-          </View>
-        </View>
 
         {/* I.1 OBJETO DEL NOMBRAMIENTO POR TIEMPO DETERMINADO */}
-        <Text style={{ ...s.sectionTitle, marginTop: 15 }}>I.1    OBJETO DEL NOMBRAMIENTO POR TIEMPO DETERMINADO:</Text>
-        <Text style={{ textAlign: "justify", lineHeight: 1.3, marginBottom: 10, marginTop: 5 }} wrap={true}>
-          {data.objetoNombramiento}
-        </Text>
+        <View wrap={false}>
+          <Text style={{ ...s.sectionTitle, marginTop: 15 }}>I.1    OBJETO DEL NOMBRAMIENTO POR TIEMPO DETERMINADO:</Text>
+          <Text style={{ textAlign: "justify", lineHeight: 1.3, marginBottom: 10, marginTop: 5 }} wrap={true}>
+            {data.objetoNombramiento}
+          </Text>
+        </View>
 
         {/* I.2 FUNCIONES PRINCIPALES */}
-        <Text style={s.sectionTitle}>I.2    FUNCIONES PRINCIPALES:</Text>
-        {data.funcionesPrincipales?.map((act, index) => (
-          <View key={`fun-${index}`} style={s.listItemContainer} wrap={false}>
-            <Text style={s.listNum}>{index + 1}.</Text>
+        <View wrap={false}>
+          <Text style={s.sectionTitle}>I.2    FUNCIONES PRINCIPALES:</Text>
+          {data.funcionesPrincipales?.slice(0, 1).map((act, index) => (
+            <View key={`fun-${index}`} style={s.listItemContainer}>
+              <Text style={s.listNum}>{index + 1}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{act}</Text>
+            </View>
+          ))}
+        </View>
+        {data.funcionesPrincipales?.slice(1).map((act, index) => (
+          <View key={`fun-${index + 1}`} style={s.listItemContainer} wrap={false}>
+            <Text style={s.listNum}>{index + 2}.</Text>
             <Text style={s.listTextWrap} wrap={true}>{act}</Text>
           </View>
         ))}
 
         {/* I.3 RESPONSABILIDADES */}
-        <Text style={s.sectionTitle}>I.3    RESPONSABILIDADES:</Text>
-        {data.responsabilidades?.map((resp, index) => (
-          <View key={`res-${index}`} style={s.listItemContainer} wrap={false}>
-            <Text style={s.listNum}>{index + 1}.</Text>
+        <View wrap={false}>
+          <Text style={s.sectionTitle}>I.3    RESPONSABILIDADES:</Text>
+          {data.responsabilidades?.slice(0, 1).map((resp, index) => (
+            <View key={`res-${index}`} style={s.listItemContainer}>
+              <Text style={s.listNum}>{index + 1}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{resp}</Text>
+            </View>
+          ))}
+        </View>
+        {data.responsabilidades?.slice(1).map((resp, index) => (
+          <View key={`res-${index + 1}`} style={s.listItemContainer} wrap={false}>
+            <Text style={s.listNum}>{index + 2}.</Text>
             <Text style={s.listTextWrap} wrap={true}>{resp}</Text>
           </View>
         ))}
 
         {/* I.4 MARCO NORMATIVO, LEGAL Y ADMINISTRATIVO APLICABLE */}
-        <Text style={s.sectionTitle}>I.4    MARCO NORMATIVO, LEGAL Y ADMINISTRATIVO APLICABLE:</Text>
-        {data.marcoNormativo?.map((leg, index) => (
-          <View key={`leg-${index}`} style={s.listItemContainer} wrap={false}>
-            <Text style={s.listNum}>{index + 1}.</Text>
-            <Text style={s.listTextWrap} wrap={true}>{leg}</Text>
-          </View>
-        ))}
+        <View style={{ marginTop: 10 }} wrap={false}>
+          <Text style={s.sectionTitle}>I.4    MARCO NORMATIVO, LEGAL Y ADMINISTRATIVO APLICABLE:</Text>
+          {data.marcoNormativo?.slice(0, 1).map((leg, index) => (
+            <View key={`leg-${index}`} style={s.listItemContainer}>
+              <Text style={s.listNum}>{index + 1}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{leg}</Text>
+            </View>
+          ))}
+          {data.marcoNormativo?.slice(1).map((leg, index) => (
+            <View key={`leg-${index + 1}`} style={s.listItemContainer}>
+              <Text style={s.listNum}>{index + 2}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{leg}</Text>
+            </View>
+          ))}
 
-        {/* I.5 CONDICIONES Y RIESGOS DE TRABAJO */}
-        <Text style={{ ...s.sectionTitle, marginTop: 10 }}>I.5    CONDICIONES Y RIESGOS DE TRABAJO:</Text>
-        
-        {/* Tabla Condiciones (Wrap false para evitar cortes de tabla) */}
-        <View style={s.tableBorder} wrap={false}>
-          <View style={{ ...s.tableHeader, backgroundColor: "#fff" }}>
-            <Text style={s.tableColHeadText}>DISPONIBILIDAD DE:</Text>
-          </View>
-          <View style={s.tableRowLast}>
-            <View style={{ ...s.tableCol, width: "33%", flexDirection: "row", alignItems: "center" }}>
-              <Text style={{ fontSize: 8 }}>Cambio de domicilio</Text>
-              <Text style={{ fontSize: 8, marginLeft: 5 }}>Sí</Text>
-              <View style={s.checkboxRect}>{data.condiciones?.cambioDomicilio && <Text style={s.checkText}>X</Text>}</View>
-              <Text style={{ fontSize: 8, marginLeft: 5 }}>No</Text>
-              <View style={s.checkboxRect}>{!data.condiciones?.cambioDomicilio && <Text style={s.checkText}>X</Text>}</View>
-            </View>
-            <View style={{ ...s.tableCol, width: "33%", flexDirection: "row", alignItems: "center" }}>
-              <Text style={{ fontSize: 8 }}>Horario</Text>
-              <Text style={{ fontSize: 8, marginLeft: 5 }}>Sí</Text>
-              <View style={s.checkboxRect}>{data.condiciones?.horario && <Text style={s.checkText}>X</Text>}</View>
-              <Text style={{ fontSize: 8, marginLeft: 5 }}>No</Text>
-              <View style={s.checkboxRect}>{!data.condiciones?.horario && <Text style={s.checkText}>X</Text>}</View>
-            </View>
-            <View style={{ ...s.tableColNoBorder, width: "34%", flexDirection: "row", alignItems: "center" }}>
-              <Text style={{ fontSize: 8 }}>Viajar</Text>
-              <Text style={{ fontSize: 8, marginLeft: 5 }}>Sí</Text>
-              <View style={s.checkboxRect}>{data.condiciones?.viajar && <Text style={s.checkText}>X</Text>}</View>
-              <Text style={{ fontSize: 8, marginLeft: 5 }}>No</Text>
-              <View style={s.checkboxRect}>{!data.condiciones?.viajar && <Text style={s.checkText}>X</Text>}</View>
+          {/* Bloque de firma CENTRADO debajo del texto */}
+          <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
+            <View style={{ width: "45%", alignItems: "center" }}>
+              <Text style={{ fontSize: 8, marginBottom: 35, fontFamily: "Helvetica-Bold" }}>Vo. Bo. Marco Normativo</Text>
+              <View style={{ borderTopWidth: 1, borderTopColor: "#000", width: "100%", marginBottom: 4 }}></View>
+              <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Titular de la Unidad de Enlace</Text>
+              <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Jurídico o Equivalente</Text>
             </View>
           </View>
         </View>
 
-        <View style={s.tableBorder} wrap={false}>
-          <View style={{ ...s.tableHeader, backgroundColor: "#fff" }}>
-            <Text style={s.tableColHeadText}>EXPOSICIÓN A RIESGOS DE TRABAJO:</Text>
-          </View>
-          <View style={s.tableRow}>
-            <View style={{ ...s.tableCol, width: "25%" }}></View>
-            <View style={{ ...s.tableColHead, width: "75%", borderRightWidth: 0, flexDirection: "row", justifyContent: "space-around" }}>
-              <Text style={{ fontSize: 8 }}>Frecuencia</Text>
+        <View wrap={false}>
+          {/* I.5 CONDICIONES Y RIESGOS DE TRABAJO */}
+          <Text style={{ ...s.sectionTitle, marginTop: 10 }}>I.5    CONDICIONES Y RIESGOS DE TRABAJO:</Text>
+          
+          {/* Tabla Condiciones */}
+          <View style={s.tableBorder}>
+            <View style={{ ...s.tableHeader, backgroundColor: "#fff" }}>
+              <Text style={s.tableColHeadText}>DISPONIBILIDAD DE:</Text>
+            </View>
+            <View style={s.tableRowLast}>
+              <View style={{ ...s.tableCol, width: "33%", flexDirection: "row", alignItems: "center" }}>
+                <Text style={{ fontSize: 8 }}>Cambio de domicilio</Text>
+                <Text style={{ fontSize: 8, marginLeft: 5 }}>Sí</Text>
+                <View style={s.checkboxRect}>{data.condiciones?.cambioDomicilio && <Text style={s.checkText}>X</Text>}</View>
+                <Text style={{ fontSize: 8, marginLeft: 5 }}>No</Text>
+                <View style={s.checkboxRect}>{!data.condiciones?.cambioDomicilio && <Text style={s.checkText}>X</Text>}</View>
+              </View>
+              <View style={{ ...s.tableCol, width: "33%", flexDirection: "row", alignItems: "center" }}>
+                <Text style={{ fontSize: 8 }}>Horario</Text>
+                <Text style={{ fontSize: 8, marginLeft: 5 }}>Sí</Text>
+                <View style={s.checkboxRect}>{data.condiciones?.horario && <Text style={s.checkText}>X</Text>}</View>
+                <Text style={{ fontSize: 8, marginLeft: 5 }}>No</Text>
+                <View style={s.checkboxRect}>{!data.condiciones?.horario && <Text style={s.checkText}>X</Text>}</View>
+              </View>
+              <View style={{ ...s.tableColNoBorder, width: "34%", flexDirection: "row", alignItems: "center" }}>
+                <Text style={{ fontSize: 8 }}>Viajar</Text>
+                <Text style={{ fontSize: 8, marginLeft: 5 }}>Sí</Text>
+                <View style={s.checkboxRect}>{data.condiciones?.viajar && <Text style={s.checkText}>X</Text>}</View>
+                <Text style={{ fontSize: 8, marginLeft: 5 }}>No</Text>
+                <View style={s.checkboxRect}>{!data.condiciones?.viajar && <Text style={s.checkText}>X</Text>}</View>
+              </View>
             </View>
           </View>
-          <View style={s.tableRow}>
-            <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", textAlign: "center" }}>Lesiones</Text></View>
-            <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, textAlign: "center" }}>Bajo</Text></View>
-            <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, textAlign: "center" }}>Medio</Text></View>
-            <View style={{ ...s.tableColNoBorder, width: "25%" }}><Text style={{ fontSize: 8, textAlign: "center" }}>Alto</Text></View>
-          </View>
-          <View style={s.tableRow}>
-            <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8 }}>Caidas</Text></View>
-            <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.caidas === 'Bajo' ? 'X' : ''}</Text></View>
-            <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.caidas === 'Medio' ? 'X' : ''}</Text></View>
-            <View style={{ ...s.tableColNoBorder, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.caidas === 'Alto' ? 'X' : ''}</Text></View>
-          </View>
-          <View style={s.tableRow}>
-            <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8 }}>Mutilaciones</Text></View>
-            <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.mutilaciones === 'Bajo' ? 'X' : ''}</Text></View>
-            <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.mutilaciones === 'Medio' ? 'X' : ''}</Text></View>
-            <View style={{ ...s.tableColNoBorder, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.mutilaciones === 'Alto' ? 'X' : ''}</Text></View>
-          </View>
-          <View style={s.tableRow}>
-            <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8 }}>Golpes</Text></View>
-            <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.golpes === 'Bajo' ? 'X' : ''}</Text></View>
-            <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.golpes === 'Medio' ? 'X' : ''}</Text></View>
-            <View style={{ ...s.tableColNoBorder, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.golpes === 'Alto' ? 'X' : ''}</Text></View>
-          </View>
-          <View style={s.tableRowLast}>
-            <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8 }}>Otros</Text></View>
-            <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.otros === 'Bajo' ? 'X' : ''}</Text></View>
-            <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.otros === 'Medio' ? 'X' : ''}</Text></View>
-            <View style={{ ...s.tableColNoBorder, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.otros === 'Alto' ? 'X' : ''}</Text></View>
+
+          {/* Tabla Exposición a Riesgos */}
+          <View style={[s.tableBorder, { marginTop: 5 }]}>
+            <View style={{ ...s.tableHeader, backgroundColor: "#fff" }}>
+              <Text style={s.tableColHeadText}>EXPOSICIÓN A RIESGOS DE TRABAJO:</Text>
+            </View>
+            <View style={s.tableRow}>
+              <View style={{ ...s.tableCol, width: "25%" }}></View>
+              <View style={{ ...s.tableColHead, width: "75%", borderRightWidth: 0, flexDirection: "row", justifyContent: "space-around" }}>
+                <Text style={{ fontSize: 8 }}>Frecuencia</Text>
+              </View>
+            </View>
+            <View style={s.tableRow}>
+              <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", textAlign: "center" }}>Lesiones</Text></View>
+              <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, textAlign: "center" }}>Bajo</Text></View>
+              <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, textAlign: "center" }}>Medio</Text></View>
+              <View style={{ ...s.tableColNoBorder, width: "25%" }}><Text style={{ fontSize: 8, textAlign: "center" }}>Alto</Text></View>
+            </View>
+            <View style={s.tableRow}>
+              <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8 }}>Caidas</Text></View>
+              <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.caidas === 'Bajo' ? 'X' : ''}</Text></View>
+              <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.caidas === 'Medio' ? 'X' : ''}</Text></View>
+              <View style={{ ...s.tableColNoBorder, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.caidas === 'Alto' ? 'X' : ''}</Text></View>
+            </View>
+            <View style={s.tableRow}>
+              <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8 }}>Mutilaciones</Text></View>
+              <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.mutilaciones === 'Bajo' ? 'X' : ''}</Text></View>
+              <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.mutilaciones === 'Medio' ? 'X' : ''}</Text></View>
+              <View style={{ ...s.tableColNoBorder, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.mutilaciones === 'Alto' ? 'X' : ''}</Text></View>
+            </View>
+            <View style={s.tableRow}>
+              <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8 }}>Golpes</Text></View>
+              <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.golpes === 'Bajo' ? 'X' : ''}</Text></View>
+              <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.golpes === 'Medio' ? 'X' : ''}</Text></View>
+              <View style={{ ...s.tableColNoBorder, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.golpes === 'Alto' ? 'X' : ''}</Text></View>
+            </View>
+            <View style={s.tableRowLast}>
+              <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8 }}>Otros</Text></View>
+              <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.otros === 'Bajo' ? 'X' : ''}</Text></View>
+              <View style={{ ...s.tableCol, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.otros === 'Medio' ? 'X' : ''}</Text></View>
+              <View style={{ ...s.tableColNoBorder, width: "25%", alignItems: "center" }}><Text>{data.riesgos?.otros === 'Alto' ? 'X' : ''}</Text></View>
+            </View>
           </View>
         </View>
 

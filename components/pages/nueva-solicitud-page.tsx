@@ -66,7 +66,6 @@ export type FormularioData = {
   condicionCambioDomicilio?: boolean
   condicionHorario?:         boolean
   condicionViajar?:          boolean
-  resguardoActivos?:         boolean
 }
 
 // Columnas de Excel
@@ -2026,12 +2025,12 @@ function FormularioNombramiento({
           .filter(([, v]) => v)
           .map(([k, v]) => `${formatKey(k)}: ${v.charAt(0).toUpperCase() + v.slice(1)}`),
       ],
-      resguardoActivos: resguardoActivos === "si",
-      escolaridad: escolaridad.join(", "),
-      compAdm:     compAdm.join("\n"),
-      compTec:     compTec.join("\n"),
-      compSoc:     compSoc.join("\n"),
-      valores:     valores.join("\n"),
+      resguardoActivos: resguardoActivos, 
+      escolaridad: escolaridad.join(", "), 
+      compAdm:     compAdm.join("\n"), 
+      compTec:     compTec.join("\n"), 
+      compSoc:     compSoc.join("\n"), 
+      valores:     valores.join("\n"), 
       areasExp:    areasExp.join("\n"),
       riesgoCaidas: riesgos.caídas ?? riesgos.caidas ?? "",
       riesgoMutilaciones: riesgos.mutilaciones ?? "",
