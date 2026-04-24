@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { AppSidebar, type PageKey } from "@/components/app-sidebar"
 import { AppHeader } from "@/components/app-header"
@@ -16,6 +16,10 @@ import { UsuariosPage } from "@/components/pages/usuarios-page"
 import { PerfilPage } from "@/components/pages/perfil-page"
 import { ValidacionUefaPage } from "@/components/pages/validacion-uefa-page"
 import { ConfiguracionPage } from "@/components/pages/configuracion-page"
+import { ProgresoFirmadoPage } from "@/components/pages/progreso-firmado-page"
+
+const PAGE_KEY = "sdtf_current_page"
+const SIDEBAR_KEY = "sdtf_sidebar_collapsed"
 
 export function AppShell() {
   const { user } = useAuth()
@@ -24,6 +28,25 @@ export function AppShell() {
   const [reviewSolicitudId, setReviewSolicitudId] = useState<string | null>(null)
   const [reviewFiltro, setReviewFiltro] = useState<1 | 2 | 3>(1)
   const [editSolicitud, setEditSolicitud] = useState<EditSolicitudPayload | undefined>(undefined)
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    const storedPage = localStorage.getItem(PAGE_KEY) as PageKey | null
+    if (storedPage && storedPage !== "revision-do") setCurrentPage(storedPage)
+    const storedSidebar = localStorage.getItem(SIDEBAR_KEY)
+    if (storedSidebar === "true") setSidebarCollapsed(true)
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) return
+    localStorage.setItem(PAGE_KEY, currentPage)
+  }, [currentPage, hydrated])
+
+  useEffect(() => {
+    if (!hydrated) return
+    localStorage.setItem(SIDEBAR_KEY, String(sidebarCollapsed))
+  }, [sidebarCollapsed, hydrated])
 
   const handleNavigate = (page: PageKey) => {
     if (page !== "nueva-solicitud") setEditSolicitud(undefined)
@@ -62,6 +85,8 @@ export function AppShell() {
         return <BandejaFiltroPage filtro={2} onOpenReview={handleOpenReview} />
       case "bandeja-filtro3":
         return <BandejaFiltroPage filtro={3} onOpenReview={handleOpenReview} />
+      case "progreso-firmado":
+        return <ProgresoFirmadoPage />
       case "revision-do":
         return reviewSolicitudId ? (
           <RevisionDOPage solicitudId={reviewSolicitudId} filtro={reviewFiltro} onBack={handleBackFromReview} />
@@ -85,10 +110,15 @@ export function AppShell() {
     }
   }
 
+  const sidebarCurrentPage: PageKey =
+    currentPage === "revision-do"
+      ? (`bandeja-filtro${reviewFiltro}` as PageKey)
+      : currentPage
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <AppSidebar
-        currentPage={currentPage}
+        currentPage={sidebarCurrentPage}
         onNavigate={handleNavigate}
         collapsed={sidebarCollapsed}
         onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}

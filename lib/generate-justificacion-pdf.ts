@@ -97,9 +97,26 @@ function bulletList(doc: jsPDF, y: number, items: string[]): number {
 }
 
 // ── Main generator ──
-export function generateJustificacionPDF(data: JustificacionData) {
+export function buildJustificacionPDFDoc(data: JustificacionData) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" })
   const totalPages = 3
+  return _fillDoc(doc, data, totalPages)
+}
+
+export function generateJustificacionPDFBase64(data: JustificacionData): string {
+  const doc = buildJustificacionPDFDoc(data)
+  const out = doc.output("datauristring")
+  // "data:application/pdf;filename=generated.pdf;base64,XXXX" → extract XXXX
+  const idx = out.indexOf("base64,")
+  return idx >= 0 ? out.slice(idx + "base64,".length) : out
+}
+
+export function generateJustificacionPDF(data: JustificacionData) {
+  const doc = buildJustificacionPDFDoc(data)
+  doc.save(`Justificacion_${data.folio}.pdf`)
+}
+
+function _fillDoc(doc: jsPDF, data: JustificacionData, totalPages: number) {
 
   // ═══════════════════ PAGE 1 ═══════════════════
   drawHeader(doc, 1, totalPages)
@@ -276,6 +293,5 @@ export function generateJustificacionPDF(data: JustificacionData) {
     doc.text(`Fecha: ${new Date().toLocaleDateString("es-MX")}`, sigCenterX, y + 10, { align: "center" })
   }
 
-  // Save
-  doc.save(`Justificacion_${data.folio}.pdf`)
+  return doc
 }

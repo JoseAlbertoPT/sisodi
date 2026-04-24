@@ -1069,7 +1069,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
       : (checklistStats.allDone && checklistStats.hasNo && checklistStats.noWithoutObs === 0)
   const observarBlocked = false
 
-  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string) => {
+  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string, modalidadFirmaValue?: "electronica" | "autografa") => {
     if (!solicitud) return
     setGuardando(true)
     try {
@@ -1083,6 +1083,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
           usuarioId:     (user as any)?.id ?? "",
           observaciones: observaciones ? [observaciones] : undefined,
           ...(revisorId ? { revisorId } : {}),
+          ...(modalidadFirmaValue ? { modalidadFirma: modalidadFirmaValue } : {}),
         }),
       })
       const json = await res.json()
@@ -1104,7 +1105,17 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   , [solicitud])
 
   const handleAprobar = async (revisorId?: string) => {
-    if (filtro === 3) { setShowEmitConfirm(true); return }
+    if (filtro === 3) {
+      // Si la modalidad ya fue definida (por UEFA o una aprobación previa del Emisor),
+      // no preguntamos de nuevo — aprobamos directo con esa modalidad.
+      const modalidadExistente = (solicitud as any)?.modalidadFirma as "electronica" | "autografa" | null | undefined
+      if (modalidadExistente === "electronica" || modalidadExistente === "autografa") {
+        const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadExistente)
+        if (nuevoEstado) setShowConfirmacion("Solicitud aprobada.")
+        return
+      }
+      setShowEmitConfirm(true); return
+    }
     if (filtro === 2 && !yaEstuvoEnRevisor && !revisorId) {
       setShowAprobarAsignarModal(true)
       return
@@ -1117,7 +1128,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
 
   const handleConfirmEmit = async () => {
     setShowEmitConfirm(false)
-    const nuevoEstado = await patchEstado("aprobar")
+    const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
     if (nuevoEstado) {
       setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
       setShowConfirmacion("Solicitud aprobada.")
@@ -1274,13 +1285,32 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                 <Shield className="h-7 w-7 text-primary" />
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-semibold text-card-foreground">Confirmación</h3>
-                <p className="text-sm text-muted-foreground mt-2">¿Estas seguro de Aprobar ?</p>
+                <h3 className="text-lg font-semibold text-card-foreground">Modalidad de Firma</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Selecciona cómo se firmará el dictamen. Esta decisión aplicará a todas las firmas del flujo; no se puede mezclar electrónica y autógrafa.
+                </p>
               </div>
+              <RadioGroup value={modalidadFirma}
+                onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } }}
+                className="flex flex-col gap-3 w-full">
+                {[
+                  { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
+                  { value: "autografa",   label: "Firma Autógrafa",   desc: "Descargue, firme y suba el documento" },
+                ].map(opt => (
+                  <label key={opt.value} htmlFor={`confirm-firma-${opt.value}`}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-3 transition-colors ${modalidadFirma === opt.value ? "border-secondary bg-secondary/5" : "border-border hover:border-secondary/50"}`}>
+                    <RadioGroupItem value={opt.value} id={`confirm-firma-${opt.value}`} className="mt-0.5" />
+                    <div>
+                      <span className="text-sm font-medium text-card-foreground">{opt.label}</span>
+                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </RadioGroup>
               <div className="flex items-center gap-3 w-full">
                 <Button variant="outline" className="flex-1" onClick={() => setShowEmitConfirm(false)}>Cancelar</Button>
                 <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleConfirmEmit} disabled={guardando}>
-                  {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, aprobar"}
+                  {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y aprobar"}
                 </Button>
               </div>
             </CardContent>

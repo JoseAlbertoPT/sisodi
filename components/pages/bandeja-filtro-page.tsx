@@ -16,10 +16,12 @@ import {
   Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
-  FileText, History, Download, UserCheck, ClipboardCheck, Stamp,
+  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Globe,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
+import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
+import { SeguimientoGeneralView, ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 
 interface FiltroSolicitud {
   id: string
@@ -44,7 +46,7 @@ interface FiltroSolicitud {
   isNuevaEnFiltro: Record<number, boolean>
   _raw?: any
 }
-type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "pendientes_asignacion" | "en_validacion" | "pendientes_firma" | "todas"
+type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "pendientes_asignacion" | "en_validacion" | "pendientes_firma" | "todas" | "solicitudes"
 const FILTRO_LABELS: Record<number, string> = {
   1: "Revisor",
   2: "Validación Final",
@@ -154,11 +156,20 @@ function getSlaLabel(dias: number | null) {
   return `${dias} día${dias !== 1 ? "s" : ""}`
 }
 const TAB_CONFIG: Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
-  nuevas:       { label: "Asignadas",    icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
-  correcciones: { label: "Correcciones", icon: <RotateCcw className="h-3.5 w-3.5" />,    activeBg: "bg-accent/10",      activeText: "text-accent-foreground" },
-  revision:     { label: "En revisión",  icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
-  observadas:   { label: "Observadas",   icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
-  todas:        { label: "Todas",        icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
+  nuevas:           { label: "Asignadas",            icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+  correcciones:     { label: "Correcciones",         icon: <RotateCcw className="h-3.5 w-3.5" />,    activeBg: "bg-accent/10",      activeText: "text-accent-foreground" },
+  revision:         { label: "En revisión",          icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
+  observadas:       { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
+  pendientes_firma: { label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary" },
+  todas:            { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
+}
+// Tabs específicas de la bandeja de Emisor (filtro 3). Agrega "Solicitudes" como visor global de consulta.
+const TAB_CONFIG_EMISOR: Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
+  solicitudes:      { label: "Solicitudes",          icon: <Globe className="h-3.5 w-3.5" />,         activeBg: "bg-primary/10",     activeText: "text-primary" },
+  revision:         TAB_CONFIG.revision,
+  observadas:       TAB_CONFIG.observadas,
+  pendientes_firma: TAB_CONFIG.pendientes_firma,
+  todas:            TAB_CONFIG.todas,
 }
 const TAB_CONFIG_DO: Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }> = {
   pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600" },
@@ -959,10 +970,17 @@ interface BandejaFiltroPageProps {
 export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPageProps) {
   const { user } = useAuth()
   const [solicitudes,    setSolicitudes]    = useState<FiltroSolicitud[]>([])
+  const [pendientesFirmaCount, setPendientesFirmaCount] = useState(0)
+  const [solicitudesCount, setSolicitudesCount] = useState(0)
+  const [refreshSignal, setRefreshSignal] = useState(0)
   const [loading,        setLoading]        = useState(true)
   const [error,          setError]          = useState<string | null>(null)
   const [guardando,      setGuardando]      = useState(false)
-  const [activeTab,      setActiveTab]      = useState<TabKey>(filtro === 2 ? "pendientes_asignacion" : "nuevas")
+  const [activeTab,      setActiveTab]      = useState<TabKey>(
+    filtro === 2 ? "pendientes_asignacion"
+    : filtro === 3 ? "solicitudes"
+    : "nuevas"
+  )
   const [selectedId,     setSelectedId]     = useState<string | null>(null)
   const [observarTarget,        setObservarTarget]        = useState<string | null>(null)
   const [aprobarTarget,        setAprobarTarget]        = useState<string | null>(null)
@@ -978,6 +996,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
 
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
+    setRefreshSignal(v => v + 1)
     try {
       const userId = (user as any)?.id ?? ""
       const url = filtro === 1 && userId
@@ -987,11 +1006,65 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar"); return }
       setSolicitudes(json.data ?? [])
+      if (filtro === 3) {
+        fetch("/api/solicitudes-seguimiento", { cache: "no-store" })
+          .then(r => r.json())
+          .then(j => {
+            if (!j.ok) return
+            const visibles = (j.data ?? []).filter((s: any) =>
+              ESTADOS_VISIBLES_EMISION.has((s.estado ?? "").toLowerCase())
+            )
+            setSolicitudesCount(visibles.length)
+          })
+          .catch(() => {})
+      }
     } catch { setError("Error de conexión al servidor") }
     finally { setLoading(false) }
   }, [filtro, user])
 
   useEffect(() => { cargar() }, [cargar])
+
+  // Para la bandeja de Emisor: precargar el conteo de la vista global "Solicitudes"
+  // (todas las que han ingresado al flujo) para mostrarlo en la tab sin tener que abrirla.
+  useEffect(() => {
+    if (filtro !== 3) return
+    let aborted = false
+    fetch("/api/solicitudes-seguimiento", { cache: "no-store" })
+      .then(r => r.json())
+      .then(json => {
+        if (aborted || !json.ok) return
+        const visibles = (json.data ?? []).filter((s: any) =>
+          ESTADOS_VISIBLES_EMISION.has((s.estado ?? "").toLowerCase())
+        )
+        setSolicitudesCount(visibles.length)
+      })
+      .catch(() => {})
+    return () => { aborted = true }
+  }, [filtro])
+
+  // Precargar conteo de "Pendientes de firma" para todas las bandejas (sin tener que abrir la tab).
+  useEffect(() => {
+    const userId = (user as any)?.id ?? ""
+    if (!userId) return
+    const bandejaActual = filtro === 1 ? "revision" : filtro === 2 ? "validacion" : "emision"
+    let aborted = false
+    fetch(`/api/firma-efirma/progreso?usuarioId=${encodeURIComponent(userId)}`, { cache: "no-store" })
+      .then(r => r.json())
+      .then(json => {
+        if (aborted || !json.ok) return
+        const procesos = json.procesos ?? []
+        const count = procesos.filter((p: any) => {
+          if (!p.mi_firmante_pendiente || p.mi_firmante_pendiente.bandeja !== bandejaActual) return false
+          const miFirmante = p.firmantes.find((f: any) => f.id === p.mi_firmante_pendiente.id)
+          if (!miFirmante) return false
+          const siguiente = [...p.firmantes].filter((f: any) => !f.firmado).sort((a: any, b: any) => a.orden - b.orden)[0]
+          return !!siguiente && miFirmante.orden === siguiente.orden
+        }).length
+        setPendientesFirmaCount(count)
+      })
+      .catch(() => {})
+    return () => { aborted = true }
+  }, [filtro, user])
 
   const handleAprobar = useCallback(async (id: string, revisorId?: string) => {
     setGuardando(true)
@@ -1089,15 +1162,17 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
     const c: Record<TabKey, number> = {
       nuevas: 0, correcciones: 0, revision: 0, observadas: 0,
       pendientes_asignacion: 0, en_validacion: 0, pendientes_firma: 0,
-      todas: 0,
+      todas: 0, solicitudes: 0,
     }
     c.todas = solicitudes.length
     solicitudes.forEach(s => {
       const tab = classifySolicitud(s, filtro)
       if (tab !== "todas") c[tab]++
     })
+    c.pendientes_firma = pendientesFirmaCount
+    c.solicitudes = solicitudesCount
     return c
-  }, [solicitudes, filtro])
+  }, [solicitudes, filtro, pendientesFirmaCount, solicitudesCount])
 
   const filtered = useMemo(() =>
     solicitudes
@@ -1221,9 +1296,13 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         onValueChange={(v) => setActiveTab(v as TabKey)}
         items={(filtro === 2
           ? Object.keys(TAB_CONFIG_DO)
-          : Object.keys(TAB_CONFIG)
+          : filtro === 3
+            ? Object.keys(TAB_CONFIG_EMISOR)
+            : Object.keys(TAB_CONFIG)
         ).map((tabKey) => {
-          const cfg = filtro === 2 ? TAB_CONFIG_DO[tabKey] : TAB_CONFIG[tabKey]
+          const cfg = filtro === 2 ? TAB_CONFIG_DO[tabKey]
+                    : filtro === 3 ? TAB_CONFIG_EMISOR[tabKey]
+                    : TAB_CONFIG[tabKey]
           return {
             value: tabKey,
             label: cfg.label,
@@ -1233,7 +1312,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         })}
       />
 
-      {/* filtros  */}
+      {/* filtros — ocultos en la vista global de Solicitudes (Emisor) */}
+      {!(filtro === 3 && activeTab === "solicitudes") && (
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1284,7 +1364,17 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
           </SelectContent>
         </Select>
       </div>
+      )}
 
+      {activeTab === "pendientes_firma" ? (
+        <Card className="shadow-sm border-border">
+          <CardContent className="pt-6">
+            <PendientesFirmaPanel filtro={filtro} currentUserId={(user as any)?.id ?? ""} onCountChange={setPendientesFirmaCount} />
+          </CardContent>
+        </Card>
+      ) : filtro === 3 && activeTab === "solicitudes" ? (
+        <SeguimientoGeneralView refreshSignal={refreshSignal} />
+      ) : (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm font-semibold text-card-foreground">
@@ -1476,6 +1566,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
           )}
         </CardContent>
       </Card>
+      )}
 
       <ConfirmModal
         open={!!aprobarTarget}

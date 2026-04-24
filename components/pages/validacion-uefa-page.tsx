@@ -16,8 +16,10 @@ import {
   Eye, CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
   Info, RefreshCw, Loader2, HelpCircle, Printer, Stamp,
+  Shield, FileSignature,
 } from "lucide-react"
-import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
+import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
+import { FirmaModal } from "@/components/firma-modal"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 
@@ -39,6 +41,7 @@ interface UefaSolicitud {
   folio: string
   folioJustificacion: string
   folioDictamen: string | null
+  modalidadFirma: "electronica" | "autografa" | null
   tipo: string
   secretaria: string
   fecha: string
@@ -207,6 +210,7 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     folioJustificacion:   item.folio_justificacion
       ?? `JUST-${new Date(item.fecha_creacion ?? Date.now()).getFullYear()}-${String(item.id).padStart(4, "0")}`,
     folioDictamen:        folioDictamenRaw,
+    modalidadFirma:       (item.modalidad_firma === "electronica" || item.modalidad_firma === "autografa") ? item.modalidad_firma : null,
     numeroDictamen,
     tipo:                 item.tipo_solicitud ?? "—",
     secretaria:           item.secretaria ?? item.usuario?.area?.nombre ?? "—",
@@ -1065,6 +1069,7 @@ export function ValidacionUefaPage() {
   const [observarTargetId, setObservarTargetId] = useState<number | null>(null)
   const [aprobarTargetId,  setAprobarTargetId]  = useState<number | null>(null)
   const [dictamenViewId,   setDictamenViewId]   = useState<number | null>(null)
+  const [firmaTargetId,    setFirmaTargetId]    = useState<number | null>(null)
 
   const cargarSolicitudes = useCallback(async () => {
     setLoading(true); setError(null)
@@ -1232,10 +1237,56 @@ export function ValidacionUefaPage() {
     </PageLayout>
   )
 
+  const firmaTargetSol = solicitudes.find(s => s.id === firmaTargetId) ?? null
+
   return (
     <PageLayout>
       {dictamenViewSol && (
         <DictamenModal solicitud={dictamenViewSol} onClose={() => setDictamenViewId(null)} />
+      )}
+
+      {firmaTargetSol && (
+        <FirmaModal
+          open={firmaTargetId !== null}
+          onClose={() => setFirmaTargetId(null)}
+          solicitudId={firmaTargetSol.id}
+          folioJustificacion={firmaTargetSol.folioJustificacion}
+          folioRecepcion={firmaTargetSol.folio && firmaTargetSol.folio !== `SOL-${firmaTargetSol.id}` ? firmaTargetSol.folio : null}
+          modalidadFirma={firmaTargetSol.modalidadFirma}
+          currentUserId={(user as any)?.id ?? ""}
+          onGenerarPdf={() => {
+            generateJustificacionPDF({
+              folio: firmaTargetSol.folioJustificacion,
+              tipo: firmaTargetSol.tipo as any,
+              secretaria: firmaTargetSol.secretaria,
+              unidadAdministrativa: firmaTargetSol.unidadAdministrativa,
+              denominacion: firmaTargetSol.denominacion,
+              vigenciaInicio: firmaTargetSol.vigenciaInicio,
+              vigenciaFin: firmaTargetSol.vigenciaFin,
+              importeBruto: firmaTargetSol.importeBruto,
+              esRenovacion: firmaTargetSol.esRenovacion,
+              folioAnterior: firmaTargetSol.folioAnterior,
+              fecha: firmaTargetSol.fecha,
+              firmadoDigitalmente: false,
+            })
+          }}
+          onGenerarPdfBase64={async () => generateJustificacionPDFBase64({
+            folio: firmaTargetSol.folioJustificacion,
+            tipo: firmaTargetSol.tipo as any,
+            secretaria: firmaTargetSol.secretaria,
+            unidadAdministrativa: firmaTargetSol.unidadAdministrativa,
+            denominacion: firmaTargetSol.denominacion,
+            vigenciaInicio: firmaTargetSol.vigenciaInicio,
+            vigenciaFin: firmaTargetSol.vigenciaFin,
+            importeBruto: firmaTargetSol.importeBruto,
+            esRenovacion: firmaTargetSol.esRenovacion,
+            folioAnterior: firmaTargetSol.folioAnterior,
+            fecha: firmaTargetSol.fecha,
+            firmadoDigitalmente: false,
+          })}
+          onFinalizar={async () => { await handleFirmarJustificacion(firmaTargetSol.id) }}
+          guardandoFinal={guardando}
+        />
       )}
 
       <div className="flex items-start justify-between">
@@ -1289,6 +1340,9 @@ export function ValidacionUefaPage() {
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Creación</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Recepción</th>
                     <th className="px-4 py-3 text-left font-semibold">Estado Actual</th>
+                    {activeTab === "Emitidas" && (
+                      <th className="px-4 py-3 text-left font-semibold">Modalidad</th>
+                    )}
                     <th className="px-4 py-3 text-left font-semibold">Acciones</th>
                   </tr>
                 </thead>
@@ -1316,6 +1370,21 @@ export function ValidacionUefaPage() {
                         <td className="px-4 py-3 text-muted-foreground">{sol.fecha}</td>
                         <td className="px-4 py-3 text-muted-foreground">{sol.vigenciaInicio}</td>
                         <td className="px-4 py-3"><UefaEstadoBadge estado={sol.estado} /></td>
+                        {activeTab === "Emitidas" && (
+                          <td className="px-4 py-3">
+                            {sol.modalidadFirma === "electronica" ? (
+                              <Badge className="bg-primary/15 text-primary border-0 gap-1">
+                                <Shield className="h-3 w-3" /> Electrónica
+                              </Badge>
+                            ) : sol.modalidadFirma === "autografa" ? (
+                              <Badge className="bg-accent/20 text-accent-foreground border-0 gap-1">
+                                <FileSignature className="h-3 w-3" /> Autógrafa
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <Button
@@ -1348,7 +1417,7 @@ export function ValidacionUefaPage() {
                             {solTab === "Pendiente Firma" && (
                               <Button
                                 variant="ghost" size="sm"
-                                onClick={() => handleFirmarJustificacion(sol.id)}
+                                onClick={() => setFirmaTargetId(sol.id)}
                                 disabled={guardando}
                                 className="text-secondary hover:text-secondary/80 gap-1.5"
                               >

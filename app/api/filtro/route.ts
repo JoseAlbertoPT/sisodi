@@ -310,7 +310,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { solicitudId, accion, filtro, usuarioId, observaciones, folioDictamen, folioRecepcion, revisorId } = body
+    const { solicitudId, accion, filtro, usuarioId, observaciones, folioDictamen, folioRecepcion, revisorId, modalidadFirma } = body
 
     if (!solicitudId || !accion || !usuarioId) {
       return NextResponse.json(
@@ -354,10 +354,11 @@ export async function PATCH(req: NextRequest) {
         )
       }
 
+      const modalidadExistente = (solicitudExistente as any).modalidad_firma ?? "autografa"
       if (solicitudExistente.dictamen) {
         await prisma.dictamen.update({
           where: { solicitud_id: idNum },
-          data:  { folio: folioDictamen },
+          data:  { folio: folioDictamen, tipo_firma: modalidadExistente },
         })
       } else {
         await prisma.dictamen.create({
@@ -365,7 +366,7 @@ export async function PATCH(req: NextRequest) {
             solicitud_id:  idNum,
             folio:         folioDictamen,
             fecha_emision: new Date(),
-            tipo_firma:    "autografa",
+            tipo_firma:    modalidadExistente,
             archivo_pdf:   null,
           },
         })
@@ -585,12 +586,14 @@ export async function PATCH(req: NextRequest) {
         : null
 
     const asignarRevisor = filtro === 2 && nombreEstadoNuevo === estadoEnRevision(1) && revisorId
+    const guardarModalidad = accion === "aprobar" && filtro === 3 && (modalidadFirma === "electronica" || modalidadFirma === "autografa")
 
     const solicitudActualizada = await prisma.solicitud.update({
       where: { id: idNum },
       data:  {
         estado_id: estadoNuevo.id,
         ...(asignarRevisor ? { revisor_asignado_id: revisorId } : {}),
+        ...(guardarModalidad ? { modalidad_firma: modalidadFirma } : {}),
       },
       include: {
         estado:  true,
@@ -645,12 +648,13 @@ export async function PATCH(req: NextRequest) {
               estado_anterior_id: estadoNuevo.id,
               estado_nuevo_id:    estadoEmitido.id,
               comentario: folioAsignado
-                ? `Dictamen emitido. Folio: ${folioAsignado} | Tipo firma: autografa`
+                ? `Dictamen emitido. Folio: ${folioAsignado} | Tipo firma: ${(solicitud as any).modalidad_firma ?? modalidadFirma ?? "autografa"}`
                 : "Dictamen emitido",
             },
           }),
         ]
 
+        const modalidadSolicitud = (solicitud as any).modalidad_firma ?? modalidadFirma ?? "autografa"
         if (folioAsignado && !solicitud.dictamen) {
           updates.unshift(
             prisma.dictamen.create({
@@ -658,9 +662,16 @@ export async function PATCH(req: NextRequest) {
                 solicitud_id:  idNum,
                 folio:         folioAsignado,
                 fecha_emision: ahora,
-                tipo_firma:    "autografa",
+                tipo_firma:    modalidadSolicitud,
                 archivo_pdf:   null,
               },
+            })
+          )
+        } else if (solicitud.dictamen) {
+          updates.push(
+            prisma.dictamen.update({
+              where: { solicitud_id: idNum },
+              data: { tipo_firma: modalidadSolicitud },
             })
           )
         }
