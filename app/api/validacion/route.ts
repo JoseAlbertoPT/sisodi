@@ -19,11 +19,11 @@ export async function GET(req: NextRequest) {
       })
       if (viewer) {
         if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
-          // Usuario centralizado: ve su secretaría + todos los paraestatal (secretaria_id null)
-          where.OR = [
-            { usuario: { secretaria_id: viewer.secretaria_id } },
-            { usuario: { secretaria_id: null } },
-          ]
+          // Usuario centralizado: ve solo solicitudes de su misma secretaría
+          where.usuario = {
+            organo_centralizado: { isNot: null },
+            secretaria_id: viewer.secretaria_id,
+          }
         } else {
           // Usuario paraestatal: ve solo paraestatal
           where.usuario = { organo_centralizado: { is: null } }
@@ -156,20 +156,38 @@ export async function PATCH(req: NextRequest) {
 
     const esEnvioDGDO = nuevoEstado.toLowerCase() === "pendiente do"
 
-    // Generar folio_recepcion global (FREC, formato AB-001) al enviar a DGDO
+    // Generar folio_recepcion al enviar a DGDO
+    // - Normal:       AB-NNN       (incrementa FREC)
+    // - Extemporánea: AB-NNN-N     (toma último FREC + incrementa FREC_EXT, sin tocar FREC)
     let folioRecepcionNuevo: string | undefined
     if (esEnvioDGDO && !solicitud.folio_recepcion) {
       const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
-      const now    = new Date()
-      const mesNum = now.getMonth() + 1
+      const now     = new Date()
+      const mesNum  = now.getMonth() + 1
       const anioNum = now.getFullYear()
       const mesCode = MONTH_CODES[now.getMonth()]
-      const registro = await prisma.consecutivo_folio.upsert({
-        where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
-        update: { consecutivo: { increment: 1 } },
-        create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: 1 },
-      })
-      folioRecepcionNuevo = `${mesCode}-${String(registro.consecutivo ?? 1).padStart(3, "0")}`
+
+      if (solicitud.es_extemporanea) {
+        // Leer el último consecutivo regular (sin incrementar)
+        const regFrec = await prisma.consecutivo_folio.findUnique({
+          where: { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
+        })
+        const ultimoFrec = regFrec?.consecutivo ?? 0
+        // Incrementar el consecutivo de extemporáneas
+        const regExt = await prisma.consecutivo_folio.upsert({
+          where:  { tipo_mes_anio: { tipo: "FREC_EXT", mes: mesNum, anio: anioNum } },
+          update: { consecutivo: { increment: 1 } },
+          create: { tipo: "FREC_EXT", mes: mesNum, anio: anioNum, consecutivo: 1 },
+        })
+        folioRecepcionNuevo = `${mesCode}-${String(ultimoFrec).padStart(3, "0")}-${regExt.consecutivo}`
+      } else {
+        const registro = await prisma.consecutivo_folio.upsert({
+          where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
+          update: { consecutivo: { increment: 1 } },
+          create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: 1 },
+        })
+        folioRecepcionNuevo = `${mesCode}-${String(registro.consecutivo ?? 1).padStart(3, "0")}`
+      }
     }
 
     // Si es un borrador enviado y aún no tiene folio, asignarlo ahora

@@ -230,9 +230,18 @@ model solicitud {
   nivel_tabulador       String?               @db.VarChar(20)
   categoria_tabulador   String?               @db.VarChar(10)
   objeto                String?
-  actividades           String[]              @default([])
-  responsabilidades     String[]              @default([])
-  escolaridad           String?               @db.VarChar(100)
+  actividades                String[]              @default([])
+  responsabilidades          String[]              @default([])
+  marco_normativo            String[]              @default([])
+  riesgo_caidas              String?               @db.VarChar(20)
+  riesgo_mutilaciones        String?               @db.VarChar(20)
+  riesgo_golpes              String?               @db.VarChar(20)
+  riesgo_otros               String?               @db.VarChar(20)
+  condicion_cambio_domicilio Boolean?              @default(false)
+  condicion_horario          Boolean?              @default(false)
+  condicion_viajar           Boolean?              @default(false)
+  resguardo_activos          String?               @db.VarChar(10)
+  escolaridad                String?
   comp_adm              String?
   comp_tec              String?
   comp_soc              String?
@@ -240,9 +249,7 @@ model solicitud {
   areas_exp             String?
   revisor_asignado_id   String?               @db.Uuid
   puesto_jefe_inmediato String?               @db.VarChar(200)
-  marco_normativo       String[]              @default([])
   condiciones_riesgos   String[]              @default([])
-  resguardo_activos     String?               @db.VarChar(10)
   tipo_importe          String?               @db.VarChar(20)
   modalidad_firma       String?               @db.VarChar(20)
   adjunto               adjunto[]
@@ -258,6 +265,8 @@ model solicitud {
   @@index([estado_id], map: "idx_solicitud_estado")
   @@index([usuario_id], map: "idx_solicitud_usuario")
 }
+
+
 
 model usuario {
   id                    String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid

@@ -590,7 +590,7 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Unidad Responsable del Gasto"           value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
           <ReadOnlyField label="Número de Prestadores de Servicios"     value={solicitud.numeroPrestadores} />
           <ReadOnlyField label="Programa o Proyecto"                    value={solicitud.programaProyecto} />
-          <ReadOnlyField label="Tipo de Actividades"                    value={solicitud.tipoActividades} />
+          <ReadOnlyField label="Tipo de Actividad"                    value={solicitud.tipoActividades} />
           <ReadOnlyField label="Régimen de Contratación"                value={formatRegimen(solicitud.regimen)} />
          {/* <ReadOnlyField label="Denominación"                           value={solicitud.denominacion} /> */}
           <ReadOnlyField label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
@@ -661,6 +661,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(solicitud.regimen)} />
           <ReadOnlyField label="Denominación del Nombramiento"         value={solicitud.denominacion} />
           <ReadOnlyField label="Puesto del Jefe Inmediato"             value={solicitud.puestoJefeInmediato} />
+          <ReadOnlyField label="Tipo de Actividad"                   value={solicitud.tipoActividades} />
           <ReadOnlyField label="Número de Personas a Contratar"        value={solicitud.numeroPrestadores} />
           <ReadOnlyField label="Tipo de Pago"    value={solicitud.tipoImporte || "Mensual"} />
           <ReadOnlyField label="Importe Neto"  value={solicitud.importeBruto} />
@@ -676,7 +677,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Renovación" defaultOpen={solicitud.esRenovacion}>
+      {/*<SectionCard title="Renovación" defaultOpen={solicitud.esRenovacion}>
         {solicitud.esRenovacion ? (
           <div className="grid gap-4 md:grid-cols-2">
             <ReadOnlyField label="Es Renovación"              value="Sí" />
@@ -685,7 +686,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
         ) : (
           <ReadOnlyField label="Es Renovación" value="No" />
         )}
-      </SectionCard>
+      </SectionCard> */}
 
       <SectionCard num="III" title="Objeto del Nombramiento">
         <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
@@ -716,6 +717,17 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Resguardo de Activos" value={solicitud.resguardoActivos === "si" ? "Sí" : solicitud.resguardoActivos === "no" ? "No" : solicitud.resguardoActivos} />
         </SectionCard>
       )}
+
+      <SectionCard num="IX" title="Perfil">
+        <div className="grid gap-5 md:grid-cols-2">
+          <ReadOnlyList label="Escolaridad Mínima"            value={solicitud.escolaridad} />
+          <ReadOnlyList sub="VIII.1" label="Competencias Administrativas" value={solicitud.compAdm} />
+          <ReadOnlyList sub="VIII.2" label="Competencias Técnicas"        value={solicitud.compTec} />
+          <ReadOnlyList sub="VIII.3" label="Competencias Sociales"        value={solicitud.compSoc} />
+          <ReadOnlyList label="Áreas de Experiencia"          value={solicitud.areasExp} />
+          <ReadOnlyList label="Valores"                       value={solicitud.valores} />
+        </div>
+      </SectionCard>
 
       <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
         <AdjuntosSection bitacora={solicitud.bitacora} />
@@ -895,21 +907,7 @@ function DetalleView({
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5"
-            onClick={() => generateJustificacionPDF({
-              folio:                sol.folioJustificacion || sol.folio,
-              tipo:                 sol.tipo,
-              secretaria:           sol.secretaria,
-              unidadAdministrativa: sol.unidadAdministrativa,
-              regimen:              sol.regimen,
-              denominacion:         sol.denominacion,
-              vigenciaInicio:       sol.vigenciaInicio,
-              vigenciaFin:          sol.vigenciaFin,
-              importeBruto:         sol.importeBruto,
-              esRenovacion:         sol.esRenovacion,
-              folioAnterior:        sol.folioAnterior,
-              fecha:                sol.fecha,
-              firmadoDigitalmente:  !canEdit,
-            })}>
+            onClick={() => generateJustificacionPDF(sol.id, sol.folioJustificacion || sol.folio)}>
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           {canEdit && !periodoConfirmado && (
@@ -940,14 +938,7 @@ function DetalleView({
           )}
           {isEmitido && (
             <>
-              <Button variant="outline" size="sm" className="gap-1.5"
-                onClick={() => handleDemoAction("Ver dictamen")}>
-                <FileCheck className="h-4 w-4" />Ver Dictamen
-              </Button>
-              <Button variant="outline" size="sm" className="gap-1.5"
-                onClick={() => handleDemoAction("Descargar")}>
-                <Download className="h-4 w-4" />Descargar
-              </Button>
+
             </>
           )}
           {isReadOnly && (
@@ -1142,7 +1133,6 @@ function DetalleView({
           </CardContent>
         </Card>
       )}
-
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {sol.tipo === "Prestacion de Servicios"
@@ -1211,8 +1201,9 @@ function checkVigenteFromCal(
     row = cal.nombramiento.find((r) => r.quincena === periodo)
   }
   if (!row) return { vigente: false, limiteDO: null }
-  const limite = parseDateDMY(row.limiteDO)
-  return { vigente: today <= limite, limiteDO: row.limiteDO }
+  const fechaFin = getPeriodoEndDate(regimen, periodo)
+  const vigente = fechaFin !== null ? today <= fechaFin : today <= parseDateDMY(row.limiteDO)
+  return { vigente, limiteDO: row.limiteDO }
 }
 
 export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (payload: EditSolicitudPayload) => void }) {
@@ -1310,8 +1301,6 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
     const resEnvio = await fetch("/api/validacion", {
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
         solicitudId: id,
         nuevoEstado: "En Validacion Justificaciones",
@@ -1351,8 +1340,8 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
 
   return (
     <PageLayout
-      title="Bandeja URG - Mis Justificaciones"
-      description="Solicitudes capturadas por mi área, con seguimiento de validación de justificaciones y emisión de dictamen."
+      title="Bandeja de mis justificaciones"
+      description="Consulta y da seguimiento al estado de tus solicitudes."
     >
 
       <FilterTabs
@@ -1370,7 +1359,6 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
           className="pl-10 bg-card"
         />
       </div>
-
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">
@@ -1421,7 +1409,6 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
                     </tr>
                   ))
                 }
-
                 {filtered.map((sol) => {
                   const observador  = getObservador(sol.estado)
                   const subEstado   = getSubEstadoDGDO(sol.estado)
@@ -1489,14 +1476,7 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
                             className="text-secondary hover:text-primary gap-1.5">
                             <Eye className="h-4 w-4" />Ver
                           </Button>
-                          {isEmitida && (
-                            <Button variant="ghost" size="sm"
-                              onClick={() => setSelectedId(sol.id)}
-                              className="text-emerald-600 hover:text-emerald-700 gap-1.5"
-                              title="Ver y descargar dictamen">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          )}
+
                         </div>
                       </td>
                     </tr>

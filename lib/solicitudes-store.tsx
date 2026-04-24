@@ -218,6 +218,16 @@ export interface Solicitud {
   folioJustificacion: string | null      // e.g. "JUST-2026-0001" — JUST-AAAA-NNNN format
   folioJustificacionAnio: number | null
   folioJustificacionConsecutivo: number | null
+  // New fields from schema
+  marco_normativo: string[]
+  riesgo_caidas: string
+  riesgo_mutilaciones: string
+  riesgo_golpes: string
+  riesgo_otros: string
+  condicion_cambio_domicilio: boolean
+  condicion_horario: boolean
+  condicion_viajar: boolean
+  resguardo_activos: string | null
 }
 
 // ── Seed data ──
@@ -273,6 +283,15 @@ function createSeedData(): Solicitud[] {
       folioJustificacion: "JUST-2026-0001",
       folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 1,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-002",
@@ -325,6 +344,15 @@ function createSeedData(): Solicitud[] {
       folioJustificacion: "JUST-2026-0002",
       folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 2,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-003",
@@ -378,6 +406,15 @@ function createSeedData(): Solicitud[] {
       folioJustificacion: "JUST-2026-0003",
       folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 3,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-004",
@@ -429,9 +466,16 @@ function createSeedData(): Solicitud[] {
       folioDictamenConsecutivo: null,
       folioDictamenAsignadoPor: null,
       fechaAsignacionFolioDictamen: null,
-      folioJustificacion: "JUST-2026-0004",
-      folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 4,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-005",
@@ -480,9 +524,16 @@ function createSeedData(): Solicitud[] {
       folioDictamenConsecutivo: null,
       folioDictamenAsignadoPor: null,
       fechaAsignacionFolioDictamen: null,
-      folioJustificacion: "JUST-2026-0005",
-      folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 5,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-006",
@@ -534,9 +585,16 @@ function createSeedData(): Solicitud[] {
       folioDictamenConsecutivo: 2,
       folioDictamenAsignadoPor: "Revisor Filtro 2",
       fechaAsignacionFolioDictamen: "2026-02-10 10:00",
-      folioJustificacion: "JUST-2026-0006",
-      folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 6,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-007",
@@ -601,9 +659,16 @@ function createSeedData(): Solicitud[] {
       folioDictamenConsecutivo: 3,
       folioDictamenAsignadoPor: "Revisor Filtro 2",
       fechaAsignacionFolioDictamen: "2026-02-06 10:00",
-      folioJustificacion: "JUST-2026-0007",
-      folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 7,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-008",
@@ -650,9 +715,16 @@ function createSeedData(): Solicitud[] {
       folioDictamenConsecutivo: null,
       folioDictamenAsignadoPor: null,
       fechaAsignacionFolioDictamen: null,
-      folioJustificacion: "JUST-2026-0008",
-      folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 8,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-009",
@@ -700,9 +772,16 @@ function createSeedData(): Solicitud[] {
       folioDictamenConsecutivo: null,
       folioDictamenAsignadoPor: null,
       fechaAsignacionFolioDictamen: null,
-      folioJustificacion: "JUST-2026-0009",
-      folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 9,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-010",
@@ -748,9 +827,16 @@ function createSeedData(): Solicitud[] {
       folioDictamenConsecutivo: null,
       folioDictamenAsignadoPor: null,
       fechaAsignacionFolioDictamen: null,
-      folioJustificacion: null,
-      folioJustificacionAnio: null,
       folioJustificacionConsecutivo: null,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-011",
@@ -803,9 +889,16 @@ function createSeedData(): Solicitud[] {
       folioDictamenConsecutivo: null,
       folioDictamenAsignadoPor: null,
       fechaAsignacionFolioDictamen: null,
-      folioJustificacion: "JUST-2026-0010",
-      folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 10,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
     {
       id: "sol-012",
@@ -852,9 +945,16 @@ function createSeedData(): Solicitud[] {
       folioDictamenConsecutivo: null,
       folioDictamenAsignadoPor: null,
       fechaAsignacionFolioDictamen: null,
-      folioJustificacion: "JUST-2026-0011",
-      folioJustificacionAnio: 2026,
       folioJustificacionConsecutivo: 11,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     },
   ]
 }
@@ -897,9 +997,9 @@ interface SolicitudesContextType {
   emitirDictamen: (id: string, fechaDictaminacion: string, modalidadFirma: "electronica" | "autografa", destinatarios: string[], usuario: string, archivoFirmado?: string) => void
   getEmitidos: () => Solicitud[]
   // Excepcion DO
-  crearExcepcionDO: (data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData">) => void
+  crearExcepcionDO: (data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "marco_normativo" | "riesgo_caidas" | "riesgo_mutilaciones" | "riesgo_golpes" | "riesgo_otros" | "condicion_cambio_domicilio" | "condicion_horario" | "condicion_viajar" | "resguardo_activos" | "folioJustificacion" | "folioJustificacionAnio" | "folioJustificacionConsecutivo" | "folioDictamen" | "folioDictamenMes" | "folioDictamenAnio" | "folioDictamenConsecutivo" | "folioDictamenAsignadoPor" | "fechaAsignacionFolioDictamen">) => void
   // Regularizacion DO
-  crearRegularizacionDO: (data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "folioRecepcion" | "folioRecepcionManual" | "folioTemporal" | "folioTemporalOriginal" | "folioOficializadoPor" | "fechaOficializacion">) => string
+  crearRegularizacionDO: (data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "folioRecepcion" | "folioRecepcionManual" | "folioTemporal" | "folioTemporalOriginal" | "folioOficializadoPor" | "fechaOficializacion" | "marco_normativo" | "riesgo_caidas" | "riesgo_mutilaciones" | "riesgo_golpes" | "riesgo_otros" | "condicion_cambio_domicilio" | "condicion_horario" | "condicion_viajar" | "resguardo_activos" | "folioJustificacion" | "folioJustificacionAnio" | "folioJustificacionConsecutivo" | "folioDictamen" | "folioDictamenMes" | "folioDictamenAnio" | "folioDictamenConsecutivo" | "folioDictamenAsignadoPor" | "fechaAsignacionFolioDictamen">) => string
   oficializarFolio: (id: string, mesOficial: string, anioOficial: number, consecutivoOficial: number, fechaRecepcionOficial: string, usuario: string) => string | null
   // Folio Dictamen (Filtro 2)
   asignarFolioDictamen: (id: string, mes: number, anio: number, consecutivo: number, usuario: string) => string | null
@@ -1263,7 +1363,7 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
   }, [solicitudes])
 
   // ── Create Excepcion DO ──
-  const crearExcepcionDO = useCallback((data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData">) => {
+  const crearExcepcionDO = useCallback((data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "marco_normativo" | "riesgo_caidas" | "riesgo_mutilaciones" | "riesgo_golpes" | "riesgo_otros" | "condicion_cambio_domicilio" | "condicion_horario" | "condicion_viajar" | "resguardo_activos" | "folioJustificacion" | "folioJustificacionAnio" | "folioJustificacionConsecutivo" | "folioDictamen" | "folioDictamenMes" | "folioDictamenAnio" | "folioDictamenConsecutivo" | "folioDictamenAsignadoPor" | "fechaAsignacionFolioDictamen">) => {
     const now = new Date().toISOString().replace("T", " ").slice(0, 16)
     const newId = `sol-${String(solicitudes.length + 1).padStart(3, "0")}`
 
@@ -1303,16 +1403,25 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
       folioDictamenConsecutivo: null,
       folioDictamenAsignadoPor: null,
       fechaAsignacionFolioDictamen: null,
-      folioJustificacion: data.folioJustificacion,
-      folioJustificacionAnio: data.folioJustificacionAnio,
-      folioJustificacionConsecutivo: data.folioJustificacionConsecutivo,
+      folioJustificacion: null,
+      folioJustificacionAnio: null,
+      folioJustificacionConsecutivo: null,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
     }
 
     setSolicitudes((prev) => [...prev, newSol])
   }, [solicitudes.length])
 
   // ── Create Regularizacion DO ──
-  const crearRegularizacionDO = useCallback((data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "folioRecepcion" | "folioRecepcionManual" | "folioTemporal" | "folioTemporalOriginal" | "folioOficializadoPor" | "fechaOficializacion">) => {
+  const crearRegularizacionDO = useCallback((data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "folioRecepcion" | "folioRecepcionManual" | "folioTemporal" | "folioTemporalOriginal" | "folioOficializadoPor" | "fechaOficializacion" | "marco_normativo" | "riesgo_caidas" | "riesgo_mutilaciones" | "riesgo_golpes" | "riesgo_otros" | "condicion_cambio_domicilio" | "condicion_horario" | "condicion_viajar" | "resguardo_activos" | "folioJustificacion" | "folioJustificacionAnio" | "folioJustificacionConsecutivo" | "folioDictamen" | "folioDictamenMes" | "folioDictamenAnio" | "folioDictamenConsecutivo" | "folioDictamenAsignadoPor" | "fechaAsignacionFolioDictamen">) => {
     const now = new Date().toISOString().replace("T", " ").slice(0, 16)
     const newId = `sol-${String(solicitudes.length + 1).padStart(3, "0")}`
     const tempFolio = generateFolioRecepcion() + "-1"
@@ -1355,14 +1464,23 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
       folioOficializadoPor: null,
       fechaOficializacion: null,
       folioDictamen: null,
+      marco_normativo: [],
+      riesgo_caidas: "Bajo",
+      riesgo_mutilaciones: "Bajo",
+      riesgo_golpes: "Bajo",
+      riesgo_otros: "Bajo",
+      condicion_cambio_domicilio: false,
+      condicion_horario: false,
+      condicion_viajar: false,
+      resguardo_activos: "no",
       folioDictamenMes: null,
       folioDictamenAnio: null,
       folioDictamenConsecutivo: null,
       folioDictamenAsignadoPor: null,
       fechaAsignacionFolioDictamen: null,
-      folioJustificacion: data.folioJustificacion,
-      folioJustificacionAnio: data.folioJustificacionAnio,
-      folioJustificacionConsecutivo: data.folioJustificacionConsecutivo,
+      folioJustificacion: null,
+      folioJustificacionAnio: null,
+      folioJustificacionConsecutivo: null,
     }
 
     setSolicitudes((prev) => [...prev, newSol])

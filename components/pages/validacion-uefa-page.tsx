@@ -15,7 +15,7 @@ import {
 import {
   Eye, CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
-  Info, RefreshCw, Loader2, HelpCircle, Printer, Stamp,
+  Info, RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
   Shield, FileSignature,
 } from "lucide-react"
 import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
@@ -34,7 +34,7 @@ type UefaTab =
   | "Emitidas"
   | "Todas"
 
-interface HistorialEntry { fecha: string; usuario: string; accion: string }
+interface HistorialEntry { fecha: string; usuario: string; accion: string; comentario?: string }
 
 interface UefaSolicitud {
   id: number
@@ -57,9 +57,13 @@ interface UefaSolicitud {
   vigenciaFin: string
   importeBruto: string
   esRenovacion: boolean
+  esExtemporanea: boolean
   folioAnterior?: string
   historial: HistorialEntry[]
   observacionesUefa: string
+  observadoPor?: string
+  fechaObservacion?: string
+  tipoObservacion?: string
   numeroDictamen?: string
   fechaDictamen?: string
   tipoFirma?: string | null
@@ -140,7 +144,6 @@ function getTabForEstado(estado: string): UefaTab {
     n.includes("observado por validacion final") ||
     n.includes("observado por emisor")
   ) return "En Proceso"
-
   return "Nuevas"
 }
 function formatRegimen(raw: string): string {
@@ -177,9 +180,10 @@ function resolverFolioDictamen(item: any): string | null {
 
 function mapBDtoSolicitud(item: any): UefaSolicitud {
   const historial: HistorialEntry[] = (item.historial_solicitud ?? []).map((h: any) => ({
-    fecha:   formatFechaHora(h.fecha),
-    usuario: h.usuario?.nombre ?? "Sistema",
-    accion:  h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? h.comentario ?? "—",
+    fecha:      formatFechaHora(h.fecha),
+    usuario:    h.usuario?.nombre ?? "Sistema",
+    accion:     h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+    comentario: h.comentario ?? undefined,
   }))
 
   const folioDictamenRaw = resolverFolioDictamen(item)
@@ -194,6 +198,11 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     const match = emisorEntry.comentario.match(/Destinatarios:\s*(.+)/i)
     if (match) destinatarios = match[1].split("|").map((d: string) => d.trim()).filter(Boolean)
   }
+
+  const observacionUefaEntry = (item.historial_solicitud ?? []).find((h: any) => {
+    const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
+    return nombre.toLowerCase().includes("observad") && h.comentario
+  })
 
   const revisorEntry = (item.historial_solicitud ?? []).find((h: any) => {
     const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
@@ -228,8 +237,9 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     regimen:              item.regimen ?? "—",
     tipoActividades:      item.tipo_actividades ?? "—",
     numeroPrestadores:    item.numero_prestadores?.toString() ?? "—",
-    esRenovacion:         item.es_renovacion ?? false,
-    folioAnterior:        item.folio_anterior ?? undefined,
+    esRenovacion:         item.es_renovacion    ?? false,
+    esExtemporanea:       item.es_extemporanea  ?? false,
+    folioAnterior:        item.folio_anterior   ?? undefined,
     objeto:               item.objeto ?? "—",
     actividades:          Array.isArray(item.actividades) ? item.actividades.filter(Boolean) : [],
     responsabilidades:    Array.isArray(item.responsabilidades) ? item.responsabilidades.filter(Boolean) : [],
@@ -240,7 +250,12 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     valores:              item.valores ?? "—",
     areasExp:             item.areas_exp ?? "—",
     historial,
-    observacionesUefa:    item.observaciones_uefa ?? item.observacion_uefa ?? "",
+    observacionesUefa:    observacionUefaEntry?.comentario ?? item.observaciones_uefa ?? item.observacion_uefa ?? "",
+    observadoPor:         observacionUefaEntry?.usuario?.nombre ?? undefined,
+    fechaObservacion:     observacionUefaEntry?.fecha ? formatFechaHora(observacionUefaEntry.fecha) : undefined,
+    tipoObservacion:      observacionUefaEntry
+      ? (observacionUefaEntry.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "Observación")
+      : undefined,
     fechaDictamen:        item.dictamen?.fecha_emision ? formatFecha(item.dictamen.fecha_emision) : undefined,
     tipoFirma:            item.dictamen?.tipo_firma ?? null,
     destinatarios,
@@ -458,6 +473,47 @@ function UefaEstadoBadge({ estado }: { estado: string }) {
   )
 }
 
+function ObservacionTimeline({ comentario }: { comentario: string }) {
+  const lineas = comentario.split("\n").filter(Boolean)
+  const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
+  const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
+
+  if (itemsChecklist.length === 0) {
+    return <p className="text-sm text-[#832B56] leading-relaxed">{comentario}</p>
+  }
+  return (
+    <div className="flex flex-col gap-0 mt-1">
+      {comentarioGeneral && (
+        <p className="text-xs text-[#832B56]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
+      )}
+      {itemsChecklist.map((linea, idx) => {
+        const [titulo, obs] = linea.split("::")
+        const numMatch = titulo.match(/^(\d+)\./)
+        const num = numMatch ? numMatch[1] : String(idx + 1)
+        const label = titulo.replace(/^\d+\.\s*/, "").trim()
+        const isLast = idx === itemsChecklist.length - 1
+        return (
+          <div key={idx} className="flex gap-3">
+            <div className="flex flex-col items-center">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/60 bg-white text-[10px] font-bold text-[#832B56]">
+                {num}
+              </div>
+              {!isLast && <div className="w-px flex-1 bg-[#832B56]/20 my-0.5" />}
+            </div>
+            <div className={`flex flex-col gap-1 flex-1 ${!isLast ? "pb-3" : "pb-1"}`}>
+              <span className="text-xs font-semibold text-[#832B56]/90 leading-snug">{label}</span>
+              {obs?.trim() && (
+                <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                  {obs.trim()}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 function UefaHistorialTimeline({ historial }: { historial: HistorialEntry[] }) {
   if (!historial.length) return <p className="text-xs text-muted-foreground">Sin historial registrado.</p>
   return (
@@ -582,9 +638,7 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
             <ReadOnlyField label="Puesto del Jefe Inmediato"          value={raw?.puesto_jefe_inmediato ?? "—"} />
           )}
           <ReadOnlyField label="Número de Prestadores de Servicio"    value={solicitud.numeroPrestadores} />
-          {!esNombramiento && (
-            <ReadOnlyField label="Tipo de Actividades"                value={solicitud.tipoActividades} />
-          )}
+          <ReadOnlyField label="Tipo de Actividad"                value={solicitud.tipoActividades} />
           <ReadOnlyField label="Tipo de Pago"    value={raw?.tipo_importe || "Mensual"} />
           <ReadOnlyField label="Vigencia Inicio"                      value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                     value={solicitud.vigenciaFin} />
@@ -639,18 +693,16 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
         </SectionCard>
       )}
 
-      {!esNombramiento && (
-        <SectionCard title="Perfil Requerido">
-          <div className="grid gap-4 md:grid-cols-2">
-            <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(solicitud.escolaridad)} />
-            <PerfilListField label="Competencias Administrativas"  value={solicitud.compAdm} />
-            <PerfilListField label="Competencias Técnicas"         value={solicitud.compTec} />
-            <PerfilListField label="Competencias Sociales"         value={solicitud.compSoc} />
-            <PerfilListField label="Valores"                       value={solicitud.valores} />
-            <PerfilListField label="Áreas de Experiencia"          value={solicitud.areasExp} />
-          </div>
-        </SectionCard>
-      )}
+      <SectionCard title="Perfil Requerido">
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(solicitud.escolaridad)} />
+          <PerfilListField label="Competencias Administrativas"  value={solicitud.compAdm} />
+          <PerfilListField label="Competencias Técnicas"         value={solicitud.compTec} />
+          <PerfilListField label="Competencias Sociales"         value={solicitud.compSoc} />
+          <PerfilListField label="Valores"                       value={solicitud.valores} />
+          <PerfilListField label="Áreas de Experiencia"          value={solicitud.areasExp} />
+        </div>
+      </SectionCard>
 
       <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
         {raw?.adjunto?.length > 0 ? (
@@ -882,20 +934,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         <div className="flex items-center gap-2">
           <Button
             variant="outline" size="sm" className="gap-1.5"
-            onClick={() => generateJustificacionPDF({
-              folio: solicitud.folioJustificacion,
-              tipo: solicitud.tipo as any,
-              secretaria: solicitud.secretaria,
-              unidadAdministrativa: solicitud.unidadAdministrativa,
-              denominacion: solicitud.denominacion,
-              vigenciaInicio: solicitud.vigenciaInicio,
-              vigenciaFin: solicitud.vigenciaFin,
-              importeBruto: solicitud.importeBruto,
-              esRenovacion: solicitud.esRenovacion,
-              folioAnterior: solicitud.folioAnterior,
-              fecha: solicitud.fecha,
-              firmadoDigitalmente: !isNueva,
-            })}
+            onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
@@ -940,27 +979,36 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
               >
                 <FileCheck className="h-4 w-4" />Ver Dictamen
               </Button>
-              <Button
-                variant="outline" size="sm"
-                onClick={() => setShowDictamen(true)}
-                className="gap-1.5"
-              >
-                <Download className="h-4 w-4" />Descargar
-              </Button>
+
             </>
+          )}
+          {isObservada && (
+            <Badge variant="outline" className="gap-1.5 text-muted-foreground py-1.5 px-3">
+              <Lock className="h-3 w-3" />Solo lectura
+            </Badge>
           )}
         </div>
       </div>
 
       {isObservada && (
-        <Card className="border-2 border-destructive/30 bg-destructive/5 shadow-sm">
+        <Card className="border-2 border-[#832B56]/40 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
-            <Info className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-            <div>
-              <span className="text-sm font-semibold text-destructive">Observaciones por  Validación UEFA </span>
-              {solicitud.observacionesUefa
-                ? <p className="text-sm text-card-foreground mt-1">{solicitud.observacionesUefa}</p>
-                : <p className="text-sm text-muted-foreground mt-1">Sin detalle de observaciones registrado.</p>}
+            <AlertTriangle className="h-5 w-5 text-[#832B56] shrink-0 mt-0.5" />
+            <div className="flex-1 flex flex-col gap-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-sm font-medium text-[#832B56]">
+                  {solicitud.tipoObservacion ?? "Observación"}
+                </span>
+                {solicitud.fechaObservacion && (
+                  <span className="text-[10px] text-muted-foreground">{solicitud.fechaObservacion}</span>
+                )}
+              </div>
+              {solicitud.observadoPor && (
+                <p className="text-xs text-muted-foreground mt-0.5">Por: {solicitud.observadoPor}</p>
+              )}
+              {solicitud.observacionesUefa && (
+                <ObservacionTimeline comentario={solicitud.observacionesUefa} />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1056,7 +1104,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
   )
 }
 
-// pagina principla
 export function ValidacionUefaPage() {
   const { user } = useAuth()
 
@@ -1141,6 +1188,8 @@ export function ValidacionUefaPage() {
         ...s,
         estado: "Observado por Validacion",
         observacionesUefa: obs,
+        observadoPor:      (user as any)?.nombre ?? "Validacion",
+        fechaObservacion:  formatFechaHora(new Date().toISOString()),
         historial: [...s.historial, {
           fecha:   formatFechaHora(new Date().toISOString()),
           usuario: (user as any)?.nombre ?? "Validacion",
@@ -1291,15 +1340,14 @@ export function ValidacionUefaPage() {
 
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Bandeja de Validacion de Justificaciones</h2>
-          <p className="text-sm text-muted-foreground">Revisión, firma y seguimiento de justificaciones enviadas por las URG</p>
+          <h2 className="text-xl font-semibold text-foreground">Bandeja de validación de justificaciones</h2>
+          <p className="text-sm text-muted-foreground">Gestiona y da seguimiento a las justificaciones durante su proceso de validación y emisión.</p>
         </div>
         <Button variant="outline" size="sm" onClick={cargarSolicitudes} disabled={loading} className="gap-1.5">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Actualizar
         </Button>
       </div>
-
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="flex items-center gap-3 py-3">
@@ -1362,6 +1410,11 @@ export function ValidacionUefaPage() {
                       <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                         <td className="px-4 py-3 font-medium text-card-foreground">
                           <span>{folioPrincipal}</span>
+                          {sol.esExtemporanea && folioRecepcion && (
+                            <span className="block text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 mt-0.5 w-fit">
+                              Folio temporal
+                            </span>
+                          )}
                           {folioSecundario && (
                             <span className="block text-xs text-muted-foreground mt-0.5">{folioSecundario}</span>
                           )}
@@ -1427,20 +1480,6 @@ export function ValidacionUefaPage() {
                             {solTab === "Emitidas" && (
                               <>
                                 { }
-                                <Button
-                                  variant="ghost" size="sm"
-                                  onClick={() => setDictamenViewId(sol.id)}
-                                  className="gap-1.5 text-primary hover:text-primary/80"
-                                >
-                                  <FileCheck className="h-4 w-4" />Ver Dictamen
-                                </Button>
-                                <Button
-                                  variant="ghost" size="sm"
-                                  onClick={() => setDictamenViewId(sol.id)}
-                                  className="gap-1.5 text-muted-foreground hover:text-card-foreground"
-                                >
-                                  <Download className="h-4 w-4" />Descargar
-                                </Button>
                               </>
                             )}
                           </div>

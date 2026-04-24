@@ -59,6 +59,13 @@ export type FormularioData = {
   compSoc:               string
   valores:               string
   areasExp:              string
+  riesgoCaidas?:         string
+  riesgoMutilaciones?:   string
+  riesgoGolpes?:         string
+  riesgoOtros?:          string
+  condicionCambioDomicilio?: boolean
+  condicionHorario?:         boolean
+  condicionViajar?:          boolean
 }
 
 // Columnas de Excel
@@ -448,7 +455,8 @@ function formatFolioDictamen(folio: string): string {
   return `${parseInt(m[1], 10)}/${m[2]}`
 }
 
-function splitList(text: string): string[] {
+function splitList(text: any): string[] {
+  if (typeof text !== 'string') return [""]
   const lines = text
     .split(/\n|\r\n/)
     .map((s) => s.replace(/^\s*[IVX]+\.\s*/, "").replace(/^\s*[•\-*]\s*/, "").trim())
@@ -1601,7 +1609,7 @@ function FormularioPrestacion({
             {/* Tipo actividad */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Tipo de Actividades
+                Tipo de Actividad
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -1810,7 +1818,6 @@ function FormularioPrestacion({
           </div>
         </CardContent>
       </Card>
-
       {/* Perfil */}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
@@ -1936,7 +1943,30 @@ function FormularioNombramiento({
   const [condiciones, setCondiciones]               = useState<Record<string, string>>({})
   const [riesgos,     setRiesgos]                   = useState<Record<string, string>>({})
   const [resguardoActivos, setResguardoActivos]     = useState("")
+  const [escolaridad, setEscolaridad] = useState<string[]>(splitTags(datosRenovacion?.escolaridad))
+  const [compAdm,     setCompAdm]     = useState<string[]>(splitTags(datosRenovacion?.compAdm))
+  const [compTec,     setCompTec]     = useState<string[]>(splitTags(datosRenovacion?.compTec))
+  const [compSoc,     setCompSoc]     = useState<string[]>(splitTags(datosRenovacion?.compSoc))
+  const [valores,     setValores]     = useState<string[]>(splitTags(datosRenovacion?.valores))
+  const [areasExp,    setAreasExp]    = useState<string[]>(splitTags(datosRenovacion?.areasExp))
+  const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
+    datosRenovacion?.tipoActividad
+      ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
+      : ""
+  )
   const tipoAdministracion = tipoAdministracionUsuario
+  const tiposActividadNomPorPrograma = useTiposActividadPorPrograma(
+    programaInput, "nombramiento", excelRows, tipoAdministracion, secretariaConfirmada
+  )
+  const tiposActividadNomPorRegimen = useTiposActividad(
+    "nombramiento", excelRows, tipoAdministracion, secretariaConfirmada
+  )
+  const tiposActividadNom = programaInput && tiposActividadNomPorPrograma.length > 0
+    ? tiposActividadNomPorPrograma : tiposActividadNomPorRegimen
+  const tipoActividadNomLabel = tipoActividadSeleccionado
+    ? tiposActividadNom.find(t => t.value === tipoActividadSeleccionado)?.label
+    : undefined
+
   const sugerencias = useMemo(() => {
     if (esRenovacion) {
       if (!secretariaInput) return SECRETARIAS_CATALOGO
@@ -1959,6 +1989,7 @@ function FormularioNombramiento({
   const numeroUA = getNumeroUA(secretariaConfirmada || secretariaInput, unidadAdscripcion)
   const handleSecretariaConfirm = (valor: string) => {
     if (bloqueadoPorRenovacion) return
+
     setSecretariaInput(valor); setSecretariaConfirmada(valor); setShowSugerencias(false)
     setUnidadAdscripcion(""); setClaveUA(""); setUrgSeleccionada("")
   }
@@ -1971,7 +2002,7 @@ function FormularioNombramiento({
       unidadResponsable:    urgSeleccionada,
       programaProyecto:     programaInput,
       regimen:              "nombramiento",
-      tipoActividades:      "",
+      tipoActividades:      tipoActividadNomLabel ?? tipoActividadSeleccionado,
       numeroPrestadores,
       denominacion,
       puestoJefeInmediato,
@@ -1994,8 +2025,20 @@ function FormularioNombramiento({
           .filter(([, v]) => v)
           .map(([k, v]) => `${formatKey(k)}: ${v.charAt(0).toUpperCase() + v.slice(1)}`),
       ],
-      resguardoActivos: resguardoActivos || undefined,
-      escolaridad: "", compAdm: "", compTec: "", compSoc: "", valores: "", areasExp: "",
+      resguardoActivos: resguardoActivos, 
+      escolaridad: escolaridad.join(", "), 
+      compAdm:     compAdm.join("\n"), 
+      compTec:     compTec.join("\n"), 
+      compSoc:     compSoc.join("\n"), 
+      valores:     valores.join("\n"), 
+      areasExp:    areasExp.join("\n"),
+      riesgoCaidas: riesgos.caídas ?? riesgos.caidas ?? "",
+      riesgoMutilaciones: riesgos.mutilaciones ?? "",
+      riesgoGolpes: riesgos.golpes ?? "",
+      riesgoOtros: riesgos.otros ?? "",
+      condicionCambioDomicilio: condiciones["cambio-de-domicilio"] === "si",
+      condicionHorario: condiciones["horario-especial"] === "si",
+      condicionViajar: condiciones.viajar === "si",
     })
   }, [
     secretariaConfirmada, secretariaInput, claveUA, unidadAdscripcion, urgSeleccionada,
@@ -2003,13 +2046,16 @@ function FormularioNombramiento({
     tipoAdministracion,
     vigenciaInicio, vigenciaFin, importeNeto, tipoImporte,
     nivelTabulador, categoriaTabulador, objetoNombramiento,
-    funciones, responsabilidades, marcoNormativo, condiciones, riesgos, resguardoActivos, onFormChange,
+    tipoActividadSeleccionado, tipoActividadNomLabel,
+    funciones, responsabilidades, marcoNormativo, condiciones, riesgos, resguardoActivos,
+    escolaridad, compAdm, compTec, compSoc, valores, areasExp, onFormChange,
   ])
 
   return (
     <div className="flex flex-col gap-3">
-      {showMarcoModal && (
+      {showMarcoModal && ( 
         <MarcoNormativoModal
+
           onAccept={() => {
             marcoModalShownRef.current = true
             if (pendingMarcoChange !== null) {
@@ -2157,7 +2203,6 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {/* Denominación, Puesto y Número — todos los regímenes de nombramiento */}
             <>
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
@@ -2187,6 +2232,37 @@ function FormularioNombramiento({
                 />
               </div>
 
+              {/* Tipo de Actividad */}
+              <div className="flex flex-col gap-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  Tipo de Actividad
+                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </Label>
+                {bloqueadoPorRenovacion ? (
+                  <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                    <span className="text-sm text-muted-foreground">
+                      {datosRenovacion?.tipoActividad || tipoActividadNomLabel || "—"}
+                    </span>
+                  </div>
+                  ) : (
+                  <Select
+                    value={tipoActividadSeleccionado}
+                    onValueChange={setTipoActividadSeleccionado}
+                  >
+                    <SelectTrigger className="bg-background w-full">
+                      <span className="block truncate text-sm pr-1">
+                        {tipoActividadNomLabel ?? <span className="text-muted-foreground">Seleccione tipo de actividad</span>}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposActividadNom.length === 0
+                        ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones disponibles</div>
+                        : tiposActividadNom.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
+                      }
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Número de Personas a Contratar
@@ -2423,12 +2499,12 @@ function FormularioNombramiento({
                   </tr>
                 </thead>
                 <tbody>
-                  {["Lesiones", "Caídas", "Mutilaciones", "Golpes", "Otros"].map((r) => {
-                    const key = r.toLowerCase().replace(/\s+/g, "-")
+                  {["Caídas", "Mutilaciones", "Golpes", "Otros"].map((r) => {
+                    const key = r.toLowerCase()
                     return (
                       <tr key={r} className="border-t border-border">
                         <td className="px-4 py-2.5 text-card-foreground">{r}</td>
-                        {["bajo", "medio", "alto"].map((nivel) => (
+                        {["Bajo", "Medio", "Alto"].map((nivel) => (
                           <td key={nivel} className="px-4 py-2.5 text-center">
                             <input
                               type="radio"
@@ -2487,6 +2563,61 @@ function FormularioNombramiento({
               <Label htmlFor="resg-no" className="text-sm font-normal cursor-pointer">No</Label>
             </div>
           </RadioGroup>
+        </CardContent>
+      </Card>
+
+      {/* VIII. Perfil */}
+      <Card className="shadow-sm border-border">
+        <CardHeader className="px-4 pt-3 pb-1">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+            <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">VIII</span>
+            Perfil
+            {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
+          </CardTitle>
+          <p className="text-xs text-muted-foreground italic">
+            SE REFIERE A LA ESCOLARIDAD, COMPETENCIAS Y EXPERIENCIA.
+          </p>
+        </CardHeader>
+        <CardContent className="grid gap-x-6 gap-y-5 px-4 pb-4 pt-0 md:grid-cols-2">
+          <div className="md:col-span-2 flex flex-col gap-2">
+            <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+              Escolaridad Mínima
+              {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+            </span>
+            <DynamicList
+              label="" items={escolaridad.length > 0 ? escolaridad : [""]}
+              onChange={setEscolaridad}
+              readonly={bloqueadoPorRenovacion}
+              minRequired={1}
+              max={1}
+            />
+          </div>
+          {[
+            { sub: "VIII.1", label: "Competencias Administrativas", items: compAdm,  onChange: setCompAdm },
+            { sub: "VIII.2", label: "Competencias Técnicas",        items: compTec,  onChange: setCompTec },
+            { sub: "VIII.3", label: "Competencias Sociales",        items: compSoc,  onChange: setCompSoc },
+            { sub: null,     label: "Áreas de Experiencia",         items: areasExp, onChange: setAreasExp },
+            { sub: null,     label: "Valores",                      items: valores,  onChange: setValores },
+          ].map(({ sub, label, items, onChange }) => (
+            <div key={label} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                {sub && (
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
+                )}
+                <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+                  {label}
+                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </span>
+              </div>
+              <DynamicList
+                label="" items={items.length > 0 ? items : [""]}
+                onChange={onChange}
+                readonly={bloqueadoPorRenovacion}
+                minRequired={3}
+                max={5}
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>
@@ -2582,7 +2713,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RadioGroup value={subTipo} onValueChange={(v) => setSubTipo(v as "captura" | "regularizacion")} className="flex flex-col gap-3">
+          <RadioGroup value={subTipo} onValueChange={() => setSubTipo(v as "captura" | "regularizacion")} className="flex flex-col gap-3">
             <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${subTipo === "captura" ? "border-accent bg-accent/5" : "border-border hover:border-secondary/50"}`}>
               <RadioGroupItem value="captura" id="sub-captura" className="mt-0.5" />
               <div className="flex flex-col gap-1">
@@ -2637,7 +2768,7 @@ function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSol
   check(formData.responsabilidades,    "Responsabilidades")
   if (tipo === "prestacion") {
     check(formData.regimen,       "Régimen de Contratación")
-    check(formData.tipoActividades, "Tipo de Actividades")
+    check(formData.tipoActividades, "Tipo de Actividad")
     check(formData.escolaridad,   "Escolaridad")
     check(formData.compAdm,       "Competencias Administrativas")
     check(formData.compTec,       "Competencias Técnicas")
@@ -2691,6 +2822,14 @@ function buildSolicitudPayload({
     comp_soc:              formData.compSoc              ?? null,
     valores:               formData.valores              ?? null,
     areas_exp:             formData.areasExp             ?? null,
+    riesgo_caidas:         formData.riesgoCaidas         ?? null,
+    riesgo_mutilaciones:   formData.riesgoMutilaciones   ?? null,
+    riesgo_golpes:         formData.riesgoGolpes         ?? null,
+    riesgo_otros:          formData.riesgoOtros          ?? null,
+    condicion_cambio_domicilio: formData.condicionCambioDomicilio ?? false,
+    condicion_horario:     formData.condicionHorario     ?? false,
+    condicion_viajar:      formData.condicionViajar      ?? false,
+    resguardo_activos:     formData.resguardoActivos     ?? false,
   }
 }
 
@@ -2702,7 +2841,6 @@ export type EditSolicitudPayload = {
   periodo: string
   formData: Partial<FormularioData>
 }
-
 export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSolicitudPayload }) {
   const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
   const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")
@@ -3144,7 +3282,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
     )
   }
   return (
-    <PageLayout title="Nueva Solicitud" description="Registre una nueva solicitud de dictaminación técnica funcional">
+    <PageLayout title="Nueva solicitud" description="Inicia el registro de una solicitud para su análisis y emisión de dictamen u opinión técnica funcional.">
       <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <StepIndicator step={step} tipo={tipo} />
       </div>
@@ -3154,7 +3292,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
             <Card className="shadow-sm border-border">
               <CardContent className="flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                Verificando calendario de recepción...
+                Verificando Calendario de Recepción...
               </CardContent>
             </Card>
           )}
@@ -3256,8 +3394,8 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
                       <div className="flex items-start gap-2 w-full">
                         <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold text-destructive">Período vencido — no se puede registrar</span>
-                          <span className="text-xs text-muted-foreground">La fecha límite DO ({periodoInfo.row.limiteDO}) ya pasó.</span>
+                          <span className="text-sm font-semibold text-destructive">Período vencido — No se puede Registrar</span>
+                          <span className="text-xs text-muted-foreground">La Fecha límite DO ({periodoInfo.row.limiteDO}) ya Expiro .</span>
                         </div>
                       </div>
                     )}

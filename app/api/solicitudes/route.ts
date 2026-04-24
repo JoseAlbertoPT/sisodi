@@ -58,10 +58,12 @@ export async function POST(req: NextRequest) {
       denominacion, vigencia_inicio, vigencia_fin, importe_bruto,
       es_renovacion, folio_anterior,
       nivel_tabulador, categoria_tabulador,
-      objeto, actividades, responsabilidades,
+      objeto, actividades, responsabilidades, 
       escolaridad, comp_adm, comp_tec, comp_soc, valores, areas_exp,
-      puesto_jefe_inmediato, marco_normativo, condiciones_riesgos, resguardo_activos,
+      puesto_jefe_inmediato, marco_normativo, condiciones_riesgos, 
       tipo_importe,
+      riesgo_caidas, riesgo_mutilaciones, riesgo_golpes, riesgo_otros,
+      condicion_cambio_domicilio, condicion_horario, condicion_viajar, resguardo_activos,
       estado_nombre,
     } = body
 
@@ -127,8 +129,15 @@ export async function POST(req: NextRequest) {
         puesto_jefe_inmediato: puesto_jefe_inmediato ?? null,
         marco_normativo:       marco_normativo ?? [],
         condiciones_riesgos:   condiciones_riesgos ?? [],
-        resguardo_activos:     resguardo_activos ?? null,
         tipo_importe:          tipo_importe ?? null,
+        riesgo_caidas:              riesgo_caidas ?? null,
+        riesgo_mutilaciones:        riesgo_mutilaciones ?? null,
+        riesgo_golpes:              riesgo_golpes ?? null,
+        riesgo_otros:               riesgo_otros ?? null,
+        condicion_cambio_domicilio: condicion_cambio_domicilio ?? false,
+        condicion_horario:          condicion_horario ?? false,
+        condicion_viajar:           condicion_viajar ?? false,
+        resguardo_activos:          typeof resguardo_activos === "boolean" ? (resguardo_activos ? "si" : "no") : (resguardo_activos ?? null),
       },
     })
 
@@ -225,6 +234,7 @@ export async function PATCH(req: NextRequest) {
       objeto:                "objeto",
       actividades:           "actividades",
       responsabilidades:     "responsabilidades",
+      marco_normativo:       "marco_normativo",
       escolaridad:           "escolaridad",
       comp_adm:              "comp_adm",
       comp_tec:              "comp_tec",
@@ -232,13 +242,25 @@ export async function PATCH(req: NextRequest) {
       valores:               "valores",
       areas_exp:             "areas_exp",
       puesto_jefe_inmediato: "puesto_jefe_inmediato",
-      marco_normativo:       "marco_normativo",
       condiciones_riesgos:   "condiciones_riesgos",
-      resguardo_activos:     "resguardo_activos",
       tipo_importe:          "tipo_importe",
+      riesgo_caidas:         "riesgo_caidas",
+      riesgo_mutilaciones:   "riesgo_mutilaciones",
+      riesgo_golpes:         "riesgo_golpes",
+      riesgo_otros:          "riesgo_otros",
+      condicion_cambio_domicilio: "condicion_cambio_domicilio",
+      condicion_horario:     "condicion_horario",
+      condicion_viajar:      "condicion_viajar",
+      resguardo_activos:     "resguardo_activos",
     }
     for (const [k, v] of Object.entries(map)) {
-      if (campos[k] !== undefined) data[v] = campos[k]
+      if (campos[k] !== undefined) {
+        if (v === "resguardo_activos") {
+          data[v] = typeof campos[k] === "boolean" ? (campos[k] ? "si" : "no") : campos[k]
+        } else {
+          data[v] = campos[k]
+        }
+      }
     }
     if (campos.vigencia_inicio !== undefined)
       data.vigencia_inicio = campos.vigencia_inicio ? new Date(campos.vigencia_inicio) : null
