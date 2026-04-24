@@ -192,7 +192,7 @@ model solicitud {
   condicion_horario          Boolean?              @default(false)
   condicion_viajar           Boolean?              @default(false)
   resguardo_activos          String?               @db.VarChar(10)
-  escolaridad                String?               @db.VarChar(100)
+  escolaridad                String?
   comp_adm              String?
   comp_tec              String?
   comp_soc              String?
@@ -214,6 +214,8 @@ model solicitud {
   @@index([estado_id], map: "idx_solicitud_estado")
   @@index([usuario_id], map: "idx_solicitud_usuario")
 }
+
+
 
 model usuario {
   id                    String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import React, { useState, useMemo, useEffect, useCallback, memo } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -106,7 +106,7 @@ function mapearDictamen(raw: any): DictamenEmitido {
   }
 }
 
-function DictamenViewModal({
+const DictamenViewModal = React.memo(({
   dictamen,
   onClose,
   isDownloading,
@@ -115,8 +115,8 @@ function DictamenViewModal({
   dictamen: DictamenEmitido
   onClose: () => void
   isDownloading: boolean
-  onDownload: () => void
-}) {
+  onDownload: (firmas: Record<string, string>, formato: 'fisico' | 'en_linea') => void
+}) => {
   const titulo =
     dictamen.tipoDoc === "dictamen"
       ? "DICTAMEN TÉCNICO FUNCIONAL"
@@ -124,13 +124,78 @@ function DictamenViewModal({
 
   const folioRecepcionFormateado = formatearFolio(dictamen.folioRecepcion)
 
-  const handlePrint = () => {
-    onDownload()
-  }
+  const [firmaElaboroNombre, setFirmaElaboroNombre] = useState("")
+  const [firmaRevisoNombre, setFirmaRevisoNombre] = useState("")
+  const [firmaVoBoJuridicoNombre, setFirmaVoBoJuridicoNombre] = useState("")
+  const [firmaDictRevisoNombre, setFirmaDictRevisoNombre] = useState("")
+  const [firmaDictVerificoNombre, setFirmaDictVerificoNombre] = useState("")
+  const [firmaDictEmitioNombre, setFirmaDictEmitioNombre] = useState("")
+  const [showFirmas, setShowFirmas] = useState(false)
+  const [formato, setFormato] = useState<'fisico' | 'en_linea'>('fisico')
+
+  const esNombramiento = dictamen.tipoSolicitud?.toLowerCase().includes("nombramiento")
+
+  // Debounced state para no recargar el iframe con cada tecla
+  const [debouncedFirmas, setDebouncedFirmas] = useState({
+    firmaElaboroNombre: "",
+    firmaRevisoNombre: "",
+    firmaVoBoJuridicoNombre: "",
+    firmaDictRevisoNombre: "",
+    firmaDictVerificoNombre: "",
+    firmaDictEmitioNombre: ""
+  })
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFirmas({
+        firmaElaboroNombre,
+        firmaRevisoNombre,
+        firmaVoBoJuridicoNombre,
+        firmaDictRevisoNombre,
+        firmaDictVerificoNombre,
+        firmaDictEmitioNombre
+      })
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [firmaElaboroNombre, firmaRevisoNombre, firmaVoBoJuridicoNombre, firmaDictRevisoNombre, firmaDictVerificoNombre, firmaDictEmitioNombre])
+
+  const iframeSrc = useMemo(() => {
+    const params = new URLSearchParams({ id: dictamen.id })
+    if (debouncedFirmas.firmaElaboroNombre) params.set("firmaElaboroNombre", debouncedFirmas.firmaElaboroNombre)
+    if (debouncedFirmas.firmaRevisoNombre) params.set("firmaRevisoNombre", debouncedFirmas.firmaRevisoNombre)
+    if (debouncedFirmas.firmaVoBoJuridicoNombre) params.set("firmaVoBoJuridicoNombre", debouncedFirmas.firmaVoBoJuridicoNombre)
+    if (debouncedFirmas.firmaDictRevisoNombre) params.set("firmaDictRevisoNombre", debouncedFirmas.firmaDictRevisoNombre)
+    if (debouncedFirmas.firmaDictVerificoNombre) params.set("firmaDictVerificoNombre", debouncedFirmas.firmaDictVerificoNombre)
+    if (debouncedFirmas.firmaDictEmitioNombre) params.set("firmaDictEmitioNombre", debouncedFirmas.firmaDictEmitioNombre)
+    params.set("formato", formato)
+    return `/api/pdf/justificacion?${params.toString()}#toolbar=0&view=FitH`
+  }, [dictamen.id, debouncedFirmas, formato])
+
+  const handleDownload = useCallback(() => {
+    onDownload({
+      firmaElaboroNombre,
+      firmaRevisoNombre,
+      firmaVoBoJuridicoNombre,
+      firmaDictRevisoNombre,
+      firmaDictVerificoNombre,
+      firmaDictEmitioNombre,
+    }, 'fisico')
+  }, [onDownload, firmaElaboroNombre, firmaRevisoNombre, firmaVoBoJuridicoNombre, firmaDictRevisoNombre, firmaDictVerificoNombre, firmaDictEmitioNombre])
+
+  const handleDownloadOnline = useCallback(() => {
+    onDownload({
+      firmaElaboroNombre,
+      firmaRevisoNombre,
+      firmaVoBoJuridicoNombre,
+      firmaDictRevisoNombre,
+      firmaDictVerificoNombre,
+      firmaDictEmitioNombre,
+    }, 'en_linea')
+  }, [onDownload, firmaElaboroNombre, firmaRevisoNombre, firmaVoBoJuridicoNombre, firmaDictRevisoNombre, firmaDictVerificoNombre, firmaDictEmitioNombre])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
-      <Card className="w-full max-w-3xl max-h-[85vh] flex flex-col shadow-xl border-2 border-primary/20">
+      <Card className="w-full max-w-5xl max-h-[90vh] flex flex-col shadow-xl border-2 border-primary/20">
         <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0">
           <div>
             <CardTitle className="text-base font-semibold text-card-foreground">
@@ -141,27 +206,102 @@ function DictamenViewModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handlePrint} disabled={isDownloading} className="gap-1.5 min-w-[140px]">
+            <div className="flex bg-muted rounded-md p-1 mr-2 border border-border">
+              <Button 
+                variant={formato === 'fisico' ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setFormato('fisico')}
+                className="h-7 px-3 text-[10px] uppercase font-bold"
+              >
+                Físico
+              </Button>
+              <Button 
+                variant={formato === 'en_linea' ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setFormato('en_linea')}
+                className="h-7 px-3 text-[10px] uppercase font-bold"
+              >
+                En Línea
+              </Button>
+            </div>
+            <Button
+              variant={showFirmas ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowFirmas(!showFirmas)}
+              className="gap-1.5"
+            >
+              <Printer className="h-4 w-4" />
+              {showFirmas ? "Ocultar Firmas" : "Editar Firmas"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading} className="gap-1.5 min-w-[130px]">
               {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {isDownloading ? "Generando..." : "Descargar PDF"}
+              {isDownloading ? "Generando..." : "Descargar Físico"}
+            </Button>
+            <Button variant="default" size="sm" onClick={handleDownloadOnline} disabled={isDownloading} className="gap-1.5 min-w-[140px]">
+              {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck className="h-4 w-4" />}
+              {isDownloading ? "Generando..." : "Descargar en Línea"}
             </Button>
             <Button variant="ghost" size="sm" onClick={onClose}>Cerrar</Button>
           </div>
         </CardHeader>
 
-        <ScrollArea className="flex-1 px-6 pb-6">
-          <div className="w-full h-[70vh] bg-muted rounded-md border border-border overflow-hidden">
-            <iframe 
-              src={`/api/pdf/justificacion?id=${dictamen.id}#toolbar=0&view=FitH`} 
-              className="w-full h-full border-0" 
-              title={`Vista previa Dictamen ${dictamen.folioDictamen ?? dictamen.id}`}
-            />
+        <div className="flex flex-1 overflow-hidden">
+          {showFirmas && (
+            <div className="w-72 shrink-0 border-r border-border p-4 overflow-y-auto space-y-4 bg-muted/30">
+              <h4 className="text-sm font-semibold text-card-foreground mb-3">Nombres de Firmantes</h4>
+
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Página Principal</p>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">Elaboró</label>
+                  <Input value={firmaElaboroNombre} onChange={(e) => setFirmaElaboroNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Revisó</label>
+                  <Input value={firmaRevisoNombre} onChange={(e) => setFirmaRevisoNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                </div>
+                {esNombramiento && (
+                  <div>
+                    <label className="text-xs text-muted-foreground">Vo. Bo. Jurídico</label>
+                    <Input value={firmaVoBoJuridicoNombre} onChange={(e) => setFirmaVoBoJuridicoNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                  </div>
+                )}
+              </div>
+
+              <hr className="border-border" />
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Página Dictaminación</p>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">Revisó</label>
+                  <Input value={firmaDictRevisoNombre} onChange={(e) => setFirmaDictRevisoNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Verificó</label>
+                  <Input value={firmaDictVerificoNombre} onChange={(e) => setFirmaDictVerificoNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Emitió</label>
+                  <Input value={firmaDictEmitioNombre} onChange={(e) => setFirmaDictEmitioNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 px-4 pb-4">
+            <div className="w-full h-[75vh] bg-muted rounded-md border border-border overflow-hidden">
+              <iframe
+                src={iframeSrc}
+                className="w-full h-full border-0"
+                title={`Vista previa Dictamen ${dictamen.folioDictamen ?? dictamen.id}`}
+              />
+            </div>
           </div>
-        </ScrollArea>
+        </div>
       </Card>
     </div>
   )
-}
+})
+
 // pagina Principal
 export function DictamenesPage() {
   const { user } = useAuth()
@@ -177,13 +317,13 @@ export function DictamenesPage() {
   const [filterSecretaria, setFilterSecretaria] = useState("todas")
   const [filterTipo,       setFilterTipo]       = useState("todos")
 
-  const descargarPdfDictamen = async (solicitudId: string, folio: string | null) => {
+  const descargarPdfDictamen = async (solicitudId: string, folio: string | null, firmas: Record<string, string> = {}, formato: 'fisico' | 'en_linea' = 'fisico') => {
     setDownloadingId(solicitudId)
     try {
       const res = await fetch("/api/pdf/justificacion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ solicitudId })
+        body: JSON.stringify({ solicitudId, ...firmas, formato })
       })
 
       if (!res.ok) {
@@ -196,7 +336,8 @@ export function DictamenesPage() {
       const a = document.createElement("a")
       a.href = url
       const folioName = folio ? folio.replace(/\//g, "-") : solicitudId
-      a.download = `Dictamen_${folioName}.pdf`
+      const suffix = formato === 'en_linea' ? '_EnLinea' : ''
+      a.download = `Dictamen_${folioName}${suffix}.pdf`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -232,38 +373,47 @@ export function DictamenesPage() {
   )
 
   const filtered = useMemo(
-    () =>
-      dictamenes
-        .filter((d) => {
-          if (!searchTerm) return true
-          const t = searchTerm.toLowerCase()
-          return (
-            formatearFolio(d.folioDictamen).toLowerCase().includes(t)  ||
-            d.folioDictamen.toLowerCase().includes(t)                   ||
-            formatearFolio(d.folioRecepcion).toLowerCase().includes(t)  ||
-            (d.folioRecepcion?.toLowerCase().includes(t) ?? false)      ||
-            d.secretaria.toLowerCase().includes(t)                      ||
-            (d.denominacion?.toLowerCase().includes(t) ?? false)
-          )
-        })
-        .filter((d) => {
-          if (filterAnio === "todos") return true
-          return d.fechaEmision?.startsWith(filterAnio) ?? false
-        })
-        .filter((d) => {
-          if (filterMes === "todos") return true
-          if (d.fechaEmision) return d.fechaEmision.slice(5, 7) === filterMes
-          const mesFolio = mesDesdeRaw(d.folioRecepcion)
-          if (mesFolio) return mesFolio === filterMes
-          return false
-        })
-        .filter((d) => filterSecretaria === "todas" || d.secretaria === filterSecretaria)
-        .filter((d) => {
-          if (filterTipo === "todos")    return true
-          if (filterTipo === "dictamen") return d.tipoDoc === "dictamen"
-          if (filterTipo === "opinion")  return d.tipoDoc === "opinion"
-          return true
-        }),
+    () => {
+      let result = dictamenes;
+
+      if (searchTerm) {
+        const t = searchTerm.toLowerCase();
+        result = result.filter((d) => 
+          formatearFolio(d.folioDictamen).toLowerCase().includes(t) ||
+          (d.folioDictamen?.toLowerCase().includes(t) ?? false) ||
+          formatearFolio(d.folioRecepcion).toLowerCase().includes(t) ||
+          (d.folioRecepcion?.toLowerCase().includes(t) ?? false) ||
+          d.secretaria.toLowerCase().includes(t) ||
+          (d.denominacion?.toLowerCase().includes(t) ?? false)
+        );
+      }
+
+      if (filterAnio !== "todos") {
+        result = result.filter((d) => d.fechaEmision?.startsWith(filterAnio));
+      }
+
+      if (filterMes !== "todos") {
+        result = result.filter((d) => {
+          if (d.fechaEmision) return d.fechaEmision.slice(5, 7) === filterMes;
+          const mesFolio = mesDesdeRaw(d.folioRecepcion);
+          return mesFolio === filterMes;
+        });
+      }
+
+      if (filterSecretaria !== "todas") {
+        result = result.filter((d) => d.secretaria === filterSecretaria);
+      }
+
+      if (filterTipo !== "todos") {
+        result = result.filter((d) => {
+          if (filterTipo === "dictamen") return d.tipoDoc === "dictamen";
+          if (filterTipo === "opinion") return d.tipoDoc === "opinion";
+          return true;
+        });
+      }
+
+      return result;
+    },
     [dictamenes, searchTerm, filterAnio, filterMes, filterSecretaria, filterTipo]
   )
 
@@ -281,7 +431,7 @@ export function DictamenesPage() {
           dictamen={viewing} 
           onClose={() => setViewing(null)} 
           isDownloading={downloadingId === viewing.id}
-          onDownload={() => descargarPdfDictamen(viewing.id, viewing.folioDictamen)}
+          onDownload={(firmas, formato) => descargarPdfDictamen(viewing.id, viewing.folioDictamen, firmas, formato)}
         />
       )}
 

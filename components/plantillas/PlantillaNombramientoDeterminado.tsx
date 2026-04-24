@@ -14,6 +14,7 @@ import React from "react";
    ═══════════════════════════════════════════════════════════ */
 export interface JustificacionNombramientoData {
   tipoAdministracion: 'centralizada' | 'paraestatal';
+  formato: 'fisico' | 'en_linea';
   oficioSolicitud: string;
   secretaria: string;
   unidadAdministrativa: string;
@@ -63,6 +64,13 @@ export interface JustificacionNombramientoData {
     areasExperiencia: string[];
     aniosExperiencia: string;
   };
+  // Nombres editables de firmantes
+  firmaElaboroNombre?: string;
+  firmaRevisoNombre?: string;
+  firmaVoBoJuridicoNombre?: string;
+  firmaDictRevisoNombre?: string;
+  firmaDictVerificoNombre?: string;
+  firmaDictEmitioNombre?: string;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -99,7 +107,7 @@ const s = StyleSheet.create({
   watermarkImage: { 
     width: 600,
     height: "auto",
-    transform: 'scale(2.0)', 
+    transform: 'scale(2.5)', 
     objectFit: 'contain',
   },
   /* --- Encabezado (tabla 3 columnas con bordes) --- */
@@ -146,11 +154,11 @@ const s = StyleSheet.create({
   fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 15 },
   centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 10 },
   // Espaciado ajustado requerido: marginTop 5, marginBottom 5
-  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 5, marginTop: 5 },
+  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 3, marginTop: 5 },
 
   /* --- Filas de Formulario (campos 1-14) --- */
-  row: { flexDirection: "row", marginBottom: 6, alignItems: "flex-end" },
-  bold: { fontFamily: "Helvetica-Bold", marginBottom: 5, marginTop: 5 },
+  row: { flexDirection: "row", marginBottom: 4, alignItems: "flex-end" },
+  bold: { fontFamily: "Helvetica-Bold", marginBottom: 3, marginTop: 3 },
   numLabel: { width: 15, fontFamily: "Helvetica-Bold", fontSize: 9 },
   marginLabel: { fontFamily: "Helvetica-Bold", marginRight: 5, fontSize: 9 },
   valueText: {
@@ -159,7 +167,7 @@ const s = StyleSheet.create({
     borderBottomColor: "#000",
     fontSize: 9,
     fontFamily: "Helvetica",
-    paddingBottom: 1,
+    paddingBottom: 2,
   },
 
   /* --- Checkboxes --- */
@@ -276,11 +284,11 @@ const s = StyleSheet.create({
   },
 
   /* --- Listas Dinámicas (Wraps) - Numeración --- */
-  listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10, marginTop: 5 },
+  listItemContainer: { flexDirection: "row", marginBottom: 3, paddingLeft: 10, marginTop: 2 },
   listNum: { width: 18, fontFamily: "Helvetica-Bold" },
   listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.3 },
   // Se usará también para perfil
-  bulletItemContainer: { flexDirection: "row", marginBottom: 4, paddingLeft: 15, marginTop: 3 },
+  bulletItemContainer: { flexDirection: "row", marginBottom: 2, paddingLeft: 15, marginTop: 1 },
   bulletSign: { width: 18, fontFamily: "Helvetica-Bold" },
 
   /* --- Bloque de Firmas (Elaboró / Revisó) --- */
@@ -300,7 +308,8 @@ const s = StyleSheet.create({
     width: "100%",
     marginBottom: 4,
   },
-  firmaLabel: { fontSize: 8, marginBottom: 25, textAlign: "center" },
+  firmaLabel: { fontSize: 8, marginBottom: 5, textAlign: "center" },
+  firmaNombre: { fontSize: 9, fontFamily: "Helvetica-Bold", textAlign: "center", marginBottom: 5, minHeight: 12 },
   firmaDesc: {
     fontFamily: "Helvetica-Bold",
     fontSize: 7,
@@ -450,25 +459,37 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           <Text style={s.valueText}>{data.unidadResponsable}</Text>
         </View>
 
-        {/* Campo 4: Programa */}
+        {/* Campo 4: Programa o Proyecto */}
         <View style={s.row}>
           <Text style={s.numLabel}>4.</Text>
           <Text style={s.marginLabel}>Programa o Proyecto:</Text>
           <Text style={s.valueText}>{data.programaProyecto}</Text>
         </View>
 
-        {/* Campo 5: Denominación */}
-        <View style={s.row}>
-          <Text style={s.numLabel}>5.</Text>
-          <Text style={s.marginLabel}>Denominación del Nombramiento:</Text>
-          <Text style={s.valueText}>{data.denominacionNombramiento}</Text>
+        {/* Campo 5: Denominación del Nombramiento — Estructura Flexbox para Salto de Línea */}
+        <View style={{ marginBottom: 6 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+            <Text style={s.numLabel}>5.</Text>
+            <Text style={{ ...s.marginLabel, width: 145 }}>Denominación del Nombramiento:</Text>
+            <View style={{ flex: 1, borderBottomWidth: 1, borderBottomColor: "#000", minHeight: 14 }}>
+              <Text style={{ fontSize: 9, fontFamily: "Helvetica", paddingBottom: 2 }}>
+                {data.denominacionNombramiento || ""}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* Campo 6: Tipo de Actividad */}
-        <View style={s.row}>
-          <Text style={s.numLabel}>6.</Text>
-          <Text style={s.marginLabel}>Tipo de Actividad:</Text>
-          <Text style={s.valueText}>{data.tipoActividad}</Text>
+        {/* Campo 6: Tipo de Actividad — Estructura Flexbox para Salto de Línea */}
+        <View style={{ marginBottom: 6 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+            <Text style={s.numLabel}>6.</Text>
+            <Text style={{ ...s.marginLabel, width: 90 }}>Tipo de Actividad:</Text>
+            <View style={{ flex: 1, borderBottomWidth: 1, borderBottomColor: "#000", minHeight: 14 }}>
+              <Text style={{ fontSize: 9, fontFamily: "Helvetica", paddingBottom: 2 }}>
+                {data.tipoActividad || ""}
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* Campo 7: Puesto del Jefe Inmediato */}
@@ -576,17 +597,41 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
               <Text style={s.listTextWrap} wrap={true}>{leg}</Text>
             </View>
           ))}
-          {data.marcoNormativo?.slice(1).map((leg, index) => (
-            <View key={`leg-${index + 1}`} style={s.listItemContainer}>
-              <Text style={s.listNum}>{index + 2}.</Text>
-              <Text style={s.listTextWrap} wrap={true}>{leg}</Text>
-            </View>
-          ))}
+        </View>
 
-          {/* Bloque de firma CENTRADO debajo del texto */}
-          <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 20 }}>
+        {/* En medio (si hay más de 2) */}
+        {data.marcoNormativo?.slice(1, -1).map((leg, index) => (
+          <View key={`leg-${index + 1}`} style={s.listItemContainer} wrap={false}>
+            <Text style={s.listNum}>{index + 2}.</Text>
+            <Text style={s.listTextWrap} wrap={true}>{leg}</Text>
+          </View>
+        ))}
+
+        {/* ÚLTIMO item (o nada si solo hay 1) + FIRMA envueltos juntos */}
+        <View wrap={false}>
+          {data.marcoNormativo && data.marcoNormativo.length > 1 && (
+            <View style={s.listItemContainer}>
+              <Text style={s.listNum}>{data.marcoNormativo.length}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{data.marcoNormativo[data.marcoNormativo.length - 1]}</Text>
+            </View>
+          )}
+
+          {/* LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) */}
+          {data.formato === 'en_linea' && (
+            <View style={{ marginTop: 20, marginBottom: 15, alignItems: 'center' }}>
+              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
+              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+              <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
+                a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+              </Text>
+            </View>
+          )}
+
+          {/* Bloque de firma CENTRADO debajo del texto — pegado al marco normativo */}
+          <View style={{ flexDirection: "row", justifyContent: "center", marginTop: data.formato === 'en_linea' ? 10 : 30 }}>
             <View style={{ width: "45%", alignItems: "center" }}>
-              <Text style={{ fontSize: 8, marginBottom: 35, fontFamily: "Helvetica-Bold" }}>Vo. Bo. Marco Normativo</Text>
+              <Text style={{ fontSize: 8, marginBottom: 5, fontFamily: "Helvetica-Bold" }}>Vo. Bo. Marco Normativo</Text>
+              <Text style={s.firmaNombre}>{data.firmaVoBoJuridicoNombre || ""}</Text>
               <View style={{ borderTopWidth: 1, borderTopColor: "#000", width: "100%", marginBottom: 4 }}></View>
               <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Titular de la Unidad de Enlace</Text>
               <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Jurídico o Equivalente</Text>
@@ -688,60 +733,97 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         </Text>
 
         {/* ── II. PERFIL ── */}
-        <Text style={{ ...s.sectionTitle, marginTop: 15 }}>II.  PERFIL:</Text>
-        <Text style={{ marginBottom: 5, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia, necesarios para ocupar el puesto).</Text>
+        <View wrap={false}>
+          <Text style={{ ...s.sectionTitle, marginTop: 15 }}>II.  PERFIL:</Text>
+          <Text style={{ marginBottom: 8, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia, necesarios para ocupar el puesto).</Text>
 
-        {/* II.1 Escolaridad */}
-        <Text style={s.bold}>II.1    ESCOLARIDAD MÍNIMA:</Text>
-        {data.perfil?.escolaridadMinima?.map((esc, i) => (
-          <View key={`esc-${i}`} style={s.bulletItemContainer} wrap={false}>
-            {/* Listas Numeradas en lugar de bullets */}
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+          {/* II.1 Escolaridad — título + primer item juntos */}
+          <Text style={{ ...s.bold, marginBottom: 10 }}>II.1    ESCOLARIDAD MÍNIMA:</Text>
+          {data.perfil?.escolaridadMinima?.slice(0, 1).map((esc, i) => (
+            <View key={`esc-${i}`} style={s.bulletItemContainer}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{esc}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.escolaridadMinima?.slice(1).map((esc, i) => (
+          <View key={`esc-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap} wrap={true}>{esc}</Text>
           </View>
         ))}
 
-        {/* II.2 Competencias */}
-        <Text style={{ ...s.bold, marginTop: 10 }}>II.2    COMPETENCIAS LABORALES REQUERIDAS:</Text>
-
-        {/* II.2.1 Administrativas */}
-        <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 5, marginLeft: 15, marginBottom: 5 }}>II.2.1  Administrativas:</Text>
-        {data.perfil?.competenciasAdministrativas?.map((comp, i) => (
-          <View key={`ca-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+        {/* II.2 Competencias — título + subtítulo + primer item juntos */}
+        <View wrap={false}>
+          <Text style={{ ...s.bold, marginTop: 10, marginBottom: 12 }}>II.2    COMPETENCIAS LABORALES REQUERIDAS:</Text>
+          <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 3, marginLeft: 15, marginBottom: 2 }}>II.2.1  Administrativas:</Text>
+          {data.perfil?.competenciasAdministrativas?.slice(0, 1).map((comp, i) => (
+            <View key={`ca-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{comp}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.competenciasAdministrativas?.slice(1).map((comp, i) => (
+          <View key={`ca-${i + 1}`} style={{...s.bulletItemContainer, paddingLeft: 30}} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap} wrap={true}>{comp}</Text>
           </View>
         ))}
 
-        {/* II.2.2 Técnicas */}
-        <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 5, marginLeft: 15, marginBottom: 5 }}>II.2.2  Técnicas:</Text>
-        {data.perfil?.competenciasTecnicas?.map((comp, i) => (
-          <View key={`ct-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+        {/* II.2.2 Técnicas — título + primer item juntos */}
+        <View wrap={false}>
+          <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 8, marginLeft: 15, marginBottom: 6 }}>II.2.2  Técnicas:</Text>
+          {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
+            <View key={`ct-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{comp}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.competenciasTecnicas?.slice(1).map((comp, i) => (
+          <View key={`ct-${i + 1}`} style={{...s.bulletItemContainer, paddingLeft: 30}} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap} wrap={true}>{comp}</Text>
           </View>
         ))}
 
-        {/* II.2.3 Sociales */}
-        <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 5, marginLeft: 15, marginBottom: 5 }}>II.2.3  Sociales:</Text>
-        {data.perfil?.competenciasSociales?.map((comp, i) => (
-          <View key={`cs-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+        {/* II.2.3 Sociales — título + primer item juntos */}
+        <View wrap={false}>
+          <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 8, marginLeft: 15, marginBottom: 6 }}>II.2.3  Sociales:</Text>
+          {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
+            <View key={`cs-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{comp}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.competenciasSociales?.slice(1).map((comp, i) => (
+          <View key={`cs-${i + 1}`} style={{...s.bulletItemContainer, paddingLeft: 30}} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap} wrap={true}>{comp}</Text>
           </View>
         ))}
 
-        {/* II.2.4 Valores */}
-        <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 5, marginLeft: 15, marginBottom: 5 }}>II.2.4  Valores:</Text>
-        {data.perfil?.valores?.map((val, i) => (
-          <View key={`val-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+        {/* II.2.4 Valores — título + primer item juntos */}
+        <View wrap={false}>
+          <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 3, marginLeft: 15, marginBottom: 2 }}>II.2.4  Valores:</Text>
+          {data.perfil?.valores?.slice(0, 1).map((val, i) => (
+            <View key={`val-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap} wrap={true}>{val}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.valores?.slice(1).map((val, i) => (
+          <View key={`val-${i + 1}`} style={{...s.bulletItemContainer, paddingLeft: 30}} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap} wrap={true}>{val}</Text>
           </View>
         ))}
 
         {/* II.3 Áreas y Años de Experiencia */}
-        <View style={{ flexDirection: "row", marginTop: 15 }} wrap={false}>
+        <View style={{ flexDirection: "row", marginTop: 10 }} wrap={false}>
           <View style={{ width: "50%" }}>
             <Text style={s.bold}>II.3    ÁREAS DE EXPERIENCIA:</Text>
             {data.perfil?.areasExperiencia?.map((area, i) => (
@@ -753,22 +835,36 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
           <View style={{ width: "50%" }}>
             <Text style={s.bold}>AÑOS DE EXPERIENCIA:</Text>
-            <Text style={{ marginTop: 5, marginLeft: 15 }}>{data.perfil?.aniosExperiencia}</Text>
+            <Text style={{ marginTop: 3, marginLeft: 15 }}>{data.perfil?.aniosExperiencia}</Text>
           </View>
         </View>
 
+
         <View style={{ flex: 1 }} />
+
+        {/* ══════ LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) ══════ */}
+        {data.formato === 'en_linea' && (
+          <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+            <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
+              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+            </Text>
+          </View>
+        )}
 
         {/* ══════ FIRMAS (Elaboró / Revisó) ══════ */}
         <View style={s.firmasWrapper} wrap={false}>
           <View style={s.firmaBox}>
             <Text style={s.firmaLabel}>Elaboró</Text>
+            <Text style={s.firmaNombre}>{data.firmaElaboroNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la</Text>
             <Text style={s.firmaDesc}>Persona Titular de la Unidad Administrativa u Organismo Auxiliar</Text>
           </View>
           <View style={s.firmaBox}>
             <Text style={s.firmaLabel}>Revisó</Text>
+            <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la</Text>
             <Text style={s.firmaDesc}>Unidad de Enlace Financiero Administrativo o Equivalente</Text>
@@ -840,25 +936,42 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             </View>
           </View>
           <View style={s.dictBoxRow2}>
-            <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold" }}>Nota:</Text>
+            <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginBottom: 4 }}>Nota:</Text>
+            <Text style={{ fontSize: 8, textAlign: "justify", lineHeight: 1.4 }}>
+              Esta Dirección General únicamente dictamina sobre la funcionalidad de las actividades conforme con la metodología establecida y queda fuera de sus atribuciones la distribución y ejecución de los recursos para el pago de las contrataciones, en las cuales se deberá observar lo dispuesto por el Artículo Quinto del Presupuesto de Egresos del Gobierno del Estado de Morelos para el ejercicio fiscal 2026 y demás normatividad aplicable.
+            </Text>
           </View>
         </View>
 
         <View style={{ flex: 1 }} />
 
+        {/* ══════ LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) ══════ */}
+        {data.formato === 'en_linea' && (
+          <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+            <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
+              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+            </Text>
+          </View>
+        )}
+
         <View style={s.firmasDictWrapper} wrap={false}>
           <View style={s.firmaDictBox}>
             <Text style={s.firmaLabel}>Revisó</Text>
+            <Text style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la Persona responsable de la revisión de la Justificación</Text>
           </View>
           <View style={s.firmaDictBox}>
             <Text style={s.firmaLabel}>Verificó</Text>
+            <Text style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la Dirección de Análisis Normativo y Funcional</Text>
           </View>
           <View style={s.firmaDictBox}>
             <Text style={s.firmaLabel}>Emitió</Text>
+            <Text style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la Dirección General de Desarrollo Organizacional</Text>
           </View>

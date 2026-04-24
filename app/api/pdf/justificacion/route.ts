@@ -22,10 +22,28 @@ function splitToArray(str: string | null | undefined): string[] {
     .filter((item) => item.length > 0);
 }
 
+/* ── Helper: Limpia y formatea cadenas con guiones bajos ── */
+function formatString(str: string | null | undefined): string {
+  if (!str) return "";
+  const spaced = str.replace(/_/g, " ");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 /* ── POST /api/pdf/justificacion ── */
 
+// Firma names interface
+interface FirmaNames {
+  firmaElaboroNombre?: string;
+  firmaRevisoNombre?: string;
+  firmaVoBoJuridicoNombre?: string;
+  firmaDictRevisoNombre?: string;
+  firmaDictVerificoNombre?: string;
+  firmaDictEmitioNombre?: string;
+  formato?: 'fisico' | 'en_linea';
+}
+
 // Reutilizable wrapper para ambos métodos (GET y POST)
-async function generatePDFResponse(solicitudId: string | null) {
+async function generatePDFResponse(solicitudId: string | null, firmas: FirmaNames = {}) {
   try {
     if (!solicitudId) {
       return NextResponse.json(
@@ -51,14 +69,15 @@ async function generatePDFResponse(solicitudId: string | null) {
     if (sol.tipo_solicitud === "nombramiento" || (sol.regimen && sol.regimen.toLowerCase().includes("nombramiento"))) {
       const dataNombramiento: JustificacionNombramientoData = {
         tipoAdministracion: (sol as any).tipo_administracion || 'centralizada',
+        formato: firmas.formato || 'fisico',
         oficioSolicitud: "",
         secretaria: sol.secretaria ?? "",
         unidadAdministrativa: sol.unidad_administrativa ?? "",
         unidadResponsable: sol.unidad_responsable ?? "",
         programaProyecto: sol.programa_proyecto ?? "",
-        denominacionNombramiento: sol.denominacion ?? "",
-        tipoActividad: sol.tipo_actividades ?? "",
-        puestoJefeInmediato: sol.puesto_jefe_inmediato ?? "",
+        denominacionNombramiento: formatString(sol.denominacion),
+        tipoActividad: formatString(sol.tipo_actividades),
+        puestoJefeInmediato: formatString(sol.puesto_jefe_inmediato),
         numeroPersonas: sol.numero_prestadores ?? 1,
         importeNetoMensual: sol.importe_bruto
           ? `$${Number(sol.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
@@ -102,6 +121,13 @@ async function generatePDFResponse(solicitudId: string | null) {
           areasExperiencia: splitToArray(sol.areas_exp),
           aniosExperiencia: "",
         },
+        // Firmas editables
+        firmaElaboroNombre: firmas.firmaElaboroNombre,
+        firmaRevisoNombre: firmas.firmaRevisoNombre,
+        firmaVoBoJuridicoNombre: firmas.firmaVoBoJuridicoNombre,
+        firmaDictRevisoNombre: firmas.firmaDictRevisoNombre,
+        firmaDictVerificoNombre: firmas.firmaDictVerificoNombre,
+        firmaDictEmitioNombre: firmas.firmaDictEmitioNombre,
       };
 
       buffer = await renderToBuffer(
@@ -111,13 +137,14 @@ async function generatePDFResponse(solicitudId: string | null) {
       // ── Mapeo DIRECTO: campo de Prisma → campo de JustificacionData ──
       const dataHonorarios: JustificacionData = {
         tipoAdministracion: (sol as any).tipo_administracion || 'centralizada', // TODO: Ajustar este mapeo de base de datos según el esquema actual
+        formato:            firmas.formato || 'fisico',
         secretaria:         sol.secretaria ?? "",
         unidadAdministrativa: sol.unidad_administrativa ?? "",
         unidadResponsable:  sol.unidad_responsable ?? "",
         regimenContratacion: sol.regimen ?? "",
         numeroPrestadores:  sol.numero_prestadores ?? 1,
-        programaProyecto:   sol.programa_proyecto ?? "",
-        tipoActividades:    sol.tipo_actividades ?? "",
+        programaProyecto:   formatString(sol.programa_proyecto),
+        tipoActividades:    formatString(sol.tipo_actividades),
         vigenciaInicio:     sol.vigencia_inicio
           ? sol.vigencia_inicio.toISOString().split("T")[0]
           : "",
@@ -151,6 +178,12 @@ async function generatePDFResponse(solicitudId: string | null) {
           valores:                     splitToArray(sol.valores),
           areasExperiencia:            splitToArray(sol.areas_exp),
         },
+        // Firmas editables
+        firmaElaboroNombre: firmas.firmaElaboroNombre,
+        firmaRevisoNombre: firmas.firmaRevisoNombre,
+        firmaDictRevisoNombre: firmas.firmaDictRevisoNombre,
+        firmaDictVerificoNombre: firmas.firmaDictVerificoNombre,
+        firmaDictEmitioNombre: firmas.firmaDictEmitioNombre,
       };
 
       buffer = await renderToBuffer(
@@ -183,11 +216,29 @@ async function generatePDFResponse(solicitudId: string | null) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  return generatePDFResponse(body.solicitudId);
+  const firmas: FirmaNames = {
+    firmaElaboroNombre: body.firmaElaboroNombre,
+    firmaRevisoNombre: body.firmaRevisoNombre,
+    firmaVoBoJuridicoNombre: body.firmaVoBoJuridicoNombre,
+    firmaDictRevisoNombre: body.firmaDictRevisoNombre,
+    firmaDictVerificoNombre: body.firmaDictVerificoNombre,
+    firmaDictEmitioNombre: body.firmaDictEmitioNombre,
+    formato: body.formato === 'en_linea' ? 'en_linea' : 'fisico',
+  };
+  return generatePDFResponse(body.solicitudId, firmas);
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
-  return generatePDFResponse(solicitudId);
+  const firmas: FirmaNames = {
+    firmaElaboroNombre: searchParams.get("firmaElaboroNombre") || undefined,
+    firmaRevisoNombre: searchParams.get("firmaRevisoNombre") || undefined,
+    firmaVoBoJuridicoNombre: searchParams.get("firmaVoBoJuridicoNombre") || undefined,
+    firmaDictRevisoNombre: searchParams.get("firmaDictRevisoNombre") || undefined,
+    firmaDictVerificoNombre: searchParams.get("firmaDictVerificoNombre") || undefined,
+    firmaDictEmitioNombre: searchParams.get("firmaDictEmitioNombre") || undefined,
+    formato: searchParams.get("formato") === 'en_linea' ? 'en_linea' : 'fisico',
+  };
+  return generatePDFResponse(solicitudId, firmas);
 }

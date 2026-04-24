@@ -14,6 +14,7 @@ import React from "react";
    ═══════════════════════════════════════════════════════════ */
 export interface JustificacionData {
   tipoAdministracion: 'centralizada' | 'paraestatal';
+  formato: 'fisico' | 'en_linea';
   secretaria: string;
   unidadAdministrativa: string;
   unidadResponsable: string;
@@ -38,6 +39,12 @@ export interface JustificacionData {
     areasExperiencia: string[];
     valores: string[];
   };
+  // Nombres editables de firmantes
+  firmaElaboroNombre?: string;
+  firmaRevisoNombre?: string;
+  firmaDictRevisoNombre?: string;
+  firmaDictVerificoNombre?: string;
+  firmaDictEmitioNombre?: string;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -68,16 +75,13 @@ const s = StyleSheet.create({
     display: 'flex',
     alignItems: "center",
     justifyContent: "center",
-    opacity: 0.08, // Colores vivos
+    opacity: 0.06,
     zIndex: -1, // Detrás del texto
   },
-watermarkImage: { 
-    width: 600, // Ajustamos al ancho real de la hoja
+  watermarkImage: { 
+    width: 600,
     height: "auto",
-    // ESTA ES LA CLAVE: Ve subiendo el 1.5 poco a poco (1.8, 2.0, 2.5...)
-    // 1.5 significa 150% del tamaño original
-    transform: 'scale(2.0)', 
-    // Asegura que no se deforme al escalar
+    transform: 'scale(2.5)', 
     objectFit: 'contain',
   },
   /* --- Encabezado (tabla 3 columnas con bordes) --- */
@@ -133,12 +137,12 @@ watermarkImage: {
   claveText: { fontSize: 8, textAlign: "center" },
 
   /* --- Elementos de página --- */
-  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 15 },
-  centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 10 },
-  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 5, marginTop: 10 },
+  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10 },
+  centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 6 },
+  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 3, marginTop: 6 },
 
   /* --- Filas de Formulario (campos 1-11) --- */
-  row: { flexDirection: "row", marginBottom: 6, alignItems: "flex-end" },
+  row: { flexDirection: "row", marginBottom: 4, alignItems: "flex-end" },
   bold: { fontFamily: "Helvetica-Bold" },
   numLabel: { width: 15, fontFamily: "Helvetica-Bold", fontSize: 9 },
   marginLabel: { fontFamily: "Helvetica-Bold", marginRight: 5, fontSize: 9 },
@@ -148,7 +152,7 @@ watermarkImage: {
     borderBottomColor: "#000",
     fontSize: 9,
     fontFamily: "Helvetica",
-    paddingBottom: 1,
+    paddingBottom: 2,
   },
 
   /* --- Checkboxes --- */
@@ -221,10 +225,10 @@ watermarkImage: {
   },
 
   /* --- Listas Dinámicas (Wraps) --- */
-  listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10, marginTop: 5 },
+  listItemContainer: { flexDirection: "row", marginBottom: 3, paddingLeft: 10, marginTop: 2 },
   listNum: { width: 15, fontFamily: "Helvetica-Bold" },
   listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.3 },
-  bulletItemContainer: { flexDirection: "row", marginBottom: 4, paddingLeft: 20, marginTop: 3 },
+  bulletItemContainer: { flexDirection: "row", marginBottom: 2, paddingLeft: 20, marginTop: 1 },
   bulletSign: { width: 15, fontFamily: "Helvetica" },
 
   /* --- Bloque de Firmas (Elaboró / Revisó) --- */
@@ -244,7 +248,8 @@ watermarkImage: {
     width: "100%",
     marginBottom: 4,
   },
-  firmaLabel: { fontSize: 8, marginBottom: 25, textAlign: "center" },
+  firmaLabel: { fontSize: 8, marginBottom: 5, textAlign: "center" },
+  firmaNombre: { fontSize: 9, fontFamily: "Helvetica-Bold", textAlign: "center", marginBottom: 5, minHeight: 12 },
   firmaDesc: {
     fontFamily: "Helvetica-Bold",
     fontSize: 7,
@@ -416,11 +421,11 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text>Honorarios Asimilados a Salarios</Text>
         </View>
 
-        {/* Campo 6: Tipo de Actividades */}
+        {/* Campo 6: Tipo de Actividades — flex-row con línea de subrayado completa */}
         <View style={s.row}>
           <Text style={s.numLabel}>6.</Text>
           <Text style={s.marginLabel}>Tipo de Actividades:</Text>
-          <Text style={s.valueText}>{data.tipoActividades}</Text>
+          <Text style={s.valueText}>{data.tipoActividades || ""}</Text>
         </View>
 
         {/* Campo 7: Número de Prestadores */}
@@ -508,82 +513,136 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         {/* ── II. PERFIL ── */}
         <View wrap={false}>
           <Text style={{ ...s.sectionTitle, marginTop: 15 }}>II.  PERFIL A CUBRIR POR EL PRESTADOR DE SERVICIOS:</Text>
-          <Text style={{ marginBottom: 5, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia)</Text>
-        </View>
+          <Text style={{ marginBottom: 8, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia)</Text>
 
-        {/* II.1 Escolaridad — mapeado dinámico */}
-        <Text style={s.bold}>II. 1.  ESCOLARIDAD MÍNIMA:</Text>
-        {data.perfil?.escolaridadMinima?.map((esc, i) => (
-          <View key={`esc-${i}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+          {/* II.1 Escolaridad — título + primer item juntos */}
+          <Text style={{ ...s.bold, marginBottom: 10 }}>II. 1.  ESCOLARIDAD MÍNIMA:</Text>
+          {data.perfil?.escolaridadMinima?.slice(0, 1).map((esc, i) => (
+            <View key={`esc-${i}`} style={s.bulletItemContainer}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap}>{esc}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.escolaridadMinima?.slice(1).map((esc, i) => (
+          <View key={`esc-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap}>{esc}</Text>
           </View>
         ))}
 
-        {/* II.2 Competencias */}
-        <Text style={{ ...s.bold, marginTop: 5 }}>II. 2.  COMPETENCIAS LABORALES REQUERIDAS:</Text>
-
-        {/* II.2.1 Administrativas — mapeado dinámico */}
-        <Text style={{ ...s.bold, marginLeft: 15, marginTop: 3 }}>II. 2.1.  Administrativas:</Text>
-        {data.perfil?.competenciasAdministrativas?.map((comp, i) => (
-          <View key={`ca-${i}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+        {/* II.2 Competencias — título + subtítulo + primer item juntos */}
+        <View wrap={false}>
+          <Text style={{ ...s.bold, marginTop: 10, marginBottom: 12 }}>II. 2.  COMPETENCIAS LABORALES REQUERIDAS:</Text>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 3 }}>II. 2.1.  Administrativas:</Text>
+          {data.perfil?.competenciasAdministrativas?.slice(0, 1).map((comp, i) => (
+            <View key={`ca-${i}`} style={s.bulletItemContainer}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap}>{comp}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.competenciasAdministrativas?.slice(1).map((comp, i) => (
+          <View key={`ca-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap}>{comp}</Text>
           </View>
         ))}
 
-        {/* II.2.2 Técnicas — mapeado dinámico */}
-        <Text style={{ ...s.bold, marginLeft: 15, marginTop: 3 }}>II. 2.2.  Técnicas:</Text>
-        {data.perfil?.competenciasTecnicas?.map((comp, i) => (
-          <View key={`ct-${i}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+        {/* II.2.2 Técnicas — título + primer item juntos */}
+        <View wrap={false}>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 8, marginBottom: 4 }}>II. 2.2.  Técnicas:</Text>
+          {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
+            <View key={`ct-${i}`} style={s.bulletItemContainer}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap}>{comp}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.competenciasTecnicas?.slice(1).map((comp, i) => (
+          <View key={`ct-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap}>{comp}</Text>
           </View>
         ))}
 
-        {/* II.2.3 Sociales — mapeado dinámico */}
-        <Text style={{ ...s.bold, marginLeft: 15, marginTop: 3 }}>II. 2.3.  Sociales:</Text>
-        {data.perfil?.competenciasSociales?.map((comp, i) => (
-          <View key={`cs-${i}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+        {/* II.2.3 Sociales — título + primer item juntos */}
+        <View wrap={false}>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 8, marginBottom: 4 }}>II. 2.3.  Sociales:</Text>
+          {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
+            <View key={`cs-${i}`} style={s.bulletItemContainer}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap}>{comp}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.competenciasSociales?.slice(1).map((comp, i) => (
+          <View key={`cs-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap}>{comp}</Text>
           </View>
         ))}
 
-        {/* ══════════════════════════════════════════════
-           PÁGINA 3: VALORES + EXP + FIRMAS
-           ══════════════════════════════════════════════ */}
-
-        {/* II.2.4 Valores — mapeado dinámico */}
-        <Text style={{ ...s.bold, marginLeft: 15, marginTop: 3 }}>II. 2.4.  Valores:</Text>
-        {data.perfil?.valores?.map((val, i) => (
-          <View key={`val-${i}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+        {/* II.2.4 Valores — título + primer item juntos */}
+        <View wrap={false}>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 3 }}>II. 2.4.  Valores:</Text>
+          {data.perfil?.valores?.slice(0, 1).map((val, i) => (
+            <View key={`val-${i}`} style={s.bulletItemContainer}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap}>{val}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.valores?.slice(1).map((val, i) => (
+          <View key={`val-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap}>{val}</Text>
           </View>
         ))}
 
-        {/* II.3 Áreas de Experiencia — mapeado dinámico */}
-        <Text style={{ ...s.bold, marginTop: 5 }}>II.3.  ÁREAS DE EXPERIENCIA:</Text>
-        {data.perfil?.areasExperiencia?.map((area, i) => (
-          <View key={`ae-${i}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 1}.</Text>
+        {/* II.3 Áreas de Experiencia — título + primer item juntos */}
+        <View wrap={false}>
+          <Text style={{ ...s.bold, marginTop: 5 }}>II.3.  ÁREAS DE EXPERIENCIA:</Text>
+          {data.perfil?.areasExperiencia?.slice(0, 1).map((area, i) => (
+            <View key={`ae-${i}`} style={s.bulletItemContainer}>
+              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.listTextWrap}>{area}</Text>
+            </View>
+          ))}
+        </View>
+        {data.perfil?.areasExperiencia?.slice(1).map((area, i) => (
+          <View key={`ae-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
+            <Text style={s.bulletSign}>{i + 2}.</Text>
             <Text style={s.listTextWrap}>{area}</Text>
           </View>
         ))}
 
+
         <View style={{ flex: 1 }} />
+
+        {/* ══════ LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) ══════ */}
+        {data.formato === 'en_linea' && (
+          <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+            <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
+              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+            </Text>
+          </View>
+        )}
 
         {/* ══════ FIRMAS (Elaboró / Revisó) ══════ */}
         <View style={s.firmasWrapper} wrap={false}>
           <View style={s.firmaBox}>
             <Text style={s.firmaLabel}>Elaboró</Text>
+            <Text style={s.firmaNombre}>{data.firmaElaboroNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la</Text>
             <Text style={s.firmaDesc}>Persona Titular de la Unidad Administrativa u Organismo Auxiliar</Text>
           </View>
           <View style={s.firmaBox}>
             <Text style={s.firmaLabel}>Revisó</Text>
+            <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la</Text>
             <Text style={s.firmaDesc}>Unidad de Enlace Financiero Administrativo o Equivalente</Text>
@@ -656,25 +715,42 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
             </View>
           </View>
           <View style={s.dictBoxRow2}>
-            <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold" }}>Nota:</Text>
+            <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginBottom: 4 }}>Nota:</Text>
+            <Text style={{ fontSize: 8, textAlign: "justify", lineHeight: 1.4 }}>
+              Esta Dirección General únicamente dictamina sobre la funcionalidad de las actividades conforme con la metodología establecida y queda fuera de sus atribuciones la distribución y ejecución de los recursos para el pago de las contrataciones, en las cuales se deberá observar lo dispuesto por el Artículo Quinto del Presupuesto de Egresos del Gobierno del Estado de Morelos para el ejercicio fiscal 2026 y demás normatividad aplicable.
+            </Text>
           </View>
         </View>
 
         <View style={{ flex: 1 }} />
 
+        {/* ══════ LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) ══════ */}
+        {data.formato === 'en_linea' && (
+          <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+            <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
+              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+            </Text>
+          </View>
+        )}
+
         <View style={s.firmasDictWrapper} wrap={false}>
           <View style={s.firmaDictBox}>
             <Text style={s.firmaLabel}>Revisó</Text>
+            <Text style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la Persona responsable de la revisión de la Justificación</Text>
           </View>
           <View style={s.firmaDictBox}>
             <Text style={s.firmaLabel}>Verificó</Text>
+            <Text style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la Dirección de Análisis Normativo y Funcional</Text>
           </View>
           <View style={s.firmaDictBox}>
             <Text style={s.firmaLabel}>Emitió</Text>
+            <Text style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</Text>
             <View style={s.firmaLine}></View>
             <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la Dirección General de Desarrollo Organizacional</Text>
           </View>
