@@ -59,6 +59,13 @@ export type FormularioData = {
   compSoc:               string
   valores:               string
   areasExp:              string
+  riesgoCaidas?:         string
+  riesgoMutilaciones?:   string
+  riesgoGolpes?:         string
+  riesgoOtros?:          string
+  condicionCambioDomicilio?: boolean
+  condicionHorario?:         boolean
+  condicionViajar?:          boolean
 }
 
 // Columnas de Excel
@@ -448,7 +455,8 @@ function formatFolioDictamen(folio: string): string {
   return `${parseInt(m[1], 10)}/${m[2]}`
 }
 
-function splitList(text: string): string[] {
+function splitList(text: any): string[] {
+  if (typeof text !== 'string') return [""]
   const lines = text
     .split(/\n|\r\n/)
     .map((s) => s.replace(/^\s*[IVX]+\.\s*/, "").replace(/^\s*[•\-*]\s*/, "").trim())
@@ -1981,6 +1989,7 @@ function FormularioNombramiento({
   const numeroUA = getNumeroUA(secretariaConfirmada || secretariaInput, unidadAdscripcion)
   const handleSecretariaConfirm = (valor: string) => {
     if (bloqueadoPorRenovacion) return
+
     setSecretariaInput(valor); setSecretariaConfirmada(valor); setShowSugerencias(false)
     setUnidadAdscripcion(""); setClaveUA(""); setUrgSeleccionada("")
   }
@@ -2016,13 +2025,20 @@ function FormularioNombramiento({
           .filter(([, v]) => v)
           .map(([k, v]) => `${formatKey(k)}: ${v.charAt(0).toUpperCase() + v.slice(1)}`),
       ],
-      resguardoActivos: resguardoActivos || undefined,
-      escolaridad: escolaridad.join(", "),
-      compAdm:     compAdm.join("\n"),
-      compTec:     compTec.join("\n"),
-      compSoc:     compSoc.join("\n"),
-      valores:     valores.join("\n"),
+      resguardoActivos: resguardoActivos, 
+      escolaridad: escolaridad.join(", "), 
+      compAdm:     compAdm.join("\n"), 
+      compTec:     compTec.join("\n"), 
+      compSoc:     compSoc.join("\n"), 
+      valores:     valores.join("\n"), 
       areasExp:    areasExp.join("\n"),
+      riesgoCaidas: riesgos.caídas ?? riesgos.caidas ?? "",
+      riesgoMutilaciones: riesgos.mutilaciones ?? "",
+      riesgoGolpes: riesgos.golpes ?? "",
+      riesgoOtros: riesgos.otros ?? "",
+      condicionCambioDomicilio: condiciones["cambio-de-domicilio"] === "si",
+      condicionHorario: condiciones["horario-especial"] === "si",
+      condicionViajar: condiciones.viajar === "si",
     })
   }, [
     secretariaConfirmada, secretariaInput, claveUA, unidadAdscripcion, urgSeleccionada,
@@ -2037,8 +2053,9 @@ function FormularioNombramiento({
 
   return (
     <div className="flex flex-col gap-3">
-      {showMarcoModal && (
+      {showMarcoModal && ( 
         <MarcoNormativoModal
+
           onAccept={() => {
             marcoModalShownRef.current = true
             if (pendingMarcoChange !== null) {
@@ -2482,12 +2499,12 @@ function FormularioNombramiento({
                   </tr>
                 </thead>
                 <tbody>
-                  {["Lesiones", "Caídas", "Mutilaciones", "Golpes", "Otros"].map((r) => {
-                    const key = r.toLowerCase().replace(/\s+/g, "-")
+                  {["Caídas", "Mutilaciones", "Golpes", "Otros"].map((r) => {
+                    const key = r.toLowerCase()
                     return (
                       <tr key={r} className="border-t border-border">
                         <td className="px-4 py-2.5 text-card-foreground">{r}</td>
-                        {["bajo", "medio", "alto"].map((nivel) => (
+                        {["Bajo", "Medio", "Alto"].map((nivel) => (
                           <td key={nivel} className="px-4 py-2.5 text-center">
                             <input
                               type="radio"
@@ -2805,6 +2822,14 @@ function buildSolicitudPayload({
     comp_soc:              formData.compSoc              ?? null,
     valores:               formData.valores              ?? null,
     areas_exp:             formData.areasExp             ?? null,
+    riesgo_caidas:         formData.riesgoCaidas         ?? null,
+    riesgo_mutilaciones:   formData.riesgoMutilaciones   ?? null,
+    riesgo_golpes:         formData.riesgoGolpes         ?? null,
+    riesgo_otros:          formData.riesgoOtros          ?? null,
+    condicion_cambio_domicilio: formData.condicionCambioDomicilio ?? false,
+    condicion_horario:     formData.condicionHorario     ?? false,
+    condicion_viajar:      formData.condicionViajar      ?? false,
+    resguardo_activos:     formData.resguardoActivos     ?? false,
   }
 }
 

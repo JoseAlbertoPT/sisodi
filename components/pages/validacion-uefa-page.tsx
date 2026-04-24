@@ -930,20 +930,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         <div className="flex items-center gap-2">
           <Button
             variant="outline" size="sm" className="gap-1.5"
-            onClick={() => generateJustificacionPDF({
-              folio: solicitud.folioJustificacion,
-              tipo: solicitud.tipo as any,
-              secretaria: solicitud.secretaria,
-              unidadAdministrativa: solicitud.unidadAdministrativa,
-              denominacion: solicitud.denominacion,
-              vigenciaInicio: solicitud.vigenciaInicio,
-              vigenciaFin: solicitud.vigenciaFin,
-              importeBruto: solicitud.importeBruto,
-              esRenovacion: solicitud.esRenovacion,
-              folioAnterior: solicitud.folioAnterior,
-              fecha: solicitud.fecha,
-              firmadoDigitalmente: !isNueva,
-            })}
+            onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>

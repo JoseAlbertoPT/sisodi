@@ -907,21 +907,7 @@ function DetalleView({
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5"
-            onClick={() => generateJustificacionPDF({
-              folio:                sol.folioJustificacion || sol.folio,
-              tipo:                 sol.tipo,
-              secretaria:           sol.secretaria,
-              unidadAdministrativa: sol.unidadAdministrativa,
-              regimen:              sol.regimen,
-              denominacion:         sol.denominacion,
-              vigenciaInicio:       sol.vigenciaInicio,
-              vigenciaFin:          sol.vigenciaFin,
-              importeBruto:         sol.importeBruto,
-              esRenovacion:         sol.esRenovacion,
-              folioAnterior:        sol.folioAnterior,
-              fecha:                sol.fecha,
-              firmadoDigitalmente:  !canEdit,
-            })}>
+            onClick={() => generateJustificacionPDF(sol.id, sol.folioJustificacion || sol.folio)}>
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           {canEdit && !periodoConfirmado && (
@@ -1313,8 +1299,6 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
 
   const handleUpdatePeriodoYEnviar = useCallback(async (id: string, periodo: string) => {
     const resEnvio = await fetch("/api/validacion", {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json" },
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
