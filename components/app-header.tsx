@@ -44,7 +44,7 @@ export function AppHeader({ onToggleSidebar, sidebarCollapsed }: HeaderProps) {
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
         </button>
 
-        {/* Avatar + RFC + Rol */}
+        {}
         <div className="hidden md:flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold select-none">
             {inicial}

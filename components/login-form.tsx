@@ -11,10 +11,6 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 
-// ══════════════════════════════════════════════════════════════════
-// Modal: Recuperar contraseña (RFC → código → nueva contraseña)
-// ══════════════════════════════════════════════════════════════════
-
 function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
   type Paso = "rfc" | "codigo" | "nueva" | "exito"
 
@@ -160,7 +156,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
       <div className="w-full max-w-md ml-auto mr-[5%] lg:mr-[8%]">
         <div className="rounded-3xl bg-[#808078]/80 backdrop-blur-md shadow-2xl flex flex-col overflow-hidden">
 
-          {/* Header */}
+          {}
           <div className="flex flex-col items-center gap-3 px-10 pt-10 pb-6">
             <Image src="/LogoQuetzal.svg" alt="Logo" width={70} height={70} className="opacity-90" />
             <h1 className="text-lg font-medium text-white/90 tracking-wide">Recuperar contraseña</h1>
@@ -172,7 +168,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
             </p>
           </div>
 
-          {/* Paso 1: RFC */}
+          {}
           {paso === "rfc" && (
             <div className="px-10 pb-10 flex flex-col gap-5">
               <StepIndicator />
@@ -195,7 +191,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Paso 2: Código */}
+          {}
           {paso === "codigo" && (
             <div className="px-10 pb-10 flex flex-col gap-5">
               <StepIndicator />
@@ -227,7 +223,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Paso 3: Nueva contraseña */}
+          {}
           {paso === "nueva" && (
             <div className="px-10 pb-10 flex flex-col gap-5">
               <StepIndicator />
@@ -272,7 +268,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {/* Éxito */}
+          {}
           {paso === "exito" && (
             <div className="px-10 pb-10 flex flex-col items-center gap-5">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
@@ -291,10 +287,6 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
     </div>
   )
 }
-
-// ══════════════════════════════════════════════════════════════════
-// Modal: Cambio de contraseña obligatorio (primer ingreso)
-// ══════════════════════════════════════════════════════════════════
 
 function ModalCambioContrasena({
   username, onSuccess, onCancel,
@@ -397,10 +389,6 @@ function ModalCambioContrasena({
   )
 }
 
-// ══════════════════════════════════════════════════════════════════
-// Login principal
-// ══════════════════════════════════════════════════════════════════
-
 export function LoginForm() {
   const { login, logout } = useAuth()
 
@@ -450,20 +438,20 @@ export function LoginForm() {
       >
         <div className="w-full max-w-xl ml-auto mr-[5%] lg:mr-[8%] mb-[8%]">
           <div className="rounded-3xl bg-[#808078]/75 backdrop-blur-md shadow-2xl px-16 py-20 flex flex-col items-center gap-12">
-            {/* Logo */}
+            {}
             <div className="flex flex-col items-center gap-4">
               <Image src="/LogoQuetzal.svg" alt="Logo Quetzal" width={110} height={110} className="opacity-90" />
               <h1 className="text-2xl font-medium text-white/90 tracking-wide">Inicia sesión</h1>
             </div>
 
-            {/* Error */}
+            {}
             {error && (
               <div className="w-full rounded-full bg-red-500/20 px-5 py-3 text-base text-white text-center border border-red-400/30">
                 {error}
               </div>
             )}
 
-            {/* Form */}
+            {}
             <form onSubmit={handleSubmit} className="flex flex-col gap-7 w-full">
               <Input
                 id="rfc"
@@ -500,19 +488,19 @@ export function LoginForm() {
               </button>
             </form>
 
-            {/* Recuperar */}
-            <button
+            {}
+           {/* <button
               type="button"
               onClick={() => setMostrarModalRecuperar(true)}
               className="text-sm text-white/60 hover:text-white/90 transition-colors"
             >
               Recuperar contraseña
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
 
-      {/* Modal cambio contraseña obligatorio */}
+      {}
       {mostrarModalCambio && (
         <ModalCambioContrasena
           username={rfc.trim().toUpperCase()}

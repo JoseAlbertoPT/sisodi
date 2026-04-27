@@ -68,7 +68,6 @@ export type FormularioData = {
   condicionViajar?:          boolean
 }
 
-// Columnas de Excel
 const COL = {
   secretaria:             "SECRETARÍA/SUBSECRETARÍA/DEPENDENCIA/ORGANISMO AUXILIAR",
   unidadAdscripcion:      "UNIDAD ADMINISTRATIVA DE ADSCRIPCIÓN",
@@ -1182,7 +1181,6 @@ function getNumeroUA(secretaria: string, unidad: string): string {
   return idx >= 0 ? String(idx + 1) : unidad
 }
 
-
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
   datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
@@ -1221,7 +1219,7 @@ function FormularioPrestacion({
   const [unidadSeleccionada,   setUnidadSeleccionada]   = useState(
     datosRenovacion?.unidadAdscripcion ?? unidadFija ?? initialData?.unidadAdministrativa ?? ""
   )
-  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? "")
+  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? initialData?.unidadAdministrativa ?? "")
   const [urgSeleccionada,      setUrgSeleccionada]      = useState(
     datosRenovacion?.unidadResponsableGasto
     ?? initialData?.unidadResponsable
@@ -1235,7 +1233,9 @@ function FormularioPrestacion({
   const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
     datosRenovacion?.tipoActividad
       ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
-      : initialData?.tipoActividades ?? ""
+      : initialData?.tipoActividades
+      ? initialData.tipoActividades.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
+      : ""
   )
   const [numeroPrestadores, setNumeroPrestadores] = useState(
     datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "3" : "")
@@ -1422,7 +1422,6 @@ function FormularioPrestacion({
     if (bloqueadoPorRenovacion) return
     setProgramaSeleccionado(val)
     setTipoActividadSeleccionado("")
-    setObjeto(""); setActividades([""]); setResponsabilidades([""])
   }
 
   const handleRegimenChange = (val: string) => {
@@ -1472,7 +1471,7 @@ function FormularioPrestacion({
               </div>
             </div>
 
-            {/* Unidad Administrativa de Adscripción */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Administrativa de Adscripción
@@ -1480,7 +1479,7 @@ function FormularioPrestacion({
               </Label>
               {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground font-semibold font-mono">{numeroUA}</span>
+                  <span className="text-sm text-muted-foreground font-semibold font-mono">{fmtClave(numeroUA)}</span>
                 </div>
               ) : catalogoUAs.some((u) => u.clave !== "") ? (
                 <Select
@@ -1498,7 +1497,7 @@ function FormularioPrestacion({
                   </SelectTrigger>
                   <SelectContent>
                     {catalogoUAs.filter((u) => u.clave !== "").map((u) => (
-                      <SelectItem key={u.nombre} value={u.clave} className="font-mono">{fmtClave(u.clave)}</SelectItem>
+                      <SelectItem key={u.nombre} value={u.clave} textValue={fmtClave(u.clave)} className="font-mono">{fmtClave(u.clave)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1512,7 +1511,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Unidad Responsable del Gasto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Responsable del Gasto
@@ -1549,7 +1548,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Programa */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programa o Proyecto
@@ -1577,7 +1576,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Régimen */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Régimen de Contratación
@@ -1606,7 +1605,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Tipo actividad */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Actividad
@@ -1639,23 +1638,21 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Número prestadores */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Número de Prestadores de Servicios
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               <Input
                 type="number" min={1}
                 value={numeroPrestadores}
-                onChange={(e) => { if (!bloqueadoPorRenovacion) setNumeroPrestadores(e.target.value) }}
+                onChange={(e) => setNumeroPrestadores(e.target.value)}
                 placeholder="Ej. 5"
-                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                readOnly={bloqueadoPorRenovacion}
+                className="bg-background"
               />
             </div>
 
-            {/* Tipo importe */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Pago
@@ -1679,7 +1676,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Importe Bruto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Importe Bruto
@@ -1697,7 +1694,7 @@ function FormularioPrestacion({
               </div>
             </div>
 
-            {/* Vigencia */}
+            {}
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
@@ -1741,7 +1738,7 @@ function FormularioPrestacion({
               </div>
             </div>
 
-            {/* Adjunto */}
+            {}
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
               <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} />
@@ -1750,7 +1747,7 @@ function FormularioPrestacion({
         </CardContent>
       </Card>
 
-      {/* Tabulador */}
+      {}
       <TabuladorNiveles
         nivelCategoria={datosRenovacion?.nivelCategoria}
         importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeBruto}
@@ -1759,7 +1756,7 @@ function FormularioPrestacion({
         secretaria={secretariaConfirmada || secretariaInput}
       />
 
-      {/* Objeto */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1818,7 +1815,7 @@ function FormularioPrestacion({
           </div>
         </CardContent>
       </Card>
-      {/* Perfil */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1878,7 +1875,7 @@ function FormularioPrestacion({
 }
 function FormularioNombramiento({
   prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
-  tipoAdministracionUsuario = "centralizada",
+  tipoAdministracionUsuario = "centralizada", initialData,
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
@@ -1889,6 +1886,7 @@ function FormularioNombramiento({
   claveReportePlazas?: string | null
   catalogoUAs?: { clave: string; nombre: string }[]
   tipoAdministracionUsuario?: "centralizada" | "paraestatal"
+  initialData?: Partial<FormularioData>
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [importeNeto,    setImporteNeto]    = useState(
@@ -1922,10 +1920,9 @@ function FormularioNombramiento({
   const [secretariaConfirmada, setSecretariaConfirmada] = useState(datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : ""))
   const [showSugerencias, setShowSugerencias] = useState(false)
   const [unidadAdscripcion, setUnidadAdscripcion] = useState(
-    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? ""
-
+    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? initialData?.unidadAdministrativa ?? ""
   )
-  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? "")
+  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? initialData?.unidadAdministrativa ?? "")
   const [urgSeleccionada, setUrgSeleccionada] = useState(
     datosRenovacion?.unidadResponsableGasto ?? ""
   )
@@ -1952,6 +1949,8 @@ function FormularioNombramiento({
   const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
     datosRenovacion?.tipoActividad
       ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
+      : initialData?.tipoActividades
+      ? initialData.tipoActividades.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
       : ""
   )
   const tipoAdministracion = tipoAdministracionUsuario
@@ -2083,7 +2082,7 @@ function FormularioNombramiento({
         </div>
       )}
 
-      {/* I. Datos Generales */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2094,7 +2093,7 @@ function FormularioNombramiento({
         <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
           <div className="grid gap-3 md:grid-cols-2">
 
-            {/* Secretaria  */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Secretaría / Dependencia / Organismo
@@ -2105,8 +2104,7 @@ function FormularioNombramiento({
               </div>
             </div>
 
-
-            {/* Unidad Administrativa de Adscripción */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Administrativa de Adscripción
@@ -2114,7 +2112,7 @@ function FormularioNombramiento({
               </Label>
               {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground font-semibold font-mono">{numeroUA}</span>
+                  <span className="text-sm text-muted-foreground font-semibold font-mono">{fmtClave(numeroUA)}</span>
                 </div>
               ) : clavesAdscripcion.length > 0 ? (
                 <Select
@@ -2130,7 +2128,7 @@ function FormularioNombramiento({
                   </SelectTrigger>
                   <SelectContent>
                     {clavesAdscripcion.map((u) => (
-                      <SelectItem key={u.nombre} value={u.clave} className="font-mono">{fmtClave(u.clave)}</SelectItem>
+                      <SelectItem key={u.nombre} value={u.clave} textValue={fmtClave(u.clave)} className="font-mono">{fmtClave(u.clave)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -2145,7 +2143,7 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {/* Unidad Responsable del Gasto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Responsable del Gasto
@@ -2182,7 +2180,7 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {/* Programa o Proyecto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programa o Proyecto
@@ -2232,7 +2230,7 @@ function FormularioNombramiento({
                 />
               </div>
 
-              {/* Tipo de Actividad */}
+              {}
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Tipo de Actividad
@@ -2266,20 +2264,18 @@ function FormularioNombramiento({
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Número de Personas a Contratar
-                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
                 </Label>
                 <Input
                   type="number" min={1}
                   value={numeroPrestadores}
-                  onChange={(e) => { if (!bloqueadoPorRenovacion) setNumeroPrestadores(e.target.value) }}
+                  onChange={(e) => setNumeroPrestadores(e.target.value)}
                   placeholder="Ej. 2"
-                  className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                  readOnly={bloqueadoPorRenovacion}
+                  className="bg-background"
                 />
               </div>
             </>
 
-            {/* Tipo de Pago */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Pago
@@ -2303,7 +2299,7 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {/* Importe Neto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Importe Neto
@@ -2321,7 +2317,7 @@ function FormularioNombramiento({
               </div>
             </div>
 
-            {/* Vigencia */}
+            {}
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
@@ -2406,7 +2402,6 @@ function FormularioNombramiento({
           />
         </CardContent>
       </Card>
-
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
@@ -2566,7 +2561,7 @@ function FormularioNombramiento({
         </CardContent>
       </Card>
 
-      {/* VIII. Perfil */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2841,7 +2836,7 @@ export type EditSolicitudPayload = {
   periodo: string
   formData: Partial<FormularioData>
 }
-export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSolicitudPayload }) {
+export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicitud?: EditSolicitudPayload; onAfterSave?: () => void }) {
   const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
   const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")
   const [esRenovacion,        setEsRenovacion]        = useState<string>("")
@@ -2861,6 +2856,14 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
   const [folioBorradorGuardado, setFolioBorradorGuardado] = useState<string>("")
   const [formData, setFormData] = useState<Partial<FormularioData>>(editSolicitud?.formData ?? {})
   const [archivoAdjunto, setArchivoAdjunto] = useState<File | null>(null)
+
+  useEffect(() => {
+    if ((borradorGuardado || enviado) && editSolicitud?.id && onAfterSave) {
+      const t = setTimeout(onAfterSave, 1500)
+      return () => clearTimeout(t)
+    }
+  }, [borradorGuardado, enviado, editSolicitud?.id, onAfterSave])
+
   const handleFormChange = useCallback((data: Partial<FormularioData>) => {
     setFormData(prev => ({ ...prev, ...data }))
   }, [])
@@ -2895,9 +2898,8 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
     fetchCentralizadaTree().then(setCatalogoTree).catch(() => {})
   }, [])
 
-
   useEffect(() => {
-    try { sessionStorage.removeItem("sisodi_folios_recientes") } catch { /* ignore */ }
+    try { sessionStorage.removeItem("sisodi_folios_recientes") } catch {  }
   }, [])
   useEffect(() => {
     if (esRenovacion !== "si") return
@@ -3006,7 +3008,6 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
     const exacta = todas.find((s) => norm(s) === norm(raiz))
     return exacta ?? raiz
   }, [user, secretariaFrescaTexto])
-
 
   const userUAOriginal = useMemo(() => {
     const texto = user?.secretariaTexto ?? secretariaFrescaTexto ?? null
@@ -3205,7 +3206,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
             fd.append("file", archivoAdjunto)
             fd.append("solicitudId", String(solicitudId))
             await fetch("/api/adjunto", { method: "POST", body: fd })
-          } catch { /* no bloquear el flujo si falla el adjunto */ }
+          } catch {  }
         }
 
         const patchRes = await fetch("/api/validacion", {
@@ -3257,6 +3258,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
     )
   }
   if (borradorGuardado) {
+    const esEdicion = !!editSolicitud?.id
     return (
       <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
         <Card className="shadow-sm border-2 border-muted">
@@ -3265,17 +3267,25 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
               <Save className="h-9 w-9 text-muted-foreground" />
             </div>
             <div className="flex flex-col items-center gap-1 text-center">
-              <p className="text-lg font-semibold text-card-foreground">Borrador guardado correctamente</p>
-              <p className="text-sm text-muted-foreground">Puede continuar la captura desde "Mis Solicitudes" → pestaña "Borradores".</p>
+              <p className="text-lg font-semibold text-card-foreground">
+                {esEdicion ? "Cambios guardados correctamente" : "Borrador guardado correctamente"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {esEdicion
+                  ? "Los cambios han sido guardados. Puede cerrar esta pantalla."
+                  : "Puede continuar la captura desde \"Mis Solicitudes\" → pestaña \"Borradores\"."}
+              </p>
             </div>
             {folioBorradorGuardado && (
               <Badge className="bg-muted text-muted-foreground border-0 text-sm px-4 py-1.5">Folio: {folioBorradorGuardado}</Badge>
             )}
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={handleReset}>
-                <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
-              </Button>
-            </div>
+            {!esEdicion && (
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={handleReset}>
+                  <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -3283,8 +3293,10 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
   }
   return (
     <PageLayout title="Nueva solicitud" description="Inicia el registro de una solicitud para su análisis y emisión de dictamen u opinión técnica funcional.">
-      <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
-        <StepIndicator step={step} tipo={tipo} />
+      <div className="sticky top-0 z-10 bg-white border-b border-border py-2 -mx-4 px-4 -mt-3 mb-1">
+        <div className="max-w-4xl mx-auto w-full">
+          <StepIndicator step={step} tipo={tipo} />
+        </div>
       </div>
       {step === "tipo" && (
         <>
@@ -3444,7 +3456,6 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
         </>
       )}
 
-
       {step === "renovacion" && (
         <Card className="shadow-sm border-border">
           <CardHeader className="px-4 pt-3 pb-1">
@@ -3603,7 +3614,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
         </Card>
       )}
 
-      {/* PASO 3 — FORMULARIO */}
+      {}
       {step === "formulario" && (
         <>
           <div className="flex items-center gap-3 flex-wrap">
@@ -3651,6 +3662,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
               claveReportePlazas={userClaveReporte}
               catalogoUAs={catalogoUAsDelUsuario}
               tipoAdministracionUsuario={user?.tipoAdministracion ?? "centralizada"}
+              initialData={editSolicitud?.formData}
             />
           )}
 
@@ -3699,19 +3711,31 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
                     <ArrowLeft className="mr-1.5 h-4 w-4" />Anterior
                   </Button>
                   <div className="flex items-center gap-3">
-                    <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador} className="gap-1.5">
-                      {guardandoBorrador
-                        ? <><Clock className="h-4 w-4 animate-spin" />Guardando...</>
-                        : <><Save className="mr-1.5 h-4 w-4" />Guardar Borrador</>
-                      }
-                    </Button>
-                    <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
-                      disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
-                      {enviando
-                        ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
-                        : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validación</>
-                      }
-                    </Button>
+                    {isEditingBorrador ? (
+                      <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
+                        disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}>
+                        {guardandoBorrador
+                          ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Guardando...</>
+                          : <><Save className="mr-1.5 h-4 w-4" />Guardar Cambios</>
+                        }
+                      </Button>
+                    ) : (
+                      <>
+                        <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador} className="gap-1.5">
+                          {guardandoBorrador
+                            ? <><Clock className="h-4 w-4 animate-spin" />Guardando...</>
+                            : <><Save className="mr-1.5 h-4 w-4" />Guardar Borrador</>
+                          }
+                        </Button>
+                        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
+                          disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
+                          {enviando
+                            ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
+                            : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validación</>
+                          }
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

@@ -108,7 +108,7 @@ function SidebarNavTree({
   toggleGroup,
   isGroupExpanded,
 }: SidebarNavTreeProps) {
-  // Collapsed: show only leaf nodes as icon buttons with tooltips
+  
   if (collapsed) {
     const leaves = collectLeafNodes(nodes)
     return (
@@ -140,7 +140,7 @@ function SidebarNavTree({
     )
   }
 
-  // Expanded
+  
   return (
     <>
       {nodes.map((node) => {
@@ -150,7 +150,7 @@ function SidebarNavTree({
           node.key === currentPage ||
           (hasChildren && nodeContainsRoute(node.children, currentPage))
 
-        // Leaf node (navigable)
+        
         if (node.key && !hasChildren) {
           const key = node.key as PageKey
           return (
@@ -177,13 +177,13 @@ function SidebarNavTree({
           )
         }
 
-        // Group with children
+        
         if (hasChildren) {
           const childLeaves = node.children!.filter((c) => c.key)
           const singleItem = childLeaves.length === 1 && node.children!.length === 1
 
           if (singleItem) {
-            // Group with a single child: render as a direct link
+            
             const child = childLeaves[0]!
             const childKey = child.key as PageKey
             return (
@@ -210,7 +210,7 @@ function SidebarNavTree({
             )
           }
 
-          // Group with multiple children: expandable section
+          
           return (
             <div key={node.id}>
               <button
@@ -318,7 +318,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
         )}
         aria-label="Navegación principal"
       >
-        {/* Header: logo image + brand */}
+        {}
         <div className="flex flex-col items-center gap-2 border-b border-border/60 px-3 py-3.5">
           <div className="flex w-full items-center justify-between">
             <span className="text-sm font-semibold leading-tight text-foreground">
@@ -354,7 +354,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
           )}
         </div>
 
-        {/* Navigation */}
+        {}
         <nav className="flex-1 overflow-y-auto px-2.5 py-3" aria-label="Menú">
           <div className="flex flex-col gap-1.5">
             {menusLoading && (
@@ -378,7 +378,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
           </div>
         </nav>
 
-        {/* Footer: user, Perfil, Salir */}
+        {}
         {!collapsed ? (
           <div className="border-t border-border/60 px-3 py-2.5">
             <div className="mb-2.5 flex items-center gap-2.5">

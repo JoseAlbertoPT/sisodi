@@ -14,7 +14,7 @@ interface FilterTabsProps {
   value: string
   onValueChange: (value: string) => void
   items: FilterTabItem[]
-  /** Optional label above the tabs (e.g. "Secciones", "Vista") to reinforce section identity */
+  
   sectionLabel?: string
   className?: string
 }

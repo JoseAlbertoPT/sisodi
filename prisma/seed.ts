@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma"
 import bcrypt from "bcryptjs"
 
 async function main() {
-  // 1. Crear roles base si no existen
+  
   const roles = ["Administrador", "Director Operativo", "Analista", "Revisor", "Capturista", "Enlace DO", "Enlace DGRH", "Consulta"]
   for (const nombre of roles) {
     await prisma.rol.upsert({
@@ -13,19 +13,19 @@ async function main() {
     })
   }
 
-  // 2. Crear área "Dirección de Organización" si no existe
+  
   const area = await prisma.area.upsert({
     where: { id: 1 },
     update: {},
     create: { nombre: "Dirección de Organización", activo: true },
   })
 
-  // 3. Obtener rol Administrador
+  
   const rolAdmin = await prisma.rol.findUniqueOrThrow({
     where: { nombre: "Administrador" },
   })
 
-  // 4. Crear acciones base
+  
   const acciones = ["Ver", "Crear", "Editar", "Eliminar"]
   for (const nombre of acciones) {
     await prisma.accion.upsert({
@@ -35,7 +35,7 @@ async function main() {
     })
   }
 
-  // 5. Crear menús
+  
   const menus = [
     { id: 1,  nombre: "Tablero",              key: "dashboard",         icono: "LayoutDashboard", ruta: "/dashboard",         orden: 1,  parent_id: null },
     { id: 2,  nombre: "Solicitudes",           key: null,                icono: "FileText",        ruta: null,                 orden: 2,  parent_id: null },
@@ -49,7 +49,7 @@ async function main() {
     { id: 10, nombre: "Dictámenes",            key: "dictamenes",        icono: "ShieldCheck",     ruta: "/dictamenes",        orden: 4,  parent_id: null },
     { id: 11, nombre: "Calendario",            key: "calendario",        icono: "CalendarDays",    ruta: "/calendario",        orden: 5,  parent_id: null },
     { id: 12, nombre: "Usuarios",              key: "usuarios",          icono: "Users",           ruta: "/usuarios",          orden: 6,  parent_id: null },
-    { id: 13, nombre: "Configuración",         key: "configuracion",     icono: "Settings",        ruta: "/configuracion",     orden: 7,  parent_id: null },
+    { id: 13, nombre: "Catálogo",               key: "configuracion",     icono: "Settings",        ruta: "/configuracion",     orden: 7,  parent_id: null },
   ]
 
   for (const m of menus) {
@@ -60,14 +60,14 @@ async function main() {
     })
   }
 
-  // 6. Asignar TODOS los menús al rol Administrador
+  
   for (const m of menus) {
     const rolMenu = await prisma.rol_menu.upsert({
       where: { rol_id_menu_id: { rol_id: rolAdmin.id, menu_id: m.id } },
       update: {},
       create: { rol_id: rolAdmin.id, menu_id: m.id },
     })
-    // Asignar todas las acciones a cada rol_menu
+    
     for (const a of acciones) {
       const accionId = acciones.indexOf(a) + 1
       await prisma.rol_menu_accion.upsert({
@@ -79,7 +79,7 @@ async function main() {
   }
   console.log("✅ Menús y permisos creados para Administrador")
 
-  // 7. Crear estados del flujo de solicitudes
+  
   const estados = [
     "En Captura",
     "Borrador",
@@ -105,7 +105,7 @@ async function main() {
   }
   console.log("✅ Estados de flujo creados")
 
-  // 9. Crear calendario 2026 (honorarios: 12 meses, asimilados/nombramiento: 22 quincenas)
+  
   const EJERCICIO = 2026
   const MESES = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -117,12 +117,12 @@ async function main() {
   for (const mes of MESES) {
     const mesIdx = MESES.indexOf(mes) + 1
     const mm = String(mesIdx).padStart(2, "0")
-    // Honorarios: fecha límite el 1 del mes
+    
     calendarioRows.push({
       ejercicio: EJERCICIO, regimen: "honorarios", periodo: mes,
       limite_do: `01/${mm}/${EJERCICIO}`, limite_dgrh: `15/${mm}/${EJERCICIO}`,
     })
-    // Quincenas para asimilados y nombramiento (excluye 1ra Enero y 2da Diciembre)
+    
     if (mes !== "Enero") {
       calendarioRows.push(
         { ejercicio: EJERCICIO, regimen: "asimilados",    periodo: `1ra ${mes}`, limite_do: `01/${mm}/${EJERCICIO}`, limite_dgrh: `15/${mm}/${EJERCICIO}` },
@@ -141,7 +141,7 @@ async function main() {
   await prisma.calendario.createMany({ data: calendarioRows })
   console.log(`✅ Calendario ${EJERCICIO} creado (${calendarioRows.length} registros)`)
 
-  // 8. Crear periodos 2026 (12 meses)
+  
   for (let mes = 1; mes <= 12; mes++) {
     const inicio = new Date(EJERCICIO, mes - 1, 1)
     const fin = new Date(EJERCICIO, mes, 0)
@@ -153,7 +153,7 @@ async function main() {
   }
   console.log(`✅ Periodos ${EJERCICIO} creados`)
 
-  // 9. Crear usuario admin si no existe
+  
   const RFC = "ADMI000000AA0"
   const PASSWORD = "Admin123!"
   const CORREO = "admin@sisodij.gob.mx"

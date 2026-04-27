@@ -1,6 +1,4 @@
-// ---------------------------------------------------------------------------
-// Interfaces
-// ---------------------------------------------------------------------------
+
 
 export interface OrganoCentralizadoNode {
   id: string
@@ -29,10 +27,6 @@ export interface OrganoParaestatalItem {
   clave_reporte_plazas: string | null
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init)
   if (!res.ok) {
@@ -48,10 +42,6 @@ function jsonBody(data: unknown): RequestInit {
     body: JSON.stringify(data),
   }
 }
-
-// ---------------------------------------------------------------------------
-// Centralizada
-// ---------------------------------------------------------------------------
 
 export function fetchCentralizadaTree() {
   return api<OrganoCentralizadoNode[]>("/api/catalogo/centralizada")
@@ -87,10 +77,6 @@ export function deleteOrganoCentralizado(id: string) {
   })
 }
 
-// ---------------------------------------------------------------------------
-// Paraestatal — Categorías
-// ---------------------------------------------------------------------------
-
 export function fetchCategoriasParaestatal() {
   return api<CategoriaParaestatalItem[]>("/api/catalogo/paraestatal/categorias")
 }
@@ -114,10 +100,6 @@ export function deleteCategoriaParaestatal(id: number) {
     method: "DELETE",
   })
 }
-
-// ---------------------------------------------------------------------------
-// Paraestatal — Órganos
-// ---------------------------------------------------------------------------
 
 export function fetchOrganosParaestatal(categoriaId?: number) {
   const qs = categoriaId ? `?categoriaId=${categoriaId}` : ""
@@ -150,10 +132,6 @@ export function deleteOrganoParaestatal(id: number) {
     method: "DELETE",
   })
 }
-
-// ---------------------------------------------------------------------------
-// Import bulk
-// ---------------------------------------------------------------------------
 
 export interface ImportRowCentralizada {
   nombre: string

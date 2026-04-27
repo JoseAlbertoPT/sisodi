@@ -19,13 +19,13 @@ export async function GET(req: NextRequest) {
       })
       if (viewer) {
         if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
-          // Usuario centralizado: ve solo solicitudes de su misma secretaría
+          
           where.usuario = {
             organo_centralizado: { isNot: null },
             secretaria_id: viewer.secretaria_id,
           }
         } else {
-          // Usuario paraestatal: ve solo paraestatal
+          
           where.usuario = { organo_centralizado: { is: null } }
         }
       }
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
           },
         },
         historial_solicitud: {
-          orderBy: { fecha: "desc" },
+          orderBy: { fecha: "asc" },
           include: {
             estado_historial_solicitud_estado_nuevo_idToestado:    true,
             estado_historial_solicitud_estado_anterior_idToestado: true,
@@ -156,9 +156,9 @@ export async function PATCH(req: NextRequest) {
 
     const esEnvioDGDO = nuevoEstado.toLowerCase() === "pendiente do"
 
-    // Generar folio_recepcion al enviar a DGDO
-    // - Normal:       AB-NNN       (incrementa FREC)
-    // - Extemporánea: AB-NNN-N     (toma último FREC + incrementa FREC_EXT, sin tocar FREC)
+    
+    
+    
     let folioRecepcionNuevo: string | undefined
     if (esEnvioDGDO && !solicitud.folio_recepcion) {
       const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
@@ -168,12 +168,12 @@ export async function PATCH(req: NextRequest) {
       const mesCode = MONTH_CODES[now.getMonth()]
 
       if (solicitud.es_extemporanea) {
-        // Leer el último consecutivo regular (sin incrementar)
+        
         const regFrec = await prisma.consecutivo_folio.findUnique({
           where: { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
         })
         const ultimoFrec = regFrec?.consecutivo ?? 0
-        // Incrementar el consecutivo de extemporáneas
+        
         const regExt = await prisma.consecutivo_folio.upsert({
           where:  { tipo_mes_anio: { tipo: "FREC_EXT", mes: mesNum, anio: anioNum } },
           update: { consecutivo: { increment: 1 } },
@@ -190,7 +190,7 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    // Si es un borrador enviado y aún no tiene folio, asignarlo ahora
+    
     let folioJustificacionNuevo: string | undefined
     if (esEnvioAValidacion && !solicitud.folio_justificacion) {
       const year = new Date().getFullYear()

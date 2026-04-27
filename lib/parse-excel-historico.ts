@@ -2,10 +2,6 @@
 
 import * as XLSX from "xlsx"
 
-/**
- * Row from the justificaciones Excel. Keys match column headers exactly
- * (e.g. "SECRETARÍA/SUBSECRETARÍA/DEPENDENCIA/ORGANISMO AUXILIAR").
- */
 export type HistoricoRow = Record<string, string | undefined>
 
 export interface ParseExcelResult {
@@ -19,10 +15,6 @@ function trimCell(value: unknown): string | undefined {
   return s === "" ? undefined : s
 }
 
-/**
- * Parses an Excel file and returns sheet names plus a function to get
- * rows per sheet (first row = headers, remaining rows = data as key-value by header).
- */
 export async function parseExcelFile(file: File): Promise<ParseExcelResult> {
   const buffer = await file.arrayBuffer()
   const workbook = XLSX.read(buffer, { type: "array" })

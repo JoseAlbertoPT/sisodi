@@ -26,7 +26,7 @@ export function PerfilPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-6">
-            {/* Avatar area */}
+            {}
             <div className="flex items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-xl font-bold">
                 {user?.name?.charAt(0)?.toUpperCase() || "U"}

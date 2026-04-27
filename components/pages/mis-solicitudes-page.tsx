@@ -34,7 +34,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/lib/auth-context"
+import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
+import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 type UrgTab =
   | "Borradores"
   | "En aprobación"
@@ -75,13 +77,6 @@ type UrgEstado =
   | "Aprobado"
   | "Emitido"
 
-interface HistorialEntry {
-  fecha: string
-  usuario: string
-  accion: string
-  comentario?: string | null
-}
-
 interface BitacoraEntry {
   seccion: string
   eventos: { fecha: string; usuario: string; descripcion: string }[]
@@ -102,7 +97,6 @@ function formatFolioRecepcion(folio: string): string {
   }
   return folio
 }
-
 
 interface UrgSolicitud {
   id: string
@@ -141,7 +135,7 @@ interface UrgSolicitud {
   condicionesRiesgos: string[]
   resguardoActivos: string
   tipoImporte: string
-  historial: HistorialEntry[]
+  historial: HistorialEntryData[]
   bitacora: BitacoraEntry[]
   observacionMotivo?: string
   observacionFecha?: string
@@ -392,12 +386,10 @@ function mapApiItem(item: any): UrgSolicitud {
       ? fmt(item.dictamen.fecha_emision)
       : undefined,
     historial: (item.historial ?? []).map((h: any) => ({
-      fecha:      h.fecha
-        ? new Date(h.fecha).toISOString().replace("T", " ").slice(0, 16)
-        : "",
-      usuario:    h.usuario,
-      accion:     h.accion,
-      comentario: normalizarComentario(h.comentario) ?? null,
+      fecha:          h.fecha ?? "",
+      usuario:        h.usuario,
+      estadoAnterior: h.estado_anterior ?? null,
+      estadoNuevo:    h.accion ?? "—",
     })),
     bitacora,
   }
@@ -553,33 +545,7 @@ function ParsedObservacion({ comentario, borderColor = "orange" }: { comentario:
     </div>
   )
 }
-function HistorialTimeline({ historial }: { historial: HistorialEntry[] }) {
-  if (!historial.length)
-    return <p className="text-xs text-muted-foreground">Sin historial registrado.</p>
-  return (
-    <div className="flex flex-col gap-0">
-      {[...historial].reverse().map((entry, index) => {
-        const esObservacion = /observad/i.test(entry.accion)
-        return (
-          <div key={index} className="flex gap-3">
-            <div className="flex flex-col items-center">
-              <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${esObservacion ? "border-[#832B56]" : "border-secondary"} bg-card`}>
-                <div className={`h-2 w-2 rounded-full ${esObservacion ? "bg-[#832B56]" : "bg-secondary"}`} />
-              </div>
-              {index < historial.length - 1 && <div className="w-px flex-1 bg-border" />}
-            </div>
-            <div className="flex flex-col gap-1 pb-4 flex-1">
-              <span className={`text-xs font-semibold ${esObservacion ? "text-[#832B56]" : "text-card-foreground"}`}>
-                {entry.accion}
-              </span>
-              <span className="text-[10px] text-muted-foreground">{entry.fecha} — {entry.usuario}</span>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
+
 function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
   return (
     <div className="flex flex-col gap-4">
@@ -592,24 +558,14 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Programa o Proyecto"                    value={solicitud.programaProyecto} />
           <ReadOnlyField label="Tipo de Actividad"                    value={solicitud.tipoActividades} />
           <ReadOnlyField label="Régimen de Contratación"                value={formatRegimen(solicitud.regimen)} />
-         {/* <ReadOnlyField label="Denominación"                           value={solicitud.denominacion} /> */}
+         {}
           <ReadOnlyField label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                       value={solicitud.vigenciaFin} />
           <ReadOnlyField label="Importe Bruto"                          value={solicitud.importeBruto} />
         </div>
       </SectionCard>
 
-     {/* <SectionCard title="Renovación" defaultOpen={solicitud.esRenovacion}>
-        {solicitud.esRenovacion ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <ReadOnlyField label="Es Renovación"              value="Sí" />
-            <ReadOnlyField label="Folio del Dictamen Anterior" value={solicitud.folioAnterior || "N/A"} />
-          </div>
-
-        ) : (
-          <ReadOnlyField label="Es Renovación" value="No" />
-        )}
-      </SectionCard> */}
+     {}
 
       <SectionCard title="Tabulador — Nivel y Categoría">
         <div className="grid gap-4 md:grid-cols-2">
@@ -677,16 +633,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
         </div>
       </SectionCard>
 
-      {/*<SectionCard title="Renovación" defaultOpen={solicitud.esRenovacion}>
-        {solicitud.esRenovacion ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <ReadOnlyField label="Es Renovación"              value="Sí" />
-            <ReadOnlyField label="Folio del Dictamen Anterior" value={solicitud.folioAnterior || "N/A"} />
-          </div>
-        ) : (
-          <ReadOnlyField label="Es Renovación" value="No" />
-        )}
-      </SectionCard> */}
+      {}
 
       <SectionCard num="III" title="Objeto del Nombramiento">
         <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
@@ -827,6 +774,8 @@ function DetalleView({
 }) {
   const cal = calData ?? { honorarios: [], asimilados: [], nombramiento: [] }
   const { toast } = useToast()
+  const { user } = useAuth()
+  const { getPermisosUsuario, consumirPermiso } = useAutorizaciones()
   const n         = (sol.estado ?? "").toLowerCase()
   const canEdit   = n === "borrador" || n === "en captura"
     || n.includes("observad")
@@ -843,6 +792,12 @@ function DetalleView({
   const isBorradorFueraDeTiempo =
     (n === "borrador" || n === "en captura") &&
     (periodoEndDate === null || today > periodoEndDate)
+
+  const permisoActivoBorrador = isBorradorFueraDeTiempo && user?.id
+    ? (getPermisosUsuario(user.id).find(
+        (p) => p.regimen === (sol.regimen as string) && p.active && !p.used
+      ) ?? null)
+    : null
 
   const [editingPeriodo,     setEditingPeriodo]     = useState(false)
   const [newPeriodo,         setNewPeriodo]         = useState(sol.periodoAplicacion)
@@ -880,6 +835,9 @@ function DetalleView({
     setShowConfirmPeriodo(false)
     setGuardandoReenvio(true)
     try {
+      if (permisoActivoBorrador && user?.id) {
+        await consumirPermiso(user.id, sol.regimen, permisoActivoBorrador.periodo)
+      }
       if (onUpdatePeriodoYEnviar) {
         await onUpdatePeriodoYEnviar(sol.id, newPeriodo)
       } else {
@@ -1015,12 +973,14 @@ function DetalleView({
       ) : null}
 
       {isBorradorFueraDeTiempo && (
-        <Card className="border-2 border-destructive/40 shadow-sm">
+        <Card className={`border-2 shadow-sm ${permisoActivoBorrador ? "border-orange-400/50" : "border-destructive/40"}`}>
           <CardContent className="flex flex-col gap-3 py-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${permisoActivoBorrador ? "text-orange-500" : "text-destructive"}`} />
               <div className="flex-1">
-                <span className="text-sm font-medium text-destructive">Periodo fuera de tiempo</span>
+                <span className={`text-sm font-medium ${permisoActivoBorrador ? "text-orange-600" : "text-destructive"}`}>
+                  Periodo fuera de tiempo
+                </span>
                 <p className="text-sm text-card-foreground mt-1">
                   El periodo seleccionado ya no está disponible. Debes actualizarlo conforme al calendario de recepción.
                 </p>
@@ -1028,12 +988,21 @@ function DetalleView({
                   Periodo: <strong>{sol.periodoAplicacion}</strong> ({regimenLabel}) — Límite DO:{" "}
                   <strong>{periodoCheck.limiteDO ?? "N/A"}</strong>
                 </p>
+                {permisoActivoBorrador && (
+                  <p className="text-xs text-orange-600 font-medium mt-1.5">
+                    Tiene habilitación especial para el periodo <strong>{permisoActivoBorrador.periodo}</strong>.
+                    Al actualizar se usará el token de captura.
+                  </p>
+                )}
               </div>
             </div>
             {!editingPeriodo && !periodoConfirmado ? (
               <Button variant="outline" size="sm"
-                className="self-start gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/5"
-                onClick={() => setEditingPeriodo(true)}>
+                className={`self-start gap-1.5 ${permisoActivoBorrador ? "border-orange-400/40 text-orange-600 hover:bg-orange-500/5" : "border-destructive/30 text-destructive hover:bg-destructive/5"}`}
+                onClick={() => {
+                  setEditingPeriodo(true)
+                  if (permisoActivoBorrador) setNewPeriodo(permisoActivoBorrador.periodo)
+                }}>
                 <Edit3 className="h-3.5 w-3.5" />Cambiar periodo
               </Button>
             ) : (
@@ -1047,9 +1016,11 @@ function DetalleView({
                     <SelectContent>
                       {periodoOptions.map((p) => {
                         const check = checkVigenteFromCal(cal, sol.regimen, p)
+                        const habilitadoPorPermiso = !check.vigente && permisoActivoBorrador && p === permisoActivoBorrador.periodo
                         return (
-                          <SelectItem key={p} value={p}>
-                            {p} {check.vigente ? "(en tiempo)" : "(vencido)"}
+                          <SelectItem key={p} value={p}
+                            disabled={!check.vigente && !habilitadoPorPermiso}>
+                            {p} {check.vigente ? "(en tiempo)" : habilitadoPorPermiso ? "(habilitado)" : "(vencido)"}
                           </SelectItem>
                         )
                       })}
@@ -1057,7 +1028,10 @@ function DetalleView({
                   </Select>
                 </div>
                 <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  disabled={newPeriodo === sol.periodoAplicacion || !checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente}
+                  disabled={newPeriodo === sol.periodoAplicacion || (
+                    !checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente &&
+                    !(permisoActivoBorrador && newPeriodo === permisoActivoBorrador.periodo)
+                  )}
                   onClick={handleUpdatePeriodo}>
                   Actualizar
                 </Button>
@@ -1092,7 +1066,8 @@ function DetalleView({
             <AlertDialogDescription>
               Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}) y la
               justificación será enviada automáticamente a Validación de Justificaciones.
-              Esta acción no se puede deshacer.
+              {permisoActivoBorrador && " Se consumirá el token de habilitación de captura."}
+              {" "}Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1147,7 +1122,7 @@ function DetalleView({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <HistorialTimeline historial={sol.historial} />
+              <HistorialTimeline entries={sol.historial} />
             </CardContent>
           </Card>
           <Card className="shadow-sm border-border">
@@ -1223,7 +1198,7 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
 
   const TABS: UrgTab[] = [
     "Borradores", "En aprobación", "Observadas / Devueltas",
-    "En proceso DGDO", "Emitidas", "Todas",
+    "En proceso DGDO", "Todas",
   ]
 
   useEffect(() => {

@@ -24,6 +24,7 @@ export function AppShell() {
   const [reviewSolicitudId, setReviewSolicitudId] = useState<string | null>(null)
   const [reviewFiltro, setReviewFiltro] = useState<1 | 2 | 3>(1)
   const [editSolicitud, setEditSolicitud] = useState<EditSolicitudPayload | undefined>(undefined)
+  const [prevPage, setPrevPage] = useState<PageKey>("dashboard")
 
   const handleNavigate = (page: PageKey) => {
     if (page !== "nueva-solicitud") setEditSolicitud(undefined)
@@ -31,8 +32,14 @@ export function AppShell() {
   }
 
   const handleEditSolicitud = (payload: EditSolicitudPayload) => {
+    setPrevPage(currentPage)
     setEditSolicitud(payload)
     setCurrentPage("nueva-solicitud")
+  }
+
+  const handleAfterSave = () => {
+    setEditSolicitud(undefined)
+    setCurrentPage(prevPage)
   }
 
   const handleOpenReview = (solicitudId: string, filtro: 1 | 2 | 3) => {
@@ -51,20 +58,20 @@ export function AppShell() {
       case "dashboard":
         return <DashboardPage onNavigate={setCurrentPage} onOpenReview={handleOpenReview} />
       case "nueva-solicitud":
-        return <NuevaSolicitudPage key={editSolicitud?.id ?? "new"} editSolicitud={editSolicitud} />
+        return <NuevaSolicitudPage key={editSolicitud?.id ?? "new"} editSolicitud={editSolicitud} onAfterSave={editSolicitud ? handleAfterSave : undefined} />
       case "mis-solicitudes":
         return <MisSolicitudesPage key={user?.id ?? "anon"} onEditSolicitud={handleEditSolicitud} />
       case "validacion-uefa":
         return <ValidacionUefaPage />
       case "bandeja-filtro1":
-        return <BandejaFiltroPage filtro={1} onOpenReview={handleOpenReview} />
+        return <BandejaFiltroPage filtro={1} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
       case "bandeja-filtro2":
-        return <BandejaFiltroPage filtro={2} onOpenReview={handleOpenReview} />
+        return <BandejaFiltroPage filtro={2} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
       case "bandeja-filtro3":
-        return <BandejaFiltroPage filtro={3} onOpenReview={handleOpenReview} />
+        return <BandejaFiltroPage filtro={3} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
       case "revision-do":
         return reviewSolicitudId ? (
-          <RevisionDOPage solicitudId={reviewSolicitudId} filtro={reviewFiltro} onBack={handleBackFromReview} />
+          <RevisionDOPage solicitudId={reviewSolicitudId} filtro={reviewFiltro} onBack={handleBackFromReview} onEditSolicitud={handleEditSolicitud} />
         ) : (
           <DashboardPage onNavigate={setCurrentPage} onOpenReview={handleOpenReview} />
         )
@@ -85,10 +92,14 @@ export function AppShell() {
     }
   }
 
+  const sidebarPage: PageKey = currentPage === "revision-do"
+    ? `bandeja-filtro${reviewFiltro}` as PageKey
+    : currentPage
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <AppSidebar
-        currentPage={currentPage}
+        currentPage={sidebarPage}
         onNavigate={handleNavigate}
         collapsed={sidebarCollapsed}
         onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}

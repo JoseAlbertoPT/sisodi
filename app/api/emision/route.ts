@@ -36,7 +36,6 @@ export async function GET(req: NextRequest) {
       )
     }
 
-
     const userId = searchParams.get("userId")
 
     const estadoEmitido = await prisma.estado.findFirst({
@@ -54,18 +53,23 @@ export async function GET(req: NextRequest) {
         select: {
           secretaria_id:       true,
           organo_centralizado: { select: { id: true } },
+          rol:                 { select: { nombre: true } },
         },
       })
       if (viewer) {
-        if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
-          organoFilter = {
-            usuario: {
-              organo_centralizado: { isNot: null },
-              secretaria_id: viewer.secretaria_id,
-            },
+        const rolNombre = viewer.rol?.nombre?.toLowerCase() ?? ""
+        const esCapturista = rolNombre === "capturista"
+        if (esCapturista) {
+          if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
+            organoFilter = {
+              usuario: {
+                organo_centralizado: { isNot: null },
+                secretaria_id: viewer.secretaria_id,
+              },
+            }
+          } else {
+            organoFilter = { usuario: { organo_centralizado: { is: null } } }
           }
-        } else {
-          organoFilter = { usuario: { organo_centralizado: { is: null } } }
         }
       }
     }
@@ -156,6 +160,7 @@ export async function GET(req: NextRequest) {
         vigenciaFin:
           sol.vigencia_fin?.toISOString().slice(0, 10) ?? null,
         esExtemporanea: (sol as any).es_extemporanea ?? null,
+        regimen:        (sol as any).regimen ?? null,
         estado:         sol.estado.nombre,
         periodo:
           sol.periodo ? `${sol.periodo.mes}/${sol.periodo.anio}` : null,

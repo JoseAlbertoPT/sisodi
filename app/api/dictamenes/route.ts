@@ -183,7 +183,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── POST /api/emision — emitir dictamen ──────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -304,7 +303,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── PATCH /api/emision — actualizar PDF de dictamen ya emitido ────────────────
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()

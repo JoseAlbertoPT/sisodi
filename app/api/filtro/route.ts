@@ -78,6 +78,7 @@ export async function GET(req: NextRequest) {
       ] : []),
       ...(filtro === 2 ? [
         "Pendiente DO",
+        "En Revision Revisor",
         "Observado por Emisor",
         "Observado por DO",
         "Observado por Revisor",
@@ -120,7 +121,7 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({ ok: true, data: [] })
         }
 
-        if (!esRolRevisor) {
+        if (!esRolRevisor && filtro === 1) {
           if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
             organoFilter = {
               usuario: {
@@ -143,6 +144,14 @@ export async function GET(req: NextRequest) {
       whereClause.revisor_asignado_id = revisorId
     }
 
+    const hoyBase = new Date(); hoyBase.setHours(0, 0, 0, 0)
+    const periodoActivo = await prisma.periodo.findFirst({
+      where: { fecha_inicio: { lte: hoyBase }, fecha_fin: { gte: hoyBase } },
+    })
+    const slaFechaCierre: Date | null = periodoActivo?.fecha_fin
+      ? (() => { const d = new Date(periodoActivo.fecha_fin); d.setHours(0,0,0,0); return d })()
+      : null
+
     const solicitudes = await prisma.solicitud.findMany({
       where: whereClause,
       include: {
@@ -162,7 +171,7 @@ export async function GET(req: NextRequest) {
           },
         },
         historial_solicitud: {
-          orderBy: { fecha: "desc" },
+          orderBy: { fecha: "asc" },
           include: {
             estado_historial_solicitud_estado_nuevo_idToestado:    true,
             estado_historial_solicitud_estado_anterior_idToestado: true,
@@ -210,14 +219,9 @@ export async function GET(req: NextRequest) {
           })
         : null
 
-      const fechaBase = sol.fecha_envio ?? sol.fecha_creacion
-      let slaRestante: number | null = null
-      if (fechaBase) {
-        const diffDias = Math.floor(
-          (new Date().getTime() - new Date(fechaBase).getTime()) / (1000 * 60 * 60 * 24)
-        )
-        slaRestante = Math.max(15 - diffDias, -99)
-      }
+      const slaRestante: number | null = slaFechaCierre
+        ? Math.ceil((slaFechaCierre.getTime() - hoyBase.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        : null
 
       const etapaFiltro    = `F${filtro}`
       const tieneFolioDictamen = !!(sol.dictamen?.folio ?? (sol as any).folio_dictamen)
@@ -397,7 +401,7 @@ export async function PATCH(req: NextRequest) {
             })
           }
         }
-      } catch { /* ignorar */ }
+      } catch {  }
 
       return NextResponse.json({
         ok:            true,
@@ -461,7 +465,7 @@ export async function PATCH(req: NextRequest) {
             }
           }
         }
-      } catch { /* ignorar */ }
+      } catch {  }
 
       return NextResponse.json({ ok: true, accion: "asignarFolioRecepcion", folioRecepcion })
     }

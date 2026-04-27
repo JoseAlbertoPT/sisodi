@@ -20,6 +20,7 @@ import {
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
+import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 
 type UefaEstado = string
 
@@ -29,10 +30,9 @@ type UefaTab =
   | "En Proceso"
   | "Observadas"
   | "Devueltas"
+  | "Observadas/Devueltas"
   | "Emitidas"
   | "Todas"
-
-interface HistorialEntry { fecha: string; usuario: string; accion: string; comentario?: string }
 
 interface UefaSolicitud {
   id: number
@@ -56,7 +56,7 @@ interface UefaSolicitud {
   esRenovacion: boolean
   esExtemporanea: boolean
   folioAnterior?: string
-  historial: HistorialEntry[]
+  historial: HistorialEntryData[]
   observacionesUefa: string
   observadoPor?: string
   fechaObservacion?: string
@@ -78,8 +78,6 @@ interface UefaSolicitud {
   areasExp: string
   _raw?: any
 }
-
-
 
 const INICIALES_MES_MAP: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
@@ -125,10 +123,10 @@ function getTabForEstado(estado: string): UefaTab {
 
   if (n === "en captura" || n.includes("en validacion justificaciones") || n.includes("enviada a validacion")) return "Nuevas"
   if (n.includes("pendiente firma justificacion")) return "Pendiente Firma"
-  if (n.includes("observado por validacion") && !n.includes("final")) return "Observadas"
-  if (n.includes("observado por do") || n.includes("observado do")) return "Observadas"
-  if (n.includes("observado por revisor")) return "Observadas"
-  if (n.includes("observado por") ) return "Devueltas"
+  if (n.includes("observado por validacion") && !n.includes("final")) return "Observadas/Devueltas"
+  if (n.includes("observado por do") || n.includes("observado do")) return "Observadas/Devueltas"
+  if (n.includes("observado por revisor")) return "Observadas/Devueltas"
+  if (n.includes("observado por")) return "Observadas/Devueltas"
   if (n === "emitido") return "Emitidas"
 
   if (
@@ -176,11 +174,11 @@ function resolverFolioDictamen(item: any): string | null {
 }
 
 function mapBDtoSolicitud(item: any): UefaSolicitud {
-  const historial: HistorialEntry[] = (item.historial_solicitud ?? []).map((h: any) => ({
-    fecha:      formatFechaHora(h.fecha),
-    usuario:    h.usuario?.nombre ?? "Sistema",
-    accion:     h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
-    comentario: h.comentario ?? undefined,
+  const historial: HistorialEntryData[] = (item.historial_solicitud ?? []).map((h: any) => ({
+    fecha:          h.fecha ?? "",
+    usuario:        h.usuario?.nombre ?? "Sistema",
+    estadoAnterior: h.estado_historial_solicitud_estado_anterior_idToestado?.nombre ?? null,
+    estadoNuevo:    h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
   }))
 
   const folioDictamenRaw = resolverFolioDictamen(item)
@@ -346,7 +344,7 @@ function DictamenModal({
         </CardHeader>
         <ScrollArea className="flex-1 px-6 pb-6">
           <div className="bg-card rounded-lg p-6 border border-border flex flex-col gap-4">
-            {/* Encabezado institucional */}
+            {}
             <div className="text-center border-b-2 border-primary pb-4">
               <p className="text-xs text-muted-foreground">GOBIERNO DEL ESTADO</p>
               <p className="text-xs text-muted-foreground">SECRETARÍA DE ADMINISTRACIÓN</p>
@@ -354,7 +352,7 @@ function DictamenModal({
               <p className="text-base font-bold text-card-foreground mt-2 tracking-wide">{titulo}</p>
             </div>
 
-            {/* Datos del dictamen */}
+            {}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="text-xs text-muted-foreground block">Número</span>
@@ -382,7 +380,7 @@ function DictamenModal({
               </div>
             </div>
 
-            {/* Destinatarios  */}
+            {}
             <div>
               <span className="text-xs text-muted-foreground block mb-1">Destinatarios</span>
               {(solicitud.destinatarios ?? []).length > 0 ? (
@@ -396,7 +394,7 @@ function DictamenModal({
               )}
             </div>
 
-            {/* Datos del solicitante */}
+            {}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="text-xs text-muted-foreground block">Secretaría</span>
@@ -418,7 +416,7 @@ function DictamenModal({
               </div>
             </div>
 
-            {/* Firmas */}
+            {}
             <div className="grid grid-cols-3 gap-3 mt-2">
               {(["reviso", "valido", "emitio"] as const).map((rol) => (
                 <div key={rol} className="flex flex-col items-center gap-1 rounded-lg border border-border p-3">
@@ -507,27 +505,6 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
           </div>
         )
       })}
-    </div>
-  )
-}
-function UefaHistorialTimeline({ historial }: { historial: HistorialEntry[] }) {
-  if (!historial.length) return <p className="text-xs text-muted-foreground">Sin historial registrado.</p>
-  return (
-    <div className="flex flex-col gap-0">
-      {[...historial].reverse().map((e, i) => (
-        <div key={i} className="flex gap-3">
-          <div className="flex flex-col items-center">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-secondary bg-card">
-              <div className="h-2 w-2 rounded-full bg-secondary" />
-            </div>
-            {i < historial.length - 1 && <div className="w-px flex-1 bg-border" />}
-          </div>
-          <div className="flex flex-col gap-0.5 pb-4">
-            <span className="text-xs font-medium text-card-foreground">{e.accion}</span>
-            <span className="text-[10px] text-muted-foreground">{e.fecha} — {e.usuario}</span>
-          </div>
-        </div>
-      ))}
     </div>
   )
 }
@@ -642,11 +619,7 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
         </div>
       </SectionCard>
 
-      {/*<SectionCard title="Renovación">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="¿Es Renovación?"   value={solicitud.esRenovacion ? "SÍ" : "NO"} />
-        </div>
-      </SectionCard>*/}
+      {}
 
       <SectionCard title="Tabulador — Nivel y Categoría">
         <div className="grid gap-4 md:grid-cols-2">
@@ -1072,7 +1045,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <UefaHistorialTimeline historial={solicitud.historial} />
+              <HistorialTimeline entries={solicitud.historial} />
             </CardContent>
           </Card>
         </div>
@@ -1149,9 +1122,10 @@ export function ValidacionUefaPage() {
         ...s,
         estado: "Pendiente DO",
         historial: [...s.historial, {
-          fecha:   formatFechaHora(new Date().toISOString()),
-          usuario: (user as any)?.nombre ?? "Validacion",
-          accion:  "Aprobada → Pendiente de asignación en DO",
+          fecha:          new Date().toISOString(),
+          usuario:        (user as any)?.nombre ?? "Validacion",
+          estadoAnterior: s.estado,
+          estadoNuevo:    "Pendiente DO",
         }],
       } : s))
       setSelectedId(null)
@@ -1186,9 +1160,10 @@ export function ValidacionUefaPage() {
         observadoPor:      (user as any)?.nombre ?? "Validacion",
         fechaObservacion:  formatFechaHora(new Date().toISOString()),
         historial: [...s.historial, {
-          fecha:   formatFechaHora(new Date().toISOString()),
-          usuario: (user as any)?.nombre ?? "Validacion",
-          accion:  `Observada — ${obs.substring(0, 60)}${obs.length > 60 ? "..." : ""}`,
+          fecha:          new Date().toISOString(),
+          usuario:        (user as any)?.nombre ?? "Validacion",
+          estadoAnterior: s.estado,
+          estadoNuevo:    "Observado por Validacion",
         }],
       } : s))
       setObservarTargetId(null)
@@ -1219,9 +1194,10 @@ export function ValidacionUefaPage() {
         ...s,
         estado: "Pendiente Firma Dictamen",
         historial: [...s.historial, {
-          fecha:   formatFechaHora(new Date().toISOString()),
-          usuario: (user as any)?.nombre ?? "Validacion",
-          accion:  "Justificacion firmada → Enviada a Emision para firma dictamen",
+          fecha:          new Date().toISOString(),
+          usuario:        (user as any)?.nombre ?? "Validacion",
+          estadoAnterior: s.estado,
+          estadoNuevo:    "Pendiente Firma Dictamen",
         }],
       } : s))
       setSelectedId(null)
@@ -1233,19 +1209,17 @@ export function ValidacionUefaPage() {
   }, [user])
 
   const tabDefs: { key: UefaTab; label: string }[] = [
-    { key: "Nuevas",          label: "Nuevas" },
-    { key: "Pendiente Firma", label: "Pendiente Firma" },
-    { key: "En Proceso",      label: "En Proceso" },
-    { key: "Observadas",      label: "Observadas" },
-    { key: "Devueltas",       label: "Devueltas" },
-    { key: "Emitidas",        label: "Emitidas" },
-    { key: "Todas",           label: "Todas" },
+    { key: "Nuevas",               label: "Nuevas" },
+    { key: "En Proceso",           label: "En Proceso" },
+    { key: "Observadas/Devueltas", label: "Observadas / Devueltas" },
+    { key: "Pendiente Firma",      label: "Pendiente de Firma" },
+    { key: "Todas",                label: "Todas" },
   ]
 
   const tabCounts = useMemo(() => {
     const counts: Record<UefaTab, number> = {
       "Nuevas": 0, "Pendiente Firma": 0, "En Proceso": 0,
-      "Observadas": 0, "Devueltas": 0, "Emitidas": 0, "Todas": solicitudes.length,
+      "Observadas": 0, "Devueltas": 0, "Observadas/Devueltas": 0, "Emitidas": 0, "Todas": solicitudes.length,
     }
     for (const s of solicitudes) {
       const t = getTabForEstado(s.estado) as UefaTab
@@ -1313,7 +1287,7 @@ export function ValidacionUefaPage() {
         items={tabDefs.map((tab) => ({ value: tab.key, label: tab.label, count: tabCounts[tab.key] ?? 0 }))}
       />
 
-      {/* Tabla */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1356,11 +1330,6 @@ export function ValidacionUefaPage() {
                       <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                         <td className="px-4 py-3 font-medium text-card-foreground">
                           <span>{folioPrincipal}</span>
-                          {sol.esExtemporanea && folioRecepcion && (
-                            <span className="block text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 mt-0.5 w-fit">
-                              Folio temporal
-                            </span>
-                          )}
                           {folioSecundario && (
                             <span className="block text-xs text-muted-foreground mt-0.5">{folioSecundario}</span>
                           )}
@@ -1380,22 +1349,7 @@ export function ValidacionUefaPage() {
                             </Button>
                             {solTab === "Nuevas" && (
                               <>
-                              { /*  <Button
-                                  variant="ghost" size="sm"
-                                  onClick={() => setAprobarTargetId(sol.id)}
-                                  disabled={guardando}
-                                  className="text-primary hover:text-primary/80 gap-1.5"
-                                >
-                                  <CheckCircle2 className="h-4 w-4" />Aprobar
-                                </Button>
-                                <Button
-                                  variant="ghost" size="sm"
-                                  onClick={() => setObservarTargetId(sol.id)}
-                                  disabled={guardando}
-                                  className="text-destructive hover:text-destructive/80 gap-1.5"
-                                >
-                                  <RotateCcw className="h-4 w-4" />Observar
-                                </Button>*/ }
+                              {  }
                               </>
                             )}
                             {solTab === "Pendiente Firma" && (

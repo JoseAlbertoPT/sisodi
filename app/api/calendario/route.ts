@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest) {
     const ejercicio = Number(req.nextUrl.searchParams.get("ejercicio") ?? new Date().getFullYear())
     const { honorarios, asimilados, nombramiento } = await req.json()
 
-    // Delete existing for this ejercicio
+    
     await prisma.calendario.deleteMany({ where: { ejercicio } })
 
     const rows: { ejercicio: number; regimen: string; periodo: string; limite_do: string; limite_dgrh: string }[] = []
@@ -53,7 +53,7 @@ export async function PUT(req: NextRequest) {
       await prisma.calendario.createMany({ data: rows })
     }
 
-    // Return the saved data
+    
     const saved = await prisma.calendario.findMany({
       where: { ejercicio },
       orderBy: { id: "asc" },

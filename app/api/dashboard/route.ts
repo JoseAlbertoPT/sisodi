@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     const mesParam = searchParams.get("mes")
     const mes      = mesParam ? parseInt(mesParam, 10) : null
 
-    // Filtrar por rango de fecha_creacion del mes/año seleccionado
+    
     const fechaDesde = mes
       ? new Date(anio, mes - 1, 1)
       : new Date(anio, 0, 1)
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       folio_recepcion: { not: null as string | null },
     }
 
-    // ── Indicadores ────────────────────────────────────────────────────────────
+    
     const [
       totalRecibidas, prestadoresAgg, regimenRows,
       prestadoresSecretariaRows, prestadoresCentralizadaAgg, prestadoresParaestatalAgg,
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
         where: baseWhere,
         _count: { id: true },
       }),
-      // Prestadores por secretaría con tipo de administración
+      
       prisma.solicitud.findMany({
         where: { ...baseWhere, numero_prestadores: { gt: 0 } },
         select: {
@@ -46,17 +46,17 @@ export async function GET(req: NextRequest) {
           usuario:            { select: { secretaria_id: true } },
         },
       }),
-      // Total prestadores administración centralizada
+      
       prisma.solicitud.aggregate({
         where: { ...baseWhere, usuario: { secretaria_id: { not: null } } },
         _sum:  { numero_prestadores: true },
       }),
-      // Total prestadores administración paraestatal
+      
       prisma.solicitud.aggregate({
         where: { ...baseWhere, usuario: { secretaria_id: null } },
         _sum:  { numero_prestadores: true },
       }),
-      // Prestadores por régimen
+      
       prisma.solicitud.groupBy({
         by:    ["regimen"],
         where: { ...baseWhere, numero_prestadores: { gt: 0 } },
@@ -85,9 +85,9 @@ export async function GET(req: NextRequest) {
 
     const enProceso = totalRecibidas - emitidas
 
-    // ── Gráfica: distribución por secretaría (centralizada vs paraestatal) ────
-    // Centralizada: usuario tiene secretaria_id (vinculado a organo_centralizado)
-    // Paraestatal:  usuario no tiene secretaria_id
+    
+    
+    
     const [centralRows, paraRows] = await Promise.all([
       prisma.solicitud.groupBy({
         by:    ["secretaria"],
@@ -111,10 +111,10 @@ export async function GET(req: NextRequest) {
       }),
     ])
 
-    // ── Gráfica: emisiones por secretaría (dictamen vs opinión) ───────────────
-    // Dictamen = centralizada (usuario.secretaria_id != null)
-    // Opinión  = paraestatal  (usuario.secretaria_id == null)
-    // Solo solicitudes en estado "Emitido" (proceso completo, igual que página Dictámenes)
+    
+    
+    
+    
     const emisionRows = await prisma.solicitud.findMany({
       where: {
         ...baseWhere,
@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => (b.dictamenes + b.opiniones) - (a.dictamenes + a.opiniones))
       .slice(0, 15)
 
-    // Agrupar prestadores por secretaría + tipo de administración
+    
     const secMap = new Map<string, { secretaria: string; prestadores: number; tipo: "Centralizada" | "Paraestatal" }>()
     for (const row of prestadoresSecretariaRows) {
       const sec  = row.secretaria ?? "Sin especificar"

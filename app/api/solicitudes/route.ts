@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       where:  { id: usuarioId },
       select: { secretaria_id: true },
     })
-    // Contador independiente por secretaría (centralizado) o compartido para paraestatal
+    
     const tipoFolioJUST = usuarioCreador?.secretaria_id
       ? `JUST-${usuarioCreador.secretaria_id}`
       : "JUST-P"
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Generate folios based on state
+    
     const fechaCreacion = nueva.fecha_creacion ?? new Date()
     const year          = fechaCreacion.getFullYear()
     const esBorrador    = estadoNombre === "Borrador"

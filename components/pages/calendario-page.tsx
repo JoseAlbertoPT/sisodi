@@ -30,7 +30,6 @@ const MESES = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ]
 
-// Quincenas válidas: excluye "1ra Enero" y "2da Diciembre"
 const QUINCENA_NAMES: string[] = MESES.flatMap((mes) => {
   const qs: string[] = []
   if (mes !== "Enero") qs.push(`1ra ${mes}`)
@@ -150,8 +149,8 @@ export function CalendarioPage() {
   }
 
   const handleStartEdit = () => {
-    // Siempre inicializa con el template completo para que las filas
-    // que no están en BD (ej. Enero) se puedan editar sin perderse.
+    
+    
     setEditData({
       honorarios: MESES.map((mes) =>
         honorarios.find((r) => r.mes === mes) ?? { mes, limiteDO: "", limiteDGRH: "" }
@@ -269,7 +268,7 @@ export function CalendarioPage() {
       description={`Periodo de aceptación y fechas límite para la recepción de solicitudes - Ejercicio ${ejercicio}`}
     >
       <div className="flex flex-col gap-6">
-        {/* Header bar */}
+        {}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/10">

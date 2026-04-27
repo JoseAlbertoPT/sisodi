@@ -24,7 +24,6 @@ const COL_UA_NOMBRE = ["UNIDAD ADMINISTRATIVA DE ADSCRIPCI", "UNIDAD ADMINISTRAT
 const COL_UA_CLAVE  = ["UA DE CLAVES", "UA CLAVE", "CLAVE UA", "CLAVE ADMINISTRATIVA", "CLAVE DE UNIDAD", "CLAVE PRESUPUESTAL"]
 const COL_UA_ADSCRIPCION = ["UNIDAD ADMINISTRATIVA DE ADSCRIPCI"]
 
-// Unidad: nombre normalizado → clave original (vacío si no se encontró)
 type UaMap = Map<string, string>
 
 function addUa(map: Map<string, UaMap>, sec: string, nombre: string, clave = "") {

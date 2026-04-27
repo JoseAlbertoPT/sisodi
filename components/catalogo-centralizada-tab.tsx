@@ -299,7 +299,7 @@ function SecretariaRow({
           </div>
         </CollapsibleContent>
       </Collapsible>
-      {/*  Agregar UA */}
+      {}
       <Dialog open={addUaOpen} onOpenChange={setAddUaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Agregar Unidad Administrativa</DialogTitle></DialogHeader>
@@ -324,7 +324,7 @@ function SecretariaRow({
         </DialogContent>
       </Dialog>
 
-      {/*  Editar Secretaría */}
+      {}
       <Dialog open={editSecOpen} onOpenChange={setEditSecOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Secretaría</DialogTitle></DialogHeader>
@@ -344,7 +344,7 @@ function SecretariaRow({
         </DialogContent>
       </Dialog>
 
-      {/*  Eliminar Secretaría */}
+      {}
       <Dialog open={deleteSecOpen} onOpenChange={setDeleteSecOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Eliminar Secretaría</DialogTitle></DialogHeader>
@@ -359,7 +359,7 @@ function SecretariaRow({
         </DialogContent>
       </Dialog>
 
-      {/*  Editar UA */}
+      {}
       <Dialog open={editUaOpen} onOpenChange={setEditUaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Unidad Administrativa</DialogTitle></DialogHeader>
@@ -383,7 +383,7 @@ function SecretariaRow({
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo: Eliminar UA */}
+      {}
       <Dialog open={deleteUaOpen} onOpenChange={setDeleteUaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Eliminar Unidad Administrativa</DialogTitle></DialogHeader>
@@ -489,7 +489,7 @@ export function CatalogoCentralizadaTab() {
         </CardContent>
       </Card>
 
-      {/* Diálogo: Nueva Secretaría */}
+      {}
       <Dialog open={addSecOpen} onOpenChange={setAddSecOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nueva Secretaría</DialogTitle></DialogHeader>

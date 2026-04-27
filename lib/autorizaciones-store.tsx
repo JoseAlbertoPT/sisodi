@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 
 export interface PermisoCaptura {
   id: number
-  userId: string          // usuario UUID
+  userId: string          
   regimen: "honorarios" | "asimilados" | "nombramiento"
   periodo: string
   active: boolean
@@ -38,7 +38,7 @@ export function AutorizacionesProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch("/api/permisos-captura")
       if (res.ok) setPermisos(await res.json())
-    } catch { /* silencioso */ }
+    } catch {  }
   }, [])
 
   useEffect(() => { void recargar() }, [recargar])
@@ -57,7 +57,7 @@ export function AutorizacionesProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error("Error al otorgar permiso")
     const created: PermisoCaptura = await res.json()
     setPermisos((prev) => [
-      // desactivar local los anteriores de misma combinación
+      
       ...prev.map((p) =>
         p.userId === data.userId && p.regimen === data.regimen && p.periodo === data.periodo && p.active && !p.used
           ? { ...p, active: false } : p

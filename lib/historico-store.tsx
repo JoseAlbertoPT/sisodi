@@ -10,7 +10,7 @@ export interface HistoricoRecord {
   subidoEn: string
   sheetNames: string[]
   sheets: Record<string, HistoricoRow[]>
-  // ── Segundo archivo (opcional) ─────────────────────────────────────────────
+  
   nombreArchivo2: string | null
   sheetNames2: string[] | null
   sheets2: Record<string, HistoricoRow[]> | null
