@@ -86,13 +86,13 @@ const SECTION_DEFS = [
     keys: ["dashboard", "nueva-solicitud", "mis-solicitudes", "validacion-uefa"] as PageKey[],
   },
   {
-    id: "proceso",
-    label: "Proceso DGDO",
-    keys: ["bandeja-filtro1", "bandeja-filtro2", "bandeja-filtro3", "revision-do", "dictamenes"] as PageKey[],
+    id: "gestion",
+    label: "Gestión de Procesos DGDO ",
+    keys: ["bandeja-filtro1", "bandeja-filtro2", "bandeja-filtro3", "dictamenes"] as PageKey[],
   },
   {
-    id: "administracion",
-    label: "Administración",
+    id: "configuracion",
+    label: "Configuración",
     keys: ["calendario", "usuarios", "configuracion"] as PageKey[],
   },
 ]
@@ -143,18 +143,19 @@ function SidebarItem({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-[13px] font-medium transition-colors"
+      className="flex w-full items-start gap-2 rounded pl-1 pr-2 py-2 text-[13px] font-medium transition-colors"
       style={style}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
-      <span className="truncate">{label}</span>
+      <span className="shrink-0 mt-0.5 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+      <span className="leading-tight">{label}</span>
     </button>
   )
 }
 
 function SidebarSection({
+  label,
   items,
   currentPage,
   onNavigate,
@@ -162,6 +163,7 @@ function SidebarSection({
   onToggle,
   showDivider,
 }: {
+  label: string
   items: MenuNode[]
   currentPage: PageKey
   onNavigate: (page: PageKey) => void
@@ -176,8 +178,11 @@ function SidebarSection({
         onClick={onToggle}
         className="flex w-full items-center gap-1.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors group"
       >
-        {showDivider && <div className="flex-1 h-px bg-border/50 group-hover:bg-border transition-colors" />}
-        {!showDivider && <div className="flex-1" />}
+        {showDivider && <div className="h-px bg-border/50 group-hover:bg-border transition-colors" style={{ width: "8px" }} />}
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 group-hover:text-foreground/60 transition-colors shrink-0">
+          {label}
+        </span>
+        <div className="flex-1 h-px bg-border/50 group-hover:bg-border transition-colors" />
         {expanded ? (
           <ChevronUp className="h-2.5 w-2.5 shrink-0" />
         ) : (
@@ -229,8 +234,8 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     justificaciones: true,
-    proceso: true,
-    administracion: true,
+    gestion: true,
+    configuracion: true,
   })
 
   const toggleSection = useCallback((id: string) => {
@@ -325,6 +330,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
                 {visibleSections.map(({ def, items }, index) => (
                   <SidebarSection
                     key={def.id}
+                    label={def.label}
                     items={items}
                     currentPage={currentPage}
                     onNavigate={onNavigate}

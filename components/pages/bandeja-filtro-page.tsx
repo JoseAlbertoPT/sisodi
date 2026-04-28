@@ -182,7 +182,6 @@ function SlaIndicator({ diasRestantes }: { diasRestantes: number | null }) {
       className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
       style={getSlaStyle(diasRestantes)}
     >
-      <Clock className="h-3 w-3" />
       {getSlaLabel(diasRestantes)}
     </span>
   )
@@ -1289,7 +1288,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
             value: tabKey,
             label: cfg.label,
             count: tabCounts[tabKey as TabKey],
-            icon:  cfg.icon,
           }
         })}
       />
@@ -1364,27 +1362,26 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                     return (
                       <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
 
-                        {}
                         <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                             {filtro === 2 && tab === "pendientes_asignacion" && sol.revisorAsignado ? (
                               <span
-                                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
                                 style={{ backgroundColor: "#0E7490", color: "#FFFFFF" }}
                               >
-                                <Clock className="h-2.5 w-2.5" />Pendiente de aceptación”
+                                Pendiente de aceptación
                               </span>
                             ) : (
                               <span
-                                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
                                 style={config.badgeStyle}
                               >
-                                {config.icon}{config.label}
+                                {config.label}
                               </span>
                             )}
                             {sol.reingresoCount > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent-foreground">
-                                <RotateCcw className="h-2.5 w-2.5" />Reingreso #{sol.reingresoCount}
+                              <span className="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent-foreground">
+                                Reingreso #{sol.reingresoCount}
                               </span>
                             )}
                           </div>
