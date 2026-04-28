@@ -449,7 +449,7 @@ export function DictamenesPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+     {/* <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { label: "Total emitidos",    value: dictamenes.length,  icon: <FileCheck className="h-5 w-5 text-primary" />,       bg: "bg-primary/10" },
           { label: "Dictámenes",        value: totalDictamenes,    icon: <Stamp className="h-5 w-5 text-secondary" />,         bg: "bg-secondary/10" },
@@ -468,7 +468,7 @@ export function DictamenesPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
+      </div> */}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -480,36 +480,19 @@ export function DictamenesPage() {
             className="pl-10 bg-card"
           />
         </div>
-        <Select value={filterAnio} onValueChange={setFilterAnio}>
-          <SelectTrigger className="w-28 bg-card"><SelectValue placeholder="Año" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="2026">2026</SelectItem>
-            <SelectItem value="2025">2025</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterMes} onValueChange={setFilterMes}>
-          <SelectTrigger className="w-36 bg-card"><SelectValue placeholder="Mes" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos los meses</SelectItem>
-            {MESES.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterSecretaria} onValueChange={setFilterSecretaria}>
-          <SelectTrigger className="w-44 bg-card"><SelectValue placeholder="Secretaría" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todas">Todas</SelectItem>
-            {secretariasUnicas.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterTipo} onValueChange={setFilterTipo}>
-          <SelectTrigger className="w-40 bg-card"><SelectValue placeholder="Tipo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="dictamen">Dictamen</SelectItem>
-            <SelectItem value="opinion">Opinión</SelectItem>
-          </SelectContent>
-        </Select>
+
+        <div className="flex flex-col gap-1">
+
+          <Select value={filterTipo} onValueChange={setFilterTipo}>
+            <SelectTrigger className="w-40 bg-card"><SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="dictamen">Dictamen</SelectItem>
+              <SelectItem value="opinion">Opinión</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Card className="shadow-sm border-border">
