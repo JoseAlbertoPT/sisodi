@@ -940,12 +940,9 @@ function FolioRecepcionCard({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
             <FileText className="h-4 w-4 text-amber-600" />Folio de Recepción
-            <span className="text-[10px] font-semibold text-amber-600 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5">
-              Temporal
-            </span>
           </CardTitle>
           <CardDescription className="text-xs">
-            Folio temporal asignado. Elija el mes y asigne el folio de recepción definitivo.
+            Elija el mes y el año
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">

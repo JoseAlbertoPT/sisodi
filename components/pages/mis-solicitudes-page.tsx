@@ -332,10 +332,13 @@ function mapApiItem(item: any): UrgSolicitud {
     : "—"
   const fmt = (d: string | null | undefined) =>
     d ? new Date(d).toISOString().slice(0, 10) : ""
-  const periodoAplicacion = item.periodo
-    ? `${item.periodo.mes}/${item.periodo.anio}`
-    : ""
   const regimen = (item.regimen ?? "honorarios") as RegimenPeriodo
+  const _MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+  const periodoAplicacion = item.periodo
+    ? regimen === "honorarios"
+      ? (_MESES[item.periodo.mes - 1] ?? `${item.periodo.mes}/${item.periodo.anio}`)
+      : `${item.periodo.mes}/${item.periodo.anio}`
+    : ""
   const rawEstado = item.estado?.nombre ?? ""
   const estadosValidos: UrgEstado[] = [
     "Borrador", "En Captura",
@@ -812,13 +815,16 @@ function DetalleView({
     (n === "borrador" || n === "en captura") &&
     sol.slaRestante != null && sol.slaRestante <= 0
 
-  const permisoActivoBorrador = isBorradorFueraDeTiempo && user?.id
+  const permisoDisponible = (n === "borrador" || n === "en captura") && user?.id
     ? (getPermisosUsuario(user.id).find(
         (p) => p.regimen === (sol.regimen as string) && p.active && !p.used
       ) ?? null)
     : null
 
+  const permisoActivoBorrador = isBorradorFueraDeTiempo ? permisoDisponible : null
+
   const [editingPeriodo,     setEditingPeriodo]     = useState(false)
+  const [editingModoSolo,    setEditingModoSolo]    = useState(false)
   const [newPeriodo,         setNewPeriodo]         = useState(sol.periodoAplicacion)
   const [guardandoReenvio,   setGuardandoReenvio]   = useState(false)
   const [showConfirmPeriodo, setShowConfirmPeriodo] = useState(false)
@@ -846,25 +852,51 @@ function DetalleView({
     }
   }
   const handleUpdatePeriodo = () => {
-    if (newPeriodo !== sol.periodoAplicacion) {
-      setShowConfirmPeriodo(true)
-    }
+    if (newPeriodo === sol.periodoAplicacion) return
+    const esPermisoPeriodo = !!(permisoDisponible && newPeriodo === permisoDisponible.periodo)
+    const nuevoVigente = checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente
+    setEditingModoSolo(nuevoVigente && !esPermisoPeriodo)
+    setShowConfirmPeriodo(true)
   }
   const handleConfirmPeriodo = async () => {
     setShowConfirmPeriodo(false)
     setGuardandoReenvio(true)
     try {
-      if (permisoActivoBorrador && user?.id) {
-        await consumirPermiso(user.id, sol.regimen, permisoActivoBorrador.periodo)
-      }
-      if (onUpdatePeriodoYEnviar) {
-        await onUpdatePeriodoYEnviar(sol.id, newPeriodo)
-      } else {
+      if (editingModoSolo) {
+        const mesesN = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+        const numericMatch = newPeriodo.match(/^(\d+)\/(\d{4})$/)
+        const periodoMes = numericMatch
+          ? Number(numericMatch[1])
+          : mesesN.findIndex((m) => newPeriodo.includes(m)) + 1 || new Date().getMonth() + 1
+        const periodoAnio = numericMatch
+          ? Number(numericMatch[2])
+          : new Date().getFullYear()
+        const res = await fetch("/api/solicitudes", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ solicitudId: sol.id, periodoMes, periodoAnio }),
+        })
+        const json = await res.json()
+        if (!res.ok || !json.ok) {
+          toast({ title: "Error", description: json.error ?? "Error al actualizar periodo", variant: "destructive" })
+          return
+        }
         if (onUpdatePeriodo) onUpdatePeriodo(sol.id, newPeriodo)
         toast({ title: "Periodo actualizado", description: `Periodo cambiado a "${newPeriodo}".` })
+        setEditingPeriodo(false)
+      } else {
+        if (permisoDisponible && user?.id) {
+          await consumirPermiso(user.id, sol.regimen, permisoDisponible.periodo)
+        }
+        if (onUpdatePeriodoYEnviar) {
+          await onUpdatePeriodoYEnviar(sol.id, newPeriodo)
+        } else {
+          if (onUpdatePeriodo) onUpdatePeriodo(sol.id, newPeriodo)
+          toast({ title: "Periodo actualizado", description: `Periodo cambiado a "${newPeriodo}".` })
+        }
+        setEditingPeriodo(false)
+        setPeriodoConfirmado(true)
       }
-      setEditingPeriodo(false)
-      setPeriodoConfirmado(true)
     } finally {
       setGuardandoReenvio(false)
     }
@@ -1083,10 +1115,12 @@ function DetalleView({
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar cambio de periodo?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}) y la
-              justificación será enviada automáticamente a Validación de Justificaciones.
-              {permisoActivoBorrador && " Se consumirá el token de habilitación de captura."}
-              {" "}Esta acción no se puede deshacer.
+              {editingModoSolo
+                ? <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}). La solicitud permanecerá en borrador. Esta acción no se puede deshacer.</>
+                : <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}) y la justificación será enviada automáticamente a Validación de Justificaciones.
+                  {permisoDisponible && " Se consumirá el token de habilitación de captura."}
+                  {" "}Esta acción no se puede deshacer.</>
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1102,14 +1136,70 @@ function DetalleView({
 
       {(n === "borrador" || n === "en captura") && periodoCheck.vigente && tipoCompatible && (
         <Card className="border-2 border-secondary/30 shadow-sm">
-          <CardContent className="flex items-start gap-3 py-4">
-            <FileCheck className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-            <div>
-              <span className="text-sm font-medium text-secondary">En tiempo para enviar</span>
-              <p className="text-xs text-muted-foreground mt-1">
-                Periodo: {sol.periodoAplicacion} — Límite DO: {periodoCheck.limiteDO}
-              </p>
+          <CardContent className="flex flex-col gap-3 py-4">
+            <div className="flex items-start gap-3">
+              <FileCheck className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span className="text-sm font-medium text-secondary">En tiempo para enviar</span>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Periodo: {sol.periodoAplicacion} — Límite DO: {periodoCheck.limiteDO}
+                </p>
+                {permisoDisponible && (
+                  <p className="text-xs text-orange-600 font-medium mt-1.5">
+                    Habilitación especial disponible — periodo <strong>{permisoDisponible.periodo}</strong> ({regimenLabel}).
+
+                  </p>
+                )}
+              </div>
             </div>
+            {!editingPeriodo ? (
+              <Button variant="outline" size="sm"
+                className="self-start gap-1.5 border-secondary/30 text-secondary hover:bg-secondary/5"
+                onClick={() => { setEditingPeriodo(true); setNewPeriodo(sol.periodoAplicacion) }}>
+                <Edit3 className="h-3.5 w-3.5" />Cambiar periodo
+              </Button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-end gap-3 rounded-lg border border-border bg-muted/50 p-3">
+                  <div className="flex flex-col gap-1.5 flex-1 max-w-xs">
+                    <span className="text-xs font-medium text-muted-foreground">Régimen: {regimenLabel}</span>
+                    <Select value={newPeriodo} onValueChange={setNewPeriodo}>
+                      <SelectTrigger className="bg-card">
+                        <SelectValue placeholder="Selecciona periodo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {periodoOptions.map((p) => {
+                          const check = checkVigenteFromCal(cal, sol.regimen, p)
+                          const habPorPermiso = !check.vigente && !!permisoDisponible && p === permisoDisponible.periodo
+                          return (
+                            <SelectItem key={p} value={p} disabled={!check.vigente && !habPorPermiso}>
+                              {p}{" "}{check.vigente ? "(en tiempo)" : habPorPermiso ? "(habilitado)" : "(vencido)"}
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    disabled={newPeriodo === sol.periodoAplicacion || (
+                      !checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente &&
+                      !(permisoDisponible && newPeriodo === permisoDisponible.periodo)
+                    )}
+                    onClick={handleUpdatePeriodo}>
+                    Actualizar
+                  </Button>
+                  <Button variant="ghost" size="sm"
+                    onClick={() => { setEditingPeriodo(false); setNewPeriodo(sol.periodoAplicacion) }}>
+                    Cancelar
+                  </Button>
+                </div>
+                {permisoDisponible && newPeriodo === permisoDisponible.periodo && (
+                  <p className="text-xs text-orange-600 px-1">
+                    Al actualizar se usará la habilitación especial y la solicitud se enviará automáticamente a validación.
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -1180,6 +1270,14 @@ type CalData = {
   nombramiento: { quincena: string; limiteDO: string }[]
 }
 
+const MESES_NOMBRE = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+
+function normalizarPeriodoANombre(periodo: string): string {
+  const m = periodo.match(/^(\d+)\/\d{4}$/)
+  if (m) return MESES_NOMBRE[parseInt(m[1], 10) - 1] ?? periodo
+  return periodo
+}
+
 function checkVigenteFromCal(
   cal: CalData,
   regimen: RegimenPeriodo,
@@ -1188,14 +1286,24 @@ function checkVigenteFromCal(
   const today = new Date(); today.setHours(0, 0, 0, 0)
   let row: { limiteDO: string } | undefined
   if (regimen === "honorarios") {
-    row = cal.honorarios.find((r) => r.mes === periodo)
+    const nombre = normalizarPeriodoANombre(periodo)
+    row = cal.honorarios.find((r) => r.mes === nombre || r.mes === periodo)
   } else if (regimen === "asimilados") {
     row = cal.asimilados.find((r) => r.quincena === periodo)
+    if (!row) {
+      const nombre = normalizarPeriodoANombre(periodo)
+      row = cal.asimilados.find((r) => r.quincena.includes(nombre))
+    }
   } else {
     row = cal.nombramiento.find((r) => r.quincena === periodo)
+    if (!row) {
+      const nombre = normalizarPeriodoANombre(periodo)
+      row = cal.nombramiento.find((r) => r.quincena.includes(nombre))
+    }
   }
   if (!row) return { vigente: false, limiteDO: null }
-  const fechaFin = getPeriodoEndDate(regimen, periodo)
+  const nombreNorm = normalizarPeriodoANombre(periodo)
+  const fechaFin = getPeriodoEndDate(regimen, nombreNorm)
   const vigente = fechaFin !== null ? today <= fechaFin : today <= parseDateDMY(row.limiteDO)
   return { vigente, limiteDO: row.limiteDO }
 }

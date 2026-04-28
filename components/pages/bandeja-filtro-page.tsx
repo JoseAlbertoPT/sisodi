@@ -126,9 +126,7 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   const estadoEnRevision = getEstadoEnRevision(filtro)
   const estadoObservado  = getEstadoObservado(filtro)
   const estadoNorm       = s.estado.toLowerCase()
-
   if (estadoNorm === estadoObservado.toLowerCase() || estadoNorm === "observado por validacion final") return "observadas"
-
   if (filtro === 1) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion") return "pendientes_firma"
     if (estadoNorm === "aceptado por revisor" || estadoNorm === "aprobado por revisor") return "revision"
@@ -136,7 +134,6 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
       return s.openedInFiltro[filtro] ? "revision" : "nuevas"
     }
   }
-
   if (filtro === 3) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion") return "pendientes_firma"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
@@ -1375,7 +1372,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
                                 style={{ backgroundColor: "#0E7490", color: "#FFFFFF" }}
                               >
-                                <Clock className="h-2.5 w-2.5" />Esperando aceptación
+                                <Clock className="h-2.5 w-2.5" />Pendiente de aceptación”
                               </span>
                             ) : (
                               <span

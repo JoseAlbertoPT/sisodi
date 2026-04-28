@@ -279,6 +279,10 @@ export async function PATCH(req: NextRequest) {
       data.vigencia_inicio = campos.vigencia_inicio ? new Date(campos.vigencia_inicio) : null
     if (campos.vigencia_fin !== undefined)
       data.vigencia_fin = campos.vigencia_fin ? new Date(campos.vigencia_fin) : null
+    if (campos.periodoMes !== undefined && campos.periodoAnio !== undefined) {
+      const pid = await resolverPeriodoId(undefined, Number(campos.periodoMes), Number(campos.periodoAnio))
+      if (pid) data.periodo_id = pid
+    }
 
     const updated = await prisma.solicitud.update({
       where: { id: solicitudId },
