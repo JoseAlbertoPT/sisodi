@@ -145,51 +145,46 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   }
   return "todas"
 }
-function getSlaColor(dias: number | null) {
-  if (dias === null) return "text-muted-foreground"
-  if (dias <= 0)  return "text-destructive"
-  if (dias <= 5)  return "text-orange-600"
-  if (dias <= 10) return "text-yellow-600"
-  return "text-emerald-600"
-}
-function getSlaBackground(dias: number | null) {
-  if (dias === null) return "bg-muted"
-  if (dias <= 0)  return "bg-destructive/10"
-  if (dias <= 5)  return "bg-orange-500/10"
-  if (dias <= 10) return "bg-yellow-500/10"
-  return "bg-emerald-500/10"
+function getSlaStyle(dias: number | null): React.CSSProperties {
+  if (dias === null) return { backgroundColor: "#e2e8f0", color: "#64748b" }
+  if (dias <= 0)  return { backgroundColor: "#832B56", color: "#FFFFFF" }
+  if (dias <= 7)  return { backgroundColor: "#C69C6D", color: "#FFFFFF" }
+  return { backgroundColor: "#283C2A", color: "#FFFFFF" }
 }
 function getSlaLabel(dias: number | null) {
   if (dias === null) return "Sin periodo"
-  if (dias <= 0) return "Periodo vencido"
+  if (dias <= 0) return "Cerrada"
   return `${dias} día${dias !== 1 ? "s" : ""} al cierre`
 }
-type TabCfg = Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string }>
+type TabCfg = Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string; badgeStyle: React.CSSProperties }>
 const TAB_CONFIG_REVISION: TabCfg = {
-  nuevas:          { label: "Asignadas",          icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
-  revision:        { label: "En revisión",         icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
-  observadas:      { label: "Observadas",          icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
-  pendientes_firma:{ label: "Pendiente de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary" },
-  todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
+  nuevas:          { label: "Asignadas",          icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" } },
+  revision:        { label: "En revisión",         icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
+  observadas:      { label: "Observadas",          icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
+  pendientes_firma:{ label: "Pendiente de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#6D28D9", color: "#FFFFFF" } },
+  todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 const TAB_CONFIG_EMISION: TabCfg = {
-  nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary" },
-  revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary" },
-  observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive" },
-  pendientes_firma:{ label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary" },
-  todas:           { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground" },
+  nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" } },
+  revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#0891B2", color: "#FFFFFF" } },
+  observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
+  pendientes_firma:{ label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#6D28D9", color: "#FFFFFF" } },
+  todas:           { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 const TAB_CONFIG_DO: TabCfg = {
-  pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600" },
-  en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary" },
-  observadas:            { label: "Observadas",               icon: <AlertTriangle className="h-3.5 w-3.5" />,  activeBg: "bg-destructive/10", activeText: "text-destructive" },
-  pendientes_firma:      { label: "Pendientes de firma",      icon: <Stamp className="h-3.5 w-3.5" />,          activeBg: "bg-secondary/10",   activeText: "text-secondary" },
-  todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground" },
+  pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600",      badgeStyle: { backgroundColor: "#C2410C", color: "#FFFFFF" } },
+  en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary",         badgeStyle: { backgroundColor: "#7C3AED", color: "#FFFFFF" } },
+  observadas:            { label: "Observadas",               icon: <AlertTriangle className="h-3.5 w-3.5" />,  activeBg: "bg-destructive/10", activeText: "text-destructive",     badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
+  pendientes_firma:      { label: "Pendientes de firma",      icon: <Stamp className="h-3.5 w-3.5" />,          activeBg: "bg-secondary/10",   activeText: "text-secondary",       badgeStyle: { backgroundColor: "#6D28D9", color: "#FFFFFF" } },
+  todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 
 function SlaIndicator({ diasRestantes }: { diasRestantes: number | null }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${getSlaBackground(diasRestantes)} ${getSlaColor(diasRestantes)}`}>
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+      style={getSlaStyle(diasRestantes)}
+    >
       <Clock className="h-3 w-3" />
       {getSlaLabel(diasRestantes)}
     </span>
@@ -718,7 +713,7 @@ function FolioDictamenCard({
           onClick={handleAsignar}
           disabled={guardando || cargando || !consecutivo || !mes || !anio}
           className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
-        >
+           >
           {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
           Asignar Folio de Dictamen
         </Button>
@@ -1283,36 +1278,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         </Card>
       )}
 
-      {}
 
-      { /* <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {(filtro === 2
-          ? [
-              { label: "Total en bandeja",         value: solicitudes.length,                     icon: <Filter className="h-5 w-5 text-secondary" />,          bg: "bg-secondary/10" },
-              { label: "Pendientes de asignación", value: tabCounts.pendientes_asignacion,         icon: <UserCheck className="h-5 w-5 text-orange-600" />,       bg: "bg-orange-500/10" },
-              { label: "En validación",            value: tabCounts.en_validacion,                 icon: <ClipboardCheck className="h-5 w-5 text-primary" />,     bg: "bg-primary/10" },
-              { label: "SLA en riesgo",            value: solicitudes.filter(s => s.slaRestante !== null && s.slaRestante <= 5).length,
-                                                                                                    icon: <AlertTriangle className="h-5 w-5 text-destructive" />,  bg: "bg-destructive/10" },
-            ]
-          : [
-              { label: "Total en bandeja", value: solicitudes.length,         icon: <Filter className="h-5 w-5 text-secondary" />,          bg: "bg-secondary/10" },
-              { label: "Nuevas",           value: tabCounts.nuevas,           icon: <CircleDot className="h-5 w-5 text-secondary" />,        bg: "bg-secondary/10" },
-              { label: "Correcciones",     value: tabCounts.correcciones,     icon: <RotateCcw className="h-5 w-5 text-accent-foreground" />, bg: "bg-accent/10" },
-              { label: "SLA en riesgo",    value: solicitudes.filter(s => s.slaRestante !== null && s.slaRestante <= 5).length,
-                                                                               icon: <AlertTriangle className="h-5 w-5 text-destructive" />,  bg: "bg-destructive/10" },
-            ]
-        ).map((c, i) => (
-          <Card key={i} className="shazdow-sm border-border">
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${c.bg}`}>{c.icon}</div>
-              <div>
-                <span className="text-2xl font-bold text-card-foreground">{c.value}</span>
-                <p className="text-xs text-muted-foreground">{c.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div> */ }
+
 
       <FilterTabs
         value={activeTab}
@@ -1380,7 +1347,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Recepción</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Corrección</th>
                     <th className="px-4 py-3 text-left font-semibold">Ult. Observo</th>
-                    <th className="px-4 py-3 text-left font-semibold">SLA</th>
+                    <th className="px-4 py-3 text-left font-semibold">Plazo máximo de atención</th>
                     <th className="px-4 py-3 text-left font-semibold">Acción</th>
                   </tr>
                 </thead>
@@ -1404,11 +1371,17 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                         <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                             {filtro === 2 && tab === "pendientes_asignacion" && sol.revisorAsignado ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/10 px-2 py-0.5 text-[10px] font-medium text-yellow-600">
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                style={{ backgroundColor: "#0E7490", color: "#FFFFFF" }}
+                              >
                                 <Clock className="h-2.5 w-2.5" />Esperando aceptación
                               </span>
                             ) : (
-                              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${config.activeBg} ${config.activeText}`}>
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                                style={config.badgeStyle}
+                              >
                                 {config.icon}{config.label}
                               </span>
                             )}

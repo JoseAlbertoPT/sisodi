@@ -829,6 +829,7 @@ function DynamicList({
     </div>
   )
 }
+
 function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
   const steps = [
     { key: "tipo",       label: "Tipo de Solicitud" },
@@ -1049,13 +1050,13 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
                       onClick={() => setSeleccionado(isSelected ? null : { nivel: c.nivel, categoria: c.categoria })}
                       className={`flex items-center gap-3 rounded-lg border-2 px-3 py-2 cursor-pointer transition-colors
                         ${isSelected ? "border-secondary bg-secondary/15" : "border-secondary/20 bg-secondary/5 hover:border-secondary/50"}`}
-                    >
-                      <span className="text-sm font-semibold text-card-foreground shrink-0">
+                         >
+                        <span className="text-sm font-semibold text-card-foreground shrink-0">
                         {c.nivel} : {formatMXN(c.min)} - {formatMXN(c.max)}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate">{c.puesto}</span>
-                      {isSelected && <CheckCircle2 className="h-4 w-4 text-secondary ml-auto shrink-0" />}
-                    </div>
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate">{c.puesto}</span>
+                        {isSelected && <CheckCircle2 className="h-4 w-4 text-secondary ml-auto shrink-0" />}
+                        </div>
                   )
                 })}
               </div>
@@ -1471,7 +1472,6 @@ function FormularioPrestacion({
               </div>
             </div>
 
-            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Administrativa de Adscripción
@@ -1548,7 +1548,6 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programa o Proyecto
@@ -1576,7 +1575,6 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Régimen de Contratación
@@ -1605,7 +1603,6 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Actividad
@@ -1638,7 +1635,6 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Número de Prestadores de Servicios
@@ -2082,7 +2078,6 @@ function FormularioNombramiento({
         </div>
       )}
 
-      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2561,7 +2556,6 @@ function FormularioNombramiento({
         </CardContent>
       </Card>
 
-      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2777,16 +2771,27 @@ function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSol
   }
   return faltantes
 }
+const MESES_LOWER_BUILD = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+
+function periodoNombreAMes(nombre: string): number {
+  const lower = (nombre ?? "").toLowerCase()
+  for (let i = 0; i < MESES_LOWER_BUILD.length; i++) {
+    if (lower.includes(MESES_LOWER_BUILD[i])) return i + 1
+  }
+  return new Date().getMonth() + 1
+}
+
 function buildSolicitudPayload({
-  usuarioId, tipo, regimenPeriodo, esExtemporanea, esRenovacion, folioSeleccionado, formData,
+  usuarioId, tipo, regimenPeriodo, periodoNombre, esExtemporanea, esRenovacion, folioSeleccionado, formData,
 }: {
-  usuarioId: string; tipo: TipoSolicitud; regimenPeriodo: string; esExtemporanea: boolean
+  usuarioId: string; tipo: TipoSolicitud; regimenPeriodo: string; periodoNombre: string; esExtemporanea: boolean
   esRenovacion: string; folioSeleccionado: string; formData: Partial<FormularioData>
 }) {
   return {
     usuarioId,
     tipo_solicitud: tipo === "prestacion" ? "Prestacion de Servicios" : "Nombramiento Tiempo Det.",
-    periodoId:             1,
+    periodoMes:  periodoNombreAMes(periodoNombre),
+    periodoAnio: new Date().getFullYear(),
     esExtemporanea,
     secretaria:            formData.secretaria            ?? null,
     unidad_administrativa: formData.unidadAdministrativa  ?? null,
@@ -2810,7 +2815,6 @@ function buildSolicitudPayload({
     responsabilidades:     formData.responsabilidades    ?? [],
     marco_normativo:       formData.marcoNormativo         ?? [],
     condiciones_riesgos:   formData.condicionesRiesgos    ?? [],
-    resguardo_activos:     formData.resguardoActivos       ?? null,
     escolaridad:           formData.escolaridad            ?? null,
     comp_adm:              formData.compAdm              ?? null,
     comp_tec:              formData.compTec              ?? null,
@@ -3146,7 +3150,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
       if (!usuarioId) { setErrorBorrador("No se pudo identificar al usuario."); setGuardandoBorrador(false); return }
 
       if (editSolicitud?.id) {
-        const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: false, esRenovacion, folioSeleccionado, formData })
+        const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: false, esRenovacion, folioSeleccionado, formData })
         const res = await fetch("/api/solicitudes", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -3156,7 +3160,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al actualizar el borrador."); setGuardandoBorrador(false); return }
         setFolioBorradorGuardado(json.data?.folio_justificacion ?? editSolicitud.id)
       } else {
-        const payload = { ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: false, esRenovacion, folioSeleccionado, formData }), estado_nombre: "Borrador" }
+        const payload = { ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: false, esRenovacion, folioSeleccionado, formData }), estado_nombre: "Borrador" }
         const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         const json = await res.json()
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al guardar el borrador."); setGuardandoBorrador(false); return }
@@ -3180,7 +3184,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
         let solicitudId: number | undefined
 
         if (editSolicitud?.id) {
-          const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
+          const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
           const res = await fetch("/api/solicitudes", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -3191,7 +3195,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
           solicitudId = Number(editSolicitud.id)
           setFolioGenerado(json.data?.folio_justificacion ?? editSolicitud.id)
         } else {
-          const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
+          const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
           const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
           const json = await res.json()
           if (!res.ok || !json.ok) { setErrorEnvio(json.error ?? "Error al registrar la solicitud."); setEnviando(false); return }

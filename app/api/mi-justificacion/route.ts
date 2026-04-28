@@ -113,7 +113,19 @@ export async function GET(req: NextRequest) {
       return tb - ta
     })
 
-    const items = solicitudes.map((s) => ({
+    const hoy = new Date()
+    const hoyUTC = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate())
+
+    const items = solicitudes.map((s) => {
+      const slaRestante: number | null = s.periodo?.fecha_fin
+        ? (() => {
+            const fin = new Date(s.periodo.fecha_fin)
+            const finUTC = Date.UTC(fin.getUTCFullYear(), fin.getUTCMonth(), fin.getUTCDate())
+            return Math.ceil((finUTC - hoyUTC) / (1000 * 60 * 60 * 24))
+          })()
+        : null
+
+      return ({
       id:                    s.id,
       folio_justificacion:   s.folio_justificacion,
       folio_recepcion:       s.folio_recepcion,
@@ -182,7 +194,8 @@ export async function GET(req: NextRequest) {
             archivo_pdf:  s.dictamen.archivo_pdf,
           }
         : null,
-    }))
+      slaRestante,
+    })})
 
     const counts = await prisma.solicitud.groupBy({
       by: ["estado_id"],

@@ -13,7 +13,7 @@ import {
   Loader2, AlertTriangle, RefreshCw,
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
-// tipos
+
 interface DictamenEmitido {
   id:             string
   folioDictamen:  string | null
@@ -78,7 +78,6 @@ const MESES = [
   { value: "11", label: "Noviembre" },  { value: "12", label: "Diciembre" },
 ]
 
-// ── Mapper API
 function mapearDictamen(raw: any): DictamenEmitido {
   const esParaestatal = (raw.tipoSolicitudRaw ?? raw.tipoSolicitud ?? raw.tipo ?? "")
     .toLowerCase()
@@ -135,7 +134,6 @@ const DictamenViewModal = React.memo(({
 
   const esNombramiento = dictamen.tipoSolicitud?.toLowerCase().includes("nombramiento")
 
-  // Debounced state para no recargar el iframe con cada tecla
   const [debouncedFirmas, setDebouncedFirmas] = useState({
     firmaElaboroNombre: "",
     firmaRevisoNombre: "",
@@ -302,7 +300,6 @@ const DictamenViewModal = React.memo(({
   )
 })
 
-// pagina Principal
 export function DictamenesPage() {
   const { user } = useAuth()
   const [dictamenes, setDictamenes] = useState<DictamenEmitido[]>([])
@@ -452,7 +449,6 @@ export function DictamenesPage() {
         </Card>
       )}
 
-      {/* Summary */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { label: "Total emitidos",    value: dictamenes.length,  icon: <FileCheck className="h-5 w-5 text-primary" />,       bg: "bg-primary/10" },
@@ -474,7 +470,6 @@ export function DictamenesPage() {
         ))}
       </div>
 
-      {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -517,7 +512,6 @@ export function DictamenesPage() {
         </Select>
       </div>
 
-      {/* Tabla */}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground">

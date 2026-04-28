@@ -489,13 +489,6 @@ export function LoginForm() {
             </form>
 
             {}
-           {/* <button
-              type="button"
-              onClick={() => setMostrarModalRecuperar(true)}
-              className="text-sm text-white/60 hover:text-white/90 transition-colors"
-            >
-              Recuperar contraseña
-            </button> */}
           </div>
         </div>
       </div>

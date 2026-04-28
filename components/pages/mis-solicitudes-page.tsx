@@ -145,6 +145,7 @@ interface UrgSolicitud {
   regimen: RegimenPeriodo
   periodoAplicacion: string
   fechaRecepcion?: string
+  slaRestante?: number | null
 }
 function FoliosCell({ sol }: { sol: UrgSolicitud }) {
   const efectivaTab = getTab(sol.estado)
@@ -229,40 +230,60 @@ function getSubEstadoDGDO(estado: UrgEstado): string | null {
 
 function estadoBadge(estado: UrgEstado) {
   const n = (estado ?? "").toLowerCase()
-  let bg = "bg-muted", text = "text-muted-foreground", label: string = estado ?? "—"
+  let style: React.CSSProperties = { backgroundColor: "#e2e8f0", color: "#64748b" }
+  let label: string = estado ?? "—"
+
   if (n === "borrador" || n === "en captura") {
-    bg = "bg-muted"; text = "text-muted-foreground"; label = "Borrador"
+    style = { backgroundColor: "#94a3b8", color: "#FFFFFF" }
+    label = "Borrador"
   } else if (
     n.includes("en validacion justificaciones") || n.includes("enviada a validacion") ||
     n.includes("pendiente firma justificacion")
   ) {
-    bg = "bg-blue-100"; text = "text-blue-800"; label = "En Aprobación"
-  } else if (n.includes("observada por uefa") || n.includes("observado por uefa")) {
-    bg = "bg-[#832B56]/15"; text = "text-[#832B56]"; label = "Observada por Validacion UEFA"
-  } else if (n.includes("observado por validacion") && !n.includes("final")) {
-    bg = "bg-[#832B56]/15"; text = "text-[#832B56]"; label = "Observada por Validacion UEFA"
+    style = { backgroundColor: "#2563EB", color: "#FFFFFF" }
+    label = "En Aprobación"
+  } else if (n.includes("observada por uefa") || n.includes("observado por uefa") ||
+    (n.includes("observado por validacion") && !n.includes("final"))) {
+    style = { backgroundColor: "#832B56", color: "#FFFFFF" }
+    label = "Observada por Validacion UEFA"
   } else if (n.includes("observado por revisor")) {
-    bg = "bg-[#832B56]/15"; text = "text-[#832B56]"; label = "Observada por Revision DGDO"
+    style = { backgroundColor: "#9D174D", color: "#FFFFFF" }
+    label = "Observada por Revision DGDO"
   } else if (n.includes("observado por validacion final")) {
-    bg = "bg-[#832B56]/15"; text = "text-[#832B56]"; label = "Observada por Validacion DGDO"
+    style = { backgroundColor: "#BE185D", color: "#FFFFFF" }
+    label = "Observada por Validacion DGDO"
   } else if (n.includes("observado por emisor")) {
-    bg = "bg-[#832B56]/15"; text = "text-[#832B56]"; label = "Observada por Emision DGDO"
+    style = { backgroundColor: "#DB2777", color: "#FFFFFF" }
+    label = "Observada por Emision DGDO"
   } else if (
     n.includes("devuelta por do") || n.includes("observado do filtro") || n.includes("observado por do")
   ) {
-    bg = "bg-[#832B56]/15"; text = "text-[#832B56]"; label = "Devuelta por DO"
-  } else if (
-    n.includes("en revision revisor") || n.includes("en validacion final") ||
-    n.includes("en revision emisor") || n.includes("pendiente firma dictamen") ||
-    n.includes("en revision do") || n === "en proceso do" ||
-    n === "pendiente do" || n === "aprobado por revisor" || n === "aceptado por revisor" || n === "aprobado"
-  ) {
-    bg = "bg-indigo-100"; text = "text-indigo-800"; label = "En Proceso DGDO"
+    style = { backgroundColor: "#EA580C", color: "#FFFFFF" }
+    label = "Devuelta por DO"
+  } else if (n.includes("en revision revisor") || n === "aprobado por revisor" || n === "aceptado por revisor") {
+    style = { backgroundColor: "#0F766E", color: "#FFFFFF" }
+    label = "En Revisión"
+  } else if (n.includes("en validacion final") || n === "aprobado") {
+    style = { backgroundColor: "#7C3AED", color: "#FFFFFF" }
+    label = "En Validación"
+  } else if (n.includes("en revision emisor")) {
+    style = { backgroundColor: "#0891B2", color: "#FFFFFF" }
+    label = "En Emisión"
+  } else if (n.includes("pendiente firma dictamen")) {
+    style = { backgroundColor: "#6D28D9", color: "#FFFFFF" }
+    label = "Pendiente Firma"
+  } else if (n.includes("en revision do") || n === "en proceso do" || n === "pendiente do") {
+    style = { backgroundColor: "#4F46E5", color: "#FFFFFF" }
+    label = "En Proceso DGDO"
   } else if (n === "emitido") {
-    bg = "bg-emerald-100"; text = "text-emerald-800"; label = "Emitido"
+    style = { backgroundColor: "#283C2A", color: "#FFFFFF" }
+    label = "Emitido"
   }
+
   return (
-    <Badge className={`${bg} ${text} hover:${bg} border-0 text-xs`}>{label}</Badge>
+    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" style={style}>
+      {label}
+    </span>
   )
 }
 
@@ -378,6 +399,7 @@ function mapApiItem(item: any): UrgSolicitud {
     tipoImporte:          item.tipo_importe           ?? "",
     regimen,
     periodoAplicacion,
+    slaRestante:          item.slaRestante ?? null,
     observacionMotivo:    lastObservacion,
     observacionFecha:     lastObservacionFecha,
     observacionUsuario:   lastObservacionUsuario,
@@ -478,7 +500,6 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
   const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
-
   if (itemsChecklist.length === 0) {
     return <p className="text-sm text-[#832B56] leading-relaxed">{comentario}</p>
   }
@@ -787,11 +808,9 @@ function DetalleView({
   const tipoCompatible = isRegimenTipoCompatible(sol.regimen, sol.tipo)
   const canSend        = periodoCheck.vigente && tipoCompatible
 
-  const periodoEndDate = getPeriodoEndDate(sol.regimen, sol.periodoAplicacion)
-  const today = new Date(); today.setHours(0, 0, 0, 0)
   const isBorradorFueraDeTiempo =
     (n === "borrador" || n === "en captura") &&
-    (periodoEndDate === null || today > periodoEndDate)
+    sol.slaRestante != null && sol.slaRestante <= 0
 
   const permisoActivoBorrador = isBorradorFueraDeTiempo && user?.id
     ? (getPermisosUsuario(user.id).find(
@@ -1367,6 +1386,9 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
                   <th className="px-4 py-3 text-left font-semibold">
                     Estatus
                   </th>
+                  <th className="px-4 py-3 text-center font-semibold">
+                    Plazo máximo de atención
+                  </th>
                   <th className="px-4 py-3 text-left font-semibold">
                     Acciones
                   </th>
@@ -1376,7 +1398,7 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
                 {loading && data.length === 0 &&
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={`skel-${i}`} className="border-b border-border/50">
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 7 }).map((_, j) => (
                         <td key={j} className="px-4 py-3">
                           <div className="h-4 w-full animate-pulse rounded bg-muted" />
                         </td>
@@ -1391,10 +1413,8 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
                   const isEmitida   = (sol.estado ?? "").toLowerCase() === "emitido"
                   const solTab      = getTab(sol.estado)
                   const isBorrador  = solTab === "Borradores"
-                  const periodoEndDate = getPeriodoEndDate(sol.regimen, sol.periodoAplicacion)
-                  const todayRow = new Date(); todayRow.setHours(0, 0, 0, 0)
                   const isBorradorFueraDeTiempo =
-                    isBorrador && (periodoEndDate === null || todayRow > periodoEndDate)
+                    isBorrador && sol.slaRestante != null && sol.slaRestante <= 0
                   return (
                     <tr key={sol.id}
                       className="border-b border-border/50 hover:bg-muted/50 transition-colors">
@@ -1444,6 +1464,24 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
                           )}
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-center">
+                        {sol.slaRestante == null ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold"
+                            style={
+                              sol.slaRestante <= 0
+                                ? { backgroundColor: "#832B56", color: "#FFFFFF" }
+                                : sol.slaRestante <= 7
+                                ? { backgroundColor: "#C69C6D", color: "#FFFFFF" }
+                                : { backgroundColor: "#283C2A", color: "#FFFFFF" }
+                            }
+                          >
+                            {sol.slaRestante <= 0 ? "Cerrada" : `${sol.slaRestante} ${sol.slaRestante === 1 ? "día" : "días"}`}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <Button variant="ghost" size="sm"
@@ -1460,7 +1498,7 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
 
                 {!loading && filtered.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                       No se encontraron solicitudes.
                     </td>
                   </tr>

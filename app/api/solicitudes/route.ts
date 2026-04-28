@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+async function resolverPeriodoId(periodoId?: number, mes?: number, anio?: number): Promise<number | undefined> {
+  if (mes && anio) {
+    let periodo = await prisma.periodo.findUnique({ where: { mes_anio: { mes, anio } } })
+    if (!periodo) {
+      const primerDia = new Date(Date.UTC(anio, mes - 1, 1))
+      const ultimoDia = new Date(Date.UTC(anio, mes, 0))
+      periodo = await prisma.periodo.create({ data: { mes, anio, fecha_inicio: primerDia, fecha_fin: ultimoDia } })
+    }
+    return periodo.id
+  }
+  return periodoId
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -52,7 +65,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const {
-      usuarioId, tipo_solicitud, periodoId, esExtemporanea,
+      usuarioId, tipo_solicitud, periodoId, periodoMes, periodoAnio, esExtemporanea,
       secretaria, unidad_administrativa, unidad_responsable,
       programa_proyecto, regimen, tipo_actividades, numero_prestadores,
       denominacion, vigencia_inicio, vigencia_fin, importe_bruto,
@@ -100,7 +113,7 @@ export async function POST(req: NextRequest) {
         usuario_id:            usuarioId,
         estado_id:             estadoInicial.id,
         tipo_solicitud,
-        periodo_id:            periodoId ?? null,
+        periodo_id:            ((await resolverPeriodoId(periodoId, periodoMes, periodoAnio)) ?? periodoId ?? 1) as number,
         es_extemporanea:       esExtemporanea ?? false,
         secretaria:            secretaria ?? null,
         unidad_administrativa: unidad_administrativa ?? null,

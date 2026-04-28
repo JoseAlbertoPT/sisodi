@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const rolFiltro         = searchParams.get("rol")
     const secretariaIdFiltro = searchParams.get("secretariaId")
 
-    const where: any = { activo: true }
+    const where: any = {}
     if (rolFiltro) {
       where.rol = { nombre: { equals: rolFiltro, mode: "insensitive" } }
     }

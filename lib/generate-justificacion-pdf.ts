@@ -1,4 +1,3 @@
-// @/lib/generate-justificacion-pdf.ts
 export async function generateJustificacionPDF(solicitudId: string | number, folioFallback: string = "") {
   try {
     const res = await fetch("/api/pdf/justificacion", {
@@ -18,7 +17,6 @@ export async function generateJustificacionPDF(solicitudId: string | number, fol
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
 
-    // The API might send the filename in the Content-Disposition header
     let filename = `Justificacion_${folioFallback || solicitudId}.pdf`;
     const cd = res.headers.get("content-disposition");
     if (cd && cd.includes("filename=")) {
@@ -35,7 +33,7 @@ export async function generateJustificacionPDF(solicitudId: string | number, fol
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   } catch (error) {
-    console.error("[generateJustificacionPDF]", error);
+    console.error(error);
     alert(error instanceof Error ? error.message : "Error al descargar el PDF de Justificación");
   }
 }

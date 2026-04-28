@@ -441,29 +441,47 @@ function DictamenModal({
 }
 
 function UefaEstadoBadge({ estado }: { estado: string }) {
-  const tab = getTabForEstado(estado)
-  const n   = norm(estado)
+  const n = norm(estado)
 
-  const colores: Record<UefaTab, { bg: string; text: string }> = {
-    "Nuevas":          { bg: "bg-secondary/15",   text: "text-secondary" },
-    "Pendiente Firma": { bg: "bg-accent/15",       text: "text-accent-foreground" },
-    "En Proceso":      { bg: "bg-primary/15",      text: "text-primary" },
-    "Observadas":      { bg: "bg-[#832B56]/15",    text: "text-[#832B56]" },
-    "Devueltas":       { bg: "bg-[#832B56]/15",    text: "text-[#832B56]" },
-    "Emitidas":        { bg: "bg-primary/15",      text: "text-primary" },
-    "Todas":           { bg: "bg-muted",           text: "text-muted-foreground" },
-  }
-  const { bg, text } = colores[tab] ?? { bg: "bg-muted", text: "text-muted-foreground" }
-
+  let style: React.CSSProperties = { backgroundColor: "#e2e8f0", color: "#64748b" }
   let label = estado
-  if (n === "en captura")                               label = "En Validacion Justificaciones"
-  else if (n.includes("pendiente firma dictamen"))      label = "Pendiente Firma Dictamen"
-  else if (n.includes("observado por revisor"))         label = "Observada por Revision DGDO"
-  else if (n.includes("observado por validacion final")) label = "Observada por Validacion DGDO"
-  else if (n.includes("observado por emisor"))          label = "Observada por Emision DGDO"
+
+  if (n === "en captura" || n.includes("en validacion justificaciones") || n.includes("enviada a validacion")) {
+    style = { backgroundColor: "#2563EB", color: "#FFFFFF" }
+    label = "En Validacion UEFA"
+  } else if (n.includes("observado por revisor")) {
+    style = { backgroundColor: "#9D174D", color: "#FFFFFF" }
+    label = "Observada por Revision DGDO"
+  } else if (n.includes("observado por validacion final")) {
+    style = { backgroundColor: "#BE185D", color: "#FFFFFF" }
+    label = "Observada por Validacion DGDO"
+  } else if (n.includes("observado por emisor")) {
+    style = { backgroundColor: "#DB2777", color: "#FFFFFF" }
+    label = "Observada por Emision DGDO"
+  } else if (n.includes("observado") || n.includes("devuelta")) {
+    style = { backgroundColor: "#832B56", color: "#FFFFFF" }
+    label = "Observada"
+  } else if (n.includes("pendiente firma dictamen")) {
+    style = { backgroundColor: "#6D28D9", color: "#FFFFFF" }
+    label = "Pendiente Firma Dictamen"
+  } else if (n.includes("en revision revisor")) {
+    style = { backgroundColor: "#0F766E", color: "#FFFFFF" }
+    label = "En Revisión"
+  } else if (n.includes("en validacion final")) {
+    style = { backgroundColor: "#7C3AED", color: "#FFFFFF" }
+    label = "En Validación DGDO"
+  } else if (n.includes("en revision emisor")) {
+    style = { backgroundColor: "#0891B2", color: "#FFFFFF" }
+    label = "En Emisión"
+  } else if (n === "emitido" || n.includes("emitido")) {
+    style = { backgroundColor: "#283C2A", color: "#FFFFFF" }
+    label = "Emitido"
+  }
 
   return (
-    <Badge className={`${bg} ${text} border-0 text-xs whitespace-nowrap`}>{label}</Badge>
+    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap" style={style}>
+      {label}
+    </span>
   )
 }
 

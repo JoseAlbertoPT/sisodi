@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { fetchMyMenus, type MenuNode } from "@/lib/permisos-api"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import {
   LayoutDashboard,
   FilePlus,
@@ -18,7 +18,6 @@ import {
   Menu as MenuIcon,
   ChevronRight,
   ChevronUp,
-  Shield,
   X,
   LogOut,
   UserCircle,
@@ -80,191 +79,133 @@ function collectLeafNodes(nodes: MenuNode[]): MenuNode[] {
   return out
 }
 
-function nodeContainsRoute(nodes: MenuNode[] | undefined, route: string): boolean {
-  if (!nodes) return false
-  for (const n of nodes) {
-    if (n.key === route) return true
-    if (nodeContainsRoute(n.children, route)) return true
-  }
-  return false
-}
+const SECTION_DEFS = [
+  {
+    id: "justificaciones",
+    label: "Justificaciones",
+    keys: ["dashboard", "nueva-solicitud", "mis-solicitudes", "validacion-uefa"] as PageKey[],
+  },
+  {
+    id: "proceso",
+    label: "Proceso DGDO",
+    keys: ["bandeja-filtro1", "bandeja-filtro2", "bandeja-filtro3", "revision-do", "dictamenes"] as PageKey[],
+  },
+  {
+    id: "administracion",
+    label: "Administración",
+    keys: ["calendario", "usuarios", "configuracion"] as PageKey[],
+  },
+]
 
-interface SidebarNavTreeProps {
-  nodes: MenuNode[]
-  currentPage: PageKey
-  onNavigate: (page: PageKey) => void
-  collapsed: boolean
-  expandedGroups: Record<string, boolean>
-  toggleGroup: (id: string) => void
-  isGroupExpanded: (id: string) => boolean
-}
-
-function SidebarNavTree({
-  nodes,
-  currentPage,
-  onNavigate,
+function SidebarItem({
+  label,
+  icon,
+  isActive,
+  onClick,
   collapsed,
-  expandedGroups,
-  toggleGroup,
-  isGroupExpanded,
-}: SidebarNavTreeProps) {
-  
+}: {
+  label: string
+  icon: React.ReactNode
+  isActive: boolean
+  onClick: () => void
+  collapsed: boolean
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  const style: React.CSSProperties = isActive
+    ? { backgroundColor: "#283C2A", color: "#FFFFFF" }
+    : hovered
+    ? { backgroundColor: "#832B56", color: "#FFFFFF" }
+    : {}
+
   if (collapsed) {
-    const leaves = collectLeafNodes(nodes)
     return (
-      <div className="flex flex-col gap-px">
-        {leaves.map((node) => {
-          const key = node.key as PageKey
-          return (
-            <Tooltip key={node.id}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => onNavigate(key)}
-                  className={cn(
-                    "flex w-full justify-center rounded p-2 text-black transition-colors",
-                    currentPage === key
-                      ? "shadow-md shadow-black/10"
-                      : "hover:bg-foreground/5 hover:text-black"
-                  )}
-                  aria-label={node.label}
-                >
-                  <span className="[&>svg]:h-4 [&>svg]:w-4">{getIconForNode(node)}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{node.label}</TooltipContent>
-            </Tooltip>
-          )
-        })}
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={onClick}
+            className="flex w-full justify-center rounded p-2 transition-colors"
+            style={style}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            aria-label={label}
+          >
+            <span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">{label}</TooltipContent>
+      </Tooltip>
     )
   }
 
-  
   return (
-    <>
-      {nodes.map((node) => {
-        const hasChildren = node.children && node.children.length > 0
-        const expanded = isGroupExpanded(node.id)
-        const isActive =
-          node.key === currentPage ||
-          (hasChildren && nodeContainsRoute(node.children, currentPage))
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-[13px] font-medium transition-colors"
+      style={style}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+      <span className="truncate">{label}</span>
+    </button>
+  )
+}
 
-        
-        if (node.key && !hasChildren) {
-          const key = node.key as PageKey
-          return (
-            <Tooltip key={node.id}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => onNavigate(key)}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-[13px] font-medium transition-colors border-l-2 border-transparent text-black",
-                    currentPage === key
-                      ? "shadow-md shadow-black/10 border-l-sidebar-dropdown bg-transparent"
-                      : "hover:bg-foreground/5"
-                  )}
-                >
-                  <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4 opacity-90">
-                    {getIconForNode(node)}
-                  </span>
-                  <span className="truncate">{node.label}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{node.label}</TooltipContent>
-            </Tooltip>
-          )
-        }
-
-        
-        if (hasChildren) {
-          const childLeaves = node.children!.filter((c) => c.key)
-          const singleItem = childLeaves.length === 1 && node.children!.length === 1
-
-          if (singleItem) {
-            
-            const child = childLeaves[0]!
-            const childKey = child.key as PageKey
-            return (
-              <Tooltip key={node.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate(childKey)}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-[13px] font-medium transition-colors border-l-2 border-transparent text-black",
-                      currentPage === childKey
-                        ? "shadow-md shadow-black/10 border-l-sidebar-dropdown bg-transparent"
-                        : "hover:bg-foreground/5"
-                    )}
-                  >
-                    <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4 opacity-90">
-                      {getIconForNode(child)}
-                    </span>
-                    <span className="truncate">{child.label}</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">{child.label}</TooltipContent>
-              </Tooltip>
-            )
-          }
-
-          
-          return (
-            <div key={node.id}>
-              <button
-                type="button"
-                onClick={() => toggleGroup(node.id)}
-                className="flex w-full items-center justify-between gap-2 rounded px-2.5 py-2 text-[13px] font-medium transition-colors text-black hover:bg-foreground/5"
-                aria-expanded={expanded}
-                aria-controls={`nav-group-${node.id}`}
-                id={`nav-group-btn-${node.id}`}
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4 opacity-90">
-                    {getIconForNode(node)}
-                  </span>
-                  <span className="truncate">{node.label}</span>
-                </span>
-                <span className="shrink-0 [&>svg]:h-3.5 [&>svg]:w-3.5 opacity-80 text-muted-foreground">
-                  {expanded ? (
-                    <ChevronUp className="h-3.5 w-3.5" aria-hidden />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-                  )}
-                </span>
-              </button>
-              <div
-                id={`nav-group-${node.id}`}
-                role="region"
-                aria-labelledby={`nav-group-btn-${node.id}`}
-                className={cn(
-                  "grid transition-[grid-template-rows] duration-200 ease-out",
-                  expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                )}
-              >
-                <div className="min-h-0 overflow-hidden">
-                  <div className="border-l-2 border-sidebar-dropdown pl-3 ml-1 mt-0.5">
-                    <SidebarNavTree
-                      nodes={node.children!}
-                      currentPage={currentPage}
-                      onNavigate={onNavigate}
-                      collapsed={false}
-                      expandedGroups={expandedGroups}
-                      toggleGroup={toggleGroup}
-                      isGroupExpanded={isGroupExpanded}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        return null
-      })}
-    </>
+function SidebarSection({
+  items,
+  currentPage,
+  onNavigate,
+  expanded,
+  onToggle,
+  showDivider,
+}: {
+  items: MenuNode[]
+  currentPage: PageKey
+  onNavigate: (page: PageKey) => void
+  expanded: boolean
+  onToggle: () => void
+  showDivider: boolean
+}) {
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-1.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors group"
+      >
+        {showDivider && <div className="flex-1 h-px bg-border/50 group-hover:bg-border transition-colors" />}
+        {!showDivider && <div className="flex-1" />}
+        {expanded ? (
+          <ChevronUp className="h-2.5 w-2.5 shrink-0" />
+        ) : (
+          <ChevronRight className="h-2.5 w-2.5 shrink-0" />
+        )}
+      </button>
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out",
+          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="flex flex-col gap-0.5 pb-0.5">
+            {items.map((node) => (
+              <SidebarItem
+                key={node.id}
+                label={node.label}
+                icon={getIconForNode(node)}
+                isActive={currentPage === (node.key as PageKey)}
+                onClick={() => onNavigate(node.key as PageKey)}
+                collapsed={false}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -273,7 +214,6 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
   const [menuTree, setMenuTree] = useState<MenuNode[] | null>(null)
   const [menusLoading, setMenusLoading] = useState(true)
   const [menusError, setMenusError] = useState<string | null>(null)
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (!user?.rol) return
@@ -281,34 +221,39 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
     setMenusLoading(true)
     setMenusError(null)
     fetchMyMenus(user.rol)
-      .then((data) => {
-        if (!cancelled) {
-          setMenuTree(data)
-          const initial: Record<string, boolean> = {}
-          data.forEach((n) => { initial[n.id] = true })
-          setExpandedGroups((prev) => ({ ...initial, ...prev }))
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) setMenusError(e instanceof Error ? e.message : "Error al cargar menú")
-      })
-      .finally(() => {
-        if (!cancelled) setMenusLoading(false)
-      })
+      .then((data) => { if (!cancelled) setMenuTree(data) })
+      .catch((e) => { if (!cancelled) setMenusError(e instanceof Error ? e.message : "Error al cargar menú") })
+      .finally(() => { if (!cancelled) setMenusLoading(false) })
     return () => { cancelled = true }
   }, [user?.rol])
 
-  const toggleGroup = useCallback((id: string) => {
-    setExpandedGroups((prev) => ({ ...prev, [id]: !prev[id] }))
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    justificaciones: true,
+    proceso: true,
+    administracion: true,
+  })
+
+  const toggleSection = useCallback((id: string) => {
+    setExpandedSections((prev) => ({ ...prev, [id]: !prev[id] }))
   }, [])
 
-  const isGroupExpanded = useCallback(
-    (id: string) => expandedGroups[id] !== false,
-    [expandedGroups]
-  )
-
+  const visibleSections = useMemo(() => {
+    if (!menuTree) return []
+    const leafMap = new Map(
+      collectLeafNodes(menuTree)
+        .filter((n) => n.key)
+        .map((n) => [n.key!, n])
+    )
+    return SECTION_DEFS.map((def) => ({
+      def,
+      items: def.keys.filter((k) => leafMap.has(k)).map((k) => leafMap.get(k)!),
+    })).filter(({ items }) => items.length > 0)
+  }, [menuTree])
+  const allLeaves = useMemo(() => {
+    if (!menuTree) return []
+    return collectLeafNodes(menuTree).filter((n) => n.key)
+  }, [menuTree])
   const userInitial = user?.nombre?.charAt(0)?.toUpperCase() ?? "?"
-
   return (
     <TooltipProvider delayDuration={0}>
       <aside
@@ -318,11 +263,10 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
         )}
         aria-label="Navegación principal"
       >
-        {}
         <div className="flex flex-col items-center gap-2 border-b border-border/60 px-3 py-3.5">
           <div className="flex w-full items-center justify-between">
             <span className="text-sm font-semibold leading-tight text-foreground">
-              <center>SDTF</center>
+              <center></center>
             </span>
             {onToggleSidebar && (
               <Tooltip>
@@ -354,31 +298,46 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
           )}
         </div>
 
-        {}
-        <nav className="flex-1 overflow-y-auto px-2.5 py-3" aria-label="Menú">
-          <div className="flex flex-col gap-1.5">
-            {menusLoading && (
-              <p className="text-sm text-muted-foreground px-2.5 py-2">Cargando menú…</p>
-            )}
-            {!menusLoading && menusError && (
-              <p className="text-sm text-destructive px-2.5 py-2">{menusError}</p>
-            )}
-            {!menusLoading && !menusError && menuTree && menuTree.length > 0 && (
-              <SidebarNavTree
-                nodes={menuTree}
-                currentPage={currentPage}
-                onNavigate={onNavigate}
-                collapsed={collapsed}
-                expandedGroups={expandedGroups}
-                toggleGroup={toggleGroup}
-                isGroupExpanded={isGroupExpanded}
-              />
-            )}
+        <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label="Menú">
+          {menusLoading && (
+            <p className="text-sm text-muted-foreground px-2.5 py-2">Cargando menú…</p>
+          )}
+          {!menusLoading && menusError && (
+            <p className="text-sm text-destructive px-2.5 py-2">{menusError}</p>
+          )}
 
-          </div>
+          {!menusLoading && !menusError && menuTree && (
+            collapsed ? (
+              <div className="flex flex-col gap-px">
+                {allLeaves.map((node) => (
+                  <SidebarItem
+                    key={node.id}
+                    label={node.label}
+                    icon={getIconForNode(node)}
+                    isActive={currentPage === (node.key as PageKey)}
+                    onClick={() => onNavigate(node.key as PageKey)}
+                    collapsed
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                {visibleSections.map(({ def, items }, index) => (
+                  <SidebarSection
+                    key={def.id}
+                    items={items}
+                    currentPage={currentPage}
+                    onNavigate={onNavigate}
+                    expanded={expandedSections[def.id] !== false}
+                    onToggle={() => toggleSection(def.id)}
+                    showDivider={index > 0}
+                  />
+                ))}
+              </div>
+            )
+          )}
         </nav>
 
-        {}
         {!collapsed ? (
           <div className="border-t border-border/60 px-3 py-2.5">
             <div className="mb-2.5 flex items-center gap-2.5">

@@ -9,9 +9,6 @@ import {
 import path from "path";
 import React from "react";
 
-/* ═══════════════════════════════════════════════════════════
-   INTERFACE EXACTA DE TUS DATOS
-   ═══════════════════════════════════════════════════════════ */
 export interface JustificacionData {
   tipoAdministracion: 'centralizada' | 'paraestatal';
   formato: 'fisico' | 'en_linea';
@@ -39,7 +36,6 @@ export interface JustificacionData {
     areasExperiencia: string[];
     valores: string[];
   };
-  // Nombres editables de firmantes
   firmaElaboroNombre?: string;
   firmaRevisoNombre?: string;
   firmaDictRevisoNombre?: string;
@@ -47,15 +43,9 @@ export interface JustificacionData {
   firmaDictEmitioNombre?: string;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   ASSETS (Asegúrate de tener estas imágenes en tu carpeta public)
-   ═══════════════════════════════════════════════════════════ */
 const LOGO_FINANZAS = path.join(process.cwd(), "public/logo-20finanzas.png");
 const MARCA_MORELOS = path.join(process.cwd(), "public/LOGO_MORELOS_V1.png");
 
-/* ═══════════════════════════════════════════════════════════
-   ESTILOS CORREGIDOS (Formato Oficial)
-   ═══════════════════════════════════════════════════════════ */
 const s = StyleSheet.create({
   page: {
     paddingTop: 30,
@@ -64,9 +54,9 @@ const s = StyleSheet.create({
     fontFamily: "Helvetica",
     fontSize: 9,
     color: "#000",
-    position: 'relative', 
+    position: 'relative',
   },
- watermarkContainer: {
+  watermarkContainer: {
     position: "absolute",
     top: 0,
     left: 0,
@@ -76,15 +66,14 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     opacity: 0.06,
-    zIndex: -1, // Detrás del texto
+    zIndex: -1,
   },
-  watermarkImage: { 
+  watermarkImage: {
     width: 600,
     height: "auto",
-    transform: 'scale(2.5)', 
+    transform: 'scale(2.5)',
     objectFit: 'contain',
   },
-  /* --- Encabezado (tabla 3 columnas con bordes) --- */
   headerTable: {
     flexDirection: "row",
     borderWidth: 1,
@@ -136,12 +125,10 @@ const s = StyleSheet.create({
   pageBox: { flex: 1, padding: 4, justifyContent: "center" },
   claveText: { fontSize: 8, textAlign: "center" },
 
-  /* --- Elementos de página --- */
   fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10 },
   centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 6 },
   sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 3, marginTop: 6 },
 
-  /* --- Filas de Formulario (campos 1-11) --- */
   row: { flexDirection: "row", marginBottom: 4, alignItems: "flex-end" },
   bold: { fontFamily: "Helvetica-Bold" },
   numLabel: { width: 15, fontFamily: "Helvetica-Bold", fontSize: 9 },
@@ -155,7 +142,6 @@ const s = StyleSheet.create({
     paddingBottom: 2,
   },
 
-  /* --- Checkboxes --- */
   checkboxRect: {
     width: 12,
     height: 12,
@@ -168,7 +154,6 @@ const s = StyleSheet.create({
   },
   checkText: { fontSize: 8, fontFamily: "Helvetica-Bold" },
 
-  /* --- Vigencia (cajas Día/Mes/Año) --- */
   vigenciaBoxWrap: { flexDirection: "row", alignItems: "flex-end" },
   vigCellColumn: { alignItems: "center", marginRight: 4 },
   vigCellLabel: { fontSize: 7, marginBottom: 2 },
@@ -181,7 +166,6 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* --- Renovación (tabla con header gris) --- */
   renovContainer: {
     borderWidth: 1,
     borderColor: "#000",
@@ -224,14 +208,12 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* --- Listas Dinámicas (Wraps) --- */
   listItemContainer: { flexDirection: "row", marginBottom: 3, paddingLeft: 10, marginTop: 2 },
   listNum: { width: 15, fontFamily: "Helvetica-Bold" },
   listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.3 },
   bulletItemContainer: { flexDirection: "row", marginBottom: 2, paddingLeft: 20, marginTop: 1 },
   bulletSign: { width: 15, fontFamily: "Helvetica" },
 
-  /* --- Bloque de Firmas (Elaboró / Revisó) --- */
   firmasWrapper: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -257,7 +239,6 @@ const s = StyleSheet.create({
     lineHeight: 1.3,
   },
 
-  /* --- Estilos para Dictaminacion --- */
   dictTitle: {
     fontFamily: "Helvetica-Bold",
     fontSize: 10,
@@ -286,7 +267,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: "#000",
-    height: 120, // Igualado a Nombramiento
+    height: 120,
   },
   dictBoxLeft: {
     width: "35%",
@@ -316,9 +297,6 @@ const s = StyleSheet.create({
   },
 });
 
-/* ═══════════════════════════════════════════════════════════
-   HELPER PARA ANALIZAR FECHAS (YYYY-MM-DD a DD, MM, YYYY)
-   ═══════════════════════════════════════════════════════════ */
 function parseDateParts(dateStr: string) {
   if (!dateStr || dateStr.trim() === "—" || dateStr.trim() === "") {
     return { d: "", m: "", y: "" };
@@ -330,9 +308,6 @@ function parseDateParts(dateStr: string) {
   return { d: dateStr, m: "", y: "" };
 }
 
-/* ═══════════════════════════════════════════════════════════
-   COMPONENTE PRINCIPAL
-   ═══════════════════════════════════════════════════════════ */
 export function PlantillaJustificacionServicios({ data }: { data: JustificacionData }) {
   const isHonorarios = data.regimenContratacion?.toLowerCase().includes("honorarios") && !data.regimenContratacion?.toLowerCase().includes("asimilado");
   const isAsimilados = data.regimenContratacion?.toLowerCase().includes("asimilado");
@@ -344,12 +319,10 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
     <Document>
       <Page size="LETTER" style={s.page} wrap>
 
-        {/* ══════ MARCA DE AGUA FIJA (todas las páginas) ══════ */}
         <View style={s.watermarkContainer} fixed>
           <Image src={MARCA_MORELOS} style={s.watermarkImage} />
         </View>
 
-        {/* ══════ ENCABEZADO FIJO (todas las páginas) ══════ */}
         <View style={s.headerTable} fixed>
           <View style={s.headerCol1}>
             <Image src={LOGO_FINANZAS} style={s.logo} />
@@ -367,10 +340,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
 
 
-        {/* ══════════════════════════════════════════════
-           PÁGINA 1: DATOS GENERALES + RENOVACIÓN + OBJETO
-           ══════════════════════════════════════════════ */}
-
         <View style={s.fechaRow}>
           <Text style={s.bold}>Fecha de elaboración de la Justificación: </Text>
           <Text style={{ borderBottomWidth: 1, minWidth: 150, textAlign: "center" }}>
@@ -382,14 +351,12 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <Text style={s.sectionTitle}>I.    DATOS GENERALES:</Text>
 
-        {/* Campo 1: Secretaría */}
         <View style={s.row}>
           <Text style={s.numLabel}>1.</Text>
           <Text style={s.marginLabel}>Secretaría/Subsecretaría/Dependencia/Organismo Auxiliar:</Text>
           <Text style={s.valueText}>{data.secretaria}</Text>
         </View>
 
-        {/* Campo 2: Unidad Administrativa */}
         <View style={s.row}>
           <Text style={s.numLabel}>2.</Text>
           <Text style={s.marginLabel}>Unidad Administrativa de Adscripción:</Text>
@@ -397,21 +364,18 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={s.valueText}>{data.unidadAdministrativa}</Text>
         </View>
 
-        {/* Campo 3: Unidad Responsable */}
         <View style={s.row}>
           <Text style={s.numLabel}>3.</Text>
           <Text style={s.marginLabel}>Unidad Responsable del Gasto:</Text>
           <Text style={s.valueText}>{data.unidadResponsable}</Text>
         </View>
 
-        {/* Campo 4: Programa */}
         <View style={s.row}>
           <Text style={s.numLabel}>4.</Text>
           <Text style={s.marginLabel}>Programa o Proyecto:</Text>
           <Text style={s.valueText}>{data.programaProyecto}</Text>
         </View>
 
-        {/* Campo 5: Régimen con checkboxes */}
         <View style={{ ...s.row, alignItems: "center" }}>
           <Text style={s.numLabel}>5.</Text>
           <Text style={s.marginLabel}>Régimen de Contratación:</Text>
@@ -421,21 +385,18 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text>Honorarios Asimilados a Salarios</Text>
         </View>
 
-        {/* Campo 6: Tipo de Actividades — flex-row con línea de subrayado completa */}
         <View style={s.row}>
           <Text style={s.numLabel}>6.</Text>
           <Text style={s.marginLabel}>Tipo de Actividades:</Text>
           <Text style={s.valueText}>{data.tipoActividades || ""}</Text>
         </View>
 
-        {/* Campo 7: Número de Prestadores */}
         <View style={s.row}>
           <Text style={s.numLabel}>7.</Text>
           <Text style={s.marginLabel}>Número de Prestadores de Servicios:</Text>
           <Text style={s.valueText}>{data.numeroPrestadores}</Text>
         </View>
 
-        {/* Campo 8: Vigencia con Cajas */}
         <View style={{ ...s.row, alignItems: "flex-end", marginTop: 5 }}>
           <Text style={s.numLabel}>8.</Text>
           <Text style={s.marginLabel}>Vigencia (inicio-término):</Text>
@@ -450,33 +411,23 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         </View>
 
-        {/* Campo 9: Importe Bruto */}
         <View style={{ ...s.row, marginTop: 5 }}>
           <Text style={s.numLabel}>9.</Text>
           <Text style={s.marginLabel}>Importe Bruto:</Text>
           <Text style={s.valueText}>{data.importeBruto}</Text>
         </View>
 
-        {/* Campo 10: Tipo de Pago */}
         <View style={{ ...s.row, marginTop: 5 }}>
           <Text style={s.numLabel}>10.</Text>
           <Text style={s.marginLabel}>Tipo de Pago:</Text>
           <Text style={s.valueText}>{data.tipoPago}</Text>
         </View>
 
-        {/* ══════════════════════════════════════════════
-           I.1 OBJETO DE LA CONTRATACIÓN
-           ══════════════════════════════════════════════ */}
         <View wrap={false}>
           <Text style={{ ...s.sectionTitle, marginTop: 15 }}>I.1.    OBJETO DE LA CONTRATACIÓN:</Text>
           <Text style={{ textAlign: "justify", lineHeight: 1.3, marginBottom: 10, marginTop: 5 }}>{data.objetoContratacion}</Text>
         </View>
 
-        {/* ══════════════════════════════════════════════
-           PÁGINA 2: ACTIVIDADES + RESPONSABILIDADES + PERFIL
-           ══════════════════════════════════════════════ */}
-
-        {/* I.2 ACTIVIDADES — mapeado dinámico con .map() */}
         <View wrap={false}>
           <Text style={s.sectionTitle}>I.2.    ACTIVIDADES A REALIZAR POR EL PRESTADOR DE SERVICIOS:</Text>
           {data.actividades?.slice(0, 1).map((act, index) => (
@@ -493,7 +444,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         ))}
 
-        {/* I.3 RESPONSABILIDADES — mapeado dinámico con .map() */}
         <View wrap={false}>
           <Text style={s.sectionTitle}>I.3.    RESPONSABILIDADES A CUMPLIR POR EL PRESTADOR DE SERVICIOS:</Text>
           {data.responsabilidades?.slice(0, 1).map((resp, index) => (
@@ -510,12 +460,10 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         ))}
 
-        {/* ── II. PERFIL ── */}
         <View wrap={false}>
           <Text style={{ ...s.sectionTitle, marginTop: 15 }}>II.  PERFIL A CUBRIR POR EL PRESTADOR DE SERVICIOS:</Text>
           <Text style={{ marginBottom: 8, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia)</Text>
 
-          {/* II.1 Escolaridad — título + primer item juntos */}
           <Text style={{ ...s.bold, marginBottom: 10 }}>II. 1.  ESCOLARIDAD MÍNIMA:</Text>
           {data.perfil?.escolaridadMinima?.slice(0, 1).map((esc, i) => (
             <View key={`esc-${i}`} style={s.bulletItemContainer}>
@@ -531,7 +479,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         ))}
 
-        {/* II.2 Competencias — título + subtítulo + primer item juntos */}
         <View wrap={false}>
           <Text style={{ ...s.bold, marginTop: 10, marginBottom: 12 }}>II. 2.  COMPETENCIAS LABORALES REQUERIDAS:</Text>
           <Text style={{ ...s.bold, marginLeft: 15, marginTop: 3 }}>II. 2.1.  Administrativas:</Text>
@@ -549,7 +496,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         ))}
 
-        {/* II.2.2 Técnicas — título + primer item juntos */}
         <View wrap={false}>
           <Text style={{ ...s.bold, marginLeft: 15, marginTop: 8, marginBottom: 4 }}>II. 2.2.  Técnicas:</Text>
           {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
@@ -566,7 +512,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         ))}
 
-        {/* II.2.3 Sociales — título + primer item juntos */}
         <View wrap={false}>
           <Text style={{ ...s.bold, marginLeft: 15, marginTop: 8, marginBottom: 4 }}>II. 2.3.  Sociales:</Text>
           {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
@@ -583,7 +528,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         ))}
 
-        {/* II.2.4 Valores — título + primer item juntos */}
         <View wrap={false}>
           <Text style={{ ...s.bold, marginLeft: 15, marginTop: 3 }}>II. 2.4.  Valores:</Text>
           {data.perfil?.valores?.slice(0, 1).map((val, i) => (
@@ -600,7 +544,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         ))}
 
-        {/* II.3 Áreas de Experiencia — título + primer item juntos */}
         <View wrap={false}>
           <Text style={{ ...s.bold, marginTop: 5 }}>II.3.  ÁREAS DE EXPERIENCIA:</Text>
           {data.perfil?.areasExperiencia?.slice(0, 1).map((area, i) => (
@@ -620,7 +563,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <View style={{ flex: 1 }} />
 
-        {/* ══════ LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) ══════ */}
         {data.formato === 'en_linea' && (
           <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
             <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
@@ -631,7 +573,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         )}
 
-        {/* ══════ FIRMAS (Elaboró / Revisó) ══════ */}
         <View style={s.firmasWrapper} wrap={false}>
           <View style={s.firmaBox}>
             <Text style={s.firmaLabel}>Elaboró</Text>
@@ -651,9 +592,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
       </Page>
 
-      {/* ══════════════════════════════════════════════
-         NUEVA PÁGINA: Dictaminación / Opinión Técnica
-         ══════════════════════════════════════════════ */}
       <Page size="LETTER" style={s.page} wrap>
         <View style={s.watermarkContainer} fixed>
           <Image src={MARCA_MORELOS} style={s.watermarkImage} />
@@ -724,7 +662,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <View style={{ flex: 1 }} />
 
-        {/* ══════ LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) ══════ */}
         {data.formato === 'en_linea' && (
           <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
             <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>

@@ -35,7 +35,6 @@ export async function GET(req: NextRequest) {
   for (const m of allMenus) {
     if (menuIds.has(m.id) && m.parent_id && !menuIds.has(m.parent_id)) {
       menuIds.add(m.parent_id)
-
     }
   }
 

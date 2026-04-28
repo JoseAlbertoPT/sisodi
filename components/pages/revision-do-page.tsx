@@ -251,23 +251,15 @@ function formatEscolaridad(e: string | null | undefined): string {
   return e || "—"
 }
 
-function getSlaColor(dias: number | null) {
-  if (dias === null) return "text-muted-foreground"
-  if (dias <= 0)  return "text-destructive"
-  if (dias <= 5)  return "text-orange-600"
-  if (dias <= 10) return "text-yellow-600"
-  return "text-emerald-600"
-}
-function getSlaBackground(dias: number | null) {
-  if (dias === null) return "bg-muted"
-  if (dias <= 0)  return "bg-destructive/10"
-  if (dias <= 5)  return "bg-orange-500/10"
-  if (dias <= 10) return "bg-yellow-500/10"
-  return "bg-emerald-500/10"
+function getSlaStyle(dias: number | null): React.CSSProperties {
+  if (dias === null) return { backgroundColor: "#e2e8f0", color: "#64748b" }
+  if (dias <= 0)  return { backgroundColor: "#832B56", color: "#FFFFFF" }
+  if (dias <= 7)  return { backgroundColor: "#C69C6D", color: "#FFFFFF" }
+  return { backgroundColor: "#283C2A", color: "#FFFFFF" }
 }
 function getSlaLabel(dias: number | null) {
   if (dias === null) return "Sin periodo"
-  if (dias <= 0) return "Periodo vencido"
+  if (dias <= 0) return "Cerrada"
   return `${dias} día${dias !== 1 ? "s" : ""} al cierre`
 }
 
@@ -329,12 +321,13 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
 }
 
 function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) {
+  const slaStyle = getSlaStyle(diasRestantes)
   return (
-    <div className={`flex items-center gap-2 rounded-lg px-4 py-2.5 ${getSlaBackground(diasRestantes)}`}>
-      <Clock className={`h-5 w-5 ${getSlaColor(diasRestantes)}`} />
+    <div className="flex items-center gap-2 rounded-lg px-4 py-2.5" style={slaStyle}>
+      <Clock className="h-5 w-5" />
       <div className="flex flex-col">
-        <span className={`text-sm font-semibold ${getSlaColor(diasRestantes)}`}>{getSlaLabel(diasRestantes)}</span>
-        <span className="text-[10px] text-muted-foreground">Días al cierre del periodo</span>
+        <span className="text-sm font-semibold">{getSlaLabel(diasRestantes)}</span>
+        <span className="text-[10px] opacity-75">Días al cierre del periodo</span>
       </div>
     </div>
   )

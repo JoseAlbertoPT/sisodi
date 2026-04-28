@@ -144,13 +144,8 @@ export async function GET(req: NextRequest) {
       whereClause.revisor_asignado_id = revisorId
     }
 
-    const hoyBase = new Date(); hoyBase.setHours(0, 0, 0, 0)
-    const periodoActivo = await prisma.periodo.findFirst({
-      where: { fecha_inicio: { lte: hoyBase }, fecha_fin: { gte: hoyBase } },
-    })
-    const slaFechaCierre: Date | null = periodoActivo?.fecha_fin
-      ? (() => { const d = new Date(periodoActivo.fecha_fin); d.setHours(0,0,0,0); return d })()
-      : null
+    const _hoyBase = new Date()
+    const hoyUTC = Date.UTC(_hoyBase.getUTCFullYear(), _hoyBase.getUTCMonth(), _hoyBase.getUTCDate())
 
     const solicitudes = await prisma.solicitud.findMany({
       where: whereClause,
@@ -219,8 +214,12 @@ export async function GET(req: NextRequest) {
           })
         : null
 
-      const slaRestante: number | null = slaFechaCierre
-        ? Math.ceil((slaFechaCierre.getTime() - hoyBase.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      const slaRestante: number | null = sol.periodo?.fecha_fin
+        ? (() => {
+            const fin = new Date(sol.periodo.fecha_fin)
+            const finUTC = Date.UTC(fin.getUTCFullYear(), fin.getUTCMonth(), fin.getUTCDate())
+            return Math.ceil((finUTC - hoyUTC) / (1000 * 60 * 60 * 24))
+          })()
         : null
 
       const etapaFiltro    = `F${filtro}`
