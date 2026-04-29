@@ -4,12 +4,16 @@ export interface PeriodoCap3000 {
   mes: string
   limiteDO: string
   limiteDGRH: string
+  fechaInicio?: string
+  fechaFin?: string
 }
 
 export interface PeriodoCap1000 {
   quincena: string
   limiteDO: string
   limiteDGRH: string
+  fechaInicio?: string
+  fechaFin?: string
 }
 
 export interface CalendarioResponse {

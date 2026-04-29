@@ -56,7 +56,7 @@ export function ConfiguracionPage() {
   )
   return (
     <PageLayout
-      title={<span className="flex items-center gap-2"><Settings className="h-5 w-5 text-secondary" />Configuracion</span>}
+      title={<span className="flex items-center gap-2"><Settings className="h-5 w-5 text-secondary" />Catálogo</span>}
       description="Parametros y cargas de datos del sistema (historico de justificaciones, etc.)."
     >
       <Tabs defaultValue="historico" className="w-full">

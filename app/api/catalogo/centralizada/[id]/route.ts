@@ -65,6 +65,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+    const usuariosCount = await prisma.usuario.count({ where: { secretaria_id: id, activo: true } })
+    if (usuariosCount > 0) {
+      return NextResponse.json(
+        { error: `No se puede eliminar: tiene ${usuariosCount} usuario${usuariosCount !== 1 ? "s" : ""} asignado${usuariosCount !== 1 ? "s" : ""}` },
+        { status: 400 }
+      )
+    }
     await prisma.organo_centralizado.delete({ where: { id } })
     return NextResponse.json({ ok: true })
   } catch (e) {

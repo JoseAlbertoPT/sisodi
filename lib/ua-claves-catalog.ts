@@ -8,24 +8,16 @@ export type UAClavesRow = {
 
 const DATOS: UAClavesRow[] = datos as UAClavesRow[]
 
-/** Lista única de secretarías para autocompletar (campo Secretaría) */
 export const SECRETARIAS_UA_CATALOGO: string[] = [
   ...new Set(DATOS.map((r) => r["SECRETARÍA"])),
 ]
 
-/**
- * Filtra sugerencias de secretaría según lo que escribe el usuario.
- */
 export function filtrarSecretarias(input: string): string[] {
   if (!input) return SECRETARIAS_UA_CATALOGO
   const q = input.toLowerCase()
   return SECRETARIAS_UA_CATALOGO.filter((s) => s.toLowerCase().includes(q))
 }
 
-/**
- * Devuelve las UA DE CLAVES ADMINISTRATIVAS que corresponden a una secretaría.
- * (Campo UA se habilita solo después de seleccionar secretaría)
- */
 export function getUAsForSecretaria(secretaria: string): string[] {
   if (!secretaria) return []
   return DATOS
@@ -33,20 +25,6 @@ export function getUAsForSecretaria(secretaria: string): string[] {
     .map((r) => r["UA DE CLAVES ADMINISTRATIVAS"])
 }
 
-/**
- * Busca el registro exacto por secretaría + UA y devuelve la CLAVE REPORTE PLAZAS.
- * Readonly — se auto-llena al seleccionar la UA.
- *
- * const registro = datos.find(
- *   d => d['SECRETARÍA'] === secretariaSeleccionada &&
- *        d['UA DE CLAVES ADMINISTRATIVAS'] === uaSeleccionada
- * )
- * claveReportePlazas = registro['CLAVE REPORTE PLAZAS']
- */
-/**
- * Devuelve el nombre de UA (UA DE CLAVES ADMINISTRATIVAS) a partir de una CLAVE REPORTE PLAZAS.
- * Útil para mostrar el nombre cuando en BD se almacenó la clave.
- */
 export function getNombreForClave(clave: string): string {
   if (!clave) return ""
   const registro = DATOS.find((d) => d["CLAVE REPORTE PLAZAS"] === clave)
@@ -63,18 +41,13 @@ export function getClaveForUA(secretaria: string, ua: string): string {
   return registro?.["CLAVE REPORTE PLAZAS"] ?? ""
 }
 
-/**
- * Formatea una clave de reporte de plazas con el patrón [1,2,2,1,1,1,1].
- * Para ≤8 dígitos el 2do grupo se rellena con cero a la izquierda.
- * Ejemplo: "12400000" → "1 02 40 0 0 0 0"
- */
 export function formatClave(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 9)
   if (!digits) return ""
   if (digits.length === 9) {
     return [digits[0], digits.slice(1, 3), digits.slice(3, 5), digits[5], digits[6], digits[7], digits[8]].join(" ")
   }
-  // ≤8 dígitos: el 2do grupo (1 dígito raw) se rellena con cero → "0X"
+  
   const parts: string[] = []
   if (digits.length >= 1) parts.push(digits[0])
   if (digits.length >= 2) parts.push("0" + digits[1])

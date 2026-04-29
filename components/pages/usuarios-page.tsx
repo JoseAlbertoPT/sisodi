@@ -110,7 +110,6 @@ function validarRFC(rfc: string): boolean {
   return rfcRegex.test(rfc.toUpperCase())
 }
 
-
 const STEP_LABELS = ["Secretaría", "Dirección", "Subdirección", "Departamento", "Unidad"]
 
 function findNodePath(
@@ -432,10 +431,6 @@ function paraestatalToTree(cats: CategoriaParaestatalItem[]): OrganoCentralizado
   }))
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   Nuevo Usuario Modal
-   ═══════════════════════════════════════════════════════════════════ */
-
 type NuevoUsuarioFormProps = {
   onClose: () => void
   onSaved: (u: Usuario) => void
@@ -489,7 +484,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
     if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC inválido (ej. ABCD850101XYZ)"
     if (!form.password.trim()) e.password = "La contraseña es requerida"
-    else if (form.password.length < 6) e.password = "Mínimo 6 caracteres"
+    else if (form.password.length < 8) e.password = "Mínimo 8 caracteres"
     if (!form.rol)             e.rol      = "Seleccione un rol"
     if (!form.secretaria)      e.secretaria = "Seleccione una secretaría"
     return e
@@ -579,7 +574,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </div>
           )}
 
-          {/* Datos generales */}
+          {}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Datos generales</span>
@@ -591,7 +586,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               </div>
               {field("correo",   "Correo electrónico", "email",    "usuario@gobierno.gob.mx", undefined, "email")}
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">RFC</Label>
+                <Label className="text-xs font-medium text-muted-foreground">Usuario</Label>
                 <Input
                   placeholder="ABCD850101XYZ"
                   value={form.rfc}
@@ -603,7 +598,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
                 {errors.rfc  && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
               </div>
-              {field("password", "Contraseña",         "password", "Mínimo 6 caracteres", undefined, "new-password")}
+              {field("password", "Contraseña",         "password", "Mínimo 8 caracteres", undefined, "new-password")}
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
@@ -652,7 +647,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Select>
           </div>
 
-          {/* Secretaría  */}
+          {}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -697,10 +692,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   Editar Usuario Modal
-   ═══════════════════════════════════════════════════════════════════ */
-
 type EditarUsuarioModalProps = {
   usuario: Usuario
   onClose: () => void
@@ -729,7 +720,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">("centralizada")
   const initializedRef = useRef(false)
 
-  // Auto-detect type on first load: try centralizada, if secretariaId not found try paraestatal
+  
   useEffect(() => {
     setTreeLoading(true)
     fetchCentralizadaTree()
@@ -737,7 +728,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         if (usuario.secretariaId) {
           const found = findNodePath(central, usuario.secretariaId)
           if (!found) {
-            // Not in centralizada — load paraestatal
+            
             fetchCategoriasParaestatal()
               .then((cats) => {
                 const paraTree = paraestatalToTree(cats)
@@ -769,7 +760,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
       })
   }, [])
 
-  // Reload tree when user manually changes tipoAdmin (skip initial render)
+  
   useEffect(() => {
     if (!initializedRef.current) return
     setTreeLoading(true)
@@ -791,7 +782,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC inválido (ej. ABCD850101XYZ)"
     if (!form.rol)        e.rol        = "Seleccione un rol"
     if (!form.secretaria) e.secretaria = "Seleccione una secretaría"
-    if (form.password && form.password.length < 6) e.password = "Mínimo 6 caracteres"
+    if (form.password && form.password.length < 8) e.password = "Mínimo 8 caracteres"
     if (form.password && form.password !== form.confirmPassword) e.confirmPassword = "Las contraseñas no coinciden"
     return e
   }
@@ -887,7 +878,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           )}
 
-          {/* Datos generales */}
+          {}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Datos generales</span>
@@ -899,7 +890,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               </div>
               {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx")}
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">RFC</Label>
+                <Label className="text-xs font-medium text-muted-foreground">Usuario</Label>
                 <Input
                   placeholder="ABCD850101XYZ"
                   value={form.rfc}
@@ -940,7 +931,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           </div>
 
-          {/* Tipo de administración */}
+
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
             <Select
@@ -960,7 +951,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </Select>
           </div>
 
-          {/* Secretaría selector */}
+
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -983,14 +974,13 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             />
           </div>
 
-          {/* Cambiar contraseña */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Cambiar contraseña (opcional)</span>
               <div className="flex-1 border-t border-border" />
             </div>
             <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
-              {field("password",        "Nueva contraseña",     "password", "Dejar en blanco para no cambiar", undefined, "new-password")}
+              {field("password",        "Nueva contraseña",     "password", "Mínimo 8 caracteres ", undefined, "new-password")}
               {field("confirmPassword", "Confirmar contraseña", "password", "Repite la nueva contraseña",        undefined, "new-password")}
             </div>
           </div>
@@ -1070,7 +1060,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
       setRegimenCap("")
       setPeriodoCap("")
       setTimeout(() => setCaptSaved(false), 2500)
-    } catch { /* silencioso */ }
+    } catch {  }
   }
 
   const isDirty = useMemo(() => {
@@ -1375,11 +1365,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   )
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════
-   Página principal de Usuarios
-   ═══════════════════════════════════════════════════════════════════ */
-
 export function UsuariosPage() {
   const [usuarios,      setUsuarios]      = useState<Usuario[]>([])
   const [loading,       setLoading]       = useState(true)
@@ -1425,7 +1410,7 @@ export function UsuariosPage() {
       title="Usuarios"
       description="Administración de usuarios del sistema"
     >
-      {/* Header */}
+      {}
       <div className="flex items-center justify-end">
         <Button className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2" onClick={() => setShowNewForm(true)}>
           <UserPlus className="h-4 w-4" />
@@ -1433,7 +1418,7 @@ export function UsuariosPage() {
         </Button>
       </div>
 
-      {/* Modales */}
+      {}
       {showNewForm && (
         <NuevoUsuarioModal
           key={newFormKey}
@@ -1456,7 +1441,7 @@ export function UsuariosPage() {
         />
       )}
 
-      {/* Buscador */}
+      {}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -1467,7 +1452,7 @@ export function UsuariosPage() {
         />
       </div>
 
-      {/* Tabla */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground">

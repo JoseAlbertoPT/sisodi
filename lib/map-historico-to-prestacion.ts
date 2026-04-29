@@ -2,7 +2,6 @@
 
 import type { HistoricoRow } from "./parse-excel-historico"
 
-/** Column header names in the Excel (exact match). */
 export const HISTORICO_COLUMNS = {
   folioJustificacion: "FOLIO DE JUSTIFICACIÓN",
   folioDictamen: "FOLIO DE DICTAMEN/OPINIÓN",
@@ -55,7 +54,6 @@ function get(row: HistoricoRow, key: keyof typeof HISTORICO_COLUMNS): string {
   return val != null ? String(val).trim() : ""
 }
 
-/** Converts DD/MM/YYYY to YYYY-MM-DD for date inputs. */
 function vigenciaToISO(ddmmyyyy: string): string {
   const t = ddmmyyyy.trim()
   if (!t) return ""
@@ -68,7 +66,6 @@ function vigenciaToISO(ddmmyyyy: string): string {
   return `${year}-${month}-${day}`
 }
 
-/** Normalize import: strip $ and spaces, comma to dot, then format as "25,000.00". */
 function formatImporteBruto(raw: string): string {
   const clean = raw.replace(/[$,\s]/g, "").replace(",", ".")
   const n = parseFloat(clean)
@@ -76,7 +73,6 @@ function formatImporteBruto(raw: string): string {
   return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** Split multiline/roman text into non-empty trimmed strings. */
 function splitListItems(text: string): string[] {
   const normalized = text
     .split(/\n|\r\n/)
@@ -111,7 +107,6 @@ function mapEscolaridad(excel: string): string {
   return ""
 }
 
-/** Map Excel unidad text to form Select value (dgpic, dgaf, dgrh). */
 function mapUnidadAdscripcion(excel: string): string {
   const u = excel.toUpperCase()
   if (u.includes("PROFESIONALIZACION") || u.includes("INNOVACION") || u.includes("INNOVACIÓN")) return "dgpic"
@@ -120,7 +115,6 @@ function mapUnidadAdscripcion(excel: string): string {
   return ""
 }
 
-/** Map Excel URG text to form Select value (urg-01, urg-02, urg-03). */
 function mapUnidadResponsableGasto(excel: string): string {
   const u = excel.toUpperCase()
   if (u.includes("OFICINA") || u.includes("SECRETARIO")) return "urg-01"
@@ -129,9 +123,6 @@ function mapUnidadResponsableGasto(excel: string): string {
   return ""
 }
 
-/**
- * Maps a single historico row to the form shape for Prestacion de Servicios.
- */
 export function mapHistoricoRowToPrestacion(row: HistoricoRow): HistoricoPrestacionForm {
   const secretaria = get(row, "secretaria")
   const rawUnidadAdsc = get(row, "unidadAdscripcion")

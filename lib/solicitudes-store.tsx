@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
 
-// ── Status definitions ──
 export const ESTADOS = [
   "Borrador",
   "En Validacion Justificaciones",
@@ -20,13 +19,12 @@ export const ESTADOS = [
 
 export type Estado = (typeof ESTADOS)[number]
 
-// ── SLA colors ──
 export function getSlaColor(diasRestantes: number | null): string {
   if (diasRestantes === null) return "text-muted-foreground"
-  if (diasRestantes <= 0) return "text-destructive"       // Rojo - vencido
-  if (diasRestantes <= 5) return "text-[#c57a2a]"         // Naranja - 1-5 dias
-  if (diasRestantes <= 10) return "text-accent"            // Amarillo - 6-10 dias
-  return "text-secondary"                                  // Verde - >10 dias
+  if (diasRestantes <= 0) return "text-destructive"
+  if (diasRestantes <= 5) return "text-[#c57a2a]"
+  if (diasRestantes <= 10) return "text-accent"
+  return "text-secondary"
 }
 
 export function getSlaBackground(diasRestantes: number | null): string {
@@ -43,7 +41,6 @@ export function getSlaLabel(diasRestantes: number | null): string {
   return `${diasRestantes} dia${diasRestantes > 1 ? "s" : ""}`
 }
 
-// ── Estado badge color ──
 export function getEstadoVariant(estado: Estado) {
   switch (estado) {
     case "Borrador":
@@ -71,29 +68,25 @@ export function getEstadoVariant(estado: Estado) {
   }
 }
 
-// ── Folio de Recepcion generation ──
 const MONTH_CODES: Record<number, string> = {
   0: "EN", 1: "FE", 2: "MR", 3: "AB", 4: "MY", 5: "JN",
   6: "JL", 7: "AG", 8: "SE", 9: "OC", 10: "NV", 11: "DI",
 }
 
-// ── Historial entry ──
 export interface HistorialEntry {
   fecha: string
   usuario: string
   accion: string
   estadoAnterior: Estado | null
   estadoNuevo: Estado
-  visibilidadDO?: boolean  // When true, only visible to DO roles
+  visibilidadDO?: boolean
 }
 
-// ── Observacion por seccion ──
 export interface ObservacionSeccion {
   seccion: string
   observacion: string
 }
 
-// ── Checklist normativo ──
 export type ChecklistValor = "si" | "no" | "noAplica" | null
 
 export interface ChecklistItemState {
@@ -105,7 +98,6 @@ export interface ChecklistItemState {
 
 export type ChecklistDO = Record<string, ChecklistItemState>
 
-// ── Checklist definitions ──
 export const CHECKLIST_PRESTACION_SERVICIOS = [
   { key: "oficioSolicitud", label: "Oficio de solicitud adjunto", num: 1 },
   { key: "secretariaDependencia", label: "Secretaria/Subsecretaria/Dependencia correcta", num: 2 },
@@ -147,25 +139,22 @@ export function createEmptyChecklist(tipo: "Prestacion de Servicios" | "Nombrami
   return checklist
 }
 
-// ── Emission data ──
 export interface EmisionData {
-  numeroDictamen: string          // NN/MM/YYYY format
-  fechaDictaminacion: string      // YYYY-MM-DD
+  numeroDictamen: string
+  fechaDictaminacion: string
   modalidadFirma: "electronica" | "autografa"
   destinatarios: string[]
   firmadoPor: {
-    reviso: string               // F1 user
-    valido: string               // F2 user
-    emitio: string               // DG user
+    reviso: string
+    valido: string
+    emitio: string
   }
-  archivoFirmado: string | null  // For autografa: uploaded file name
-  fechaEmision: string           // ISO timestamp when emitted
+  archivoFirmado: string | null
+  fechaEmision: string
 }
 
-// ── Tipo Administracion (for dictamen vs opinion) ──
 export type TipoAdministracion = "centralizada" | "paraestatal"
 
-// ── Solicitud interface ──
 export interface Solicitud {
   id: string
   folioSolicitud: string
@@ -183,42 +172,34 @@ export interface Solicitud {
   observaciones: string[]
   observacionesPorSeccion: ObservacionSeccion[]
   checklistDO: ChecklistDO
-  // Form data summary
   denominacion: string
   vigenciaInicio: string
   vigenciaFin: string
   importeBruto: string
   esRenovacion: boolean
   folioAnterior: string | null
-  // Reingreso / tab tracking
-  reingresoCount: number              // How many times this came back after correction
-  lastObservedStage: 1 | 2 | 3 | null // Which filtro last observed it
-  lastObservedDate: string | null      // When it was last observed
-  openedInFiltro: Record<number, boolean>  // Whether a reviewer opened/started reviewing it
-  isNuevaEnFiltro: Record<number, boolean> // True if arrived at this filtro for the first time (never observed here)
-  // Emission data
+  reingresoCount: number
+  lastObservedStage: 1 | 2 | 3 | null
+  lastObservedDate: string | null
+  openedInFiltro: Record<number, boolean>
+  isNuevaEnFiltro: Record<number, boolean>
   emisionData: EmisionData | null
-  // Excepcion DO
   esExcepcionDO: boolean
-  folioRecepcionManual: boolean       // Whether folio was manually assigned
-  // Regularizacion fields
-  esRegularizacion: boolean              // true if regularizacion mode
-  folioTemporal: boolean                 // true until officialised
-  folioTemporalOriginal: string | null   // e.g. "FE-005-1", kept for traceability
+  folioRecepcionManual: boolean
+  esRegularizacion: boolean
+  folioTemporal: boolean
+  folioTemporalOriginal: string | null
   folioOficializadoPor: string | null
   fechaOficializacion: string | null
-  // Folio de Dictamen (assigned in Filtro 2)
-  folioDictamen: string | null           // e.g. "09/02/2026" — NN/MM/YYYY (sequential number, NOT a date)
-  folioDictamenMes: number | null        // 1-12
-  folioDictamenAnio: number | null       // YYYY
-  folioDictamenConsecutivo: number | null // sequential number within that month
+  folioDictamen: string | null
+  folioDictamenMes: number | null
+  folioDictamenAnio: number | null
+  folioDictamenConsecutivo: number | null
   folioDictamenAsignadoPor: string | null
   fechaAsignacionFolioDictamen: string | null
-  // Folio de Justificación (assigned when sent to UEFA validation)
-  folioJustificacion: string | null      // e.g. "JUST-2026-0001" — JUST-AAAA-NNNN format
+  folioJustificacion: string | null
   folioJustificacionAnio: number | null
   folioJustificacionConsecutivo: number | null
-  // New fields from schema
   marco_normativo: string[]
   riesgo_caidas: string
   riesgo_mutilaciones: string
@@ -230,7 +211,6 @@ export interface Solicitud {
   resguardo_activos: string | null
 }
 
-// ── Seed data ──
 function createSeedData(): Solicitud[] {
   return [
     {
@@ -959,27 +939,23 @@ function createSeedData(): Solicitud[] {
   ]
 }
 
-// ── Folio counter state ──
 interface FolioCounter {
   month: number
   year: number
   count: number
 }
 
-// ── Dictamen counter state ──
 interface DictamenCounter {
   month: number
   year: number
   count: number
 }
 
-// ── Justificacion counter state (annual, global) ──
 interface JustificacionCounter {
   year: number
   count: number
 }
 
-// ── Context ──
 interface SolicitudesContextType {
   solicitudes: Solicitud[]
   getSolicitud: (id: string) => Solicitud | undefined
@@ -993,18 +969,13 @@ interface SolicitudesContextType {
   aprobarFiltro: (id: string, usuario: string, filtro: 1 | 2 | 3) => void
   markOpenedInFiltro: (id: string, filtro: 1 | 2 | 3) => void
   simularReingreso: (id: string) => void
-  // Emission actions
   emitirDictamen: (id: string, fechaDictaminacion: string, modalidadFirma: "electronica" | "autografa", destinatarios: string[], usuario: string, archivoFirmado?: string) => void
   getEmitidos: () => Solicitud[]
-  // Excepcion DO
   crearExcepcionDO: (data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "marco_normativo" | "riesgo_caidas" | "riesgo_mutilaciones" | "riesgo_golpes" | "riesgo_otros" | "condicion_cambio_domicilio" | "condicion_horario" | "condicion_viajar" | "resguardo_activos" | "folioJustificacion" | "folioJustificacionAnio" | "folioJustificacionConsecutivo" | "folioDictamen" | "folioDictamenMes" | "folioDictamenAnio" | "folioDictamenConsecutivo" | "folioDictamenAsignadoPor" | "fechaAsignacionFolioDictamen">) => void
-  // Regularizacion DO
   crearRegularizacionDO: (data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "folioRecepcion" | "folioRecepcionManual" | "folioTemporal" | "folioTemporalOriginal" | "folioOficializadoPor" | "fechaOficializacion" | "marco_normativo" | "riesgo_caidas" | "riesgo_mutilaciones" | "riesgo_golpes" | "riesgo_otros" | "condicion_cambio_domicilio" | "condicion_horario" | "condicion_viajar" | "resguardo_activos" | "folioJustificacion" | "folioJustificacionAnio" | "folioJustificacionConsecutivo" | "folioDictamen" | "folioDictamenMes" | "folioDictamenAnio" | "folioDictamenConsecutivo" | "folioDictamenAsignadoPor" | "fechaAsignacionFolioDictamen">) => string
   oficializarFolio: (id: string, mesOficial: string, anioOficial: number, consecutivoOficial: number, fechaRecepcionOficial: string, usuario: string) => string | null
-  // Folio Dictamen (Filtro 2)
   asignarFolioDictamen: (id: string, mes: number, anio: number, consecutivo: number, usuario: string) => string | null
   getNextDictamenConsecutivo: (mes: number, anio: number, excludeId?: string) => number
-  // Enviar a validación UEFA (generates folioJustificacion)
   enviarAValidacion: (id: string, usuario: string) => string
 }
 
@@ -1120,7 +1091,6 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
           historial: [...s.historial, entry],
           lastObservedStage: filtro,
           lastObservedDate: today,
-          // Clear isNueva for this filtro since it has been observed here
           isNuevaEnFiltro: { ...s.isNuevaEnFiltro, [filtro]: false },
         }
       })
@@ -1144,7 +1114,6 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
           estadoAnterior: s.estado,
           estadoNuevo: nextEstado,
         }
-        // Mark next filtro as "nueva" if going to the next one
         const newIsNueva = { ...s.isNuevaEnFiltro }
         if (filtro < 3) {
           newIsNueva[filtro + 1] = true
@@ -1155,7 +1124,6 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
           slaRestante: filtro === 3 ? null : s.slaRestante,
           historial: [...s.historial, entry],
           isNuevaEnFiltro: newIsNueva,
-          // Reset checklist for next filtro (clean slate)
           checklistDO: filtro < 3 ? createEmptyChecklist(s.tipo) : s.checklistDO,
           openedInFiltro: { ...s.openedInFiltro, [filtro]: true },
         }
@@ -1163,12 +1131,10 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
-  // Simulate URG correcting and sending back an observed solicitud
   const simularReingreso = useCallback((id: string) => {
     setSolicitudes((prev) =>
       prev.map((s) => {
         if (s.id !== id) return s
-        // Only works for observed solicitudes
         if (!s.estado.startsWith("Observado DO Filtro")) return s
         const now = new Date().toISOString().replace("T", " ").slice(0, 16)
         const entryCorreccion: HistorialEntry = {
@@ -1183,9 +1149,7 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
           estado: "En revision DO Filtro 1" as Estado,
           reingresoCount: s.reingresoCount + 1,
           historial: [...s.historial, entryCorreccion],
-          // Reset checklist for fresh review
           checklistDO: createEmptyChecklist(s.tipo),
-          // NOT nueva - it's a correction
           isNuevaEnFiltro: { 1: false },
           openedInFiltro: {},
         }
@@ -1197,18 +1161,16 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     setSolicitudes((prev) =>
       prev.map((s) => {
         if (s.id !== id) return s
-        if (s.openedInFiltro[filtro]) return s // Already marked
+        if (s.openedInFiltro[filtro]) return s
         return {
           ...s,
           openedInFiltro: { ...s.openedInFiltro, [filtro]: true },
-          // Once opened, it's no longer "nueva" but "en revision"
           isNuevaEnFiltro: { ...s.isNuevaEnFiltro, [filtro]: false },
         }
       })
     )
   }, [])
 
-  // ── Get next dictamen consecutivo for a given month/year ──
   const getNextDictamenConsecutivo = useCallback((mes: number, anio: number, excludeId?: string): number => {
     let maxNum = 0
     for (const s of solicitudes) {
@@ -1220,12 +1182,10 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     return maxNum + 1
   }, [solicitudes])
 
-  // ── Assign folio de dictamen (Filtro 2) ──
   const asignarFolioDictamen = useCallback((id: string, mes: number, anio: number, consecutivo: number, usuario: string): string | null => {
     const mm = String(mes).padStart(2, "0")
     const folioStr = `${String(consecutivo).padStart(2, "0")}/${mm}/${anio}`
 
-    // Check duplicate
     const duplicate = solicitudes.find(
       (s) => s.folioDictamen === folioStr && s.id !== id
     )
@@ -1258,10 +1218,9 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
         }
       })
     )
-    return null // success
+    return null
   }, [solicitudes])
 
-  // ── Generate dictamen number NN/MM/YYYY ──
   const generateNumeroDictamen = useCallback((fechaDictaminacion: string) => {
     const date = new Date(fechaDictaminacion + "T12:00:00")
     const month = date.getMonth()
@@ -1279,7 +1238,6 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     return `${String(newCount).padStart(2, "0")}/${mm}/${year}`
   }, [dictamenCounter])
 
-  // ── Emit dictamen ──
   const emitirDictamen = useCallback((
     id: string,
     fechaDictaminacion: string,
@@ -1294,10 +1252,8 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
       prev.map((s) => {
         if (s.id !== id) return s
 
-        // Use pre-assigned folio dictamen if available, otherwise generate
         const numeroDictamen = s.folioDictamen || generateNumeroDictamen(fechaDictaminacion)
 
-        // Build firmadoPor from historial
         const revisoEntry = s.historial.find(h => h.accion.includes("Aprobada en Filtro 1"))
         const validoEntry = s.historial.find(h => h.accion.includes("Aprobada en Filtro 2"))
 
@@ -1357,12 +1313,10 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     )
   }, [generateNumeroDictamen])
 
-  // ── Get emitidos ──
   const getEmitidos = useCallback(() => {
     return solicitudes.filter((s) => s.estado === "Emitido" && s.emisionData !== null)
   }, [solicitudes])
 
-  // ── Create Excepcion DO ──
   const crearExcepcionDO = useCallback((data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "marco_normativo" | "riesgo_caidas" | "riesgo_mutilaciones" | "riesgo_golpes" | "riesgo_otros" | "condicion_cambio_domicilio" | "condicion_horario" | "condicion_viajar" | "resguardo_activos" | "folioJustificacion" | "folioJustificacionAnio" | "folioJustificacionConsecutivo" | "folioDictamen" | "folioDictamenMes" | "folioDictamenAnio" | "folioDictamenConsecutivo" | "folioDictamenAsignadoPor" | "fechaAsignacionFolioDictamen">) => {
     const now = new Date().toISOString().replace("T", " ").slice(0, 16)
     const newId = `sol-${String(solicitudes.length + 1).padStart(3, "0")}`
@@ -1420,7 +1374,6 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     setSolicitudes((prev) => [...prev, newSol])
   }, [solicitudes.length])
 
-  // ── Create Regularizacion DO ──
   const crearRegularizacionDO = useCallback((data: Omit<Solicitud, "id" | "estado" | "historial" | "observaciones" | "observacionesPorSeccion" | "checklistDO" | "slaRestante" | "reingresoCount" | "lastObservedStage" | "lastObservedDate" | "openedInFiltro" | "isNuevaEnFiltro" | "emisionData" | "folioRecepcion" | "folioRecepcionManual" | "folioTemporal" | "folioTemporalOriginal" | "folioOficializadoPor" | "fechaOficializacion" | "marco_normativo" | "riesgo_caidas" | "riesgo_mutilaciones" | "riesgo_golpes" | "riesgo_otros" | "condicion_cambio_domicilio" | "condicion_horario" | "condicion_viajar" | "resguardo_activos" | "folioJustificacion" | "folioJustificacionAnio" | "folioJustificacionConsecutivo" | "folioDictamen" | "folioDictamenMes" | "folioDictamenAnio" | "folioDictamenConsecutivo" | "folioDictamenAsignadoPor" | "fechaAsignacionFolioDictamen">) => {
     const now = new Date().toISOString().replace("T", " ").slice(0, 16)
     const newId = `sol-${String(solicitudes.length + 1).padStart(3, "0")}`
@@ -1487,11 +1440,9 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     return tempFolio
   }, [solicitudes.length, generateFolioRecepcion])
 
-  // ── Oficializar folio ──
   const oficializarFolio = useCallback((id: string, mesOficial: string, anioOficial: number, consecutivoOficial: number, fechaRecepcionOficial: string, usuario: string): string | null => {
     const officialFolio = `${mesOficial}-${String(consecutivoOficial).padStart(3, "0")}`
 
-    // Check for duplicate
     const duplicate = solicitudes.find(
       (s) => s.folioRecepcion === officialFolio && s.id !== id
     )
@@ -1532,10 +1483,9 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
         }
       })
     )
-    return null // null = success
+    return null
   }, [solicitudes])
 
-  // ── Generate Folio de Justificacion (JUST-AAAA-NNNN) ──
   const generateFolioJustificacion = useCallback(() => {
     const year = new Date().getFullYear()
     let newCount: number
@@ -1543,7 +1493,7 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     if (justificacionCounter.year === year) {
       newCount = justificacionCounter.count + 1
     } else {
-      newCount = 1 // Reset for new year
+      newCount = 1
     }
 
     setJustificacionCounter({ year, count: newCount })
@@ -1554,7 +1504,6 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     }
   }, [justificacionCounter])
 
-  // ── Enviar a Validación UEFA (assigns folioJustificacion) ──
   const enviarAValidacion = useCallback((id: string, usuario: string): string => {
     const now = new Date().toISOString().replace("T", " ").slice(0, 16)
     const { folio, anio, consecutivo } = generateFolioJustificacion()
@@ -1562,7 +1511,6 @@ export function SolicitudesProvider({ children }: { children: ReactNode }) {
     setSolicitudes((prev) =>
       prev.map((s) => {
         if (s.id !== id) return s
-        // Only generate JUST folio if it doesn't already have one (e.g., re-sending after observation)
         const justFolio = s.folioJustificacion || folio
         const justAnio = s.folioJustificacionAnio || anio
         const justConsec = s.folioJustificacionConsecutivo || consecutivo

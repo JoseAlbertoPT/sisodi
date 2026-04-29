@@ -66,6 +66,7 @@ export async function PATCH(
 
     if (password) {
       data.password_hash = await bcrypt.hash(password, 12)
+      data.must_change_password = true
     }
 
     const actualizado = await prisma.usuario.update({

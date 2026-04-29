@@ -30,7 +30,6 @@ const MESES = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ]
 
-// Quincenas válidas: excluye "1ra Enero" y "2da Diciembre"
 const QUINCENA_NAMES: string[] = MESES.flatMap((mes) => {
   const qs: string[] = []
   if (mes !== "Enero") qs.push(`1ra ${mes}`)
@@ -150,17 +149,17 @@ export function CalendarioPage() {
   }
 
   const handleStartEdit = () => {
-    // Siempre inicializa con el template completo para que las filas
-    // que no están en BD (ej. Enero) se puedan editar sin perderse.
+    
+    
     setEditData({
       honorarios: MESES.map((mes) =>
-        honorarios.find((r) => r.mes === mes) ?? { mes, limiteDO: "", limiteDGRH: "" }
+        honorarios.find((r) => r.mes === mes) ?? { mes, limiteDO: "", limiteDGRH: "", fechaInicio: "", fechaFin: "" }
       ),
       asimilados: QUINCENA_NAMES.map((q) =>
-        asimilados.find((r) => r.quincena === q) ?? { quincena: q, limiteDO: "", limiteDGRH: "" }
+        asimilados.find((r) => r.quincena === q) ?? { quincena: q, limiteDO: "", limiteDGRH: "", fechaInicio: "", fechaFin: "" }
       ),
       nombramiento: QUINCENA_NAMES.map((q) =>
-        nombramiento.find((r) => r.quincena === q) ?? { quincena: q, limiteDO: "", limiteDGRH: "" }
+        nombramiento.find((r) => r.quincena === q) ?? { quincena: q, limiteDO: "", limiteDGRH: "", fechaInicio: "", fechaFin: "" }
       ),
     })
     setEditing(true)
@@ -196,7 +195,7 @@ export function CalendarioPage() {
   const updateEditRow = (
     regimen: "honorarios" | "asimilados" | "nombramiento",
     key: string,
-    field: "limiteDO" | "limiteDGRH",
+    field: "limiteDO" | "limiteDGRH" | "fechaInicio" | "fechaFin",
     value: string,
   ) => {
     if (!editData) return
@@ -269,7 +268,7 @@ export function CalendarioPage() {
       description={`Periodo de aceptación y fechas límite para la recepción de solicitudes - Ejercicio ${ejercicio}`}
     >
       <div className="flex flex-col gap-6">
-        {/* Header bar */}
+        {}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/10">
@@ -277,7 +276,7 @@ export function CalendarioPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-card-foreground">Ejercicio fiscal</h3>
+                <h3 className="text-sm font-semibold text-card-foreground">Ejercicio Fiscal</h3>
                 <Badge variant="outline" className="text-xs font-mono tabular-nums">{ejercicio}</Badge>
               </div>
               <p className="text-[11px] text-muted-foreground">Fechas límite de recepción para dictaminación</p>
@@ -442,7 +441,8 @@ export function CalendarioPage() {
 
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
-                      <th className="px-5 py-3 text-left font-semibold w-48">Mes de Aplicacion </th>
+                      <th className="px-5 py-3 text-left font-semibold w-48">Mes de Aplicacion</th>
+                      <th className="px-5 py-3 text-center font-semibold">Fecha Cierre</th>
                       <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)</th>
                       <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
                     </tr>
@@ -454,6 +454,15 @@ export function CalendarioPage() {
                         <td className="px-5 py-3"><span className="font-medium text-card-foreground">{row.quincena}</span></td>
                         {editing ? (
                           <>
+                            <td className="px-3 py-2 text-center">
+                              <DatePickerHabil
+                                value={dmyToDate(row.fechaFin ?? "")}
+                                defaultMonth={new Date(ejercicio, MESES.indexOf(mesDeQuincena(row.quincena)), 1)}
+                                onChange={(d) => updateEditRow(tabRecepcion, row.quincena, "fechaFin", d ? dateToDmy(d) : "")}
+                                className="w-36"
+                                compact
+                              />
+                            </td>
                             <td className="px-3 py-2 text-center">
                               <DatePickerHabil
                                 value={dmyToDate(row.limiteDO)}
@@ -475,6 +484,11 @@ export function CalendarioPage() {
                           </>
                         ) : (
                           <>
+                            <td className="px-5 py-3 text-center">
+                              {row.fechaFin
+                                ? <DateCell value={row.fechaFin} />
+                                : <span className="text-muted-foreground/40 text-xs">—</span>}
+                            </td>
                             <td className="px-5 py-3 text-center"><DateCell value={row.limiteDO} /></td>
                             <td className="px-5 py-3 text-center"><DateCell value={row.limiteDGRH} /></td>
                           </>

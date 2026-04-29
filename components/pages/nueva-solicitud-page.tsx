@@ -68,7 +68,6 @@ export type FormularioData = {
   condicionViajar?:          boolean
 }
 
-// Columnas de Excel
 const COL = {
   secretaria:             "SECRETARÍA/SUBSECRETARÍA/DEPENDENCIA/ORGANISMO AUXILIAR",
   unidadAdscripcion:      "UNIDAD ADMINISTRATIVA DE ADSCRIPCIÓN",
@@ -386,24 +385,11 @@ function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string
   const handleFile = (file: File) => {
     setError(null)
     const ext = file.name.split(".").pop()?.toLowerCase()
-    if (!["pdf", "doc", "docx"].includes(ext ?? "")) {
-      setError("Solo son ACEPTABLES ARCHIVOS PDF o DOC."); return
+    if (!["pdf", "doc", "docx", "xls", "xlsx", "png", "jpg", "jpeg", "zip", "rar", "txt", "odt", "ods"].includes(ext ?? "")) {
+      setError("Formato no soportado. Se aceptan PDF, DOC, DOCX, XLS, XLSX, imágenes, ZIP, entre otros."); return
     }
     if (file.size > 10 * 1024 * 1024) {
       setError("El archivo supera el límite de 10 MB."); return
-    }
-    const fileDate = new Date(file.lastModified)
-    const now = new Date()
-    const mesActual = fileDate.getFullYear() === now.getFullYear() && fileDate.getMonth() === now.getMonth()
-    let mesVigencia = false
-    if (vigenciaInicio) {
-      const vig = new Date(vigenciaInicio + "T00:00:00")
-      mesVigencia = fileDate.getFullYear() === vig.getFullYear() && fileDate.getMonth() === vig.getMonth()
-    }
-    if (!mesActual && !mesVigencia) {
-      const mesLabel = now.toLocaleDateString("es-MX", { month: "long", year: "numeric" })
-      setError(`El Archivo de ser del MES  (${mesLabel})${vigenciaInicio ? " o del MES de la VIGENCIA" : ""}.`)
-      return
     }
     setArchivo(file)
     onFileChange?.(file)
@@ -411,7 +397,7 @@ function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string
 
         return (
         <div className="flex flex-col gap-1.5">
-        <input ref={inputRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
+        <input ref={inputRef} type="file" accept="*" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
         <div
         onClick={() => inputRef.current?.click()}
@@ -430,7 +416,7 @@ function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string
         ) : (
           <div className="flex flex-col items-center gap-1 text-center">
             <Upload className="h-5 w-5 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">PDF, DOC (máx. 10 MB) — Clic (para buscar ) o Arrastra</p>
+            <p className="text-xs text-muted-foreground">Cualquier formato (máx. 10 MB) — Clic para buscar o Arrastra</p>
           </div>
         )}
       </div>
@@ -830,6 +816,7 @@ function DynamicList({
     </div>
   )
 }
+
 function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
   const steps = [
     { key: "tipo",       label: "Tipo de Solicitud" },
@@ -1050,13 +1037,13 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
                       onClick={() => setSeleccionado(isSelected ? null : { nivel: c.nivel, categoria: c.categoria })}
                       className={`flex items-center gap-3 rounded-lg border-2 px-3 py-2 cursor-pointer transition-colors
                         ${isSelected ? "border-secondary bg-secondary/15" : "border-secondary/20 bg-secondary/5 hover:border-secondary/50"}`}
-                    >
-                      <span className="text-sm font-semibold text-card-foreground shrink-0">
+                         >
+                        <span className="text-sm font-semibold text-card-foreground shrink-0">
                         {c.nivel} : {formatMXN(c.min)} - {formatMXN(c.max)}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate">{c.puesto}</span>
-                      {isSelected && <CheckCircle2 className="h-4 w-4 text-secondary ml-auto shrink-0" />}
-                    </div>
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate">{c.puesto}</span>
+                        {isSelected && <CheckCircle2 className="h-4 w-4 text-secondary ml-auto shrink-0" />}
+                        </div>
                   )
                 })}
               </div>
@@ -1182,7 +1169,6 @@ function getNumeroUA(secretaria: string, unidad: string): string {
   return idx >= 0 ? String(idx + 1) : unidad
 }
 
-
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
   datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
@@ -1221,7 +1207,7 @@ function FormularioPrestacion({
   const [unidadSeleccionada,   setUnidadSeleccionada]   = useState(
     datosRenovacion?.unidadAdscripcion ?? unidadFija ?? initialData?.unidadAdministrativa ?? ""
   )
-  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? "")
+  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? initialData?.unidadAdministrativa ?? "")
   const [urgSeleccionada,      setUrgSeleccionada]      = useState(
     datosRenovacion?.unidadResponsableGasto
     ?? initialData?.unidadResponsable
@@ -1235,7 +1221,9 @@ function FormularioPrestacion({
   const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
     datosRenovacion?.tipoActividad
       ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
-      : initialData?.tipoActividades ?? ""
+      : initialData?.tipoActividades
+      ? initialData.tipoActividades.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
+      : ""
   )
   const [numeroPrestadores, setNumeroPrestadores] = useState(
     datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "3" : "")
@@ -1422,7 +1410,6 @@ function FormularioPrestacion({
     if (bloqueadoPorRenovacion) return
     setProgramaSeleccionado(val)
     setTipoActividadSeleccionado("")
-    setObjeto(""); setActividades([""]); setResponsabilidades([""])
   }
 
   const handleRegimenChange = (val: string) => {
@@ -1472,7 +1459,6 @@ function FormularioPrestacion({
               </div>
             </div>
 
-            {/* Unidad Administrativa de Adscripción */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Administrativa de Adscripción
@@ -1480,7 +1466,7 @@ function FormularioPrestacion({
               </Label>
               {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground font-semibold font-mono">{numeroUA}</span>
+                  <span className="text-sm text-muted-foreground font-semibold font-mono">{fmtClave(numeroUA)}</span>
                 </div>
               ) : catalogoUAs.some((u) => u.clave !== "") ? (
                 <Select
@@ -1498,7 +1484,7 @@ function FormularioPrestacion({
                   </SelectTrigger>
                   <SelectContent>
                     {catalogoUAs.filter((u) => u.clave !== "").map((u) => (
-                      <SelectItem key={u.nombre} value={u.clave} className="font-mono">{fmtClave(u.clave)}</SelectItem>
+                      <SelectItem key={u.nombre} value={u.clave} textValue={fmtClave(u.clave)} className="font-mono">{fmtClave(u.clave)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1512,7 +1498,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Unidad Responsable del Gasto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Responsable del Gasto
@@ -1549,7 +1535,6 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Programa */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programa o Proyecto
@@ -1577,7 +1562,6 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Régimen */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Régimen de Contratación
@@ -1606,7 +1590,6 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Tipo actividad */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Actividad
@@ -1639,23 +1622,20 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Número prestadores */}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Número de Prestadores de Servicios
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               <Input
                 type="number" min={1}
                 value={numeroPrestadores}
-                onChange={(e) => { if (!bloqueadoPorRenovacion) setNumeroPrestadores(e.target.value) }}
+                onChange={(e) => setNumeroPrestadores(e.target.value)}
                 placeholder="Ej. 5"
-                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                readOnly={bloqueadoPorRenovacion}
+                className="bg-background"
               />
             </div>
 
-            {/* Tipo importe */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Pago
@@ -1679,7 +1659,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            {/* Importe Bruto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Importe Bruto
@@ -1697,7 +1677,7 @@ function FormularioPrestacion({
               </div>
             </div>
 
-            {/* Vigencia */}
+            {}
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
@@ -1741,7 +1721,7 @@ function FormularioPrestacion({
               </div>
             </div>
 
-            {/* Adjunto */}
+            {}
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
               <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} />
@@ -1750,7 +1730,7 @@ function FormularioPrestacion({
         </CardContent>
       </Card>
 
-      {/* Tabulador */}
+      {}
       <TabuladorNiveles
         nivelCategoria={datosRenovacion?.nivelCategoria}
         importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeBruto}
@@ -1759,7 +1739,7 @@ function FormularioPrestacion({
         secretaria={secretariaConfirmada || secretariaInput}
       />
 
-      {/* Objeto */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1818,7 +1798,7 @@ function FormularioPrestacion({
           </div>
         </CardContent>
       </Card>
-      {/* Perfil */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1878,7 +1858,7 @@ function FormularioPrestacion({
 }
 function FormularioNombramiento({
   prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
-  tipoAdministracionUsuario = "centralizada",
+  tipoAdministracionUsuario = "centralizada", initialData,
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
@@ -1889,6 +1869,7 @@ function FormularioNombramiento({
   claveReportePlazas?: string | null
   catalogoUAs?: { clave: string; nombre: string }[]
   tipoAdministracionUsuario?: "centralizada" | "paraestatal"
+  initialData?: Partial<FormularioData>
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [importeNeto,    setImporteNeto]    = useState(
@@ -1922,10 +1903,9 @@ function FormularioNombramiento({
   const [secretariaConfirmada, setSecretariaConfirmada] = useState(datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : ""))
   const [showSugerencias, setShowSugerencias] = useState(false)
   const [unidadAdscripcion, setUnidadAdscripcion] = useState(
-    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? ""
-
+    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? initialData?.unidadAdministrativa ?? ""
   )
-  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? "")
+  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? initialData?.unidadAdministrativa ?? "")
   const [urgSeleccionada, setUrgSeleccionada] = useState(
     datosRenovacion?.unidadResponsableGasto ?? ""
   )
@@ -1952,6 +1932,8 @@ function FormularioNombramiento({
   const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
     datosRenovacion?.tipoActividad
       ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
+      : initialData?.tipoActividades
+      ? initialData.tipoActividades.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
       : ""
   )
   const tipoAdministracion = tipoAdministracionUsuario
@@ -2083,7 +2065,6 @@ function FormularioNombramiento({
         </div>
       )}
 
-      {/* I. Datos Generales */}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2094,7 +2075,7 @@ function FormularioNombramiento({
         <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
           <div className="grid gap-3 md:grid-cols-2">
 
-            {/* Secretaria  */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Secretaría / Dependencia / Organismo
@@ -2105,8 +2086,7 @@ function FormularioNombramiento({
               </div>
             </div>
 
-
-            {/* Unidad Administrativa de Adscripción */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Administrativa de Adscripción
@@ -2114,7 +2094,7 @@ function FormularioNombramiento({
               </Label>
               {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground font-semibold font-mono">{numeroUA}</span>
+                  <span className="text-sm text-muted-foreground font-semibold font-mono">{fmtClave(numeroUA)}</span>
                 </div>
               ) : clavesAdscripcion.length > 0 ? (
                 <Select
@@ -2130,7 +2110,7 @@ function FormularioNombramiento({
                   </SelectTrigger>
                   <SelectContent>
                     {clavesAdscripcion.map((u) => (
-                      <SelectItem key={u.nombre} value={u.clave} className="font-mono">{fmtClave(u.clave)}</SelectItem>
+                      <SelectItem key={u.nombre} value={u.clave} textValue={fmtClave(u.clave)} className="font-mono">{fmtClave(u.clave)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -2145,7 +2125,7 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {/* Unidad Responsable del Gasto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Responsable del Gasto
@@ -2182,7 +2162,7 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {/* Programa o Proyecto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programa o Proyecto
@@ -2232,7 +2212,7 @@ function FormularioNombramiento({
                 />
               </div>
 
-              {/* Tipo de Actividad */}
+              {}
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Tipo de Actividad
@@ -2266,20 +2246,18 @@ function FormularioNombramiento({
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Número de Personas a Contratar
-                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
                 </Label>
                 <Input
                   type="number" min={1}
                   value={numeroPrestadores}
-                  onChange={(e) => { if (!bloqueadoPorRenovacion) setNumeroPrestadores(e.target.value) }}
+                  onChange={(e) => setNumeroPrestadores(e.target.value)}
                   placeholder="Ej. 2"
-                  className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
-                  readOnly={bloqueadoPorRenovacion}
+                  className="bg-background"
                 />
               </div>
             </>
 
-            {/* Tipo de Pago */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Pago
@@ -2303,7 +2281,7 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {/* Importe Neto */}
+            {}
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Importe Neto
@@ -2321,7 +2299,7 @@ function FormularioNombramiento({
               </div>
             </div>
 
-            {/* Vigencia */}
+            {}
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
@@ -2406,7 +2384,6 @@ function FormularioNombramiento({
           />
         </CardContent>
       </Card>
-
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
@@ -2566,7 +2543,6 @@ function FormularioNombramiento({
         </CardContent>
       </Card>
 
-      {/* VIII. Perfil */}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2782,16 +2758,27 @@ function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSol
   }
   return faltantes
 }
+const MESES_LOWER_BUILD = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+
+function periodoNombreAMes(nombre: string): number {
+  const lower = (nombre ?? "").toLowerCase()
+  for (let i = 0; i < MESES_LOWER_BUILD.length; i++) {
+    if (lower.includes(MESES_LOWER_BUILD[i])) return i + 1
+  }
+  return new Date().getMonth() + 1
+}
+
 function buildSolicitudPayload({
-  usuarioId, tipo, regimenPeriodo, esExtemporanea, esRenovacion, folioSeleccionado, formData,
+  usuarioId, tipo, regimenPeriodo, periodoNombre, esExtemporanea, esRenovacion, folioSeleccionado, formData,
 }: {
-  usuarioId: string; tipo: TipoSolicitud; regimenPeriodo: string; esExtemporanea: boolean
+  usuarioId: string; tipo: TipoSolicitud; regimenPeriodo: string; periodoNombre: string; esExtemporanea: boolean
   esRenovacion: string; folioSeleccionado: string; formData: Partial<FormularioData>
 }) {
   return {
     usuarioId,
     tipo_solicitud: tipo === "prestacion" ? "Prestacion de Servicios" : "Nombramiento Tiempo Det.",
-    periodoId:             1,
+    periodoMes:  periodoNombreAMes(periodoNombre),
+    periodoAnio: new Date().getFullYear(),
     esExtemporanea,
     secretaria:            formData.secretaria            ?? null,
     unidad_administrativa: formData.unidadAdministrativa  ?? null,
@@ -2815,7 +2802,6 @@ function buildSolicitudPayload({
     responsabilidades:     formData.responsabilidades    ?? [],
     marco_normativo:       formData.marcoNormativo         ?? [],
     condiciones_riesgos:   formData.condicionesRiesgos    ?? [],
-    resguardo_activos:     formData.resguardoActivos       ?? null,
     escolaridad:           formData.escolaridad            ?? null,
     comp_adm:              formData.compAdm              ?? null,
     comp_tec:              formData.compTec              ?? null,
@@ -2841,7 +2827,7 @@ export type EditSolicitudPayload = {
   periodo: string
   formData: Partial<FormularioData>
 }
-export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSolicitudPayload }) {
+export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicitud?: EditSolicitudPayload; onAfterSave?: () => void }) {
   const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
   const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")
   const [esRenovacion,        setEsRenovacion]        = useState<string>("")
@@ -2861,6 +2847,14 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
   const [folioBorradorGuardado, setFolioBorradorGuardado] = useState<string>("")
   const [formData, setFormData] = useState<Partial<FormularioData>>(editSolicitud?.formData ?? {})
   const [archivoAdjunto, setArchivoAdjunto] = useState<File | null>(null)
+
+  useEffect(() => {
+    if ((borradorGuardado || enviado) && editSolicitud?.id && onAfterSave) {
+      const t = setTimeout(onAfterSave, 1500)
+      return () => clearTimeout(t)
+    }
+  }, [borradorGuardado, enviado, editSolicitud?.id, onAfterSave])
+
   const handleFormChange = useCallback((data: Partial<FormularioData>) => {
     setFormData(prev => ({ ...prev, ...data }))
   }, [])
@@ -2895,9 +2889,8 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
     fetchCentralizadaTree().then(setCatalogoTree).catch(() => {})
   }, [])
 
-
   useEffect(() => {
-    try { sessionStorage.removeItem("sisodi_folios_recientes") } catch { /* ignore */ }
+    try { sessionStorage.removeItem("sisodi_folios_recientes") } catch {  }
   }, [])
   useEffect(() => {
     if (esRenovacion !== "si") return
@@ -3006,7 +2999,6 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
     const exacta = todas.find((s) => norm(s) === norm(raiz))
     return exacta ?? raiz
   }, [user, secretariaFrescaTexto])
-
 
   const userUAOriginal = useMemo(() => {
     const texto = user?.secretariaTexto ?? secretariaFrescaTexto ?? null
@@ -3145,7 +3137,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
       if (!usuarioId) { setErrorBorrador("No se pudo identificar al usuario."); setGuardandoBorrador(false); return }
 
       if (editSolicitud?.id) {
-        const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: false, esRenovacion, folioSeleccionado, formData })
+        const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: false, esRenovacion, folioSeleccionado, formData })
         const res = await fetch("/api/solicitudes", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -3155,7 +3147,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al actualizar el borrador."); setGuardandoBorrador(false); return }
         setFolioBorradorGuardado(json.data?.folio_justificacion ?? editSolicitud.id)
       } else {
-        const payload = { ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: false, esRenovacion, folioSeleccionado, formData }), estado_nombre: "Borrador" }
+        const payload = { ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: false, esRenovacion, folioSeleccionado, formData }), estado_nombre: "Borrador" }
         const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         const json = await res.json()
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al guardar el borrador."); setGuardandoBorrador(false); return }
@@ -3179,7 +3171,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
         let solicitudId: number | undefined
 
         if (editSolicitud?.id) {
-          const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
+          const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
           const res = await fetch("/api/solicitudes", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -3190,7 +3182,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
           solicitudId = Number(editSolicitud.id)
           setFolioGenerado(json.data?.folio_justificacion ?? editSolicitud.id)
         } else {
-          const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
+          const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData })
           const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
           const json = await res.json()
           if (!res.ok || !json.ok) { setErrorEnvio(json.error ?? "Error al registrar la solicitud."); setEnviando(false); return }
@@ -3205,7 +3197,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
             fd.append("file", archivoAdjunto)
             fd.append("solicitudId", String(solicitudId))
             await fetch("/api/adjunto", { method: "POST", body: fd })
-          } catch { /* no bloquear el flujo si falla el adjunto */ }
+          } catch {  }
         }
 
         const patchRes = await fetch("/api/validacion", {
@@ -3257,6 +3249,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
     )
   }
   if (borradorGuardado) {
+    const esEdicion = !!editSolicitud?.id
     return (
       <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
         <Card className="shadow-sm border-2 border-muted">
@@ -3265,17 +3258,25 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
               <Save className="h-9 w-9 text-muted-foreground" />
             </div>
             <div className="flex flex-col items-center gap-1 text-center">
-              <p className="text-lg font-semibold text-card-foreground">Borrador guardado correctamente</p>
-              <p className="text-sm text-muted-foreground">Puede continuar la captura desde "Mis Solicitudes" → pestaña "Borradores".</p>
+              <p className="text-lg font-semibold text-card-foreground">
+                {esEdicion ? "Cambios guardados correctamente" : "Borrador guardado correctamente"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {esEdicion
+                  ? "Los cambios han sido guardados. Puede cerrar esta pantalla."
+                  : "Puede continuar la captura desde \"Mis Solicitudes\" → pestaña \"Borradores\"."}
+              </p>
             </div>
             {folioBorradorGuardado && (
               <Badge className="bg-muted text-muted-foreground border-0 text-sm px-4 py-1.5">Folio: {folioBorradorGuardado}</Badge>
             )}
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={handleReset}>
-                <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
-              </Button>
-            </div>
+            {!esEdicion && (
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={handleReset}>
+                  <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -3283,9 +3284,13 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
   }
   return (
     <PageLayout title="Nueva solicitud" description="Inicia el registro de una solicitud para su análisis y emisión de dictamen u opinión técnica funcional.">
-      <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
-        <StepIndicator step={step} tipo={tipo} />
+      <div className="py-2 -mx-4 px-4 -mt-3 mb-1">
+        <div className="max-w-4xl mx-auto w-full flex justify-center">
+          <StepIndicator step={step} tipo={tipo} />
+        </div>
       </div>
+
+
       {step === "tipo" && (
         <>
           {calCargando && (
@@ -3395,7 +3400,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
                         <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-semibold text-destructive">Período vencido — No se puede Registrar</span>
-                          <span className="text-xs text-muted-foreground">La Fecha límite DO ({periodoInfo.row.limiteDO}) ya Expiro .</span>
+                          <span className="text-xs text-muted-foreground">La Fecha  límite DO ({periodoInfo.row.limiteDO}) ya Expiro .</span>
                         </div>
                       </div>
                     )}
@@ -3406,44 +3411,15 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
           </Card>
 
           <Card className={`shadow-sm border-border ${(periodoVencido && !permisoActivo) || !calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
-            <CardHeader className="px-4 pt-3 pb-1">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                <FilePlus className="h-4 w-4 text-secondary" />Seleccione Tipo de Solicitud
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 px-4 pb-3 pt-0">
-              <RadioGroup value={tipo} onValueChange={(v) => {
-                const next = v as TipoSolicitud
-                if (next === "prestacion"   && regimenPeriodo === "nombramiento") return
-                if (next === "nombramiento" && regimenPeriodo !== "nombramiento") return
-                setTipo(next)
-              }} className="flex flex-col gap-3">
-                <label htmlFor="tipo-prestacion" className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-2.5 transition-colors ${tipo === "prestacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
-                  <RadioGroupItem value="prestacion" id="tipo-prestacion" className="mt-0.5" disabled={regimenPeriodo === "nombramiento"} />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-card-foreground">Justificación de Prestación de Servicios</span>
-                    <span className="text-xs text-muted-foreground">Honorarios / Honorarios Asimilados a Salarios</span>
-                  </div>
-                </label>
-                <label htmlFor="tipo-nombramiento" className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-2.5 transition-colors ${tipo === "nombramiento" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
-                  <RadioGroupItem value="nombramiento" id="tipo-nombramiento" className="mt-0.5" disabled={regimenPeriodo !== "nombramiento"} />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-card-foreground">Justificación para Nombramiento por Tiempo Determinado</span>
-                    <span className="text-xs text-muted-foreground">Nombramiento por Tiempo Determinado</span>
-                  </div>
-                </label>
-              </RadioGroup>
-              <div className="flex justify-end pt-2">
-                <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-                  Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
-                </Button>
-              </div>
+            <CardContent className="flex justify-end px-2 py-2">
+              <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+                Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
             </CardContent>
           </Card>
         </>
       )}
-
 
       {step === "renovacion" && (
         <Card className="shadow-sm border-border">
@@ -3603,24 +3579,25 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
         </Card>
       )}
 
-      {/* PASO 3 — FORMULARIO */}
-      {step === "formulario" && (
-        <>
-          <div className="flex items-center gap-3 flex-wrap">
-            <Badge className="bg-primary text-primary-foreground">
-              {tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento por Tiempo Determinado"}
-            </Badge>
-            {prefilled && datosRenovacion && (
-              <Badge variant="outline" className="border-secondary text-secondary gap-1">
-                <Lock className="h-3 w-3" />Renovación
-              </Badge>
-            )}
-            {excelRows.length > 0 && (
-              <Badge variant="outline" className="border-border text-muted-foreground text-xs">
-                Excel histórico activo ({excelRows.length} registros)
-              </Badge>
-            )}
-          </div>
+
+   {step === "formulario" && (
+     <>
+       <div className="flex flex-col gap-2">
+         <div>
+           <Button variant="outline" size="sm" onClick={handleBack} className="gap-1.5">
+             <ArrowLeft className="h-4 w-4" />Anterior
+           </Button>
+
+
+           {prefilled && datosRenovacion && (
+             <Badge variant="outline" className="border-secondary text-secondary gap-1">
+               <Lock className="h-3 w-3" />Renovación
+             </Badge>
+
+
+           )}
+         </div>
+       </div>
 
           {tipo === "prestacion" ? (
             <FormularioPrestacion
@@ -3651,6 +3628,7 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
               claveReportePlazas={userClaveReporte}
               catalogoUAs={catalogoUAsDelUsuario}
               tipoAdministracionUsuario={user?.tipoAdministracion ?? "centralizada"}
+              initialData={editSolicitud?.formData}
             />
           )}
 
@@ -3699,19 +3677,31 @@ export function NuevaSolicitudPage({ editSolicitud }: { editSolicitud?: EditSoli
                     <ArrowLeft className="mr-1.5 h-4 w-4" />Anterior
                   </Button>
                   <div className="flex items-center gap-3">
-                    <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador} className="gap-1.5">
-                      {guardandoBorrador
-                        ? <><Clock className="h-4 w-4 animate-spin" />Guardando...</>
-                        : <><Save className="mr-1.5 h-4 w-4" />Guardar Borrador</>
-                      }
-                    </Button>
-                    <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
-                      disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
-                      {enviando
-                        ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
-                        : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validación</>
-                      }
-                    </Button>
+                    {isEditingBorrador ? (
+                      <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
+                        disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}>
+                        {guardandoBorrador
+                          ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Guardando...</>
+                          : <><Save className="mr-1.5 h-4 w-4" />Guardar Cambios</>
+                        }
+                      </Button>
+                    ) : (
+                      <>
+                        <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador} className="gap-1.5">
+                          {guardandoBorrador
+                            ? <><Clock className="h-4 w-4 animate-spin" />Guardando...</>
+                            : <><Save className="mr-1.5 h-4 w-4" />Guardar Borrador</>
+                          }
+                        </Button>
+                        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
+                          disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
+                          {enviando
+                            ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
+                            : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validación</>
+                          }
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

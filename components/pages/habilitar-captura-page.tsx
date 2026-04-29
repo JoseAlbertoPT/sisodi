@@ -41,7 +41,7 @@ export function HabilitarCapturaPage() {
   const usuarioSeleccionado = usuarios.find((u) => u.id === usuarioId) ?? null
 
   const permisosUsuario: PermisoCaptura[] = usuarioSeleccionado
-    ? getPermisosUsuario(usuarioSeleccionado.nombre)
+    ? getPermisosUsuario(usuarioSeleccionado.id)
     : []
   const activos = permisosUsuario.filter((p) => p.active && !p.used)
 
@@ -56,7 +56,7 @@ export function HabilitarCapturaPage() {
   const handleHabilitar = () => {
     if (!regimen || !periodo || !usuarioSeleccionado) return
     habilitarPermiso({
-      userId:    usuarioSeleccionado.nombre,
+      userId:    usuarioSeleccionado.id,
       regimen,
       periodo,
       grantedBy: currentUser?.nombre ?? "Administrador",
@@ -67,7 +67,7 @@ export function HabilitarCapturaPage() {
     setTimeout(() => setSaved(false), 2500)
   }
 
-  // All active permissions across all users (for summary table)
+  
   const todosActivos = permisos.filter((p) => p.active && !p.used)
 
   return (
@@ -75,7 +75,7 @@ export function HabilitarCapturaPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
 
-        {/* ── Otorgar permiso ── */}
+        {}
         <Card className="shadow-sm border-border">
           <CardHeader className="px-5 pt-4 pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -141,7 +141,7 @@ export function HabilitarCapturaPage() {
           </CardContent>
         </Card>
 
-        {/* ── Permisos del usuario seleccionado ── */}
+        {}
         <Card className="shadow-sm border-border">
           <CardHeader className="px-5 pt-4 pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -166,7 +166,7 @@ export function HabilitarCapturaPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => revocarPermiso(p.userId, p.regimen, p.periodo)}
+                      onClick={() => revocarPermiso(p.id)}
                       className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                       title="Revocar permiso"
                     >
@@ -180,7 +180,7 @@ export function HabilitarCapturaPage() {
         </Card>
       </div>
 
-      {/* ── Resumen global ── */}
+      {}
       {todosActivos.length > 0 && (
         <>
           <Separator />
@@ -201,7 +201,7 @@ export function HabilitarCapturaPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => revocarPermiso(p.userId, p.regimen, p.periodo)}
+                      onClick={() => revocarPermiso(p.id)}
                       className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                       title="Revocar permiso"
                     >

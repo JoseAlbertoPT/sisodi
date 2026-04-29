@@ -16,8 +16,10 @@ export interface PermisosUser {
 
 export async function fetchMyMenus(rolNombre: string): Promise<MenuNode[]> {
   const res = await fetch(`/api/menus?rol=${encodeURIComponent(rolNombre)}`)
-  if (!res.ok) throw new Error("Error al cargar menús")
-  return res.json()
+  if (res.status === 404) return []
+  if (!res.ok) throw new Error(`Error al cargar menús (${res.status})`)
+  const data = await res.json()
+  return Array.isArray(data) ? data : []
 }
 
 export async function fetchMenusTree(): Promise<MenuNode[]> {

@@ -1,15 +1,15 @@
-// ── Calendario de Recepcion – tipos y utilidades (datos vienen del API/store) ──
+
 
 export interface PeriodoCap3000 {
   mes: string
-  fechaFin: string   // último día del periodo (dd/mm/yyyy)
+  fechaFin: string   
   limiteDO: string
   limiteDGRH: string
 }
 
 export interface PeriodoCap1000 {
   quincena: string
-  fechaFin: string   // último día del periodo (dd/mm/yyyy)
+  fechaFin: string   
   limiteDO: string
   limiteDGRH: string
 }
@@ -21,8 +21,6 @@ export interface PeriodoVigenciaResult {
   limiteDO: string | null
 }
 
-// Legacy mock data — kept for backward compatibility with nueva-solicitud-page
-// These are fallback values; the real data comes from the calendario API/store
 export const CAP_3000: PeriodoCap3000[] = [
   { mes: "Enero",      fechaFin: "31/01/2026", limiteDO: "07/01/2026", limiteDGRH: "09/01/2026" },
   { mes: "Febrero",    fechaFin: "28/02/2026", limiteDO: "09/01/2026", limiteDGRH: "19/01/2026" },
@@ -65,16 +63,11 @@ export const CAP_1000: PeriodoCap1000[] = [
 
 export const NOMBRAMIENTO_TD: PeriodoCap1000[] = CAP_1000
 
-/** Parse dd/mm/yyyy to Date */
 export function parseDateDMY(s: string): Date {
   const [d, m, y] = s.split("/").map(Number)
   return new Date(y, m - 1, d)
 }
 
-/**
- * Returns the last calendar date of the given periodo directly from the
- * calendar data (fechaFin field), so there is no computed guesswork.
- */
 export function getPeriodoEndDate(
   regimen: RegimenPeriodo,
   periodoSeleccionado: string,
@@ -88,10 +81,6 @@ export function getPeriodoEndDate(
   return row ? parseDateDMY(row.fechaFin) : null
 }
 
-/**
- * Returns whether the given periodo is still within the DO deadline
- * for the given regimen.
- */
 export function isPeriodoVigente(
   regimen: RegimenPeriodo,
   periodoSeleccionado: string,
@@ -115,9 +104,6 @@ export function isPeriodoVigente(
   return { vigente: today <= limiteDODate, limiteDO: row.limiteDO }
 }
 
-/**
- * Validates that regimen matches the solicitud tipo.
- */
 export function isRegimenTipoCompatible(
   regimen: RegimenPeriodo,
   tipo: "Prestacion de Servicios" | "Nombramiento Tiempo Determinado",

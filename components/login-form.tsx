@@ -11,13 +11,8 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 
-// ══════════════════════════════════════════════════════════════════
-// Modal: Recuperar contraseña (RFC → código → nueva contraseña)
-// ══════════════════════════════════════════════════════════════════
-
 function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
   type Paso = "rfc" | "codigo" | "nueva" | "exito"
-
   const [paso, setPaso] = useState<Paso>("rfc")
   const [rfc, setRfc] = useState("")
   const [rfcError, setRfcError] = useState("")
@@ -151,7 +146,6 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
       ))}
     </div>
   )
-
   return (
     <div
       className="relative flex min-h-screen items-center bg-cover bg-center bg-no-repeat px-6"
@@ -160,7 +154,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
       <div className="w-full max-w-md ml-auto mr-[5%] lg:mr-[8%]">
         <div className="rounded-3xl bg-[#808078]/80 backdrop-blur-md shadow-2xl flex flex-col overflow-hidden">
 
-          {/* Header */}
+
           <div className="flex flex-col items-center gap-3 px-10 pt-10 pb-6">
             <Image src="/LogoQuetzal.svg" alt="Logo" width={70} height={70} className="opacity-90" />
             <h1 className="text-lg font-medium text-white/90 tracking-wide">Recuperar contraseña</h1>
@@ -171,8 +165,6 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
               {paso === "exito" && "Contraseña actualizada exitosamente"}
             </p>
           </div>
-
-          {/* Paso 1: RFC */}
           {paso === "rfc" && (
             <div className="px-10 pb-10 flex flex-col gap-5">
               <StepIndicator />
@@ -194,8 +186,6 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           )}
-
-          {/* Paso 2: Código */}
           {paso === "codigo" && (
             <div className="px-10 pb-10 flex flex-col gap-5">
               <StepIndicator />
@@ -226,8 +216,6 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           )}
-
-          {/* Paso 3: Nueva contraseña */}
           {paso === "nueva" && (
             <div className="px-10 pb-10 flex flex-col gap-5">
               <StepIndicator />
@@ -271,8 +259,6 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           )}
-
-          {/* Éxito */}
           {paso === "exito" && (
             <div className="px-10 pb-10 flex flex-col items-center gap-5">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
@@ -291,44 +277,41 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
     </div>
   )
 }
-
-// ══════════════════════════════════════════════════════════════════
-// Modal: Cambio de contraseña obligatorio (primer ingreso)
-// ══════════════════════════════════════════════════════════════════
-
 function ModalCambioContrasena({
   username, onSuccess, onCancel,
 }: { username: string; onSuccess: () => void; onCancel: () => void }) {
-  const { changePassword } = useAuth()
+  const { changePassword, logout } = useAuth()
 
+  const [passwordActual, setPasswordActual] = useState("")
   const [nuevaPassword, setNuevaPassword] = useState("")
   const [confirmarPassword, setConfirmarPassword] = useState("")
+  const [showActual, setShowActual] = useState(false)
   const [showNueva, setShowNueva] = useState(false)
   const [showConfirmar, setShowConfirmar] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [exito, setExito] = useState(false)
 
-  const reglas = [
-    { label: "Mínimo 8 caracteres", ok: nuevaPassword.length >= 8 },
-    { label: "Al menos una mayúscula", ok: /[A-Z]/.test(nuevaPassword) },
-    { label: "Al menos un número", ok: /[0-9]/.test(nuevaPassword) },
-    { label: "Las contraseñas coinciden", ok: nuevaPassword.length > 0 && nuevaPassword === confirmarPassword },
-  ]
-  const todasOk = reglas.every((r) => r.ok)
-
+  const todasOk =
+    nuevaPassword.length >= 8 && nuevaPassword === confirmarPassword
   const handleGuardar = async () => {
     setError("")
+    if (!passwordActual) { setError("Ingrese su contraseña actual."); return }
     if (!todasOk) { setError("Por favor cumpla todos los requisitos."); return }
     setLoading(true)
     try {
+      const res = await fetch("/api/auth?action=login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rfc: username, password: passwordActual }),
+      })
+      if (!res.ok) { setError("La contraseña actual es incorrecta."); setLoading(false); return }
       await changePassword(username, nuevaPassword)
       setExito(true)
-      setTimeout(() => onSuccess(), 1800)
+      setTimeout(() => { logout(); onSuccess() }, 2500)
     } catch { setError("Error al cambiar la contraseña. Intente de nuevo.") }
     finally { setLoading(false) }
   }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -347,19 +330,27 @@ function ModalCambioContrasena({
               <CheckCircle2 className="h-8 w-8 text-green-400" />
             </div>
             <span className="text-base font-semibold text-white">¡Contraseña actualizada!</span>
-            <span className="text-sm text-white/60 text-center">Ingresando al sistema...</span>
+            <span className="text-sm text-white/60 text-center">Inicie sesión con su nueva contraseña.</span>
           </div>
         ) : (
           <div className="flex flex-col gap-5 px-10 py-6">
             <div className="rounded-2xl bg-white/10 px-4 py-3">
               <p className="text-xs text-white/60 leading-relaxed">
-                Su cuenta fue creada con una contraseña temporal. Por seguridad, debe establecer una nueva contraseña personal.
+                Por seguridad . Debe establecer una nueva contraseña personal.
               </p>
+            </div>
+            <div className="relative">
+              <Input type={showActual ? "text" : "password"} placeholder="Contraseña actual" value={passwordActual}
+                onChange={(e) => { setPasswordActual(e.target.value); setError("") }}
+                className="h-14 rounded-full bg-white border-0 text-base px-6 pr-12" autoFocus />
+              <button type="button" onClick={() => setShowActual(!showActual)} className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                {showActual ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
             <div className="relative">
               <Input type={showNueva ? "text" : "password"} placeholder="Nueva contraseña" value={nuevaPassword}
                 onChange={(e) => { setNuevaPassword(e.target.value); setError("") }}
-                className="h-14 rounded-full bg-white border-0 text-base px-6 pr-12" autoFocus />
+                className="h-14 rounded-full bg-white border-0 text-base px-6 pr-12" />
               <button type="button" onClick={() => setShowNueva(!showNueva)} className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showNueva ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
@@ -372,20 +363,13 @@ function ModalCambioContrasena({
                 {showConfirmar ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
-            {nuevaPassword.length > 0 && (
-              <div className="rounded-2xl bg-white/10 px-4 py-3 flex flex-col gap-1.5">
-                {reglas.map((r) => (
-                  <div key={r.label} className="flex items-center gap-2">
-                    <div className={`h-1.5 w-1.5 rounded-full ${r.ok ? "bg-green-400" : "bg-white/20"}`} />
-                    <span className={`text-xs ${r.ok ? "text-green-300" : "text-white/40"}`}>{r.label}</span>
-                  </div>
-                ))}
-              </div>
+            {nuevaPassword.length > 0 && nuevaPassword.length < 8 && (
+              <p className="text-xs text-white/50 text-center">Mínimo 8 caracteres</p>
             )}
             {error && <div className="rounded-full bg-red-500/20 px-5 py-2.5 text-sm text-white text-center border border-red-400/30">{error}</div>}
             <div className="flex gap-3">
               <button type="button" onClick={onCancel} className="flex-1 h-12 rounded-full border border-white/20 text-white/70 hover:text-white text-sm transition-colors">Cerrar sesión</button>
-              <button type="button" onClick={handleGuardar} disabled={!todasOk || loading}
+              <button type="button" onClick={handleGuardar} disabled={!passwordActual || !todasOk || loading}
                 className="flex-1 h-12 rounded-full bg-[#4A5249] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors disabled:opacity-50">
                 {loading ? "Guardando..." : "Guardar contraseña"}
               </button>
@@ -396,11 +380,22 @@ function ModalCambioContrasena({
     </div>
   )
 }
-
-// ══════════════════════════════════════════════════════════════════
-// Login principal
-// ══════════════════════════════════════════════════════════════════
-
+export function ForzarCambioContrasena() {
+  const { user, logout } = useAuth()
+  if (!user) return null
+  return (
+    <div
+      className="relative flex min-h-screen bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/LOG-IN_SISODIJ-01.jpg')" }}
+    >
+      <ModalCambioContrasena
+        username={user.rfc}
+        onSuccess={() => {}}
+        onCancel={() => logout()}
+      />
+    </div>
+  )
+}
 export function LoginForm() {
   const { login, logout } = useAuth()
 
@@ -413,11 +408,9 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [mostrarModalCambio, setMostrarModalCambio] = useState(false)
   const [mostrarModalRecuperar, setMostrarModalRecuperar] = useState(false)
-
   if (mostrarModalRecuperar) {
     return <ModalRecuperarContrasena onClose={() => setMostrarModalRecuperar(false)} />
   }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -441,7 +434,6 @@ export function LoginForm() {
       setLoading(false)
     }
   }
-
   return (
     <>
       <div
@@ -450,20 +442,16 @@ export function LoginForm() {
       >
         <div className="w-full max-w-xl ml-auto mr-[5%] lg:mr-[8%] mb-[8%]">
           <div className="rounded-3xl bg-[#808078]/75 backdrop-blur-md shadow-2xl px-16 py-20 flex flex-col items-center gap-12">
-            {/* Logo */}
+
             <div className="flex flex-col items-center gap-4">
               <Image src="/LogoQuetzal.svg" alt="Logo Quetzal" width={110} height={110} className="opacity-90" />
               <h1 className="text-2xl font-medium text-white/90 tracking-wide">Inicia sesión</h1>
             </div>
-
-            {/* Error */}
             {error && (
               <div className="w-full rounded-full bg-red-500/20 px-5 py-3 text-base text-white text-center border border-red-400/30">
                 {error}
               </div>
             )}
-
-            {/* Form */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-7 w-full">
               <Input
                 id="rfc"
@@ -499,24 +487,14 @@ export function LoginForm() {
                 {loading ? "INGRESANDO..." : "LOGIN"}
               </button>
             </form>
-
-            {/* Recuperar */}
-            <button
-              type="button"
-              onClick={() => setMostrarModalRecuperar(true)}
-              className="text-sm text-white/60 hover:text-white/90 transition-colors"
-            >
-              Recuperar contraseña
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Modal cambio contraseña obligatorio */}
       {mostrarModalCambio && (
         <ModalCambioContrasena
           username={rfc.trim().toUpperCase()}
-          onSuccess={() => setMostrarModalCambio(false)}
+          onSuccess={() => { setMostrarModalCambio(false); setRfc(""); setPassword("") }}
           onCancel={() => {
             logout()
             setMostrarModalCambio(false)

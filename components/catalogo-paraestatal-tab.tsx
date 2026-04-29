@@ -32,7 +32,6 @@ function reorder<T>(list: T[], from: number, to: number): T[] {
   return result
 }
 
-/** Normaliza nombre: minúsculas + sin acentos para comparar duplicados */
 function normNombre(s: string) {
   return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
 }

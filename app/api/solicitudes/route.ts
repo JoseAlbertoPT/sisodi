@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+async function resolverPeriodoId(periodoId?: number, mes?: number, anio?: number): Promise<number | undefined> {
+  if (mes && anio) {
+    let periodo = await prisma.periodo.findUnique({ where: { mes_anio: { mes, anio } } })
+    if (!periodo) {
+      const primerDia = new Date(Date.UTC(anio, mes - 1, 1))
+      const ultimoDia = new Date(Date.UTC(anio, mes, 0))
+      periodo = await prisma.periodo.create({ data: { mes, anio, fecha_inicio: primerDia, fecha_fin: ultimoDia } })
+    }
+    return periodo.id
+  }
+  return periodoId
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -52,7 +65,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const {
-      usuarioId, tipo_solicitud, periodoId, esExtemporanea,
+      usuarioId, tipo_solicitud, periodoId, periodoMes, periodoAnio, esExtemporanea,
       secretaria, unidad_administrativa, unidad_responsable,
       programa_proyecto, regimen, tipo_actividades, numero_prestadores,
       denominacion, vigencia_inicio, vigencia_fin, importe_bruto,
@@ -74,7 +87,7 @@ export async function POST(req: NextRequest) {
       where:  { id: usuarioId },
       select: { secretaria_id: true },
     })
-    // Contador independiente por secretaría (centralizado) o compartido para paraestatal
+    
     const tipoFolioJUST = usuarioCreador?.secretaria_id
       ? `JUST-${usuarioCreador.secretaria_id}`
       : "JUST-P"
@@ -100,7 +113,7 @@ export async function POST(req: NextRequest) {
         usuario_id:            usuarioId,
         estado_id:             estadoInicial.id,
         tipo_solicitud,
-        periodo_id:            periodoId ?? null,
+        periodo_id:            ((await resolverPeriodoId(periodoId, periodoMes, periodoAnio)) ?? periodoId ?? 1) as number,
         es_extemporanea:       esExtemporanea ?? false,
         secretaria:            secretaria ?? null,
         unidad_administrativa: unidad_administrativa ?? null,
@@ -141,7 +154,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Generate folios based on state
+    
     const fechaCreacion = nueva.fecha_creacion ?? new Date()
     const year          = fechaCreacion.getFullYear()
     const esBorrador    = estadoNombre === "Borrador"
@@ -266,6 +279,10 @@ export async function PATCH(req: NextRequest) {
       data.vigencia_inicio = campos.vigencia_inicio ? new Date(campos.vigencia_inicio) : null
     if (campos.vigencia_fin !== undefined)
       data.vigencia_fin = campos.vigencia_fin ? new Date(campos.vigencia_fin) : null
+    if (campos.periodoMes !== undefined && campos.periodoAnio !== undefined) {
+      const pid = await resolverPeriodoId(undefined, Number(campos.periodoMes), Number(campos.periodoAnio))
+      if (pid) data.periodo_id = pid
+    }
 
     const updated = await prisma.solicitud.update({
       where: { id: solicitudId },

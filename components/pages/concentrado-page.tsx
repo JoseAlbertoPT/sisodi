@@ -69,7 +69,7 @@ export function ConcentradoPage() {
         </Select>
       </div>
 
-      {/* Chart */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -102,7 +102,7 @@ export function ConcentradoPage() {
         </CardContent>
       </Card>
 
-      {/* Table */}
+      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground">

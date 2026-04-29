@@ -144,17 +144,28 @@ model historial_solicitud {
 }
 
 model menu {
-  id        Int        @id @default(autoincrement())
-  nombre    String     @db.VarChar(150)
-  ruta      String?    @db.VarChar(200)
-  orden     Int?       @default(0)
-  activo    Boolean?   @default(true)
-  icono     String?    @db.VarChar(50)
-  key       String?    @db.VarChar(50)
-  parent_id Int?
-  parent    menu?      @relation("menu_hierarchy", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children  menu[]     @relation("menu_hierarchy")
-  rol_menu  rol_menu[]
+  id           Int            @id @default(autoincrement())
+  nombre       String         @db.VarChar(150)
+  ruta         String?        @db.VarChar(200)
+  orden        Int?           @default(0)
+  activo       Boolean?       @default(true)
+  icono        String?        @db.VarChar(50)
+  key          String?        @db.VarChar(50)
+  parent_id    Int?
+  parent       menu?          @relation("menu_hierarchy", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children     menu[]         @relation("menu_hierarchy")
+  rol_menu     rol_menu[]
+  usuario_menu usuario_menu[]
+}
+
+model usuario_menu {
+  id         Int     @id @default(autoincrement())
+  usuario_id String  @db.Uuid
+  menu_id    Int
+  usuario    usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  menu       menu    @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([usuario_id, menu_id])
 }
 
 model periodo {
@@ -305,6 +316,7 @@ model usuario {
   permiso_captura       permiso_captura[]
   solicitudes_asignadas solicitud[]           @relation("solicitud_revisor_asignado")
   solicitud             solicitud[]
+  usuario_menu          usuario_menu[]
   area                  area?                 @relation(fields: [area_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   rol                   rol                   @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   organo_centralizado   organo_centralizado?  @relation(fields: [secretaria_id], references: [id], onUpdate: NoAction)
@@ -335,12 +347,14 @@ model historico {
 }
 
 model calendario {
-  id          Int    @id @default(autoincrement())
-  ejercicio   Int
-  limite_dgrh String @db.VarChar(20)
-  limite_do   String @db.VarChar(20)
-  periodo     String @db.VarChar(50)
-  regimen     String @db.VarChar(20)
+  id           Int     @id @default(autoincrement())
+  ejercicio    Int
+  limite_dgrh  String  @db.VarChar(20)
+  limite_do    String  @db.VarChar(20)
+  periodo      String  @db.VarChar(50)
+  regimen      String  @db.VarChar(20)
+  fecha_inicio String? @db.VarChar(20)
+  fecha_fin    String? @db.VarChar(20)
 
   @@unique([ejercicio, regimen, periodo])
 }

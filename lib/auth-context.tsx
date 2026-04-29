@@ -1,5 +1,7 @@
 "use client"
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from "react"
+
+const IDLE_MS = 60 * 60 * 1000
 
 interface User {
   id: string
@@ -31,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Cargar sesión desde localStorage solo en el cliente
+  
   useEffect(() => {
     try {
       const stored = localStorage.getItem(AUTH_KEY)
@@ -43,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Sincronizar localStorage cuando cambia el usuario
+  
   useEffect(() => {
     if (user) {
       localStorage.setItem(AUTH_KEY, JSON.stringify(user))
@@ -84,7 +86,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) setUser({ ...user, mustChangePassword: false })
   }
 
-  const logout = () => setUser(null)
+  const logout = useCallback(() => setUser(null), [])
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+
+    const reset = () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(logout, IDLE_MS)
+    }
+
+    const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"] as const
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }))
+    reset()
+
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, reset))
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [user, logout])
 
   return (
     <AuthContext.Provider

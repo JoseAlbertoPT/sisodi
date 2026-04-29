@@ -56,7 +56,7 @@ const MESES = [
   { value: "12", label: "Diciembre" },
 ]
 
-const ANIOS = ["2024", "2025", "2026"]
+const ANIOS = [ "2026"]
 const tooltipStyle = {
   backgroundColor: "#ffffff",
   border: "1px solid #d6d5cf",
@@ -151,14 +151,19 @@ function GraficaBarrasVertical({
   )
 }
 
-function GraficaEmisiones({ data }: { data: { secretaria: string; dictamenes: number; opiniones: number }[] }) {
+function GraficaEmisiones({ data, title, barKey, barColor }: {
+  data: { secretaria: string; dictamenes: number; opiniones: number }[]
+  title: string
+  barKey: "dictamenes" | "opiniones"
+  barColor: string
+}) {
   const truncate = (s: string, n = 13) => s.length > n ? s.slice(0, n) + "…" : s
-  const maxVal = Math.max(...data.map(d => d.dictamenes + d.opiniones), 0)
+  const maxVal = Math.max(...data.map(d => d[barKey] ?? 0), 0)
   if (data.length === 0) {
     return (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold text-card-foreground">Emisiones por Secretaría</CardTitle>
+          <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground py-8 text-center">Sin emisiones en el periodo seleccionado.</p>
@@ -171,17 +176,11 @@ function GraficaEmisiones({ data }: { data: { secretaria: string; dictamenes: nu
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-1">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <CardTitle className="text-sm font-semibold text-card-foreground">Emisiones por Secretaría</CardTitle>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: C_VERDE_OSCURO }} />
-              Dictámenes
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: C_AMBAR }} />
-              Opiniones
-            </span>
-          </div>
+          <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: barColor }} />
+            {barKey === "dictamenes" ? "Dictámenes" : "Opiniones"}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="pt-2">
@@ -211,19 +210,11 @@ function GraficaEmisiones({ data }: { data: { secretaria: string; dictamenes: nu
               domain={[0, Math.ceil(maxVal * 1.18)]}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-            <Bar dataKey="dictamenes" name="Dictámenes" fill={C_VERDE_OSCURO} radius={[5, 5, 0, 0]} barSize={16}>
+            <Bar dataKey={barKey} name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"} fill={barColor} radius={[5, 5, 0, 0]} barSize={24}>
               <LabelList
-                dataKey="dictamenes"
+                dataKey={barKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: C_VERDE_OSCURO }}
-                formatter={(v: number) => v > 0 ? v : ""}
-              />
-            </Bar>
-            <Bar dataKey="opiniones" name="Opiniones" fill={C_AMBAR} radius={[5, 5, 0, 0]} barSize={16}>
-              <LabelList
-                dataKey="opiniones"
-                position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: C_AMBAR }}
+                style={{ fontSize: 10, fontWeight: 600, fill: barColor }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -255,6 +246,7 @@ const COLORES_SECRETARIA = [
 ]
 const COLORES_TIPO: Record<string, string> = {
   Centralizada: C_VERDE_OSCURO,
+
   Paraestatal:  C_DORADO,
 }
 
@@ -453,55 +445,6 @@ function GraficaPrestadores({
     </Card>
   )
 }
-function GraficaRegimen({ data }: { data: { name: string; value: number; color: string }[] }) {
-  const filtered = data.filter(d => d.value > 0)
-  const total = filtered.reduce((s, d) => s + d.value, 0)
-  return (
-    <Card className="shadow-sm border-border">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold text-card-foreground">Distribución por Régimen</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={272}>
-            <PieChart>
-              <Pie
-                data={filtered}
-                cx="50%"
-                cy="45%"
-                innerRadius={60}
-                outerRadius={95}
-                paddingAngle={3}
-                dataKey="value"
-                strokeWidth={0}
-                >
-                {filtered.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-                <Label content={<CenterLabel total={total} label="solicitudes" />} position="center" />
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
-                verticalAlign="bottom"
-                iconSize={9}
-                iconType="circle"
-                wrapperStyle={{ fontSize: "11px", paddingTop: "10px", color: "#52504a" }}
-                formatter={(v, entry: any) => (
-                  <span style={{ color: "#52504a" }}>
-                    {v} <strong style={{ color: entry.color }}>({entry.payload.value})</strong>
-                  </span>
-                )}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 function GraficaSolicitudesTipo({
   centralizada, paraestatal,
 }: {
@@ -620,18 +563,19 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
     { label: "Número total de Prestadores de Servicio",                  value: data?.prestadores   ?? 0, icon: Users,       color: C_BURDEOS     },
     { label: "Justificaciones en Proceso",                               value: data?.enProceso     ?? 0, icon: Clock,       color: C_GRIS_VERDE  },
   ]
-  const regimenData = [
-    { name: "Honorarios",            value: data?.honorarios   ?? 0, color: C_OLIVA       },
-    { name: "Honorarios Asimilados", value: data?.asimilados   ?? 0, color: C_DORADO      },
-    { name: "Nombramiento",          value: data?.nombramiento ?? 0, color: C_VERDE_OSCURO },
-  ]
+  const { emisionesCentralizada, emisionesParaestatal } = (() => {
+    if (!data) return { emisionesCentralizada: [], emisionesParaestatal: [] }
+    const centralizada = data.emisionesPorSecretaria.filter(e => e.dictamenes > 0)
+    const paraestatal  = data.emisionesPorSecretaria.filter(e => e.opiniones > 0)
+    return { emisionesCentralizada: centralizada, emisionesParaestatal: paraestatal }
+  })()
   const mesFiltroLabel = mes === "todos"
     ? "todos los meses"
     : MESES.find(m => m.value === mes)?.label ?? mes
   return (
     <PageLayout
       title="Tablero Informativo"
-      description={`Indicadores y Gráficas del Sistema · ${anio}${mes !== "Todos" ? ` — ${mesFiltroLabel}` : ""}`}
+      description={`Indicadores y Gráficas del Sistema · Periodo  ${anio}${mes !== "Todos" ? ` — ${mesFiltroLabel}` : ""}`}
     >
       <div className="flex flex-wrap items-center gap-3">
         <Select value={anio} onValueChange={setAnio}>
@@ -675,29 +619,35 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
         ))}
       </div>
 
-      <Accordion type="multiple" defaultValue={["solicitudes", "emisiones", "prestadores"]} className="flex flex-col gap-3">
+      <Accordion type="multiple" defaultValue={["solicitudes", "Emisiones", "Prestadores"]} className="flex flex-col gap-3">
 
         <AccordionItem value="solicitudes" className="rounded-lg border border-border bg-card shadow-sm px-4">
           <AccordionTrigger className="text-sm font-semibold text-card-foreground hover:no-underline py-4">
             <span className="flex items-center gap-2">
               <BarChart2 className="h-4 w-4 text-secondary" />
-              Solicitudes por Secrtaria
+              Solicitudes por Secretaría
             </span>
           </AccordionTrigger>
           <AccordionContent className="pb-4">
-            <div className="grid gap-4 lg:grid-cols-2">
-              <GraficaBarrasVertical
-                title="Administración Centralizada"
-                data={data?.porSecretariaCentralizada ?? []}
-                color={C_VERDE_OSCURO}
-                emptyMsg="Sin solicitudes centralizadas en el periodo."
+            <div className="flex flex-col gap-4">
+              <GraficaSolicitudesTipo
+                centralizada={data?.porSecretariaCentralizada ?? []}
+                paraestatal={data?.porSecretariaParaestatal ?? []}
               />
-              <GraficaBarrasVertical
-                title="Administración Paraestatal"
-                data={data?.porSecretariaParaestatal ?? []}
-                color={C_DORADO}
-                emptyMsg="Sin solicitudes paraestatales en el periodo."
-              />
+              <div className="grid gap-4 lg:grid-cols-2">
+                <GraficaBarrasVertical
+                  title="Administración Centralizada"
+                  data={data?.porSecretariaCentralizada ?? []}
+                  color={C_VERDE_OSCURO}
+                  emptyMsg="Sin solicitudes centralizadas en el periodo."
+                />
+                <GraficaBarrasVertical
+                  title="Administración Paraestatal"
+                  data={data?.porSecretariaParaestatal ?? []}
+                  color={C_DORADO}
+                  emptyMsg="Sin solicitudes paraestatales en el periodo."
+                />
+              </div>
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -706,19 +656,23 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
           <AccordionTrigger className="text-sm font-semibold text-card-foreground hover:no-underline py-4">
             <span className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-secondary" />
-              Emisiones y Distribución por Régimen
+              Emisiones por Administración
             </span>
           </AccordionTrigger>
           <AccordionContent className="pb-4">
-            <div className="flex flex-col gap-4">
-              <GraficaEmisiones data={data?.emisionesPorSecretaria ?? []} />
-              <div className="grid gap-4 lg:grid-cols-2">
-                <GraficaRegimen data={regimenData} />
-                <GraficaSolicitudesTipo
-                  centralizada={data?.porSecretariaCentralizada ?? []}
-                  paraestatal={data?.porSecretariaParaestatal ?? []}
-                />
-              </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <GraficaEmisiones
+                title="Administración Centralizada — Dictámenes"
+                data={emisionesCentralizada}
+                barKey="dictamenes"
+                barColor={C_VERDE_OSCURO}
+              />
+              <GraficaEmisiones
+                title="Administración Paraestatal — Opiniones"
+                data={emisionesParaestatal}
+                barKey="opiniones"
+                barColor={C_AMBAR}
+              />
             </div>
           </AccordionContent>
         </AccordionItem>

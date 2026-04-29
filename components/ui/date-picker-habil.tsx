@@ -8,7 +8,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-/** Parse "yyyy-MM-dd" → Date (para campos de vigencia) */
 export function isoToDate(s: string): Date | undefined {
   if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined
   const [y, m, d] = s.split("-").map(Number)
@@ -16,7 +15,6 @@ export function isoToDate(s: string): Date | undefined {
   return isNaN(dt.getTime()) ? undefined : dt
 }
 
-/** Date → "yyyy-MM-dd" */
 export function dateToIso(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, "0")
@@ -24,7 +22,6 @@ export function dateToIso(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-/** Parse "dd/mm/yyyy" → Date (para calendario de recepción) */
 export function dmyToDate(s: string): Date | undefined {
   if (!s) return undefined
   const parts = s.split("/")
@@ -34,7 +31,6 @@ export function dmyToDate(s: string): Date | undefined {
   return isNaN(dt.getTime()) ? undefined : dt
 }
 
-/** Date → "dd/mm/yyyy" */
 export function dateToDmy(d: Date): string {
   const dd = String(d.getDate()).padStart(2, "0")
   const mm = String(d.getMonth() + 1).padStart(2, "0")
@@ -42,17 +38,17 @@ export function dateToDmy(d: Date): string {
 }
 
 interface DatePickerHabilProps {
-  /** Fecha seleccionada como objeto Date (o undefined si vacío) */
+  
   value?: Date
   onChange: (date: Date | undefined) => void
-  /** Fecha mínima seleccionable */
+  
   fromDate?: Date
-  /** Mes/año al que se navega inicialmente cuando no hay valor seleccionado */
+  
   defaultMonth?: Date
   placeholder?: string
   disabled?: boolean
   className?: string
-  /** Modo compacto para celdas de tabla */
+  
   compact?: boolean
 }
 
@@ -68,12 +64,12 @@ export function DatePickerHabil({
 }: DatePickerHabilProps) {
   const [open, setOpen] = React.useState(false)
 
-  // Estado controlado del mes visible — persiste al navegar entre meses
+  
   const [month, setMonth] = React.useState<Date>(
     () => value ?? defaultMonth ?? new Date()
   )
 
-  // Cuando cambia el valor externo, sincroniza el mes visible
+  
   React.useEffect(() => {
     if (value) setMonth(value)
     else if (defaultMonth) setMonth(defaultMonth)

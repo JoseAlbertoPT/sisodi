@@ -27,15 +27,12 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
 /* ── Helper: Convierte un string separado por comas O saltos de línea en array ── */
 function splitToArray(str: string | null | undefined): string[] {
   if (!str || str.trim() === "") return [];
-  // Los datos reales vienen separados por comas: "VALOR1, VALOR2, VALOR3"
-  // También soporta saltos de línea por si cambia el formato en el futuro
   return str
     .split(/[,\n]+/)
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
 }
 
-/* ── Helper: Limpia y formatea cadenas con guiones bajos ── */
 function formatString(str: string | null | undefined): string {
   if (!str) return "";
   const spaced = str.replace(/_/g, " ");
@@ -98,14 +95,6 @@ interface FirmaNames {
 /**
  * Resuelve el nombre y cargo capturado de cada firmante registrado en
  * `firma_firmante` y mapea por (rol + bandeja) a los slots del template.
- *
- * Mapeo plantilla PRESTACION_SERVICIOS / NOMBRAMIENTO:
- *   - Vo. Bo. (externo, nombramiento)         → firmaVoBoJuridicoNombre
- *   - Elaboró (externo)                       → firmaElaboroNombre
- *   - Revisó / bandeja=uefa (interno)         → firmaRevisoNombre
- *   - Revisó / bandeja=revision (interno)     → firmaDictRevisoNombre
- *   - Verificó / bandeja=validacion (interno) → firmaDictVerificoNombre
- *   - Emitió / bandeja=emision (interno)      → firmaDictEmitioNombre
  */
 async function resolverNombresFirmantes(
   solicitudId: number,
@@ -176,7 +165,6 @@ async function resolverNombresFirmantes(
   return out;
 }
 
-// Reutilizable wrapper para ambos métodos (GET y POST)
 async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}) {
   let firmas: FirmaNames = { ...firmasInput };
   try {
@@ -187,7 +175,6 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       );
     }
 
-    // Fetch TODOS los campos de la solicitud directamente de Prisma
     const sol = await prisma.solicitud.findUnique({
       where: { id: Number(solicitudId) },
       include: { dictamen: true },
@@ -271,7 +258,6 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
           areasExperiencia: splitToArray(sol.areas_exp),
           aniosExperiencia: "",
         },
-        // Firmas editables
         firmaElaboroNombre: firmas.firmaElaboroNombre,
         firmaRevisoNombre: firmas.firmaRevisoNombre,
         firmaVoBoJuridicoNombre: firmas.firmaVoBoJuridicoNombre,
@@ -286,9 +272,8 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         { data: dataNombramiento },
       );
     } else {
-      // ── Mapeo DIRECTO: campo de Prisma → campo de JustificacionData ──
       const dataHonorarios: JustificacionData = {
-        tipoAdministracion: (sol as any).tipo_administracion || 'centralizada', // TODO: Ajustar este mapeo de base de datos según el esquema actual
+        tipoAdministracion: (sol as any).tipo_administracion || 'centralizada',
         formato:            firmas.formato || 'fisico',
         secretaria:         sol.secretaria ?? "",
         unidadAdministrativa: sol.unidad_administrativa ?? "",
@@ -312,16 +297,12 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         esRenovacion:       sol.es_renovacion ?? false,
         folioAnterior:      sol.folio_anterior ?? "",
 
-        // I.1 Objeto de la contratación — campo de texto libre
         objetoContratacion: sol.objeto ?? "",
 
-        // I.2 Actividades — es String[] en Prisma, se pasa directo
         actividades:        sol.actividades ?? [],
 
-        // I.3 Responsabilidades — es String[] en Prisma, se pasa directo
         responsabilidades:  sol.responsabilidades ?? [],
 
-        // II. Perfil — estos son strings con saltos de línea, se convierten a arrays
         perfil: {
           escolaridadMinima:          splitToArray(sol.escolaridad),
           competenciasAdministrativas: splitToArray(sol.comp_adm),
@@ -330,7 +311,6 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
           valores:                     splitToArray(sol.valores),
           areasExperiencia:            splitToArray(sol.areas_exp),
         },
-        // Firmas editables
         firmaElaboroNombre: firmas.firmaElaboroNombre,
         firmaRevisoNombre: firmas.firmaRevisoNombre,
         firmaDictRevisoNombre: firmas.firmaDictRevisoNombre,
@@ -350,7 +330,6 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       );
     }
 
-    // Devolver el PDF como archivo descargable
     const folio =
       sol.folio_justificacion ??
       sol.folio_recepcion ??
@@ -440,7 +419,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       },
     });
   } catch (error: unknown) {
-    console.error("[GET/POST /api/pdf/justificacion]", error);
+    console.error(error);
     const message =
       error instanceof Error ? error.message : "Error al generar el PDF";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

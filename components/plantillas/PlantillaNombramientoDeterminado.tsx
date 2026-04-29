@@ -9,9 +9,6 @@ import {
 import path from "path";
 import React from "react";
 
-/* ═══════════════════════════════════════════════════════════
-   INTERFACE DE DATOS (Alineada al PDF FINANZAS.pdf)
-   ═══════════════════════════════════════════════════════════ */
 export interface JustificacionNombramientoData {
   tipoAdministracion: 'centralizada' | 'paraestatal';
   formato: 'fisico' | 'en_linea';
@@ -32,14 +29,12 @@ export interface JustificacionNombramientoData {
   clavePresupuestal: string;
   renovacion: boolean;
   folioAnterior?: string;
-  
-  // Desarrollo del cuerpo
+
   objetoNombramiento: string;
   funcionesPrincipales: string[];
   responsabilidades: string[];
   marcoNormativo: string[];
-  
-  // Condiciones y riesgos
+
   condiciones: {
     cambioDomicilio: boolean;
     horario: boolean;
@@ -53,8 +48,7 @@ export interface JustificacionNombramientoData {
   };
   
   resguardoActivos: boolean;
-  
-  // Perfil
+
   perfil: {
     escolaridadMinima: string[];
     competenciasAdministrativas: string[];
@@ -64,7 +58,6 @@ export interface JustificacionNombramientoData {
     areasExperiencia: string[];
     aniosExperiencia: string;
   };
-  // Nombres editables de firmantes
   firmaElaboroNombre?: string;
   firmaRevisoNombre?: string;
   firmaVoBoJuridicoNombre?: string;
@@ -75,24 +68,18 @@ export interface JustificacionNombramientoData {
   fechaDictaminacion?: string;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   ASSETS
-   ═══════════════════════════════════════════════════════════ */
 const LOGO_FINANZAS = path.join(process.cwd(), "public/logo-20finanzas.png");
 const MARCA_MORELOS = path.join(process.cwd(), "public/LOGO_MORELOS_V1.png");
 
-/* ═══════════════════════════════════════════════════════════
-   ESTILOS CORREGIDOS (Formato Oficial)
-   ═══════════════════════════════════════════════════════════ */
 const s = StyleSheet.create({
   page: {
     paddingTop: 30,
-    paddingBottom: 40, // Sin footer, se reduce un poco el bottom padding
+    paddingBottom: 40,
     paddingHorizontal: 40,
     fontFamily: "Helvetica",
     fontSize: 9,
     color: "#000",
-    position: 'relative', 
+    position: 'relative',
   },
   watermarkContainer: {
     position: "absolute",
@@ -115,16 +102,12 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#000",
   },
-  watermarkImage: { 
+  watermarkImage: {
     width: 600,
     height: "auto",
-    transform: 'scale(2.5)', 
+    transform: 'scale(2.5)',
     objectFit: 'contain',
   },
-  /* --- Encabezado (tabla 3 columnas — bordes completos para cerrar visualmente.
-   *   Se solapa con el pageFrame en los lados/arriba, lo que en PDF se renderiza
-   *   simplemente como una línea negra continua.
-   * --- */
   headerTable: {
     flexDirection: "row",
     marginTop: -12,
@@ -163,17 +146,13 @@ const s = StyleSheet.create({
     fontSize: 10,
     textAlign: "center",
   },
-  // La caja Clave se eliminó como lo solicitaron, ahora la paginación toma todo el alto
   pageBox: { flex: 1, paddingHorizontal: 4, paddingTop: 10, justifyContent: "flex-start", alignItems: "center" },
   claveText: { fontSize: 8, textAlign: "center" },
 
-  /* --- Elementos de página --- */
   fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 26 },
   centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 14 },
-  // Espaciado ajustado requerido: marginTop 5, marginBottom 5
   sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 8, marginTop: 10 },
 
-  /* --- Filas de Formulario (campos 1-14) --- */
   row: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
   bold: { fontFamily: "Helvetica-Bold", marginBottom: 3, marginTop: 3 },
   numLabel: { width: 15, fontFamily: "Helvetica-Bold", fontSize: 9 },
@@ -187,7 +166,6 @@ const s = StyleSheet.create({
     paddingBottom: 2,
   },
 
-  /* --- Checkboxes --- */
   checkboxRect: {
     width: 12,
     height: 12,
@@ -200,7 +178,6 @@ const s = StyleSheet.create({
   },
   checkText: { fontSize: 8, fontFamily: "Helvetica-Bold" },
 
-  /* --- Vigencia (cajas Día/Mes/Año) --- */
   vigenciaBoxWrap: { flexDirection: "row", alignItems: "flex-end" },
   vigCellColumn: { alignItems: "center", marginRight: 4 },
   vigCellLabel: { fontSize: 7, marginBottom: 2 },
@@ -213,7 +190,6 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* --- Renovación (tabla con header gris) --- */
   renovContainer: {
     borderWidth: 1,
     borderColor: "#000",
@@ -256,7 +232,6 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* --- Tablas (Condiciones y Riesgos) --- */
   tableBorder: {
     borderWidth: 1,
     borderColor: "#000",
@@ -300,15 +275,12 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
 
-  /* --- Listas Dinámicas (Wraps) - Numeración --- */
   listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10, marginTop: 2 },
   listNum: { width: 18, fontFamily: "Helvetica-Bold" },
   listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.5 },
-  // Se usará también para perfil
   bulletItemContainer: { flexDirection: "row", marginBottom: 2, paddingLeft: 15, marginTop: 1 },
   bulletSign: { width: 18, fontFamily: "Helvetica-Bold" },
 
-  /* --- Bloque de Firmas (Elaboró / Revisó) --- */
   firmasWrapper: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -334,7 +306,6 @@ const s = StyleSheet.create({
     lineHeight: 1.3,
   },
 
-  /* --- Estilos para Dictaminacion --- */
   dictTitle: {
     fontFamily: "Helvetica-Bold",
     fontSize: 10,
@@ -393,9 +364,6 @@ const s = StyleSheet.create({
   },
 });
 
-/* ═══════════════════════════════════════════════════════════
-   HELPER PARA ANALIZAR FECHAS (YYYY-MM-DD a DD, MM, YYYY)
-   ═══════════════════════════════════════════════════════════ */
 function parseDateParts(dateStr: string) {
   if (!dateStr || dateStr.trim() === "—" || dateStr.trim() === "") {
     return { d: "", m: "", y: "" };
@@ -407,9 +375,6 @@ function parseDateParts(dateStr: string) {
   return { d: dateStr, m: "", y: "" };
 }
 
-/* ═══════════════════════════════════════════════════════════
-   COMPONENTE PRINCIPAL
-   ═══════════════════════════════════════════════════════════ */
 export function PlantillaNombramientoDeterminado({ data }: { data: JustificacionNombramientoData }) {
   const inD = parseDateParts(data.vigenciaInicio);
   const finD = parseDateParts(data.vigenciaTermino);
@@ -418,15 +383,11 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
     <Document>
       <Page size="LETTER" style={s.page} wrap>
 
-        {/* ══════ MARCO NEGRO FIJO (todas las páginas) ══════ */}
         <View style={s.pageFrame} fixed />
-
-        {/* ══════ MARCA DE AGUA FIJA (todas las páginas) ══════ */}
         <View style={s.watermarkContainer} fixed>
           <Image src={MARCA_MORELOS} style={s.watermarkImage} />
         </View>
 
-        {/* ══════ ENCABEZADO FIJO (todas las páginas) ══════ */}
         <View style={s.headerTable} fixed>
           <View style={s.headerCol1}>
             <Image src={LOGO_FINANZAS} style={s.logo} />
@@ -441,12 +402,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         </View>
 
-        {/* No Footer requerido */}
-
-        {/* ══════════════════════════════════════════════
-           PÁGINA 1: DATOS GENERALES
-           ══════════════════════════════════════════════ */}
-
         <View style={s.fechaRow}>
           <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 5, marginBottom: 5 }}>Fecha de elaboración de la Justificación: </Text>
           <Text style={{ borderBottomWidth: 1, minWidth: 100, textAlign: "center", marginTop: 5, marginBottom: 5 }}>
@@ -458,35 +413,30 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
         <Text style={s.sectionTitle}>I.    DATOS GENERALES:</Text>
 
-        {/* Campo 1: Secretaría */}
         <View style={s.row}>
           <Text style={s.numLabel}>1.</Text>
           <Text style={s.marginLabel}>Secretaría/Subsecretaría/Dependencia/Organismo Auxiliar:</Text>
           <Text style={s.valueText}>{data.secretaria}</Text>
         </View>
 
-        {/* Campo 2: Unidad Administrativa */}
         <View style={s.row}>
           <Text style={s.numLabel}>2.</Text>
           <Text style={s.marginLabel}>Unidad Administrativa de adscripción:</Text>
           <Text style={s.valueText}>{data.unidadAdministrativa}</Text>
         </View>
 
-        {/* Campo 3: Unidad Responsable */}
         <View style={s.row}>
           <Text style={s.numLabel}>3.</Text>
           <Text style={s.marginLabel}>Unidad Responsable del Gasto:</Text>
           <Text style={s.valueText}>{data.unidadResponsable}</Text>
         </View>
 
-        {/* Campo 4: Programa o Proyecto */}
         <View style={s.row}>
           <Text style={s.numLabel}>4.</Text>
           <Text style={s.marginLabel}>Programa o Proyecto:</Text>
           <Text style={s.valueText}>{data.programaProyecto}</Text>
         </View>
 
-        {/* Campo 5: Denominación del Nombramiento — Estructura Flexbox para Salto de Línea */}
         <View style={{ marginBottom: 6 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
             <Text style={s.numLabel}>5.</Text>
@@ -499,7 +449,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         </View>
 
-        {/* Campo 6: Tipo de Actividad — Estructura Flexbox para Salto de Línea */}
         <View style={{ marginBottom: 6 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
             <Text style={s.numLabel}>6.</Text>
@@ -512,35 +461,30 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         </View>
 
-        {/* Campo 7: Puesto del Jefe Inmediato */}
         <View style={s.row}>
           <Text style={s.numLabel}>7.</Text>
           <Text style={s.marginLabel}>Puesto del Jefe Inmediato:</Text>
           <Text style={s.valueText}>{data.puestoJefeInmediato}</Text>
         </View>
 
-        {/* Campo 8: Número de personas */}
         <View style={s.row}>
           <Text style={s.numLabel}>8.</Text>
           <Text style={s.marginLabel}>Número de personas a contratar:</Text>
           <Text style={s.valueText}>{data.numeroPersonas || ""}</Text>
         </View>
-        
-        {/* Campo 9: Importe Neto */}
+
         <View style={s.row}>
           <Text style={s.numLabel}>9.</Text>
           <Text style={s.marginLabel}>Importe Neto:</Text>
           <Text style={s.valueText}>{data.importeNetoMensual}</Text>
         </View>
 
-        {/* Campo 10: Tipo de Pago */}
         <View style={s.row}>
           <Text style={s.numLabel}>10.</Text>
           <Text style={s.marginLabel}>Tipo de Pago:</Text>
           <Text style={s.valueText}>{data.tipoPago}</Text>
         </View>
 
-        {/* Campo 11 - Equivalencia (Dos líneas) */}
         <View style={{ flexDirection: "row", marginBottom: 6, alignItems: "flex-end" }}>
           <Text style={s.numLabel}>11.</Text>
           <Text style={s.marginLabel}>Equivalencia de Acuerdo al Tabulador de Sueldos del Poder Ejecutivo, vigente:</Text>
@@ -550,7 +494,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         </View>
 
-        {/* Campo 12: Vigencia con Cajas */}
         <View style={{ ...s.row, alignItems: "flex-end", marginTop: 5 }}>
           <Text style={s.numLabel}>12.</Text>
           <Text style={s.marginLabel}>Vigencia (inicio-término):</Text>
@@ -566,7 +509,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         </View>
 
 
-        {/* I.1 OBJETO DEL NOMBRAMIENTO POR TIEMPO DETERMINADO */}
         <View wrap={false}>
           <Text style={s.sectionTitle}>I.1    OBJETO DEL NOMBRAMIENTO POR TIEMPO DETERMINADO:</Text>
           <Text style={{ textAlign: "justify", lineHeight: 1.5, marginBottom: 10, marginTop: 4 }} wrap={true}>
@@ -574,7 +516,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </Text>
         </View>
 
-        {/* I.2 FUNCIONES PRINCIPALES */}
         <View wrap={false}>
           <Text style={s.sectionTitle}>I.2    FUNCIONES PRINCIPALES:</Text>
           {data.funcionesPrincipales?.slice(0, 1).map((act, index) => (
@@ -591,7 +532,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         ))}
 
-        {/* I.3 RESPONSABILIDADES */}
         <View wrap={false}>
           <Text style={s.sectionTitle}>I.3    RESPONSABILIDADES:</Text>
           {data.responsabilidades?.slice(0, 1).map((resp, index) => (
@@ -608,7 +548,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         ))}
 
-        {/* I.4 MARCO NORMATIVO, LEGAL Y ADMINISTRATIVO APLICABLE */}
         <View style={{ marginTop: 10 }} wrap={false}>
           <Text style={s.sectionTitle}>I.4    MARCO NORMATIVO, LEGAL Y ADMINISTRATIVO APLICABLE:</Text>
           {data.marcoNormativo?.slice(0, 1).map((leg, index) => (
@@ -619,7 +558,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           ))}
         </View>
 
-        {/* En medio (si hay más de 2) */}
         {data.marcoNormativo?.slice(1, -1).map((leg, index) => (
           <View key={`leg-${index + 1}`} style={s.listItemContainer} wrap={false}>
             <Text style={s.listNum}>{index + 2}.</Text>
@@ -627,7 +565,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         ))}
 
-        {/* ÚLTIMO item (o nada si solo hay 1) + FIRMA envueltos juntos */}
         <View wrap={false}>
           {data.marcoNormativo && data.marcoNormativo.length > 1 && (
             <View style={s.listItemContainer}>
@@ -636,7 +573,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             </View>
           )}
 
-          {/* LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) */}
           {data.formato === 'en_linea' && (
             <View style={{ marginTop: 20, marginBottom: 15, alignItems: 'center' }}>
               <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
@@ -647,7 +583,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             </View>
           )}
 
-          {/* Bloque de firma CENTRADO debajo del texto — pegado al marco normativo */}
           <View style={{ flexDirection: "row", justifyContent: "center", marginTop: data.formato === 'en_linea' ? 10 : 30 }}>
             <View style={{ width: "45%", alignItems: "center" }}>
               <Text style={{ fontSize: 8, marginBottom: 5, fontFamily: "Helvetica-Bold" }}>Vo. Bo. Marco Normativo</Text>
@@ -660,10 +595,8 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         </View>
 
         <View wrap={false}>
-          {/* I.5 CONDICIONES Y RIESGOS DE TRABAJO */}
           <Text style={{ ...s.sectionTitle, marginTop: 10 }}>I.5    CONDICIONES Y RIESGOS DE TRABAJO:</Text>
-          
-          {/* Tabla Condiciones */}
+
           <View style={s.tableBorder}>
             <View style={{ ...s.tableHeader, backgroundColor: "#fff" }}>
               <Text style={s.tableColHeadText}>DISPONIBILIDAD DE:</Text>
@@ -693,7 +626,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             </View>
           </View>
 
-          {/* Tabla Exposición a Riesgos */}
           <View style={[s.tableBorder, { marginTop: 5 }]}>
             <View style={{ ...s.tableHeader, backgroundColor: "#fff" }}>
               <Text style={s.tableColHeadText}>EXPOSICIÓN A RIESGOS DE TRABAJO:</Text>
@@ -737,7 +669,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         </View>
 
-        {/* I.6 RESGUARDO PERSONALIZADO DE ACTIVOS */}
         <Text style={{...s.sectionTitle, marginTop: 10}}>I.6    RESGUARDO PERSONALIZADO DE ACTIVOS:</Text>
         <View style={{ flexDirection: "row", marginBottom: 10, alignItems: "center" }}>
           <Text style={{ fontSize: 9, marginLeft: 15 }}>Sí</Text>
@@ -752,12 +683,10 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           En el caso de Organismos Auxiliares, se estará a lo establecido por sus disposiciones administrativas correspondientes.
         </Text>
 
-        {/* ── II. PERFIL ── */}
         <View wrap={false}>
           <Text style={{ ...s.sectionTitle, marginTop: 15 }}>II.  PERFIL:</Text>
           <Text style={{ marginBottom: 8, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia, necesarios para ocupar el puesto).</Text>
 
-          {/* II.1 Escolaridad — título + primer item juntos */}
           <Text style={{ ...s.bold, marginBottom: 10 }}>II.1    ESCOLARIDAD MÍNIMA:</Text>
           {data.perfil?.escolaridadMinima?.slice(0, 1).map((esc, i) => (
             <View key={`esc-${i}`} style={s.bulletItemContainer}>
@@ -773,7 +702,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         ))}
 
-        {/* II.2 Competencias — título + subtítulo + primer item juntos */}
         <View wrap={false}>
           <Text style={{ ...s.bold, marginTop: 10, marginBottom: 12 }}>II.2    COMPETENCIAS LABORALES REQUERIDAS:</Text>
           <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 3, marginLeft: 15, marginBottom: 2 }}>II.2.1  Administrativas:</Text>
@@ -791,7 +719,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         ))}
 
-        {/* II.2.2 Técnicas — título + primer item juntos */}
         <View wrap={false}>
           <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 8, marginLeft: 15, marginBottom: 6 }}>II.2.2  Técnicas:</Text>
           {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
@@ -808,7 +735,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         ))}
 
-        {/* II.2.3 Sociales — título + primer item juntos */}
         <View wrap={false}>
           <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 8, marginLeft: 15, marginBottom: 6 }}>II.2.3  Sociales:</Text>
           {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
@@ -825,7 +751,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         ))}
 
-        {/* II.2.4 Valores — título + primer item juntos */}
         <View wrap={false}>
           <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 3, marginLeft: 15, marginBottom: 2 }}>II.2.4  Valores:</Text>
           {data.perfil?.valores?.slice(0, 1).map((val, i) => (
@@ -842,7 +767,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         ))}
 
-        {/* II.3 Áreas y Años de Experiencia */}
         <View style={{ flexDirection: "row", marginTop: 10 }} wrap={false}>
           <View style={{ width: "50%" }}>
             <Text style={s.bold}>II.3    ÁREAS DE EXPERIENCIA:</Text>
@@ -862,7 +786,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
         <View style={{ flex: 1 }} />
 
-        {/* ══════ LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) ══════ */}
         {data.formato === 'en_linea' && (
           <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
             <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
@@ -873,7 +796,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         )}
 
-        {/* ══════ FIRMAS (Elaboró / Revisó) ══════ */}
         <View style={s.firmasWrapper} wrap={false}>
           <View style={s.firmaBox}>
             <Text style={s.firmaLabel}>Elaboró</Text>
@@ -893,9 +815,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
       </Page>
 
-      {/* ══════════════════════════════════════════════
-         NUEVA PÁGINA: Dictaminación / Opinión Técnica
-         ══════════════════════════════════════════════ */}
       <Page size="LETTER" style={s.page}>
         <View style={s.pageFrame} fixed />
         <View style={s.watermarkContainer} fixed>
@@ -971,7 +890,6 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
         <View style={{ flex: 1 }} />
 
-        {/* ══════ LEYENDA DE FIRMA ELECTRÓNICA (solo en línea) ══════ */}
         {data.formato === 'en_linea' && (
           <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
             <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>

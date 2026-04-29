@@ -1,12 +1,12 @@
 "use client"
 
 import { useAuth } from "@/lib/auth-context"
-import { LoginForm } from "@/components/login-form"
+import { LoginForm, ForzarCambioContrasena } from "@/components/login-form"
 import { AppShell } from "@/components/app-shell"
 import { Loader2 } from "lucide-react"
 
 export default function Home() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
 
   if (isLoading) {
     return (
@@ -16,9 +16,7 @@ export default function Home() {
     )
   }
 
-  if (!isAuthenticated) {
-    return <LoginForm />
-  }
-
+  if (!isAuthenticated) return <LoginForm />
+  if (user?.mustChangePassword) return <ForzarCambioContrasena />
   return <AppShell />
 }

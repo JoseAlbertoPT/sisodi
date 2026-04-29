@@ -130,9 +130,9 @@ export async function POST(req: NextRequest) {
 
       if (!usuario) return err("No se encontró ninguna cuenta asociada a ese RFC.", 404)
 
-      // Generar código y guardarlo
+      
       const codigo   = Math.floor(100000 + Math.random() * 900000).toString()
-      const expiraEn = new Date(Date.now() + 10 * 60 * 1000) // 10 minutos
+      const expiraEn = new Date(Date.now() + 10 * 60 * 1000) 
 
       await prisma.codigo_recuperacion.upsert({
         where:  { usuario_id: usuario.id },
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
         update: { codigo, expira_en: expiraEn, usado: false },
       })
 
-      // Enviar correo
+      
       try {
         await enviarCodigoRecuperacion(usuario.correo, codigo)
         console.log(`[mailer] Código enviado a ${maskEmail(usuario.correo)}`)
@@ -192,7 +192,6 @@ export async function POST(req: NextRequest) {
       })
 
       if (updated.count === 0) return err("Usuario no encontrado", 404)
-
 
       const usuario = await prisma.usuario.findFirst({
         where:  { rfc: rfc.trim().toUpperCase() },
