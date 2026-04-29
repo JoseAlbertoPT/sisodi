@@ -23,15 +23,20 @@ interface ProcesoItem {
   id: number
   solicitud_id: number
   folio_justificacion: string | null
+  folio_dictamen: string | null
   tipo_solicitud: string | null
   modalidad_firma: string | null
   estado: string
+  estado_solicitud: string | null
   firmados: number
   total_firmantes: number | null
   externos_completos: boolean
   externos_total: number
   externos_firmados: number
   mi_firmante_pendiente: { id: number; rol: string; cargo: string; bandeja: string | null; bloqueado: boolean } | null
+  pendiente_emision_por_mi: boolean
+  mi_firmante_emisor_id: number | null
+  sellado_emision_subido: boolean
   firmantes: FirmanteInfo[]
 }
 
@@ -61,9 +66,14 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar"); return }
       const procesos: ProcesoItem[] = json.procesos ?? []
-      // Filtrar: solo procesos donde es MI TURNO (mi firmante es el siguiente en orden).
-      // Si todavía hay que esperar a otros firmantes (internos o externos), no debe aparecer aquí.
+      // Filtrar: incluir
+      //   (a) procesos donde es MI TURNO de firmar (siguiente firmante pendiente).
+      //   (b) procesos donde ya firmé como EMISOR pero el dictamen aún no se ha emitido
+      //       (falta subir el sellado y emitir).
       const filtrados = procesos.filter(p => {
+        // (b) — solo aplica al filtro de emisión
+        if (bandejaActual === "emision" && p.pendiente_emision_por_mi) return true
+        // (a)
         if (!p.mi_firmante_pendiente || p.mi_firmante_pendiente.bandeja !== bandejaActual) return false
         const miFirmante = p.firmantes.find(f => f.id === p.mi_firmante_pendiente!.id)
         if (!miFirmante) return false
@@ -91,6 +101,14 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
     }
     return null
   })()
+
+  // Si el target es el firmante emisor que ya firmó, abrimos el dialog en paso 2 (sellado + emitir).
+  const dialogIniciarEnSellado = !!(
+    dialogTarget &&
+    dialogTarget.firmante.bandeja === "emision" &&
+    dialogTarget.firmante.firmado &&
+    dialogTarget.proceso.pendiente_emision_por_mi
+  )
 
   return (
     <div className="flex flex-col gap-3">
@@ -129,6 +147,30 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
             </thead>
             <tbody>
               {items.map(p => {
+                // Caso especial: emisor que ya firmó y le falta sellar + emitir
+                if (p.pendiente_emision_por_mi) {
+                  const miEmisor = p.firmantes.find(f => f.id === p.mi_firmante_emisor_id)
+                  return (
+                    <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/20">
+                      <td className="px-4 py-2 font-mono text-xs">{p.folio_justificacion ?? `SOL-${p.solicitud_id}`}</td>
+                      <td className="px-4 py-2 text-xs">{p.tipo_solicitud ?? "—"}</td>
+                      <td className="px-4 py-2 text-xs">{miEmisor?.rol ?? "Emitió"}</td>
+                      <td className="px-4 py-2 font-mono text-xs">{p.firmados}/{p.total_firmantes}</td>
+                      <td className="px-4 py-2">
+                        <Badge className="bg-accent/30 text-accent-foreground border-0 text-[10px]">
+                          {p.sellado_emision_subido ? "Listo para emitir" : "Falta sellar"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <Button size="sm" onClick={() => p.mi_firmante_emisor_id && setFirmanteDialogId(p.mi_firmante_emisor_id)}
+                          className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-1.5">
+                          <Stamp className="h-3.5 w-3.5" /> Sellar y emitir
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                }
+
                 const miOrden = p.mi_firmante_pendiente ? p.firmantes.find(f => f.id === p.mi_firmante_pendiente!.id)?.orden ?? Infinity : Infinity
                 const siguiente = p.firmantes.filter(f => !f.firmado).sort((a, b) => a.orden - b.orden)[0] ?? null
                 const esMiTurno = siguiente && miOrden === siguiente.orden
@@ -164,10 +206,17 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
           onClose={() => setFirmanteDialogId(null)}
           firmanteId={dialogTarget.firmante.id}
           usuarioId={currentUserId}
-          titulo={`Firmar como ${dialogTarget.firmante.rol} — ${dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`}
+          titulo={
+            dialogIniciarEnSellado
+              ? `Sellar y emitir — ${dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`
+              : `Firmar como ${dialogTarget.firmante.rol} — ${dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`
+          }
           subtitulo={dialogTarget.firmante.cargo}
           bandeja={dialogTarget.firmante.bandeja}
           folio={dialogTarget.proceso.folio_justificacion}
+          folioDictamen={dialogTarget.proceso.folio_dictamen}
+          solicitudId={dialogTarget.proceso.solicitud_id}
+          iniciarEnSellado={dialogIniciarEnSellado}
           onFirmado={async () => { await cargar(); setFirmanteDialogId(null) }}
         />
       )}

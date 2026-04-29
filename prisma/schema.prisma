@@ -255,6 +255,7 @@ model solicitud {
   adjunto               adjunto[]
   checklist_detalle     checklist_detalle[]
   dictamen              dictamen?
+  documento_sellado     documento_sellado[]
   firma_proceso         firma_proceso?
   historial_solicitud   historial_solicitud[]
   estado                estado                @relation(fields: [estado_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -267,6 +268,21 @@ model solicitud {
 }
 
 
+
+model documento_sellado {
+  id              Int       @id @default(autoincrement())
+  solicitud_id    Int
+  etapa           String    @db.VarChar(20)
+  archivo         String    @db.VarChar(500)
+  nombre_original String?   @db.VarChar(255)
+  uploaded_by     String?   @db.Uuid
+  uploaded_at     DateTime  @default(now()) @db.Timestamp(6)
+  solicitud       solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  uploader        usuario?  @relation("documento_sellado_uploader", fields: [uploaded_by], references: [id], onUpdate: NoAction)
+
+  @@unique([solicitud_id, etapa])
+  @@index([solicitud_id], map: "idx_documento_sellado_solicitud")
+}
 
 model usuario {
   id                    String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -282,6 +298,7 @@ model usuario {
   secretaria_id         String?               @db.Uuid
   secretaria_texto      String?               @db.VarChar(512)
   codigo_recuperacion   codigo_recuperacion?
+  documentos_sellados   documento_sellado[]   @relation("documento_sellado_uploader")
   firma_proceso         firma_proceso[]
   firma_firmante        firma_firmante[]
   historial_solicitud   historial_solicitud[]

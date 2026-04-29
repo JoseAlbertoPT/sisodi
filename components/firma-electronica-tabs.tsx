@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   CheckCircle2, Loader2, Copy, Link as LinkIcon, Shield,
-  RefreshCw, AlertCircle, Users, Lock, Play, Briefcase, FileKey, KeyRound, AlertTriangle, X,
+  RefreshCw, AlertCircle, Users, Lock, Play, Briefcase, FileKey, KeyRound, AlertTriangle, X, History,
 } from "lucide-react"
+import { SelladoDocumentoSection, type SelladoEtapa } from "@/components/sellado-documento-section"
 
 interface Firmante {
   id: number
@@ -49,23 +50,28 @@ interface FirmaProceso {
 interface Props {
   solicitudId: number
   folioJustificacion: string
+  folioDictamen?: string | null
   currentUserId: string
   onGenerarPdfBase64: () => Promise<string>
   onFinalizar: () => Promise<void> | void
   guardandoFinal: boolean
+  /** Si se define, después de que el usuario complete su firma se requiere
+   *  descargar el documento, sellarlo fuera del sistema y volver a subirlo
+   *  antes de habilitar "Enviar". */
+  selladoEtapa?: SelladoEtapa
 }
-
-type TabKey = "firmantes" | "progreso"
 
 export function FirmaElectronicaTabs({
   solicitudId,
   folioJustificacion,
+  folioDictamen,
   currentUserId,
   onGenerarPdfBase64,
   onFinalizar,
   guardandoFinal,
+  selladoEtapa,
 }: Props) {
-  const [tab, setTab] = useState<TabKey>("firmantes")
+  const [selladoSubido, setSelladoSubido] = useState(false)
   const [firma, setFirma] = useState<FirmaProceso | null>(null)
   const [firmantes, setFirmantes] = useState<Firmante[]>([])
   const [loading, setLoading] = useState(true)
@@ -85,6 +91,7 @@ export function FirmaElectronicaTabs({
   const [firmandoError, setFirmandoError] = useState<string | null>(null)
   const [avisoCargoAbierto, setAvisoCargoAbierto] = useState(false)
   const [cargoHabilitado, setCargoHabilitado] = useState(false)
+  const [ultimoCargo, setUltimoCargo] = useState<string | null>(null)
   const cargoInputRef = useRef<HTMLInputElement | null>(null)
 
   const resetFirmandoInline = () => {
@@ -150,10 +157,26 @@ export function FirmaElectronicaTabs({
   useEffect(() => { cargar() }, [cargar])
 
   useEffect(() => {
-    if (tab !== "progreso" || !firma) return
+    if (!currentUserId) return
+    let cancel = false
+    fetch(`/api/firma-efirma/ultimo-cargo?usuarioId=${encodeURIComponent(currentUserId)}`, { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => { if (!cancel && j?.ok) setUltimoCargo(j.cargo ?? null) })
+      .catch(() => { /* noop */ })
+    return () => { cancel = true }
+  }, [currentUserId])
+
+  const usarUltimoCargo = () => {
+    if (!ultimoCargo) return
+    if (!cargoHabilitado) setCargoHabilitado(true)
+    setCargoFirma(ultimoCargo.toUpperCase())
+  }
+
+  useEffect(() => {
+    if (!firma) return
     pollRef.current = setInterval(cargar, 5000)
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
-  }, [tab, firma, cargar])
+  }, [firma, cargar])
 
   const handleIniciar = async () => {
     setIniciando(true); setError(null)
@@ -268,15 +291,6 @@ export function FirmaElectronicaTabs({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-1 rounded-md bg-muted p-1 self-start">
-        {(["firmantes", "progreso"] as TabKey[]).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-3 py-1.5 text-xs rounded ${tab === t ? "bg-background shadow-sm font-semibold" : "text-muted-foreground"}`}>
-            {t === "firmantes" ? "Firmantes / Links" : "Progreso"}
-          </button>
-        ))}
-      </div>
-
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-2 text-xs">
           <Badge variant="outline">{firma.estado}</Badge>
@@ -346,8 +360,23 @@ export function FirmaElectronicaTabs({
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">{f.cargo}</p>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-2">
                     <Label className="text-xs flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
+                    {ultimoCargo && ultimoCargo.trim().toUpperCase() !== cargoFirma.trim().toUpperCase() && (
+                      <button
+                        type="button"
+                        onClick={usarUltimoCargo}
+                        title={`Click para usar: ${ultimoCargo}`}
+                        className="group flex items-start gap-2 rounded-md border-2 border-dashed border-secondary/50 bg-secondary/5 hover:bg-secondary/10 hover:border-secondary px-3 py-2 text-left transition-colors"
+                      >
+                        <History className="h-4 w-4 shrink-0 text-secondary mt-0.5" />
+                        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                          <span className="text-[10px] uppercase tracking-wide text-secondary font-semibold">Tu último cargo registrado</span>
+                          <span className="text-sm font-medium text-card-foreground group-hover:text-secondary truncate">{ultimoCargo}</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground group-hover:text-secondary self-center font-medium shrink-0">Usar</span>
+                      </button>
+                    )}
                     <Input
                       ref={cargoInputRef}
                       value={cargoFirma}
@@ -396,9 +425,29 @@ export function FirmaElectronicaTabs({
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 
+      {selladoEtapa && puedeContinuar && (
+        <SelladoDocumentoSection
+          solicitudId={solicitudId}
+          etapa={selladoEtapa}
+          usuarioId={currentUserId}
+          nombreDescarga={`Dictamen_${folioDictamen ?? folioJustificacion}_firmado`.replace(/[/\\]+/g, "-")}
+          onCambio={setSelladoSubido}
+          onDescargar={async () => {
+            const b64 = await onGenerarPdfBase64()
+            const bin = atob(b64)
+            const bytes = new Uint8Array(bin.length)
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+            return new Blob([bytes], { type: "application/pdf" })
+          }}
+        />
+      )}
+
       <div className="flex justify-end pt-2">
-        <Button onClick={() => onFinalizar()} disabled={!puedeContinuar || guardandoFinal}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
+        <Button
+          onClick={() => onFinalizar()}
+          disabled={!puedeContinuar || guardandoFinal || (!!selladoEtapa && !selladoSubido)}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+        >
           {guardandoFinal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Enviar
         </Button>

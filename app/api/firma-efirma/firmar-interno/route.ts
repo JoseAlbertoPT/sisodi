@@ -7,7 +7,7 @@ const BYPASS = process.env.EFIRMA_BYPASS === "true"
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { firmanteId, usuarioId, cargoFirmante, certificado, clavePrivada, fraseClavePrivada } = body
+    const { firmanteId, usuarioId, cargoFirmante, certificado, clavePrivada, fraseClavePrivada, skipEmit } = body
 
     if (!firmanteId || !usuarioId || !cargoFirmante) {
       return NextResponse.json({ ok: false, error: "Faltan campos requeridos" }, { status: 400 })
@@ -101,9 +101,11 @@ export async function POST(req: NextRequest) {
     })
 
     // Si el proceso quedó completado, y este firmante es de emisión, emitir el dictamen.
+    // Si skipEmit=true (ej. el flujo aún requiere subir sellado), no emitimos aquí —
+    // se llamará al endpoint /api/firma-efirma/emitir-dictamen una vez el sellado esté listo.
     let emisionHecha = false
     let folioDictamenFinal: string | null = null
-    if (result.completo && firmante.bandeja === "emision") {
+    if (result.completo && firmante.bandeja === "emision" && !skipEmit) {
       try {
         const solicitudId = firmante.firma_proceso.solicitud_id
         const solicitud = await prisma.solicitud.findUnique({

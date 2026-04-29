@@ -10,20 +10,34 @@ export async function GET(req: NextRequest) {
     const soloPendientesPorMi = url.searchParams.get("pendientePorMi") === "1"
 
     const procesos = await prisma.firma_proceso.findMany({
-      where: soloPendientesPorMi && usuarioId
+      where: (soloPendientesPorMi && usuarioId
         ? {
-            estado: { not: "completado" },
-            firmantes: BYPASS
-              ? { some: { tipo: "interno", firmado: false } }
-              : {
+            solicitud: { NOT: { estado: { nombre: "Emitido" } } },
+            OR: [
+              {
+                firmantes: BYPASS
+                  ? { some: { tipo: "interno", firmado: false } }
+                  : {
+                      some: {
+                        tipo: "interno",
+                        firmado: false,
+                        OR: [{ usuario_id: usuarioId }, { usuario_id: null }],
+                      },
+                    },
+              },
+              {
+                firmantes: {
                   some: {
                     tipo: "interno",
-                    firmado: false,
-                    OR: [{ usuario_id: usuarioId }, { usuario_id: null }],
+                    bandeja: "emision",
+                    firmado: true,
+                    usuario_id: usuarioId,
                   },
                 },
+              },
+            ],
           }
-        : {},
+        : {}) as any,
       orderBy: { fecha_creacion: "desc" },
       include: {
         solicitud: {
@@ -31,8 +45,11 @@ export async function GET(req: NextRequest) {
             id: true,
             folio_justificacion: true,
             folio_recepcion: true,
+            folio_dictamen: true,
             tipo_solicitud: true,
             modalidad_firma: true,
+            estado: { select: { nombre: true } },
+            documento_sellado: { where: { etapa: "emision" }, select: { id: true } },
           },
         },
         firmantes: {
@@ -58,13 +75,27 @@ export async function GET(req: NextRequest) {
               ?? null
             )
           : null
+        const estadoSolicitud = p.solicitud?.estado?.nombre ?? null
+        const yaEmitido = (estadoSolicitud ?? "").toLowerCase() === "emitido"
+        const tieneSelladoEmision = ((p.solicitud as any)?.documento_sellado?.length ?? 0) > 0
+        // Mi firma de emisor ya hecha pero pendiente de emitir el dictamen
+        const miEmisorFirmado = usuarioId
+          ? p.firmantes.find(f => f.tipo === "interno" && f.bandeja === "emision" && f.usuario_id === usuarioId && f.firmado) ?? null
+          : null
+        const procesoCompleto = (p.total_firmantes ?? 0) > 0 && p.firmados >= (p.total_firmantes ?? 0)
+        const pendienteEmisionPorMi = !!(miEmisorFirmado && procesoCompleto && !yaEmitido)
         return {
           id: p.id,
           solicitud_id: p.solicitud_id,
           folio_justificacion: p.solicitud?.folio_justificacion ?? null,
           folio_recepcion: p.solicitud?.folio_recepcion ?? null,
+          folio_dictamen: (p.solicitud as any)?.folio_dictamen ?? null,
           tipo_solicitud: p.solicitud?.tipo_solicitud ?? null,
           modalidad_firma: p.solicitud?.modalidad_firma ?? null,
+          estado_solicitud: estadoSolicitud,
+          pendiente_emision_por_mi: pendienteEmisionPorMi,
+          mi_firmante_emisor_id: miEmisorFirmado?.id ?? null,
+          sellado_emision_subido: tieneSelladoEmision,
           tipo: p.tipo,
           estado: p.estado,
           firmados: p.firmados,

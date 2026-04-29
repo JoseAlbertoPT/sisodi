@@ -24,8 +24,10 @@ import {
 
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
-import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
+import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
+import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
+import { FirmaModal } from "@/components/firma-modal"
 
 const COLOR_SI        = "#6E795A"
 const COLOR_SI_TEXT   = "#283c2a"
@@ -1160,6 +1162,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   const [selectedDestinatarios, setSelectedDestinatarios] = useState<string[]>([])
   const [archivoSubido,         setArchivoSubido]         = useState(false)
   const [autografaDescargado,   setAutografaDescargado]   = useState(false)
+  const [selladoEmisionSubido,  setSelladoEmisionSubido]  = useState(false)
+  const [firmaEmisionAbierta,   setFirmaEmisionAbierta]   = useState(false)
 
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
@@ -1335,9 +1339,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
     if (nuevoEstado) { setObservacionGeneral(""); setChecklistErrors({}); setShowConfirmacion("Solicitud observada y regresada a URG.") }
   }
 
-  const handleEmitir = () => {
+  const handleEmitir = async () => {
     if (!solicitud) return
-    setSolicitud(prev => prev ? { ...prev, estado: "Emitido" } : prev)
+    const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
+    if (!nuevoEstado) return
+    setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
     setShowConfirmacion(
       modalidadFirma === "electronica"
         ? "Dictamen emitido y firmado electrónicamente. Expediente bloqueado."
@@ -1404,7 +1410,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
   )
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
-    (modalidadFirma === "electronica" || (autografaDescargado && archivoSubido))
+    (modalidadFirma === "electronica"
+      ? true // Para electrónica el gate vive dentro del FirmaModal (firma + sellado)
+      : (autografaDescargado && archivoSubido))
 
   if (loading) return (
     <div className="flex items-center justify-center py-24 gap-3">
@@ -1468,7 +1476,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                 </p>
               </div>
               <RadioGroup value={modalidadFirma}
-                onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } }}
+                onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } else { setSelladoEmisionSubido(false) } }}
                 className="flex flex-col gap-3 w-full">
                 {[
                   { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
@@ -1941,7 +1949,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                     <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-card-foreground">Modalidad de Firma</CardTitle></CardHeader>
                     <CardContent>
                       <RadioGroup value={modalidadFirma}
-                        onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } }}
+                        onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } else { setSelladoEmisionSubido(false) } }}
                         className="flex flex-col gap-3">
                         {[
                           { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
@@ -1983,9 +1991,19 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
                   </Card>
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-end p-4">
-                      <Button onClick={handleEmitir} disabled={!canEmit}
-                        className={`gap-1.5 ${canEmit ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
-                        <Send className="h-4 w-4" />Emitir Dictamen
+                      <Button
+                        onClick={() => {
+                          if (modalidadFirma === "electronica") {
+                            setFirmaEmisionAbierta(true)
+                          } else {
+                            handleEmitir()
+                          }
+                        }}
+                        disabled={!canEmit}
+                        className={`gap-1.5 ${canEmit ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                      >
+                        <Send className="h-4 w-4" />
+                        {modalidadFirma === "electronica" ? "Firmar y Emitir Dictamen" : "Emitir Dictamen"}
                       </Button>
                     </CardContent>
                   </Card>
@@ -2010,6 +2028,24 @@ export function RevisionDOPage({ solicitudId, filtro, onBack }: RevisionDOPagePr
         </ScrollArea>
       </div>
     </div>
+
+    {solicitud && (
+      <FirmaModal
+        open={firmaEmisionAbierta}
+        onClose={() => setFirmaEmisionAbierta(false)}
+        solicitudId={solicitud.id}
+        folioJustificacion={solicitud.folioJustificacion ?? `SOL-${solicitud.id}`}
+        folioRecepcion={solicitud.folioRecepcion ?? null}
+        folioDictamen={solicitud.folioDictamen ? formatearFolio(solicitud.folioDictamen) : null}
+        modalidadFirma="electronica"
+        currentUserId={(user as any)?.id ?? ""}
+        onGenerarPdf={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion ?? `SOL-${solicitud.id}`)}
+        onGenerarPdfBase64={async () => generateJustificacionPDFBase64(solicitud.id)}
+        onFinalizar={async () => { handleEmitir() }}
+        guardandoFinal={guardando}
+        selladoEtapa="emision"
+      />
+    )}
     </PageLayout>
   )
 }

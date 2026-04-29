@@ -71,6 +71,8 @@ export interface JustificacionNombramientoData {
   firmaDictRevisoNombre?: string;
   firmaDictVerificoNombre?: string;
   firmaDictEmitioNombre?: string;
+  // Fecha en que se emitió el dictamen (mostrada en el bloque de dictaminación)
+  fechaDictaminacion?: string;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -101,8 +103,17 @@ const s = StyleSheet.create({
     display: 'flex',
     alignItems: "center",
     justifyContent: "center",
-    opacity: 0.15,
+    opacity: 0.22,
     zIndex: -1,
+  },
+  pageFrame: {
+    position: "absolute",
+    top: 18,
+    left: 22,
+    right: 22,
+    bottom: 18,
+    borderWidth: 1,
+    borderColor: "#000",
   },
   watermarkImage: { 
     width: 600,
@@ -110,12 +121,18 @@ const s = StyleSheet.create({
     transform: 'scale(2.5)', 
     objectFit: 'contain',
   },
-  /* --- Encabezado (tabla 3 columnas con bordes) --- */
+  /* --- Encabezado (tabla 3 columnas — bordes completos para cerrar visualmente.
+   *   Se solapa con el pageFrame en los lados/arriba, lo que en PDF se renderiza
+   *   simplemente como una línea negra continua.
+   * --- */
   headerTable: {
     flexDirection: "row",
+    marginTop: -12,
+    marginLeft: -18,
+    marginRight: -18,
+    marginBottom: 36,
     borderWidth: 1,
     borderColor: "#000",
-    marginBottom: 10,
   },
   headerCol1: {
     width: "25%",
@@ -125,7 +142,7 @@ const s = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: "#000",
   },
-  logo: { width: 80, height: "auto" },
+  logo: { width: 110, height: "auto" },
   headerCol2: {
     width: "50%",
     padding: 8,
@@ -137,27 +154,27 @@ const s = StyleSheet.create({
   headerCol3: { width: "25%", flexDirection: "column" },
   headerSecretaria: {
     fontFamily: "Helvetica-Bold",
-    fontSize: 10,
+    fontSize: 11,
     textAlign: "center",
     marginBottom: 4,
   },
   headerTitle: {
     fontFamily: "Helvetica-Bold",
-    fontSize: 9,
+    fontSize: 10,
     textAlign: "center",
   },
   // La caja Clave se eliminó como lo solicitaron, ahora la paginación toma todo el alto
-  pageBox: { flex: 1, padding: 4, justifyContent: "center", alignItems: "center" },
+  pageBox: { flex: 1, paddingHorizontal: 4, paddingTop: 10, justifyContent: "flex-start", alignItems: "center" },
   claveText: { fontSize: 8, textAlign: "center" },
 
   /* --- Elementos de página --- */
-  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 15 },
-  centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 10 },
+  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 26 },
+  centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 14 },
   // Espaciado ajustado requerido: marginTop 5, marginBottom 5
-  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 3, marginTop: 5 },
+  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 8, marginTop: 10 },
 
   /* --- Filas de Formulario (campos 1-14) --- */
-  row: { flexDirection: "row", marginBottom: 4, alignItems: "flex-end" },
+  row: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
   bold: { fontFamily: "Helvetica-Bold", marginBottom: 3, marginTop: 3 },
   numLabel: { width: 15, fontFamily: "Helvetica-Bold", fontSize: 9 },
   marginLabel: { fontFamily: "Helvetica-Bold", marginRight: 5, fontSize: 9 },
@@ -284,9 +301,9 @@ const s = StyleSheet.create({
   },
 
   /* --- Listas Dinámicas (Wraps) - Numeración --- */
-  listItemContainer: { flexDirection: "row", marginBottom: 3, paddingLeft: 10, marginTop: 2 },
+  listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10, marginTop: 2 },
   listNum: { width: 18, fontFamily: "Helvetica-Bold" },
-  listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.3 },
+  listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.5 },
   // Se usará también para perfil
   bulletItemContainer: { flexDirection: "row", marginBottom: 2, paddingLeft: 15, marginTop: 1 },
   bulletSign: { width: 18, fontFamily: "Helvetica-Bold" },
@@ -400,6 +417,9 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
   return (
     <Document>
       <Page size="LETTER" style={s.page} wrap>
+
+        {/* ══════ MARCO NEGRO FIJO (todas las páginas) ══════ */}
+        <View style={s.pageFrame} fixed />
 
         {/* ══════ MARCA DE AGUA FIJA (todas las páginas) ══════ */}
         <View style={s.watermarkContainer} fixed>
@@ -548,8 +568,8 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
         {/* I.1 OBJETO DEL NOMBRAMIENTO POR TIEMPO DETERMINADO */}
         <View wrap={false}>
-          <Text style={{ ...s.sectionTitle, marginTop: 15 }}>I.1    OBJETO DEL NOMBRAMIENTO POR TIEMPO DETERMINADO:</Text>
-          <Text style={{ textAlign: "justify", lineHeight: 1.3, marginBottom: 10, marginTop: 5 }} wrap={true}>
+          <Text style={s.sectionTitle}>I.1    OBJETO DEL NOMBRAMIENTO POR TIEMPO DETERMINADO:</Text>
+          <Text style={{ textAlign: "justify", lineHeight: 1.5, marginBottom: 10, marginTop: 4 }} wrap={true}>
             {data.objetoNombramiento}
           </Text>
         </View>
@@ -620,7 +640,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           {data.formato === 'en_linea' && (
             <View style={{ marginTop: 20, marginBottom: 15, alignItems: 'center' }}>
               <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
               <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
                 a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
               </Text>
@@ -846,7 +866,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         {data.formato === 'en_linea' && (
           <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
             <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
             <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
               a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
             </Text>
@@ -877,6 +897,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
          NUEVA PÁGINA: Dictaminación / Opinión Técnica
          ══════════════════════════════════════════════ */}
       <Page size="LETTER" style={s.page}>
+        <View style={s.pageFrame} fixed />
         <View style={s.watermarkContainer} fixed>
           <Image src={MARCA_MORELOS} style={s.watermarkImage} />
         </View>
@@ -926,6 +947,11 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           <View style={s.dictBoxRow1}>
             <View style={s.dictBoxLeft}>
               <Text style={{ fontSize: 9 }}>Fecha de dictaminación:</Text>
+              {data.fechaDictaminacion && (
+                <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginTop: 8 }}>
+                  {data.fechaDictaminacion}
+                </Text>
+              )}
             </View>
             <View style={{ ...s.dictBoxRight, justifyContent: "center", alignItems: "center" }}>
               <Text style={{ fontSize: 9, marginBottom: 5 }}>Estatus:</Text>
@@ -949,7 +975,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         {data.formato === 'en_linea' && (
           <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
             <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
             <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
               a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
             </Text>

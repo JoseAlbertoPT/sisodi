@@ -1301,40 +1301,16 @@ export function ValidacionUefaPage() {
           solicitudId={firmaTargetSol.id}
           folioJustificacion={firmaTargetSol.folioJustificacion}
           folioRecepcion={firmaTargetSol.folio && firmaTargetSol.folio !== `SOL-${firmaTargetSol.id}` ? firmaTargetSol.folio : null}
+          folioDictamen={firmaTargetSol.numeroDictamen ?? (firmaTargetSol.folioDictamen ? formatearFolio(firmaTargetSol.folioDictamen) : null)}
           modalidadFirma={firmaTargetSol.modalidadFirma}
           currentUserId={(user as any)?.id ?? ""}
           onGenerarPdf={() => {
-            generateJustificacionPDF({
-              folio: firmaTargetSol.folioJustificacion,
-              tipo: firmaTargetSol.tipo as any,
-              secretaria: firmaTargetSol.secretaria,
-              unidadAdministrativa: firmaTargetSol.unidadAdministrativa,
-              denominacion: firmaTargetSol.denominacion,
-              vigenciaInicio: firmaTargetSol.vigenciaInicio,
-              vigenciaFin: firmaTargetSol.vigenciaFin,
-              importeBruto: firmaTargetSol.importeBruto,
-              esRenovacion: firmaTargetSol.esRenovacion,
-              folioAnterior: firmaTargetSol.folioAnterior,
-              fecha: firmaTargetSol.fecha,
-              firmadoDigitalmente: false,
-            })
+            generateJustificacionPDF(firmaTargetSol.id, firmaTargetSol.folioJustificacion)
           }}
-          onGenerarPdfBase64={async () => generateJustificacionPDFBase64({
-            folio: firmaTargetSol.folioJustificacion,
-            tipo: firmaTargetSol.tipo as any,
-            secretaria: firmaTargetSol.secretaria,
-            unidadAdministrativa: firmaTargetSol.unidadAdministrativa,
-            denominacion: firmaTargetSol.denominacion,
-            vigenciaInicio: firmaTargetSol.vigenciaInicio,
-            vigenciaFin: firmaTargetSol.vigenciaFin,
-            importeBruto: firmaTargetSol.importeBruto,
-            esRenovacion: firmaTargetSol.esRenovacion,
-            folioAnterior: firmaTargetSol.folioAnterior,
-            fecha: firmaTargetSol.fecha,
-            firmadoDigitalmente: false,
-          })}
+          onGenerarPdfBase64={async () => generateJustificacionPDFBase64(firmaTargetSol.id)}
           onFinalizar={async () => { await handleFirmarJustificacion(firmaTargetSol.id) }}
           guardandoFinal={guardando}
+          selladoEtapa={firmaTargetSol.modalidadFirma === "electronica" ? "uefa" : undefined}
         />
       )}
 

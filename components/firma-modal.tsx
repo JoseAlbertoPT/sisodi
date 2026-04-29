@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { FirmaAutografaPanel } from "@/components/firma-autografa-panel"
 import { FirmaElectronicaTabs } from "@/components/firma-electronica-tabs"
+import type { SelladoEtapa } from "@/components/sellado-documento-section"
 import { Shield, FileSignature, AlertCircle } from "lucide-react"
 
 interface Props {
@@ -12,18 +13,23 @@ interface Props {
   solicitudId: number
   folioJustificacion: string
   folioRecepcion?: string | null
+  folioDictamen?: string | null
   modalidadFirma: "electronica" | "autografa" | null | undefined
   currentUserId: string
   onGenerarPdf: () => Promise<void> | void
   onGenerarPdfBase64: () => Promise<string>
   onFinalizar: () => Promise<void>
   guardandoFinal: boolean
+  /** Si se define, la firma electrónica exige sellado externo después de
+   *  completar las firmas y antes de habilitar "Enviar". */
+  selladoEtapa?: SelladoEtapa
 }
 
 export function FirmaModal({
-  open, onClose, solicitudId, folioJustificacion, folioRecepcion, modalidadFirma,
+  open, onClose, solicitudId, folioJustificacion, folioRecepcion, folioDictamen, modalidadFirma,
   currentUserId,
   onGenerarPdf, onGenerarPdfBase64, onFinalizar, guardandoFinal,
+  selladoEtapa,
 }: Props) {
   const [finalizando, setFinalizando] = useState(false)
 
@@ -43,8 +49,13 @@ export function FirmaModal({
           <DialogTitle className="flex items-center gap-2 text-base">
             {esElectronica ? <Shield className="h-5 w-5 text-primary" /> : <FileSignature className="h-5 w-5 text-secondary" />}
             <span className="flex flex-col gap-0.5">
-              <span>Firmar justificación — {folioJustificacion}</span>
-              {folioRecepcion && <span className="text-xs font-normal text-muted-foreground">Folio Recepción: {folioRecepcion}</span>}
+              <span>
+                Firmar dictamen — {folioDictamen ?? <span className="italic text-muted-foreground">sin folio</span>}
+              </span>
+              <span className="text-xs font-normal text-muted-foreground">
+                Justificación: {folioJustificacion}
+                {folioRecepcion && <> · Folio Recepción: {folioRecepcion}</>}
+              </span>
             </span>
           </DialogTitle>
         </DialogHeader>
@@ -76,10 +87,12 @@ export function FirmaModal({
           <FirmaElectronicaTabs
             solicitudId={solicitudId}
             folioJustificacion={folioJustificacion}
+            folioDictamen={folioDictamen}
             currentUserId={currentUserId}
             onGenerarPdfBase64={onGenerarPdfBase64}
             onFinalizar={handleFinalizar}
             guardandoFinal={finalizando || guardandoFinal}
+            selladoEtapa={selladoEtapa}
           />
         )}
       </DialogContent>

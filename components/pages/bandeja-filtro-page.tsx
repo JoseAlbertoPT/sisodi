@@ -1124,6 +1124,9 @@ export function BandejaFiltroPage({ filtro, onOpenReview }: BandejaFiltroPagePro
         if (aborted || !json.ok) return
         const procesos = json.procesos ?? []
         const count = procesos.filter((p: any) => {
+          // Caso (b): emisor que ya firmó, falta sellar/emitir
+          if (bandejaActual === "emision" && p.pendiente_emision_por_mi) return true
+          // Caso (a): es mi turno de firmar
           if (!p.mi_firmante_pendiente || p.mi_firmante_pendiente.bandeja !== bandejaActual) return false
           const miFirmante = p.firmantes.find((f: any) => f.id === p.mi_firmante_pendiente.id)
           if (!miFirmante) return false

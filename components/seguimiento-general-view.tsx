@@ -50,13 +50,19 @@ export const ESTADOS_VISIBLES_EMISION = new Set<string>([
   "observado por validacion final",
 ])
 
+function labelEstado(estado: string): string {
+  const n = (estado ?? "").trim().toLowerCase()
+  if (n === "pendiente do") return "Pendiente de asignación"
+  return estado
+}
+
 function EstadoBadge({ estado, etapa }: { estado: string; etapa: string }) {
   const cls =
     etapa === "emitido" ? "bg-secondary/15 text-secondary"
     : etapa === "rechazado" ? "bg-destructive/15 text-destructive"
     : etapa === "emisor" ? "bg-primary/15 text-primary"
     : "bg-muted text-card-foreground"
-  return <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${cls}`}>{estado}</span>
+  return <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${cls}`}>{labelEstado(estado)}</span>
 }
 
 function formatFecha(v: string | null) {
@@ -188,7 +194,7 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
             <SelectTrigger className="w-44 bg-card"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos</SelectItem>
-              {estados.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+              {estados.map(e => <SelectItem key={e} value={e}>{labelEstado(e)}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

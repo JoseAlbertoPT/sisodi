@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useMemo, useEffect, useCallback, memo } from "react"
+import React, { useState, useMemo, useEffect, useCallback, useRef, memo } from "react"
+import dynamic from "next/dynamic"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +14,16 @@ import {
   Loader2, AlertTriangle, RefreshCw,
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
+
+const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center gap-2 text-muted-foreground bg-muted rounded-md">
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span className="text-sm">Cargando visor…</span>
+    </div>
+  ),
+})
 // tipos
 interface DictamenEmitido {
   id:             string
@@ -23,6 +34,7 @@ interface DictamenEmitido {
   archivoPdf:     string | null
   secretaria:     string
   tipoSolicitud:  string
+  regimen:        string | null
   denominacion:   string | null
   importeBruto:   string | null
   vigenciaInicio: string | null
@@ -93,6 +105,7 @@ function mapearDictamen(raw: any): DictamenEmitido {
     archivoPdf:     raw.archivoPdf     ?? null,
     secretaria:     raw.secretaria     ?? "—",
     tipoSolicitud:  raw.tipoSolicitud  ?? raw.tipo ?? "—",
+    regimen:        raw.regimen        ?? null,
     denominacion:   raw.denominacion   ?? raw.tipoSolicitud ?? raw.tipo ?? null,
     importeBruto:   raw.importeBruto   ?? null,
     vigenciaInicio: raw.vigenciaInicio ?? null,
@@ -124,6 +137,40 @@ const DictamenViewModal = React.memo(({
 
   const folioRecepcionFormateado = formatearFolio(dictamen.folioRecepcion)
 
+  const tipoSolicitudLabel = (() => {
+    const t = (dictamen.tipoSolicitud ?? "").toLowerCase()
+    const r = (dictamen.regimen ?? "").toLowerCase()
+    if (!t || t === "—") return null
+    if (t.includes("nombramiento")) return "Nombramiento"
+    if (t.includes("paraestatal")) return "Paraestatal"
+    if (t.includes("honorario") || r.includes("honorario") || r.includes("asimilado")) {
+      if (r.includes("asimilado")) return "Honorarios asimilados a salarios"
+      return "Honorarios"
+    }
+    return dictamen.tipoSolicitud.charAt(0).toUpperCase() + dictamen.tipoSolicitud.slice(1)
+  })()
+
+  const esHonorarios =
+    (dictamen.tipoSolicitud ?? "").toLowerCase().includes("honorario") ||
+    (dictamen.regimen ?? "").toLowerCase().includes("honorario") ||
+    (dictamen.regimen ?? "").toLowerCase().includes("asimilado")
+
+  const formatearFecha = (iso: string | null) => {
+    if (!iso) return null
+    try {
+      return new Date(iso).toLocaleDateString("es-MX", {
+        day: "2-digit", month: "long", year: "numeric",
+      })
+    } catch { return null }
+  }
+  const formatearFechaCorta = (iso: string | null) => {
+    if (!iso) return null
+    try { return new Date(iso).toLocaleDateString("es-MX") } catch { return null }
+  }
+  const fechaEmisionLabel = formatearFecha(dictamen.fechaEmision)
+  const vigenciaInicioLabel = formatearFechaCorta(dictamen.vigenciaInicio)
+  const vigenciaFinLabel = formatearFechaCorta(dictamen.vigenciaFin)
+
   const [firmaElaboroNombre, setFirmaElaboroNombre] = useState("")
   const [firmaRevisoNombre, setFirmaRevisoNombre] = useState("")
   const [firmaVoBoJuridicoNombre, setFirmaVoBoJuridicoNombre] = useState("")
@@ -131,11 +178,16 @@ const DictamenViewModal = React.memo(({
   const [firmaDictVerificoNombre, setFirmaDictVerificoNombre] = useState("")
   const [firmaDictEmitioNombre, setFirmaDictEmitioNombre] = useState("")
   const [showFirmas, setShowFirmas] = useState(false)
-  const [formato, setFormato] = useState<'fisico' | 'en_linea'>('fisico')
+
+  // Formato derivado del tipoFirma del dictamen.
+  // electronica → 'en_linea' (con leyenda "DOCUMENTO FIRMADO ELECTRÓNICAMENTE")
+  // null/autografa/cualquier otro → 'fisico'
+  const formato: 'fisico' | 'en_linea' = dictamen.tipoFirma === 'electronica' ? 'en_linea' : 'fisico'
+  const modalidadLabel = dictamen.tipoFirma === 'electronica' ? 'Firma electrónica' : 'Firma autógrafa'
 
   const esNombramiento = dictamen.tipoSolicitud?.toLowerCase().includes("nombramiento")
 
-  // Debounced state para no recargar el iframe con cada tecla
+  // Las firmas aplicadas al preview (se actualizan al salir del input, no al teclear).
   const [debouncedFirmas, setDebouncedFirmas] = useState({
     firmaElaboroNombre: "",
     firmaRevisoNombre: "",
@@ -145,21 +197,38 @@ const DictamenViewModal = React.memo(({
     firmaDictEmitioNombre: ""
   })
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedFirmas({
+  const commitFirmas = useCallback(() => {
+    setDebouncedFirmas((prev) => {
+      const next = {
         firmaElaboroNombre,
         firmaRevisoNombre,
         firmaVoBoJuridicoNombre,
         firmaDictRevisoNombre,
         firmaDictVerificoNombre,
-        firmaDictEmitioNombre
-      })
-    }, 800)
-    return () => clearTimeout(timer)
+        firmaDictEmitioNombre,
+      }
+      const sameValues =
+        prev.firmaElaboroNombre === next.firmaElaboroNombre &&
+        prev.firmaRevisoNombre === next.firmaRevisoNombre &&
+        prev.firmaVoBoJuridicoNombre === next.firmaVoBoJuridicoNombre &&
+        prev.firmaDictRevisoNombre === next.firmaDictRevisoNombre &&
+        prev.firmaDictVerificoNombre === next.firmaDictVerificoNombre &&
+        prev.firmaDictEmitioNombre === next.firmaDictEmitioNombre
+      return sameValues ? prev : next
+    })
   }, [firmaElaboroNombre, firmaRevisoNombre, firmaVoBoJuridicoNombre, firmaDictRevisoNombre, firmaDictVerificoNombre, firmaDictEmitioNombre])
 
-  const iframeSrc = useMemo(() => {
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
+  const [pdfRefreshing, setPdfRefreshing] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
+  const currentBlobRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setPdfRefreshing(true)
+
     const params = new URLSearchParams({ id: dictamen.id })
     if (debouncedFirmas.firmaElaboroNombre) params.set("firmaElaboroNombre", debouncedFirmas.firmaElaboroNombre)
     if (debouncedFirmas.firmaRevisoNombre) params.set("firmaRevisoNombre", debouncedFirmas.firmaRevisoNombre)
@@ -168,8 +237,38 @@ const DictamenViewModal = React.memo(({
     if (debouncedFirmas.firmaDictVerificoNombre) params.set("firmaDictVerificoNombre", debouncedFirmas.firmaDictVerificoNombre)
     if (debouncedFirmas.firmaDictEmitioNombre) params.set("firmaDictEmitioNombre", debouncedFirmas.firmaDictEmitioNombre)
     params.set("formato", formato)
-    return `/api/pdf/justificacion?${params.toString()}#toolbar=0&view=FitH`
+
+    fetch(`/api/pdf/justificacion?${params.toString()}`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("Error al generar preview PDF")
+        return res.blob()
+      })
+      .then((blob) => {
+        if (controller.signal.aborted) return
+        const objectUrl = URL.createObjectURL(blob)
+        const previous = currentBlobRef.current
+        currentBlobRef.current = objectUrl
+        setPdfBlobUrl(objectUrl)
+        setPdfRefreshing(false)
+        if (previous) URL.revokeObjectURL(previous)
+      })
+      .catch((err) => {
+        if (err?.name === "AbortError") return
+        console.error("[PDF preview]", err)
+        setPdfRefreshing(false)
+      })
+
+    return () => controller.abort()
   }, [dictamen.id, debouncedFirmas, formato])
+
+  useEffect(() => {
+    return () => {
+      if (currentBlobRef.current) {
+        URL.revokeObjectURL(currentBlobRef.current)
+        currentBlobRef.current = null
+      }
+    }
+  }, [])
 
   const handleDownload = useCallback(() => {
     onDownload({
@@ -179,51 +278,55 @@ const DictamenViewModal = React.memo(({
       firmaDictRevisoNombre,
       firmaDictVerificoNombre,
       firmaDictEmitioNombre,
-    }, 'fisico')
-  }, [onDownload, firmaElaboroNombre, firmaRevisoNombre, firmaVoBoJuridicoNombre, firmaDictRevisoNombre, firmaDictVerificoNombre, firmaDictEmitioNombre])
-
-  const handleDownloadOnline = useCallback(() => {
-    onDownload({
-      firmaElaboroNombre,
-      firmaRevisoNombre,
-      firmaVoBoJuridicoNombre,
-      firmaDictRevisoNombre,
-      firmaDictVerificoNombre,
-      firmaDictEmitioNombre,
-    }, 'en_linea')
-  }, [onDownload, firmaElaboroNombre, firmaRevisoNombre, firmaVoBoJuridicoNombre, firmaDictRevisoNombre, firmaDictVerificoNombre, firmaDictEmitioNombre])
+    }, formato)
+  }, [onDownload, formato, firmaElaboroNombre, firmaRevisoNombre, firmaVoBoJuridicoNombre, firmaDictRevisoNombre, firmaDictVerificoNombre, firmaDictEmitioNombre])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
       <Card className="w-full max-w-5xl max-h-[90vh] flex flex-col shadow-xl border-2 border-primary/20">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0">
-          <div>
+        <CardHeader className="flex flex-row items-start justify-between pb-3 shrink-0 gap-4">
+          <div className="min-w-0 flex-1">
             <CardTitle className="text-base font-semibold text-card-foreground">
               {titulo}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Número: {dictamen.folioDictamen ?? "—"} | Folio Recepción: {folioRecepcionFormateado}
             </p>
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              <Badge variant="outline" className="text-[10px] font-normal">
+                {modalidadLabel}
+              </Badge>
+              {tipoSolicitudLabel && (
+                <Badge className="bg-primary/10 text-primary border-0 text-[10px] font-normal">
+                  Tipo: {tipoSolicitudLabel}
+                </Badge>
+              )}
+              <Badge className="bg-secondary/10 text-secondary border-0 text-[10px] font-normal">
+                {dictamen.tipoDoc === "dictamen" ? "Dictamen Técnico" : "Opinión Técnica"}
+              </Badge>
+              {fechaEmisionLabel && (
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  Emitido: {fechaEmisionLabel}
+                </Badge>
+              )}
+              {esHonorarios && vigenciaInicioLabel && vigenciaFinLabel && (
+                <Badge className="bg-accent/30 text-accent-foreground border-0 text-[10px] font-normal">
+                  Vigencia: {vigenciaInicioLabel} — {vigenciaFinLabel}
+                </Badge>
+              )}
+              {dictamen.importeBruto && (
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  Importe: {dictamen.importeBruto}
+                </Badge>
+              )}
+            </div>
+            {dictamen.denominacion && (
+              <p className="text-[11px] text-muted-foreground mt-1.5 line-clamp-1" title={dictamen.denominacion}>
+                <span className="font-medium text-card-foreground">Denominación:</span> {dictamen.denominacion}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex bg-muted rounded-md p-1 mr-2 border border-border">
-              <Button 
-                variant={formato === 'fisico' ? "default" : "ghost"} 
-                size="sm" 
-                onClick={() => setFormato('fisico')}
-                className="h-7 px-3 text-[10px] uppercase font-bold"
-              >
-                Físico
-              </Button>
-              <Button 
-                variant={formato === 'en_linea' ? "default" : "ghost"} 
-                size="sm" 
-                onClick={() => setFormato('en_linea')}
-                className="h-7 px-3 text-[10px] uppercase font-bold"
-              >
-                En Línea
-              </Button>
-            </div>
             <Button
               variant={showFirmas ? "secondary" : "outline"}
               size="sm"
@@ -233,13 +336,9 @@ const DictamenViewModal = React.memo(({
               <Printer className="h-4 w-4" />
               {showFirmas ? "Ocultar Firmas" : "Editar Firmas"}
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading} className="gap-1.5 min-w-[130px]">
+            <Button variant="default" size="sm" onClick={handleDownload} disabled={isDownloading} className="gap-1.5 min-w-[130px]">
               {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {isDownloading ? "Generando..." : "Descargar Físico"}
-            </Button>
-            <Button variant="default" size="sm" onClick={handleDownloadOnline} disabled={isDownloading} className="gap-1.5 min-w-[140px]">
-              {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck className="h-4 w-4" />}
-              {isDownloading ? "Generando..." : "Descargar en Línea"}
+              {isDownloading ? "Generando..." : "Descargar"}
             </Button>
             <Button variant="ghost" size="sm" onClick={onClose}>Cerrar</Button>
           </div>
@@ -254,16 +353,16 @@ const DictamenViewModal = React.memo(({
               <div className="space-y-2">
                 <div>
                   <label className="text-xs text-muted-foreground">Elaboró</label>
-                  <Input value={firmaElaboroNombre} onChange={(e) => setFirmaElaboroNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                  <Input value={firmaElaboroNombre} onChange={(e) => setFirmaElaboroNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Revisó</label>
-                  <Input value={firmaRevisoNombre} onChange={(e) => setFirmaRevisoNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                  <Input value={firmaRevisoNombre} onChange={(e) => setFirmaRevisoNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                 </div>
                 {esNombramiento && (
                   <div>
                     <label className="text-xs text-muted-foreground">Vo. Bo. Jurídico</label>
-                    <Input value={firmaVoBoJuridicoNombre} onChange={(e) => setFirmaVoBoJuridicoNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                    <Input value={firmaVoBoJuridicoNombre} onChange={(e) => setFirmaVoBoJuridicoNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                   </div>
                 )}
               </div>
@@ -273,26 +372,29 @@ const DictamenViewModal = React.memo(({
               <div className="space-y-2">
                 <div>
                   <label className="text-xs text-muted-foreground">Revisó</label>
-                  <Input value={firmaDictRevisoNombre} onChange={(e) => setFirmaDictRevisoNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                  <Input value={firmaDictRevisoNombre} onChange={(e) => setFirmaDictRevisoNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Verificó</label>
-                  <Input value={firmaDictVerificoNombre} onChange={(e) => setFirmaDictVerificoNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                  <Input value={firmaDictVerificoNombre} onChange={(e) => setFirmaDictVerificoNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Emitió</label>
-                  <Input value={firmaDictEmitioNombre} onChange={(e) => setFirmaDictEmitioNombre(e.target.value)} placeholder="Nombre y cargo" className="h-8 text-xs" />
+                  <Input value={firmaDictEmitioNombre} onChange={(e) => setFirmaDictEmitioNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                 </div>
               </div>
+              <p className="text-[11px] text-muted-foreground italic leading-relaxed">
+                La vista previa se actualiza al salir del campo o presionar Enter.
+              </p>
             </div>
           )}
 
           <div className="flex-1 px-4 pb-4">
-            <div className="w-full h-[75vh] bg-muted rounded-md border border-border overflow-hidden">
-              <iframe
-                src={iframeSrc}
-                className="w-full h-full border-0"
-                title={`Vista previa Dictamen ${dictamen.folioDictamen ?? dictamen.id}`}
+            <div className="w-full h-[75vh] border border-border rounded-md overflow-hidden">
+              <PdfPreview
+                fileUrl={pdfBlobUrl}
+                refreshing={pdfRefreshing}
+                label={pdfBlobUrl ? "Preparando vista…" : "Generando vista previa…"}
               />
             </div>
           </div>
@@ -627,10 +729,15 @@ export function DictamenesPage() {
                           
                           <Button
                             variant="ghost" size="sm"
-                            onClick={() => descargarPdfDictamen(d.id, d.folioDictamen)}
+                            onClick={() => descargarPdfDictamen(
+                              d.id,
+                              d.folioDictamen,
+                              {},
+                              d.tipoFirma === 'electronica' ? 'en_linea' : 'fisico',
+                            )}
                             disabled={downloadingId === d.id}
                             className="text-secondary hover:text-primary min-w-[32px]"
-                            title="Descargar PDF"
+                            title={`Descargar PDF (${d.tipoFirma === 'electronica' ? 'En línea' : 'Físico'})`}
                           >
                             {downloadingId === d.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
