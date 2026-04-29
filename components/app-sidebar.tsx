@@ -37,6 +37,7 @@ export type PageKey =
   | "bandeja-filtro1"
   | "bandeja-filtro2"
   | "bandeja-filtro3"
+  | "progreso-firmado"
   | "revision-do"
   | "dictamenes"
   | "calendario"
@@ -268,38 +269,63 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
         )}
         aria-label="Navegación principal"
       >
-        <div className="flex flex-col items-center gap-2 border-b border-border/60 px-3 py-3.5">
-          <div className="flex w-full items-center justify-between">
-            <span className="text-sm font-semibold leading-tight text-foreground">
-              <center></center>
-            </span>
-            {onToggleSidebar && (
+        <div
+          className={cn(
+            "flex flex-col items-center gap-2 border-b border-border/60 py-3.5",
+            collapsed ? "px-1.5" : "px-3"
+          )}
+        >
+          {collapsed ? (
+            onToggleSidebar && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     onClick={onToggleSidebar}
-                    className="shrink-0 rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
-                    aria-label={collapsed ? "Abrir menú" : "Cerrar menú"}
+                    className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
+                    aria-label="Abrir menú"
+                    aria-expanded={false}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <MenuIcon className="h-4 w-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="right">{collapsed ? "Abrir menú" : "Cerrar menú"}</TooltipContent>
+                <TooltipContent side="right">Abrir menú</TooltipContent>
               </Tooltip>
-            )}
-          </div>
-          <div className="flex w-full items-center justify-center rounded-md bg-white/10 p-1">
-            <img
-              src="/logo-20finanzas.png"
-              alt="Finanzas"
-              className="w-full h-14 object-contain"
-            />
-          </div>
-          {!collapsed && (
-            <span className="text-[10px] leading-tight text-muted-foreground">
-              Dictaminación Técnica
-            </span>
+            )
+          ) : (
+            <>
+              <div className="flex w-full items-center justify-between">
+                <span className="text-sm font-semibold leading-tight text-foreground">
+                  SDTF
+                </span>
+                {onToggleSidebar && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={onToggleSidebar}
+                        className="shrink-0 rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
+                        aria-label="Cerrar menú"
+                        aria-expanded={true}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Cerrar menú</TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+              <div className="flex w-full items-center justify-center rounded-md bg-white/10 p-1">
+                <img
+                  src="/logo-20finanzas.png"
+                  alt="Finanzas"
+                  className="w-full h-14 object-contain"
+                />
+              </div>
+              <span className="text-[10px] leading-tight text-muted-foreground">
+                Dictaminación Técnica
+              </span>
+            </>
           )}
         </div>
 

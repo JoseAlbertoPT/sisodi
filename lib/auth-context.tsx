@@ -20,6 +20,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
+  isLoading: boolean
   login: (rfc: string, password: string) => Promise<{ mustChangePassword: boolean } | null>
   logout: () => void
   changePassword: (rfc: string, nuevaPassword: string) => Promise<void>
@@ -30,6 +31,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   
   useEffect(() => {
@@ -38,6 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (stored) setUser(JSON.parse(stored) as User)
     } catch {
       localStorage.removeItem(AUTH_KEY)
+    } finally {
+      setIsLoading(false)
     }
   }, [])
 
@@ -106,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, login, logout, changePassword }}
+      value={{ user, isAuthenticated: !!user, isLoading, login, logout, changePassword }}
     >
       {children}
     </AuthContext.Provider>

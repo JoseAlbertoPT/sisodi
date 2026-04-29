@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { renderToBuffer } from "@react-pdf/renderer";
+import { renderToStream } from "@react-pdf/renderer";
+import { Readable } from "node:stream";
 import {
   PlantillaJustificacionServicios,
   type JustificacionData,
@@ -9,8 +10,21 @@ import {
   PlantillaNombramientoDeterminado,
   type JustificacionNombramientoData,
 } from "@/components/plantillas/PlantillaNombramientoDeterminado";
+import { efirmaClient } from "@/lib/efirma-client";
+import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import React from "react";
 
+/* ── Helper: drena un Node Readable a Buffer (necesario para post-procesar
+ *  el PDF con pdf-lib cuando se estampa la constancia eFirma). ── */
+async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream as AsyncIterable<Buffer | string>) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+/* ── Helper: Convierte un string separado por comas O saltos de línea en array ── */
 function splitToArray(str: string | null | undefined): string[] {
   if (!str || str.trim() === "") return [];
   return str
@@ -25,6 +39,43 @@ function formatString(str: string | null | undefined): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
+/* ── Helper: arma un sello digital ficticio para modo bypass ── */
+function selloFalso(prefix: string, length = 344): string {
+  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let out = prefix;
+  while (out.length < length) {
+    out += charset[Math.floor(Math.random() * charset.length)];
+  }
+  return out.slice(0, length - 2) + "==";
+}
+
+/* ── Helper: construye una firma ficticia a partir de un firmante local (modo bypass) ── */
+function buildFirmaFicticia(firmante: any, uuid?: string | null): FirmaPortal {
+  const nombre = firmante?.nombre || "JUAN PÉREZ GARCÍA";
+  const rfc = firmante?.rfc || "PEGJ800101AB1";
+  const cargo = firmante?.cargo_firmante || firmante?.cargo || "Servidor Público";
+  const rol = firmante?.rol || "Firmante";
+  const fechaFirma = firmante?.fecha_firma || new Date().toISOString();
+  const portalUrl = process.env.EFIRMA_PORTAL_URL || "https://firma-dev.morelos.gob.mx";
+  const fakeUuid = uuid || "00000000-0000-0000-0000-000000000000";
+  return {
+    usuario: rfc,
+    rolFirmante: `${rol} — ${cargo}`,
+    responsable: nombre,
+    selloDigital: selloFalso("DEMO"),
+    estampadoTiempo: typeof fechaFirma === "string" ? fechaFirma.replace("T", " ").slice(0, 19) : new Date(fechaFirma).toISOString().replace("T", " ").slice(0, 19),
+    selloEstampadoTiempo: selloFalso("GEM"),
+    noCertificado: "00001000000700000001",
+    noCertificadoGEM: "00001000000709040175",
+    rfcGEM: "GEM720601TW9",
+    urlValidacion: `${portalUrl.replace(/\/$/, "")}/ValidacionFirma?uuid=${fakeUuid}`,
+    firmadoEn: fechaFirma,
+  };
+}
+
+/* ── POST /api/pdf/justificacion ── */
+
+// Firma names interface
 interface FirmaNames {
   firmaElaboroNombre?: string;
   firmaRevisoNombre?: string;
@@ -32,10 +83,90 @@ interface FirmaNames {
   firmaDictRevisoNombre?: string;
   firmaDictVerificoNombre?: string;
   firmaDictEmitioNombre?: string;
+  firmaElaboroCargo?: string;
+  firmaRevisoCargo?: string;
+  firmaVoBoJuridicoCargo?: string;
+  firmaDictRevisoCargo?: string;
+  firmaDictVerificoCargo?: string;
+  firmaDictEmitioCargo?: string;
   formato?: 'fisico' | 'en_linea';
 }
 
-async function generatePDFResponse(solicitudId: string | null, firmas: FirmaNames = {}) {
+/**
+ * Resuelve el nombre y cargo capturado de cada firmante registrado en
+ * `firma_firmante` y mapea por (rol + bandeja) a los slots del template.
+ */
+async function resolverNombresFirmantes(
+  solicitudId: number,
+  base: FirmaNames,
+): Promise<FirmaNames> {
+  const proceso = await prisma.firma_proceso.findUnique({
+    where: { solicitud_id: solicitudId },
+    include: {
+      firmantes: {
+        include: { usuario: { select: { id: true, nombre: true } } },
+        orderBy: { orden: "asc" },
+      },
+    },
+  });
+  if (!proceso) return base;
+
+  const out: FirmaNames = { ...base };
+
+  const resolverNombre = (f: any): string => {
+    return (
+      (f.tipo === "interno" ? f.usuario?.nombre : null) ||
+      f.nombre ||
+      ""
+    );
+  };
+  const resolverCargo = (f: any): string => {
+    return (f.cargo_firmante || "").trim();
+  };
+
+  for (const f of proceso.firmantes as any[]) {
+    const nombre = resolverNombre(f);
+    const cargo = resolverCargo(f);
+    if (!nombre && !cargo) continue;
+    const rol = (f.rol || "").toLowerCase();
+    const bandeja = (f.bandeja || "").toLowerCase();
+
+    if (rol.includes("vo. bo") || rol.includes("vo.bo") || rol.includes("vobo")) {
+      if (!out.firmaVoBoJuridicoNombre) out.firmaVoBoJuridicoNombre = nombre;
+      if (!out.firmaVoBoJuridicoCargo && cargo) out.firmaVoBoJuridicoCargo = cargo;
+      continue;
+    }
+    if (rol.includes("elaboró") || rol.includes("elaboro")) {
+      if (!out.firmaElaboroNombre) out.firmaElaboroNombre = nombre;
+      if (!out.firmaElaboroCargo && cargo) out.firmaElaboroCargo = cargo;
+      continue;
+    }
+    if (rol.includes("revisó") || rol.includes("reviso")) {
+      if (bandeja === "uefa") {
+        if (!out.firmaRevisoNombre) out.firmaRevisoNombre = nombre;
+        if (!out.firmaRevisoCargo && cargo) out.firmaRevisoCargo = cargo;
+      } else if (bandeja === "revision") {
+        if (!out.firmaDictRevisoNombre) out.firmaDictRevisoNombre = nombre;
+        if (!out.firmaDictRevisoCargo && cargo) out.firmaDictRevisoCargo = cargo;
+      }
+      continue;
+    }
+    if (rol.includes("verificó") || rol.includes("verifico")) {
+      if (!out.firmaDictVerificoNombre) out.firmaDictVerificoNombre = nombre;
+      if (!out.firmaDictVerificoCargo && cargo) out.firmaDictVerificoCargo = cargo;
+      continue;
+    }
+    if (rol.includes("emitió") || rol.includes("emitio")) {
+      if (!out.firmaDictEmitioNombre) out.firmaDictEmitioNombre = nombre;
+      if (!out.firmaDictEmitioCargo && cargo) out.firmaDictEmitioCargo = cargo;
+      continue;
+    }
+  }
+  return out;
+}
+
+async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}) {
+  let firmas: FirmaNames = { ...firmasInput };
   try {
     if (!solicitudId) {
       return NextResponse.json(
@@ -46,7 +177,18 @@ async function generatePDFResponse(solicitudId: string | null, firmas: FirmaName
 
     const sol = await prisma.solicitud.findUnique({
       where: { id: Number(solicitudId) },
+      include: { dictamen: true },
     });
+
+    const fechaDict =
+      sol?.dictamen?.fecha_emision ?? (sol as any)?.fecha_emision ?? null;
+    const fechaDictaminacion = fechaDict
+      ? new Date(fechaDict).toLocaleDateString("es-MX", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        })
+      : "";
 
     if (!sol) {
       return NextResponse.json(
@@ -55,7 +197,11 @@ async function generatePDFResponse(solicitudId: string | null, firmas: FirmaName
       );
     }
 
-    let buffer;
+    // Auto-completa nombres de firmantes desde firma_firmante (no sobrescribe
+    // los que vinieron explícitamente en el body).
+    firmas = await resolverNombresFirmantes(Number(solicitudId), firmas);
+
+    let pdfElement: React.ReactElement;
 
     if (sol.tipo_solicitud === "nombramiento" || (sol.regimen && sol.regimen.toLowerCase().includes("nombramiento"))) {
       const dataNombramiento: JustificacionNombramientoData = {
@@ -118,10 +264,12 @@ async function generatePDFResponse(solicitudId: string | null, firmas: FirmaName
         firmaDictRevisoNombre: firmas.firmaDictRevisoNombre,
         firmaDictVerificoNombre: firmas.firmaDictVerificoNombre,
         firmaDictEmitioNombre: firmas.firmaDictEmitioNombre,
+        fechaDictaminacion,
       };
 
-      buffer = await renderToBuffer(
-        React.createElement(PlantillaNombramientoDeterminado as React.FC<any>, { data: dataNombramiento })
+      pdfElement = React.createElement(
+        PlantillaNombramientoDeterminado as React.FC<any>,
+        { data: dataNombramiento },
       );
     } else {
       const dataHonorarios: JustificacionData = {
@@ -168,10 +316,17 @@ async function generatePDFResponse(solicitudId: string | null, firmas: FirmaName
         firmaDictRevisoNombre: firmas.firmaDictRevisoNombre,
         firmaDictVerificoNombre: firmas.firmaDictVerificoNombre,
         firmaDictEmitioNombre: firmas.firmaDictEmitioNombre,
+        firmaElaboroCargo: firmas.firmaElaboroCargo,
+        firmaRevisoCargo: firmas.firmaRevisoCargo,
+        firmaDictRevisoCargo: firmas.firmaDictRevisoCargo,
+        firmaDictVerificoCargo: firmas.firmaDictVerificoCargo,
+        firmaDictEmitioCargo: firmas.firmaDictEmitioCargo,
+        fechaDictaminacion,
       };
 
-      buffer = await renderToBuffer(
-        React.createElement(PlantillaJustificacionServicios as React.FC<any>, { data: dataHonorarios })
+      pdfElement = React.createElement(
+        PlantillaJustificacionServicios as React.FC<any>,
+        { data: dataHonorarios },
       );
     }
 
@@ -182,7 +337,81 @@ async function generatePDFResponse(solicitudId: string | null, firmas: FirmaName
 
     const filename = `Justificacion_${folio.replace(/\//g, "-")}.pdf`;
 
-    return new NextResponse(buffer as unknown as BodyInit, {
+    // ─── Render del PDF base ───
+    // Usamos renderToStream en lugar de renderToBuffer: cuando NO se requiere
+    // post-procesado (formato físico) podemos enviar el stream directo a la
+    // respuesta y el navegador empieza a pintar el iframe en cuanto llegan los
+    // primeros bytes (mejor TTFB). Si hay que estampar la constancia, drenamos
+    // el stream a un Buffer.
+    const pdfStream = await renderToStream(pdfElement as any);
+
+    // ─── Post-procesamiento: estampar constancia de firma electrónica ───
+    if (firmas.formato === "en_linea") {
+      let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
+      try {
+        const bypass = process.env.EFIRMA_BYPASS === "true";
+
+        const firmaProceso = await prisma.firma_proceso.findUnique({
+          where: { solicitud_id: Number(solicitudId) },
+          include: bypass
+            ? { firmantes: { orderBy: { orden: "asc" } } }
+            : undefined,
+        });
+
+        let firmasPortal: FirmaPortal[] = [];
+
+        if (bypass) {
+          // ── Modo prueba: usar firmantes locales + sellos ficticios ──
+          const dummyFirmantes = (firmaProceso as any)?.firmantes ?? [];
+          if (dummyFirmantes.length > 0) {
+            firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
+          } else {
+            firmasPortal = [buildFirmaFicticia({}, firmaProceso?.uuid)];
+          }
+        } else if (firmaProceso?.proceso_id) {
+          // ── Modo real: consultar al portal e.firma ──
+          const estado: any = await efirmaClient.estado(firmaProceso.proceso_id);
+          firmasPortal = Array.isArray(estado?.firmas)
+            ? estado.firmas.map((f: any) => ({
+                usuario: f.usuario ?? "",
+                rolFirmante: f.rolFirmante ?? null,
+                responsable: f.responsable ?? null,
+                selloDigital: f.selloDigital ?? null,
+                estampadoTiempo: f.estampadoTiempo ?? null,
+                selloEstampadoTiempo: f.selloEstampadoTiempo ?? null,
+                noCertificado: f.noCertificado ?? null,
+                noCertificadoGEM: f.noCertificadoGEM ?? null,
+                rfcGEM: f.rfcGEM ?? null,
+                urlValidacion: f.urlValidacion ?? null,
+                firmadoEn: f.firmadoEn ?? null,
+              }))
+            : [];
+        }
+
+        if (firmasPortal.length > 0) {
+          pdfFinal = await agregarConstanciaFirma({
+            pdfBase: pdfFinal as Buffer,
+            firmas: firmasPortal,
+            nombreArchivo: filename,
+            folio,
+          });
+        }
+      } catch (errFirma) {
+        console.error("[pdf/justificacion] Error agregando constancia de firma:", errFirma);
+      }
+
+      return new NextResponse(pdfFinal as unknown as BodyInit, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `inline; filename="${filename}"`,
+        },
+      });
+    }
+
+    // ─── Camino rápido: streamear el PDF directamente (sin constancia) ───
+    const webStream = Readable.toWeb(pdfStream as Readable) as ReadableStream;
+    return new NextResponse(webStream, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

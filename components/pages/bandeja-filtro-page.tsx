@@ -16,10 +16,12 @@ import {
   Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
-  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil,
+  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Globe, Pencil,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
+import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
+import { SeguimientoGeneralView, ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 
@@ -47,7 +49,7 @@ interface FiltroSolicitud {
   revisorAsignado: { id: string; nombre: string; correo: string } | null
   _raw?: any
 }
-type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "pendientes_asignacion" | "en_validacion" | "pendientes_firma" | "todas"
+type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "pendientes_asignacion" | "en_validacion" | "pendientes_firma" | "todas" | "solicitudes"
 const FILTRO_LABELS: Record<number, string> = {
   1: "Revisor",
   2: "Validación Final",
@@ -162,6 +164,7 @@ const TAB_CONFIG_REVISION: TabCfg = {
   todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 const TAB_CONFIG_EMISION: TabCfg = {
+  solicitudes:     { label: "Solicitudes",          icon: <Globe className="h-3.5 w-3.5" />,         activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#1D4ED8", color: "#FFFFFF" } },
   nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" } },
   revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#0891B2", color: "#FFFFFF" } },
   observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
@@ -1059,10 +1062,17 @@ interface BandejaFiltroPageProps {
 export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: BandejaFiltroPageProps) {
   const { user } = useAuth()
   const [solicitudes,    setSolicitudes]    = useState<FiltroSolicitud[]>([])
+  const [pendientesFirmaCount, setPendientesFirmaCount] = useState(0)
+  const [solicitudesCount, setSolicitudesCount] = useState(0)
+  const [refreshSignal, setRefreshSignal] = useState(0)
   const [loading,        setLoading]        = useState(true)
   const [error,          setError]          = useState<string | null>(null)
   const [guardando,      setGuardando]      = useState(false)
-  const [activeTab,      setActiveTab]      = useState<TabKey>(filtro === 2 ? "pendientes_asignacion" : "nuevas")
+  const [activeTab,      setActiveTab]      = useState<TabKey>(
+    filtro === 2 ? "pendientes_asignacion"
+    : filtro === 3 ? "solicitudes"
+    : "nuevas"
+  )
   const [selectedId,     setSelectedId]     = useState<string | null>(null)
   const [observarTarget,        setObservarTarget]        = useState<string | null>(null)
   const [aprobarTarget,        setAprobarTarget]        = useState<string | null>(null)
@@ -1074,6 +1084,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
 
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
+    setRefreshSignal(v => v + 1)
     try {
       const userId = (user as any)?.id ?? ""
       const url = filtro === 1 && userId
@@ -1083,11 +1094,68 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar"); return }
       setSolicitudes(json.data ?? [])
+      if (filtro === 3) {
+        fetch("/api/solicitudes-seguimiento", { cache: "no-store" })
+          .then(r => r.json())
+          .then(j => {
+            if (!j.ok) return
+            const visibles = (j.data ?? []).filter((s: any) =>
+              ESTADOS_VISIBLES_EMISION.has((s.estado ?? "").toLowerCase())
+            )
+            setSolicitudesCount(visibles.length)
+          })
+          .catch(() => {})
+      }
     } catch { setError("Error de conexión al servidor") }
     finally { setLoading(false) }
   }, [filtro, user])
 
   useEffect(() => { cargar() }, [cargar])
+
+  // Para la bandeja de Emisor: precargar el conteo de la vista global "Solicitudes"
+  // (todas las que han ingresado al flujo) para mostrarlo en la tab sin tener que abrirla.
+  useEffect(() => {
+    if (filtro !== 3) return
+    let aborted = false
+    fetch("/api/solicitudes-seguimiento", { cache: "no-store" })
+      .then(r => r.json())
+      .then(json => {
+        if (aborted || !json.ok) return
+        const visibles = (json.data ?? []).filter((s: any) =>
+          ESTADOS_VISIBLES_EMISION.has((s.estado ?? "").toLowerCase())
+        )
+        setSolicitudesCount(visibles.length)
+      })
+      .catch(() => {})
+    return () => { aborted = true }
+  }, [filtro])
+
+  // Precargar conteo de "Pendientes de firma" para todas las bandejas (sin tener que abrir la tab).
+  useEffect(() => {
+    const userId = (user as any)?.id ?? ""
+    if (!userId) return
+    const bandejaActual = filtro === 1 ? "revision" : filtro === 2 ? "validacion" : "emision"
+    let aborted = false
+    fetch(`/api/firma-efirma/progreso?usuarioId=${encodeURIComponent(userId)}`, { cache: "no-store" })
+      .then(r => r.json())
+      .then(json => {
+        if (aborted || !json.ok) return
+        const procesos = json.procesos ?? []
+        const count = procesos.filter((p: any) => {
+          // Caso (b): emisor que ya firmó, falta sellar/emitir
+          if (bandejaActual === "emision" && p.pendiente_emision_por_mi) return true
+          // Caso (a): es mi turno de firmar
+          if (!p.mi_firmante_pendiente || p.mi_firmante_pendiente.bandeja !== bandejaActual) return false
+          const miFirmante = p.firmantes.find((f: any) => f.id === p.mi_firmante_pendiente.id)
+          if (!miFirmante) return false
+          const siguiente = [...p.firmantes].filter((f: any) => !f.firmado).sort((a: any, b: any) => a.orden - b.orden)[0]
+          return !!siguiente && miFirmante.orden === siguiente.orden
+        }).length
+        setPendientesFirmaCount(count)
+      })
+      .catch(() => {})
+    return () => { aborted = true }
+  }, [filtro, user])
 
   const handleAprobar = useCallback(async (id: string, revisorId?: string) => {
     setGuardando(true)
@@ -1187,15 +1255,17 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
     const c: Record<TabKey, number> = {
       nuevas: 0, correcciones: 0, revision: 0, observadas: 0,
       pendientes_asignacion: 0, en_validacion: 0, pendientes_firma: 0,
-      todas: 0,
+      todas: 0, solicitudes: 0,
     }
     c.todas = solicitudes.length
     solicitudes.forEach(s => {
       const tab = classifySolicitud(s, filtro)
       if (tab !== "todas") c[tab]++
     })
+    c.pendientes_firma = pendientesFirmaCount
+    c.solicitudes = solicitudesCount
     return c
-  }, [solicitudes, filtro])
+  }, [solicitudes, filtro, pendientesFirmaCount, solicitudesCount])
 
   const filtered = useMemo(() =>
     solicitudes
@@ -1292,7 +1362,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         })}
       />
 
-      {}
+      {!(filtro === 3 && activeTab === "solicitudes") && (
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1313,7 +1383,17 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
           </SelectContent>
         </Select>
       </div>
+      )}
 
+      {activeTab === "pendientes_firma" ? (
+        <Card className="shadow-sm border-border">
+          <CardContent className="pt-6">
+            <PendientesFirmaPanel filtro={filtro} currentUserId={(user as any)?.id ?? ""} onCountChange={setPendientesFirmaCount} />
+          </CardContent>
+        </Card>
+      ) : filtro === 3 && activeTab === "solicitudes" ? (
+        <SeguimientoGeneralView refreshSignal={refreshSignal} />
+      ) : (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm font-semibold text-card-foreground">
@@ -1493,6 +1573,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
           )}
         </CardContent>
       </Card>
+      )}
       <ConfirmModal
         open={!!aprobarTarget}
         onClose={() => setAprobarTarget(null)}

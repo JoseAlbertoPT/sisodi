@@ -24,9 +24,11 @@ import {
 
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
-import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
+import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
 import { type EditSolicitudPayload, type FormularioData } from "@/components/pages/nueva-solicitud-page"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
+import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
+import { FirmaModal } from "@/components/firma-modal"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 
 const COLOR_SI        = "#6E795A"
@@ -1140,6 +1142,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [selectedDestinatarios, setSelectedDestinatarios] = useState<string[]>([])
   const [archivoSubido,         setArchivoSubido]         = useState(false)
   const [autografaDescargado,   setAutografaDescargado]   = useState(false)
+  const [selladoEmisionSubido,  setSelladoEmisionSubido]  = useState(false)
+  const [firmaEmisionAbierta,   setFirmaEmisionAbierta]   = useState(false)
 
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
@@ -1227,7 +1231,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       ? !sinObservacion
       : (checklistStats.allDone && checklistStats.hasNo && checklistStats.noWithoutObs === 0)
   const observarBlocked = false
-  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string) => {
+
+  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string, modalidadFirmaValue?: "electronica" | "autografa") => {
     if (!solicitud) return
     setGuardando(true)
     try {
@@ -1241,6 +1246,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           usuarioId:     (user as any)?.id ?? "",
           observaciones: observaciones ? [observaciones] : undefined,
           ...(revisorId ? { revisorId } : {}),
+          ...(modalidadFirmaValue ? { modalidadFirma: modalidadFirmaValue } : {}),
         }),
       })
       const json = await res.json()
@@ -1261,7 +1267,17 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     )
   , [solicitud])
   const handleAprobar = async (revisorId?: string) => {
-    if (filtro === 3) { setShowEmitConfirm(true); return }
+    if (filtro === 3) {
+      // Si la modalidad ya fue definida (por UEFA o una aprobación previa del Emisor),
+      // no preguntamos de nuevo — aprobamos directo con esa modalidad.
+      const modalidadExistente = (solicitud as any)?.modalidadFirma as "electronica" | "autografa" | null | undefined
+      if (modalidadExistente === "electronica" || modalidadExistente === "autografa") {
+        const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadExistente)
+        if (nuevoEstado) setShowConfirmacion("Solicitud aprobada.")
+        return
+      }
+      setShowEmitConfirm(true); return
+    }
     if (filtro === 2 && !yaEstuvoEnRevisor && !revisorId) {
       setShowAprobarAsignarModal(true)
       return
@@ -1273,7 +1289,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   }
   const handleConfirmEmit = async () => {
     setShowEmitConfirm(false)
-    const nuevoEstado = await patchEstado("aprobar")
+    const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
     if (nuevoEstado) {
       setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
       setShowConfirmacion("Solicitud aprobada.")
@@ -1303,9 +1319,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     if (nuevoEstado) { setObservacionGeneral(""); setChecklistErrors({}); setShowConfirmacion("Solicitud observada y regresada a URG.") }
   }
 
-  const handleEmitir = () => {
+  const handleEmitir = async () => {
     if (!solicitud) return
-    setSolicitud(prev => prev ? { ...prev, estado: "Emitido" } : prev)
+    const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
+    if (!nuevoEstado) return
+    setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
     setShowConfirmacion(
       modalidadFirma === "electronica"
         ? "Dictamen emitido y firmado electrónicamente. Expediente bloqueado."
@@ -1372,7 +1390,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   )
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
-    (modalidadFirma === "electronica" || (autografaDescargado && archivoSubido))
+    (modalidadFirma === "electronica"
+      ? true // Para electrónica el gate vive dentro del FirmaModal (firma + sellado)
+      : (autografaDescargado && archivoSubido))
 
   if (loading) return (
     <div className="flex items-center justify-center py-24 gap-3">
@@ -1430,13 +1450,32 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 <Shield className="h-7 w-7 text-primary" />
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-semibold text-card-foreground">Confirmación</h3>
-                <p className="text-sm text-muted-foreground mt-2">¿Estas seguro de Aprobar ?</p>
+                <h3 className="text-lg font-semibold text-card-foreground">Modalidad de Firma</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Selecciona cómo se firmará el dictamen. Esta decisión aplicará a todas las firmas del flujo; no se puede mezclar electrónica y autógrafa.
+                </p>
               </div>
+              <RadioGroup value={modalidadFirma}
+                onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } else { setSelladoEmisionSubido(false) } }}
+                className="flex flex-col gap-3 w-full">
+                {[
+                  { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
+                  { value: "autografa",   label: "Firma Autógrafa",   desc: "Descargue, firme y suba el documento" },
+                ].map(opt => (
+                  <label key={opt.value} htmlFor={`confirm-firma-${opt.value}`}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-3 transition-colors ${modalidadFirma === opt.value ? "border-secondary bg-secondary/5" : "border-border hover:border-secondary/50"}`}>
+                    <RadioGroupItem value={opt.value} id={`confirm-firma-${opt.value}`} className="mt-0.5" />
+                    <div>
+                      <span className="text-sm font-medium text-card-foreground">{opt.label}</span>
+                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </RadioGroup>
               <div className="flex items-center gap-3 w-full">
                 <Button variant="outline" className="flex-1" onClick={() => setShowEmitConfirm(false)}>Cancelar</Button>
                 <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleConfirmEmit} disabled={guardando}>
-                  {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, aprobar"}
+                  {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y aprobar"}
                 </Button>
               </div>
             </CardContent>
@@ -1894,7 +1933,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                     <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-card-foreground">Modalidad de Firma</CardTitle></CardHeader>
                     <CardContent>
                       <RadioGroup value={modalidadFirma}
-                        onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } }}
+                        onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } else { setSelladoEmisionSubido(false) } }}
                         className="flex flex-col gap-3">
                         {[
                           { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
@@ -1936,9 +1975,19 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                   </Card>
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-end p-4">
-                      <Button onClick={handleEmitir} disabled={!canEmit}
-                        className={`gap-1.5 ${canEmit ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
-                        <Send className="h-4 w-4" />Emitir Dictamen
+                      <Button
+                        onClick={() => {
+                          if (modalidadFirma === "electronica") {
+                            setFirmaEmisionAbierta(true)
+                          } else {
+                            handleEmitir()
+                          }
+                        }}
+                        disabled={!canEmit}
+                        className={`gap-1.5 ${canEmit ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                      >
+                        <Send className="h-4 w-4" />
+                        {modalidadFirma === "electronica" ? "Firmar y Emitir Dictamen" : "Emitir Dictamen"}
                       </Button>
                     </CardContent>
                   </Card>
@@ -1963,6 +2012,24 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         </ScrollArea>
       </div>
     </div>
+
+    {solicitud && (
+      <FirmaModal
+        open={firmaEmisionAbierta}
+        onClose={() => setFirmaEmisionAbierta(false)}
+        solicitudId={solicitud.id}
+        folioJustificacion={solicitud.folioJustificacion ?? `SOL-${solicitud.id}`}
+        folioRecepcion={solicitud.folioRecepcion ?? null}
+        folioDictamen={solicitud.folioDictamen ? formatearFolio(solicitud.folioDictamen) : null}
+        modalidadFirma="electronica"
+        currentUserId={(user as any)?.id ?? ""}
+        onGenerarPdf={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion ?? `SOL-${solicitud.id}`)}
+        onGenerarPdfBase64={async () => generateJustificacionPDFBase64(solicitud.id)}
+        onFinalizar={async () => { handleEmitir() }}
+        guardandoFinal={guardando}
+        selladoEtapa="emision"
+      />
+    )}
     </PageLayout>
   )
 }

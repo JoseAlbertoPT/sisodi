@@ -46,6 +46,7 @@ async function main() {
     { id: 7,  nombre: "Revision",              key: "bandeja-filtro1",   icono: "Filter",          ruta: "/bandeja-filtro1",   orden: 1,  parent_id: 6 },
     { id: 8,  nombre: "Validacion",            key: "bandeja-filtro2",   icono: "Filter",          ruta: "/bandeja-filtro2",   orden: 2,  parent_id: 6 },
     { id: 9,  nombre: "Emision",               key: "bandeja-filtro3",   icono: "Filter",          ruta: "/bandeja-filtro3",   orden: 3,  parent_id: 6 },
+    { id: 14, nombre: "Progreso Firmado",      key: "progreso-firmado",  icono: "ClipboardCheck",  ruta: "/progreso-firmado",  orden: 4,  parent_id: 6 },
     { id: 10, nombre: "Dictámenes",            key: "dictamenes",        icono: "ShieldCheck",     ruta: "/dictamenes",        orden: 4,  parent_id: null },
     { id: 11, nombre: "Calendario",            key: "calendario",        icono: "CalendarDays",    ruta: "/calendario",        orden: 5,  parent_id: null },
     { id: 12, nombre: "Usuarios",              key: "usuarios",          icono: "Users",           ruta: "/usuarios",          orden: 6,  parent_id: null },

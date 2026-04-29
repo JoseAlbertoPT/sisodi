@@ -69,6 +69,55 @@ model dictamen {
   solicitud     solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
+model firma_proceso {
+  id               Int              @id @default(autoincrement())
+  solicitud_id     Int              @unique
+  tipo             String           @db.VarChar(20)
+  proceso_id       String?          @db.VarChar(100)
+  uuid             String?          @unique @db.VarChar(100)
+  acceso_token     String?          @db.VarChar(64)
+  total_firmantes  Int?
+  firmados         Int              @default(0)
+  archivo_firmado  String?          @db.VarChar(500)
+  estado           String           @default("iniciado") @db.VarChar(20)
+  creado_por_id    String           @db.Uuid
+  fecha_creacion   DateTime         @default(now()) @db.Timestamp(6)
+  fecha_completado DateTime?        @db.Timestamp(6)
+  accedido_en      DateTime?        @db.Timestamp(6)
+  expira_en        DateTime?        @db.Timestamp(6)
+  session_id       String?          @db.VarChar(64)
+  solicitud        solicitud        @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario          usuario          @relation(fields: [creado_por_id], references: [id], onUpdate: NoAction)
+  firmantes        firma_firmante[]
+
+  @@index([solicitud_id], map: "idx_firma_proceso_solicitud")
+}
+
+model firma_firmante {
+  id               Int           @id @default(autoincrement())
+  firma_proceso_id Int
+  orden            Int
+  rol              String        @db.VarChar(30)
+  cargo            String        @db.VarChar(300)
+  tipo             String        @db.VarChar(20)
+  bandeja          String?       @db.VarChar(20)
+  usuario_id       String?       @db.Uuid
+  nombre           String?       @db.VarChar(200)
+  rfc              String?       @db.VarChar(20)
+  correo           String?       @db.VarChar(200)
+  cargo_firmante   String?       @db.VarChar(300)
+  firmado          Boolean       @default(false)
+  fecha_firma      DateTime?     @db.Timestamp(6)
+  acceso_token     String?       @unique @db.VarChar(64)
+  accedido_en      DateTime?     @db.Timestamp(6)
+  expira_en        DateTime?     @db.Timestamp(6)
+  session_id       String?       @db.VarChar(64)
+  firma_proceso    firma_proceso @relation(fields: [firma_proceso_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario          usuario?      @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+
+  @@index([firma_proceso_id], map: "idx_firma_firmante_proceso")
+}
+
 model estado {
   id                                                                 Int                   @id @default(autoincrement())
   nombre                                                             String                @unique @db.VarChar(100)
@@ -213,9 +262,12 @@ model solicitud {
   puesto_jefe_inmediato String?               @db.VarChar(200)
   condiciones_riesgos   String[]              @default([])
   tipo_importe          String?               @db.VarChar(20)
+  modalidad_firma       String?               @db.VarChar(20)
   adjunto               adjunto[]
   checklist_detalle     checklist_detalle[]
   dictamen              dictamen?
+  documento_sellado     documento_sellado[]
+  firma_proceso         firma_proceso?
   historial_solicitud   historial_solicitud[]
   estado                estado                @relation(fields: [estado_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   periodo               periodo               @relation(fields: [periodo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -227,6 +279,21 @@ model solicitud {
 }
 
 
+
+model documento_sellado {
+  id              Int       @id @default(autoincrement())
+  solicitud_id    Int
+  etapa           String    @db.VarChar(20)
+  archivo         String    @db.VarChar(500)
+  nombre_original String?   @db.VarChar(255)
+  uploaded_by     String?   @db.Uuid
+  uploaded_at     DateTime  @default(now()) @db.Timestamp(6)
+  solicitud       solicitud @relation(fields: [solicitud_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  uploader        usuario?  @relation("documento_sellado_uploader", fields: [uploaded_by], references: [id], onUpdate: NoAction)
+
+  @@unique([solicitud_id, etapa])
+  @@index([solicitud_id], map: "idx_documento_sellado_solicitud")
+}
 
 model usuario {
   id                    String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -242,6 +309,9 @@ model usuario {
   secretaria_id         String?               @db.Uuid
   secretaria_texto      String?               @db.VarChar(512)
   codigo_recuperacion   codigo_recuperacion?
+  documentos_sellados   documento_sellado[]   @relation("documento_sellado_uploader")
+  firma_proceso         firma_proceso[]
+  firma_firmante        firma_firmante[]
   historial_solicitud   historial_solicitud[]
   permiso_captura       permiso_captura[]
   solicitudes_asignadas solicitud[]           @relation("solicitud_revisor_asignado")
