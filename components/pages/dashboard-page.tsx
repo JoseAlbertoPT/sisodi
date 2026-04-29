@@ -56,7 +56,7 @@ const MESES = [
   { value: "12", label: "Diciembre" },
 ]
 
-const ANIOS = ["2024", "2025", "2026"]
+const ANIOS = [ "2026"]
 const tooltipStyle = {
   backgroundColor: "#ffffff",
   border: "1px solid #d6d5cf",
@@ -575,7 +575,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
   return (
     <PageLayout
       title="Tablero Informativo"
-      description={`Indicadores y Gráficas del Sistema · ${anio}${mes !== "Todos" ? ` — ${mesFiltroLabel}` : ""}`}
+      description={`Indicadores y Gráficas del Sistema · Periodo  ${anio}${mes !== "Todos" ? ` — ${mesFiltroLabel}` : ""}`}
     >
       <div className="flex flex-wrap items-center gap-3">
         <Select value={anio} onValueChange={setAnio}>

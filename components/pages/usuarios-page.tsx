@@ -484,7 +484,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
     if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC inválido (ej. ABCD850101XYZ)"
     if (!form.password.trim()) e.password = "La contraseña es requerida"
-    else if (form.password.length < 6) e.password = "Mínimo 6 caracteres"
+    else if (form.password.length < 8) e.password = "Mínimo 8 caracteres"
     if (!form.rol)             e.rol      = "Seleccione un rol"
     if (!form.secretaria)      e.secretaria = "Seleccione una secretaría"
     return e
@@ -586,7 +586,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               </div>
               {field("correo",   "Correo electrónico", "email",    "usuario@gobierno.gob.mx", undefined, "email")}
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">RFC</Label>
+                <Label className="text-xs font-medium text-muted-foreground">Usuario</Label>
                 <Input
                   placeholder="ABCD850101XYZ"
                   value={form.rfc}
@@ -598,7 +598,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
                 {errors.rfc  && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
               </div>
-              {field("password", "Contraseña",         "password", "Mínimo 6 caracteres", undefined, "new-password")}
+              {field("password", "Contraseña",         "password", "Mínimo 8 caracteres", undefined, "new-password")}
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
@@ -782,7 +782,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC inválido (ej. ABCD850101XYZ)"
     if (!form.rol)        e.rol        = "Seleccione un rol"
     if (!form.secretaria) e.secretaria = "Seleccione una secretaría"
-    if (form.password && form.password.length < 6) e.password = "Mínimo 6 caracteres"
+    if (form.password && form.password.length < 8) e.password = "Mínimo 8 caracteres"
     if (form.password && form.password !== form.confirmPassword) e.confirmPassword = "Las contraseñas no coinciden"
     return e
   }
@@ -890,7 +890,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               </div>
               {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx")}
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">RFC</Label>
+                <Label className="text-xs font-medium text-muted-foreground">Usuario</Label>
                 <Input
                   placeholder="ABCD850101XYZ"
                   value={form.rfc}
@@ -931,7 +931,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           </div>
 
-          {}
+
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
             <Select
@@ -951,7 +951,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </Select>
           </div>
 
-          {}
+
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -974,14 +974,13 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             />
           </div>
 
-          {}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Cambiar contraseña (opcional)</span>
               <div className="flex-1 border-t border-border" />
             </div>
             <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
-              {field("password",        "Nueva contraseña",     "password", "Dejar en blanco para no cambiar", undefined, "new-password")}
+              {field("password",        "Nueva contraseña",     "password", "Mínimo 8 caracteres ", undefined, "new-password")}
               {field("confirmPassword", "Confirmar contraseña", "password", "Repite la nueva contraseña",        undefined, "new-password")}
             </div>
           </div>

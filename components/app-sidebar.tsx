@@ -29,7 +29,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-
 export type PageKey =
   | "dashboard"
   | "nueva-solicitud"
@@ -87,7 +86,7 @@ const SECTION_DEFS = [
   },
   {
     id: "gestion",
-    label: "Gestión de Procesos DGDO ",
+    label: "Gestión  DGDO ",
     keys: ["bandeja-filtro1", "bandeja-filtro2", "bandeja-filtro3", "dictamenes"] as PageKey[],
   },
   {
@@ -219,6 +218,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
   const [menuTree, setMenuTree] = useState<MenuNode[] | null>(null)
   const [menusLoading, setMenusLoading] = useState(true)
   const [menusError, setMenusError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (!user?.rol) return
@@ -230,7 +230,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
       .catch((e) => { if (!cancelled) setMenusError(e instanceof Error ? e.message : "Error al cargar menú") })
       .finally(() => { if (!cancelled) setMenusLoading(false) })
     return () => { cancelled = true }
-  }, [user?.rol])
+  }, [user?.rol, retryCount])
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     justificaciones: true,
@@ -308,7 +308,16 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
             <p className="text-sm text-muted-foreground px-2.5 py-2">Cargando menú…</p>
           )}
           {!menusLoading && menusError && (
-            <p className="text-sm text-destructive px-2.5 py-2">{menusError}</p>
+            <div className="flex flex-col gap-1.5 px-2.5 py-2">
+              <p className="text-xs text-destructive">{menusError}</p>
+              <button
+                type="button"
+                onClick={() => setRetryCount((n) => n + 1)}
+                className="text-xs text-muted-foreground underline hover:text-foreground text-left"
+              >
+                Reintentar
+              </button>
+            </div>
           )}
 
           {!menusLoading && !menusError && menuTree && (

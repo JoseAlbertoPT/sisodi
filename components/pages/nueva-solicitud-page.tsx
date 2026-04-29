@@ -385,24 +385,11 @@ function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string
   const handleFile = (file: File) => {
     setError(null)
     const ext = file.name.split(".").pop()?.toLowerCase()
-    if (!["pdf", "doc", "docx"].includes(ext ?? "")) {
-      setError("Solo son ACEPTABLES ARCHIVOS PDF o DOC."); return
+    if (!["pdf", "doc", "docx", "xls", "xlsx", "png", "jpg", "jpeg", "zip", "rar", "txt", "odt", "ods"].includes(ext ?? "")) {
+      setError("Formato no soportado. Se aceptan PDF, DOC, DOCX, XLS, XLSX, imágenes, ZIP, entre otros."); return
     }
     if (file.size > 10 * 1024 * 1024) {
       setError("El archivo supera el límite de 10 MB."); return
-    }
-    const fileDate = new Date(file.lastModified)
-    const now = new Date()
-    const mesActual = fileDate.getFullYear() === now.getFullYear() && fileDate.getMonth() === now.getMonth()
-    let mesVigencia = false
-    if (vigenciaInicio) {
-      const vig = new Date(vigenciaInicio + "T00:00:00")
-      mesVigencia = fileDate.getFullYear() === vig.getFullYear() && fileDate.getMonth() === vig.getMonth()
-    }
-    if (!mesActual && !mesVigencia) {
-      const mesLabel = now.toLocaleDateString("es-MX", { month: "long", year: "numeric" })
-      setError(`El Archivo de ser del MES  (${mesLabel})${vigenciaInicio ? " o del MES de la VIGENCIA" : ""}.`)
-      return
     }
     setArchivo(file)
     onFileChange?.(file)
@@ -410,7 +397,7 @@ function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string
 
         return (
         <div className="flex flex-col gap-1.5">
-        <input ref={inputRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
+        <input ref={inputRef} type="file" accept="*" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
         <div
         onClick={() => inputRef.current?.click()}
@@ -429,7 +416,7 @@ function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string
         ) : (
           <div className="flex flex-col items-center gap-1 text-center">
             <Upload className="h-5 w-5 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">PDF, DOC (máx. 10 MB) — Clic (para buscar ) o Arrastra</p>
+            <p className="text-xs text-muted-foreground">Cualquier formato (máx. 10 MB) — Clic para buscar o Arrastra</p>
           </div>
         )}
       </div>
@@ -3297,11 +3284,13 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
   }
   return (
     <PageLayout title="Nueva solicitud" description="Inicia el registro de una solicitud para su análisis y emisión de dictamen u opinión técnica funcional.">
-      <div className="sticky top-0 z-10 bg-white border-b border-border py-2 -mx-4 px-4 -mt-3 mb-1">
-        <div className="max-w-4xl mx-auto w-full">
+      <div className="py-2 -mx-4 px-4 -mt-3 mb-1">
+        <div className="max-w-4xl mx-auto w-full flex justify-center">
           <StepIndicator step={step} tipo={tipo} />
         </div>
       </div>
+
+
       {step === "tipo" && (
         <>
           {calCargando && (
@@ -3411,7 +3400,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
                         <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-semibold text-destructive">Período vencido — No se puede Registrar</span>
-                          <span className="text-xs text-muted-foreground">La Fecha límite DO ({periodoInfo.row.limiteDO}) ya Expiro .</span>
+                          <span className="text-xs text-muted-foreground">La Fecha  límite DO ({periodoInfo.row.limiteDO}) ya Expiro .</span>
                         </div>
                       </div>
                     )}
@@ -3422,39 +3411,11 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
           </Card>
 
           <Card className={`shadow-sm border-border ${(periodoVencido && !permisoActivo) || !calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
-            <CardHeader className="px-4 pt-3 pb-1">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                <FilePlus className="h-4 w-4 text-secondary" />Seleccione Tipo de Solicitud
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 px-4 pb-3 pt-0">
-              <RadioGroup value={tipo} onValueChange={(v) => {
-                const next = v as TipoSolicitud
-                if (next === "prestacion"   && regimenPeriodo === "nombramiento") return
-                if (next === "nombramiento" && regimenPeriodo !== "nombramiento") return
-                setTipo(next)
-              }} className="flex flex-col gap-3">
-                <label htmlFor="tipo-prestacion" className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-2.5 transition-colors ${tipo === "prestacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
-                  <RadioGroupItem value="prestacion" id="tipo-prestacion" className="mt-0.5" disabled={regimenPeriodo === "nombramiento"} />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-card-foreground">Justificación de Prestación de Servicios</span>
-                    <span className="text-xs text-muted-foreground">Honorarios / Honorarios Asimilados a Salarios</span>
-                  </div>
-                </label>
-                <label htmlFor="tipo-nombramiento" className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-2.5 transition-colors ${tipo === "nombramiento" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
-                  <RadioGroupItem value="nombramiento" id="tipo-nombramiento" className="mt-0.5" disabled={regimenPeriodo !== "nombramiento"} />
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-card-foreground">Justificación para Nombramiento por Tiempo Determinado</span>
-                    <span className="text-xs text-muted-foreground">Nombramiento por Tiempo Determinado</span>
-                  </div>
-                </label>
-              </RadioGroup>
-              <div className="flex justify-end pt-2">
-                <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-                  Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
-                </Button>
-              </div>
+            <CardContent className="flex justify-end px-2 py-2">
+              <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+                Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
             </CardContent>
           </Card>
         </>
@@ -3618,24 +3579,25 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
         </Card>
       )}
 
-      {}
-      {step === "formulario" && (
-        <>
-          <div className="flex items-center gap-3 flex-wrap">
-            <Badge className="bg-primary text-primary-foreground">
-              {tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento por Tiempo Determinado"}
-            </Badge>
-            {prefilled && datosRenovacion && (
-              <Badge variant="outline" className="border-secondary text-secondary gap-1">
-                <Lock className="h-3 w-3" />Renovación
-              </Badge>
-            )}
-            {excelRows.length > 0 && (
-              <Badge variant="outline" className="border-border text-muted-foreground text-xs">
-                Excel histórico activo ({excelRows.length} registros)
-              </Badge>
-            )}
-          </div>
+
+   {step === "formulario" && (
+     <>
+       <div className="flex flex-col gap-2">
+         <div>
+           <Button variant="outline" size="sm" onClick={handleBack} className="gap-1.5">
+             <ArrowLeft className="h-4 w-4" />Anterior
+           </Button>
+
+
+           {prefilled && datosRenovacion && (
+             <Badge variant="outline" className="border-secondary text-secondary gap-1">
+               <Lock className="h-3 w-3" />Renovación
+             </Badge>
+
+
+           )}
+         </div>
+       </div>
 
           {tipo === "prestacion" ? (
             <FormularioPrestacion
