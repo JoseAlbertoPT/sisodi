@@ -59,13 +59,25 @@ export async function PATCH(
   }
 }
 
+async function collectDescendantIds(parentId: string): Promise<string[]> {
+  const children = await prisma.organo_centralizado.findMany({
+    where: { parent_id: parentId },
+    select: { id: true },
+  })
+  const nested = await Promise.all(children.map((c) => collectDescendantIds(c.id)))
+  return [parentId, ...nested.flat()]
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-    const usuariosCount = await prisma.usuario.count({ where: { secretaria_id: id, activo: true } })
+    const allIds = await collectDescendantIds(id)
+    const usuariosCount = await prisma.usuario.count({
+      where: { secretaria_id: { in: allIds } },
+    })
     if (usuariosCount > 0) {
       return NextResponse.json(
         { error: `No se puede eliminar: tiene ${usuariosCount} usuario${usuariosCount !== 1 ? "s" : ""} asignado${usuariosCount !== 1 ? "s" : ""}` },

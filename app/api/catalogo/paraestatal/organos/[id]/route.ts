@@ -31,6 +31,26 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+    const organo = await prisma.organo_paraestatal.findUnique({
+      where: { id: Number(id) },
+    })
+    if (!organo) return NextResponse.json({ error: "No encontrado" }, { status: 404 })
+
+    const usuariosCount = await prisma.usuario.count({
+      where: {
+        secretaria_id: null,
+        OR: [
+          { secretaria_texto: { equals: organo.nombre, mode: "insensitive" } },
+          { secretaria_texto: { endsWith: ` > ${organo.nombre}`, mode: "insensitive" } },
+        ],
+      },
+    })
+    if (usuariosCount > 0) {
+      return NextResponse.json(
+        { error: `No se puede eliminar: tiene ${usuariosCount} usuario${usuariosCount !== 1 ? "s" : ""} asignado${usuariosCount !== 1 ? "s" : ""}` },
+        { status: 400 }
+      )
+    }
     await prisma.organo_paraestatal.delete({ where: { id: Number(id) } })
     return NextResponse.json({ ok: true })
   } catch (e) {

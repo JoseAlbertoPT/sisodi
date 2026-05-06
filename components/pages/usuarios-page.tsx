@@ -7,13 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import {
 
   Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
-  Loader2, Shield, CheckCircle2, ToggleLeft, Eye, Unlock, Trash2,
+  Loader2, Shield, CheckCircle2, Eye, Unlock, Trash2,
 } from "lucide-react"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
@@ -111,7 +110,6 @@ function validarRFC(rfc: string): boolean {
 }
 
 const STEP_LABELS = ["Secretaría", "Dirección", "Subdirección", "Departamento", "Unidad"]
-
 function findNodePath(
   nodes: OrganoCentralizadoNode[],
   targetId: string,
@@ -175,9 +173,7 @@ function SecretariaTreeSelector({
   const [steps, setSteps] = useState<OrganoCentralizadoNode[]>([])
   const [searchQueries, setSearchQueries] = useState<Record<number, string>>({})
   const [autocompleteQuery, setAutocompleteQuery] = useState("")
-
   const allNodes = useMemo(() => flattenTree(tree), [tree])
-
   const filteredNodes = useMemo(() => {
     const q = autocompleteQuery.trim()
     if (!q) return []
@@ -252,7 +248,6 @@ function SecretariaTreeSelector({
   }
 
   const levels: { label: string; options: OrganoCentralizadoNode[]; selected: OrganoCentralizadoNode | null }[] = []
-
   levels.push({
     label: STEP_LABELS[Math.min(levelOffset, STEP_LABELS.length - 1)],
     options: tree,
@@ -308,7 +303,6 @@ function SecretariaTreeSelector({
                 </>
               )}
             </div>
-
             {idx < levels.length - 1 && level.selected && (
               <div className="ml-2.5 h-2 border-l-2 border-primary/20" />
             )}
@@ -319,7 +313,7 @@ function SecretariaTreeSelector({
                   <div className="relative mb-1.5">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      placeholder={idx === 0 ? "Escribir para buscar secretaría o unidad..." : `Buscar ${level.label.toLowerCase()}...`}
+                      placeholder={idx === 0 ? "Escribir para buscar Secretaría o Unidad..." : `Buscar ${level.label.toLowerCase()}...`}
                       value={query}
                       onChange={(e) => {
                         setSearchAtLevel(idx, e.target.value)
@@ -330,7 +324,6 @@ function SecretariaTreeSelector({
                     />
                   </div>
                 )}
-
                 <div className="rounded-lg border border-border bg-card max-h-44 overflow-y-auto">
                   {filtered.length === 0 && treeMatches.length === 0 && (
                     <div className="flex flex-col items-center py-4 text-center">
@@ -420,12 +413,16 @@ function paraestatalToTree(cats: CategoriaParaestatalItem[]): OrganoCentralizado
     orden: cat.orden,
     tipo: "categoria",
     parent_id: null,
+    ua_clave_administrativa: null,
+    clave_reporte_plazas: null,
     children: cat.organos.map((org) => ({
       id: `org-${org.id}`,
       nombre: org.nombre,
       orden: org.orden,
       tipo: "organo",
       parent_id: `cat-${cat.id}`,
+      ua_clave_administrativa: org.ua_clave_administrativa,
+      clave_reporte_plazas: org.clave_reporte_plazas,
       children: [],
     })),
   }))
@@ -435,8 +432,10 @@ type NuevoUsuarioFormProps = {
   onClose: () => void
   onSaved: (u: Usuario) => void
 }
-
 function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
+  const { user: currentUser } = useAuth()
+  const tipoAdminFijo = currentUser?.tipoAdministracion ?? "centralizada"
+  const esAdministrador = currentUser?.rol === "Administrador"
   const [form, setForm] = useState({
     nombre: "",
     correo: "",
@@ -456,7 +455,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const [apiError, setApiError] = useState("")
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
-  const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">("centralizada")
+  const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
 
   useEffect(() => {
     setTreeLoading(true)
@@ -479,11 +478,11 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
 
   const validate = () => {
     const e: Record<string, string> = {}
-    if (!form.nombre.trim())   e.nombre   = "El nombre es requerido"
-    if (!form.correo.trim())   e.correo   = "El correo es requerido"
+    if (!form.nombre.trim())   e.nombre   = "El Nombre  es requerido"
+    if (!form.correo.trim())   e.correo   = "El Correo es requerido"
     else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
-    if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC inválido (ej. ABCD850101XYZ)"
-    if (!form.password.trim()) e.password = "La contraseña es requerida"
+    if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC Inválido (ej. ABCD850101XYZ)"
+    if (!form.password.trim()) e.password = "La Contraseña es requerida"
     else if (form.password.length < 8) e.password = "Mínimo 8 caracteres"
     if (!form.rol)             e.rol      = "Seleccione un rol"
     if (!form.secretaria)      e.secretaria = "Seleccione una secretaría"
@@ -502,9 +501,8 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
         ? (nodePath[1].ua_clave_administrativa ?? nodePath[1].nombre)
         : null
       const secretariaTexto = uaNombre ? `${rootNombre} > ${uaNombre}` : rootNombre
-      const rawSecretariaId = form.secretariaId?.startsWith("org-")
-        ? form.secretariaId.slice(4)
-        : form.secretariaId?.startsWith("cat-")
+      const rawSecretariaId =
+        form.secretariaId?.startsWith("org-") || form.secretariaId?.startsWith("cat-")
           ? null
           : form.secretariaId
       const nuevo = await crearUsuario({
@@ -574,7 +572,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </div>
           )}
 
-          {}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Datos generales</span>
@@ -636,18 +633,18 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 setTipoAdmin(v as "centralizada" | "paraestatal")
                 setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
               }}
+              disabled={!esAdministrador}
             >
               <SelectTrigger className="bg-background h-9 text-xs">
                 <SelectValue placeholder="Seleccione tipo de administración" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="centralizada">Administración Centralizada</SelectItem>
-                <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>
+                {(esAdministrador || tipoAdminFijo === "centralizada") && <SelectItem value="centralizada">Administración Centralizada</SelectItem>}
+                {(esAdministrador || tipoAdminFijo === "paraestatal") && <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>}
               </SelectContent>
             </Select>
           </div>
 
-          {}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -699,6 +696,9 @@ type EditarUsuarioModalProps = {
 }
 
 function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalProps) {
+  const { user: currentUser } = useAuth()
+  const tipoAdminFijo = currentUser?.tipoAdministracion ?? "centralizada"
+  const esAdministrador = currentUser?.rol === "Administrador"
   const rfcLimpio = usuario.rfc?.trim().toUpperCase() ?? ""
   const [form, setForm] = useState({
     nombre:          usuario.nombre.trim(),
@@ -717,7 +717,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   const [apiError, setApiError] = useState("")
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
-  const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">("centralizada")
+  const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
   const initializedRef = useRef(false)
 
   
@@ -728,7 +728,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         if (usuario.secretariaId) {
           const found = findNodePath(central, usuario.secretariaId)
           if (!found) {
-            
             fetchCategoriasParaestatal()
               .then((cats) => {
                 const paraTree = paraestatalToTree(cats)
@@ -804,9 +803,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
       } else {
         secretariaTexto = form.secretaria
       }
-      const rawSecretariaId = form.secretariaId?.startsWith("org-")
-        ? form.secretariaId.slice(4)
-        : form.secretariaId?.startsWith("cat-")
+      const rawSecretariaId =
+        form.secretariaId?.startsWith("org-") || form.secretariaId?.startsWith("cat-")
           ? null
           : form.secretariaId
       const payload: Record<string, unknown> = {
@@ -940,13 +938,14 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 setTipoAdmin(v as "centralizada" | "paraestatal")
                 setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [] }))
               }}
+              disabled={!esAdministrador}
             >
               <SelectTrigger className="bg-background h-9 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="centralizada">Administración Centralizada</SelectItem>
-                <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>
+                {(esAdministrador || tipoAdminFijo === "centralizada") && <SelectItem value="centralizada">Administración Centralizada</SelectItem>}
+                {(esAdministrador || tipoAdminFijo === "paraestatal") && <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>}
               </SelectContent>
             </Select>
           </div>

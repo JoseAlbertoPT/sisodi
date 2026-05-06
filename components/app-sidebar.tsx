@@ -164,6 +164,7 @@ function SidebarSection({
   showDivider,
 }: {
   label: string
+  label: string
   items: MenuNode[]
   currentPage: PageKey
   onNavigate: (page: PageKey) => void
@@ -171,22 +172,32 @@ function SidebarSection({
   onToggle: () => void
   showDivider: boolean
 }) {
+  const [hovered, setHovered] = useState(false)
+
+  const btnStyle: React.CSSProperties = expanded
+    ? { backgroundColor: "rgb(94 23 51)", color: "#FFFFFF" }
+    : hovered
+    ? { backgroundColor: "#722F3718", color: "#5e1733" }
+    : { backgroundColor: "transparent", color: "#283c2a" }
+
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-0.5">
+      {showDivider && <div className="h-px bg-border/40 mx-1 my-0.5" />}
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-1.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors group"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 transition-colors"
+        style={btnStyle}
       >
-        {showDivider && <div className="h-px bg-border/50 group-hover:bg-border transition-colors" style={{ width: "8px" }} />}
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 group-hover:text-foreground/60 transition-colors shrink-0">
+        <span className="text-[11px] font-semibold uppercase tracking-wider">
           {label}
         </span>
-        <div className="flex-1 h-px bg-border/50 group-hover:bg-border transition-colors" />
         {expanded ? (
-          <ChevronUp className="h-2.5 w-2.5 shrink-0" />
+          <ChevronUp className="h-3 w-3 shrink-0" />
         ) : (
-          <ChevronRight className="h-2.5 w-2.5 shrink-0" />
+          <ChevronRight className="h-3 w-3 shrink-0" />
         )}
       </button>
       <div
@@ -196,7 +207,7 @@ function SidebarSection({
         )}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="flex flex-col gap-0.5 pb-0.5">
+          <div className="flex flex-col gap-0.5 pt-0.5 pb-1 pl-3">
             {items.map((node) => (
               <SidebarItem
                 key={node.id}
@@ -296,7 +307,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
             <>
               <div className="flex w-full items-center justify-between">
                 <span className="text-sm font-semibold leading-tight text-foreground">
-                  SDTF
+
                 </span>
                 {onToggleSidebar && (
                   <Tooltip>
@@ -308,7 +319,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
                         aria-label="Cerrar menú"
                         aria-expanded={true}
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <span className="text-base leading-none"> ⟵ </span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="right">Cerrar menú</TooltipContent>
@@ -323,7 +334,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
                 />
               </div>
               <span className="text-[10px] leading-tight text-muted-foreground">
-                Dictaminación Técnica
+
               </span>
             </>
           )}

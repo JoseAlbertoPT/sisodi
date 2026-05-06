@@ -15,18 +15,19 @@ export async function GET(req: NextRequest) {
     if (viewerUserId) {
       const viewer = await prisma.usuario.findUnique({
         where:  { id: viewerUserId },
-        select: { secretaria_id: true, organo_centralizado: { select: { id: true } } },
+        select: { secretaria_id: true, secretaria_texto: true, organo_centralizado: { select: { id: true } } },
       })
       if (viewer) {
         if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
-          
           where.usuario = {
             organo_centralizado: { isNot: null },
             secretaria_id: viewer.secretaria_id,
           }
         } else {
-          
-          where.usuario = { organo_centralizado: { is: null } }
+          where.usuario = {
+            organo_centralizado: { is: null },
+            secretaria_texto: viewer.secretaria_texto,
+          }
         }
       }
     }
@@ -131,7 +132,7 @@ export async function PATCH(req: NextRequest) {
 
     const solicitud = await prisma.solicitud.findUnique({
       where:   { id: idNum },
-      include: { estado: true, usuario: { select: { secretaria_id: true } } },
+      include: { estado: true, usuario: { select: { secretaria_id: true, secretaria_texto: true, area_id: true } } },
     })
 
     if (!solicitud) {
@@ -194,9 +195,14 @@ export async function PATCH(req: NextRequest) {
     let folioJustificacionNuevo: string | undefined
     if (esEnvioAValidacion && !solicitud.folio_justificacion) {
       const year = new Date().getFullYear()
-      const tipoFolio = solicitud.usuario?.secretaria_id
-        ? `JUST-${solicitud.usuario.secretaria_id}`
-        : "JUST-P"
+      let tipoFolio: string
+      if (solicitud.usuario?.secretaria_id) {
+        tipoFolio = `JUST-${solicitud.usuario.secretaria_id}`
+      } else if (solicitud.usuario?.area_id) {
+        tipoFolio = `JUST-A-${solicitud.usuario.area_id}`
+      } else {
+        tipoFolio = "JUST-P"
+      }
       const registro = await prisma.consecutivo_folio.upsert({
         where:  { tipo_mes_anio: { tipo: tipoFolio, mes: 0, anio: year } },
         update: { consecutivo: { increment: 1 } },

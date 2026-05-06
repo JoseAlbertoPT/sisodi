@@ -38,3 +38,4 @@ public/uploads/
 
 # Turbo (si se usa)
 .turbo
+.env

@@ -110,6 +110,7 @@ export async function GET(req: NextRequest) {
         where:  { id: viewerUserId },
         select: {
           secretaria_id:       true,
+          secretaria_texto:    true,
           organo_centralizado: { select: { id: true } },
           rol:                 { select: { nombre: true } },
         },
@@ -130,7 +131,12 @@ export async function GET(req: NextRequest) {
               },
             }
           } else {
-            organoFilter = { usuario: { organo_centralizado: { is: null } } }
+            organoFilter = {
+              usuario: {
+                organo_centralizado: { is: null },
+                secretaria_texto: viewer.secretaria_texto,
+              },
+            }
           }
         }
       }

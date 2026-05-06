@@ -393,6 +393,7 @@ export function CalendarioPage() {
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
                       <th className="px-5 py-3 text-left font-semibold">Mes de aplicación</th>
+                      <th className="px-5 py-3 text-center font-semibold">Fecha Cierre</th>
                       <th className="px-5 py-3 text-center font-semibold">Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)</th>
                       <th className="px-5 py-3 text-center font-semibold">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
                     </tr>
@@ -403,6 +404,15 @@ export function CalendarioPage() {
                         <td className="px-5 py-3"><span className="font-medium text-card-foreground">{row.mes}</span></td>
                         {editing ? (
                           <>
+                            <td className="px-3 py-2 text-center">
+                              <DatePickerHabil
+                                value={dmyToDate(row.fechaFin ?? "")}
+                                defaultMonth={new Date(ejercicio, MESES.indexOf(row.mes), 1)}
+                                onChange={(d) => updateEditRow("honorarios", row.mes, "fechaFin", d ? dateToDmy(d) : "")}
+                                className="w-36"
+                                compact
+                              />
+                            </td>
                             <td className="px-3 py-2 text-center">
                               <DatePickerHabil
                                 value={dmyToDate(row.limiteDO)}
@@ -424,6 +434,11 @@ export function CalendarioPage() {
                           </>
                         ) : (
                           <>
+                            <td className="px-5 py-3 text-center">
+                              {row.fechaFin
+                                ? <DateCell value={row.fechaFin} />
+                                : <span className="text-muted-foreground/40 text-xs">—</span>}
+                            </td>
                             <td className="px-5 py-3 text-center"><DateCell value={row.limiteDO} /></td>
                             <td className="px-5 py-3 text-center"><DateCell value={row.limiteDGRH} /></td>
                           </>

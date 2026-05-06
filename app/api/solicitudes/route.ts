@@ -85,12 +85,14 @@ export async function POST(req: NextRequest) {
 
     const usuarioCreador = await prisma.usuario.findUnique({
       where:  { id: usuarioId },
-      select: { secretaria_id: true },
+      select: { secretaria_id: true, area_id: true },
     })
-    
+
     const tipoFolioJUST = usuarioCreador?.secretaria_id
       ? `JUST-${usuarioCreador.secretaria_id}`
-      : "JUST-P"
+      : usuarioCreador?.area_id
+        ? `JUST-A-${usuarioCreador.area_id}`
+        : "JUST-P"
 
     const estadoNombre = estado_nombre ?? "En Captura"
     let estadoInicial = await prisma.estado.findFirst({
