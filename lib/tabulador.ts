@@ -1,78 +1,38 @@
-export const RANGOS_TABULADOR = [
-  
-  
-  
-  
-  {min: 32124.36 , max : 49846.50, nivel: "105", categoria: "A"},
-  
-  
-  
-  
-    {min: 24380.00, max : 32123.30, nivel: "106", categoria: "A"},
 
-  
-  
-  
-  
-    {min: 19080.00, max : 24369.40 ,  nivel: "107", categoria: "A"},
+export type RangoTabulador = {
+  min: number
+  max: number
+  nivel: string
+  categoria: string
+  puesto: string
+}
 
-  
- 
-  
-  
-    {min: 0.00, max : 18830.90 ,  nivel: "108", categoria: "A"},
+export const RANGOS_TABULADOR: RangoTabulador[] = [
+  //{ min: 32124.36, max: 49846.50, nivel: "105", categoria: "A",      puesto: "Subdirector de Área" },
 
-  
-  
-  
-  
-  { min: 0.00, max: 13292.40, nivel: "109", categoria: "A" },
+  { min: 24380.00, max: 32123.30, nivel: "106", categoria: "A",      puesto: "Coordinador de Area" },
+  { min: 19080.00, max: 24369.40, nivel: "107", categoria: "A",      puesto: "Director de Área" },
+  { min: 0.00,     max: 18830.90, nivel: "108", categoria: "A",      puesto: "Subdirector de Área" },
+  { min: 0.00,     max: 13292.40, nivel: "109", categoria: "A",      puesto: "Jefe de Departamento" },
 
-  
-  { min: 11660.00, max: 15898.94, nivel: "301", categoria: "A" },
+  { min: 11660.00, max: 15898.94, nivel: "301", categoria: "A",      puesto: "Especialista " },
+  { min: 10554.00, max: 11658.94, nivel: "302", categoria: "A",      puesto: "Técnico Especializado" },
+  { min: 0.00,     max: 10553.36, nivel: "303", categoria: "A",      puesto: "Técnico Operativo, Registrador " },
 
-  
-  { min: 10554.00, max: 11658.94, nivel: "302", categoria: "A" },
-
-  
-  { min: 0.00,     max: 10553.36, nivel: "303", categoria: "A" },
-
-  
-
-  
-  { min: 0.00,     max: 49847.00, nivel: "504", categoria: "ÚNICA" },
-
-  
-  
-  
-  { min: 0.00,     max: 47631.00, nivel: "505", categoria: "A" },
-
-  
- 
-  
-  { min: 0.00,     max: 44308.00, nivel: "506", categoria: "A" },
-
-  
-  
-  
-  { min: 0.00,     max: 40985.00, nivel: "507", categoria: "A" },
-
-  
-
-  
-  { min: 0.00,     max: 36554.00, nivel: "508", categoria: "A" },
-
-  
-  
-  
-  { min: 0.00,     max: 33231.00, nivel: "509", categoria: "A" },
-
-  
-  
-  
-    { min: 0.00,     max: 31569.00, nivel: "510", categoria: "A" },
-
+  { min: 0.00,     max: 49847.00, nivel: "504", categoria: "ÚNICA",  puesto: "Director General" },
+  { min: 0.00,     max: 47631.00, nivel: "505", categoria: "A",      puesto: "Oficial, Jefe de Unidad"},
+  { min: 0.00,     max: 44308.00, nivel: "506", categoria: "A",      puesto: "Suboficial" },
+  { min: 0.00,     max: 40985.00, nivel: "507", categoria: "A",      puesto: "Policia Primero" },
+  { min: 0.00,     max: 36554.00, nivel: "508", categoria: "A",      puesto: "Policia Segundo" },
+  { min: 0.00,     max: 33231.00, nivel: "509", categoria: "A",      puesto: "Policia Tercero" },
+  { min: 0.00,     max: 31569.00, nivel: "510", categoria: "A",      puesto: "Policia " },
 ]
+
+const NIVELES_FORMULARIO = new Set(["106","107", "108", "109", "301", "302", "303", "504", "505", "506", "507", "508", "509", "510"])
+
+export function esMostrarEnFormulario(nivel: string): boolean {
+  return NIVELES_FORMULARIO.has(nivel)
+}
 
 const fmt = (n: number) =>
   `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`

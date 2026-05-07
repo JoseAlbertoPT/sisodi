@@ -8,6 +8,68 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
+function getEasterDate(year: number): Date {
+  const a = year % 19
+  const b = Math.floor(year / 100)
+  const c = year % 100
+  const d = Math.floor(b / 4)
+  const e = b % 4
+  const f = Math.floor((b + 8) / 25)
+  const g = Math.floor((b - f + 1) / 3)
+  const h = (19 * a + b - d - g + 15) % 30
+  const i = Math.floor(c / 4)
+  const k = c % 4
+  const l = (32 + 2 * e + 2 * i - h - k) % 7
+  const m = Math.floor((a + 11 * h + 22 * l) / 451)
+  const month = Math.floor((h + l - 7 * m + 114) / 31)
+  const day = ((h + l - 7 * m + 114) % 31) + 1
+  return new Date(year, month - 1, day)
+}
+
+function getNthMonday(year: number, month: number, n: number): Date {
+  const d = new Date(year, month, 1)
+  const diff = (1 - d.getDay() + 7) % 7
+  d.setDate(1 + diff + (n - 1) * 7)
+  return d
+}
+
+function getInhabilDates(year: number): Date[] {
+  const easter = getEasterDate(year)
+  const juevesSanto = new Date(year, easter.getMonth(), easter.getDate() - 3)
+  const viernesSanto = new Date(year, easter.getMonth(), easter.getDate() - 2)
+  const dates: Date[] = [
+    new Date(year, 0, 1),
+    getNthMonday(year, 1, 1),
+    getNthMonday(year, 2, 3),
+    juevesSanto,
+    viernesSanto,
+    new Date(year, 4, 1),
+    new Date(year, 4, 5),
+    new Date(year, 5, 25),
+    new Date(year, 8, 16),
+    new Date(year, 10, 2),
+    getNthMonday(year, 10, 3),
+    new Date(year, 11, 25),
+  ]
+  if (year === 2026) {
+    const extra: [number, number][] = [
+      [0, 5], [0, 6], [0, 7],
+      [1, 2],
+      [2, 16], [2, 30], [2, 31],
+      [3, 1], [3, 2], [3, 3], [3, 10], [3, 17],
+      [4, 11],
+      [5, 22],
+      [8, 15], [8, 30],
+      [9, 12],
+      [10, 16],
+    ]
+    for (const [mo, dy] of extra) dates.push(new Date(year, mo, dy))
+  }
+  return dates
+}
+
+const INHABILES: Date[] = [2025, 2026, 2027, 2028, 2029, 2030].flatMap(getInhabilDates)
+
 export function isoToDate(s: string): Date | undefined {
   if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined
   const [y, m, d] = s.split("-").map(Number)
@@ -106,14 +168,14 @@ export function DatePickerHabil({
           startMonth={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
           fromDate={fromDate}
           weekStartsOn={1}
-          disabled={[{ dayOfWeek: [0, 6] }]}
+          disabled={INHABILES}
           onSelect={(date) => {
             onChange(date)
             if (date) setOpen(false)
           }}
-          modifiers={{ weekend: { dayOfWeek: [0, 6] } }}
+          modifiers={{ inhabil: INHABILES }}
           modifiersClassNames={{
-            weekend: "text-muted-foreground/40 bg-muted/30 cursor-not-allowed line-through",
+            inhabil: "text-muted-foreground/40 bg-muted/30 cursor-not-allowed line-through",
           }}
           classNames={{
             root:          "p-3 select-none",

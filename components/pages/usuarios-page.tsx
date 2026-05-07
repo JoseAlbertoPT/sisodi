@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -139,6 +139,26 @@ function flattenTree(
     }
   }
   return result
+}
+
+function getClaveError(secretariaId: string | null, tree: OrganoCentralizadoNode[]): string | null {
+  if (!secretariaId) return null
+  const nodePath = findNodePath(tree, secretariaId)
+  if (!nodePath) return null
+  if (nodePath.length === 1) {
+    const children = nodePath[0].children ?? []
+    if (children.length === 0) {
+      return "Esta secretaría no tiene Unidades Administrativas Registradas. Configúrelas en el catálogo antes de continuar."
+    }
+    if (!children.some((c) => c.ua_clave_administrativa)) {
+      return "Ninguna unidad de esta secretaría tiene clave administrativa. Configúrelas en el catálogo antes de continuar."
+    }
+  } else {
+    if (!nodePath[1].ua_clave_administrativa) {
+      return "La unidad seleccionada no tiene clave administrativa. Configúrela en el catálogo antes de continuar."
+    }
+  }
+  return null
 }
 
 function HighlightText({ text, query }: { text: string; query: string }) {
@@ -453,6 +473,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState("")
+  const [claveAlert, setClaveAlert] = useState("")
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
   const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
@@ -492,6 +513,8 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const handleSubmit = async () => {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
+    const claveErr = getClaveError(form.secretariaId, tree)
+    if (claveErr) { setClaveAlert(claveErr); return }
     setLoading(true)
     setApiError("")
     try {
@@ -547,6 +570,18 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   )
 
   return (
+    <>
+    <AlertDialog open={!!claveAlert} onOpenChange={(open) => { if (!open) setClaveAlert("") }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Secretaría sin configuración</AlertDialogTitle>
+          <AlertDialogDescription>{claveAlert}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setClaveAlert("")}>Entendido</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
@@ -686,6 +721,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
@@ -715,12 +751,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState("")
+  const [claveAlert, setClaveAlert] = useState("")
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
   const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
-  const initializedRef = useRef(false)
 
-  
   useEffect(() => {
     setTreeLoading(true)
     fetchCentralizadaTree()
@@ -733,7 +768,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 const paraTree = paraestatalToTree(cats)
                 const paraFound = findNodePath(paraTree, `org-${usuario.secretariaId}`)
                 if (paraFound) {
-                  initializedRef.current = true
                   setTipoAdmin("paraestatal")
                   setTree(paraTree)
                   setForm((f) => ({ ...f, secretariaId: `org-${usuario.secretariaId}` }))
@@ -742,36 +776,30 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 }
               })
               .catch(() => setTree(central))
-              .finally(() => {
-                initializedRef.current = true
-                setTreeLoading(false)
-              })
+              .finally(() => setTreeLoading(false))
             return
           }
         }
-        initializedRef.current = true
         setTree(central)
         setTreeLoading(false)
       })
-      .catch(() => {
-        initializedRef.current = true
-        setTreeLoading(false)
-      })
+      .catch(() => setTreeLoading(false))
   }, [])
 
-  
-  useEffect(() => {
-    if (!initializedRef.current) return
+  const handleTipoAdminChange = (v: string) => {
+    const newTipo = v as "centralizada" | "paraestatal"
+    setTipoAdmin(newTipo)
+    setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [] }))
     setTreeLoading(true)
     setTree([])
-    const promise = tipoAdmin === "centralizada"
+    const promise = newTipo === "centralizada"
       ? fetchCentralizadaTree()
       : fetchCategoriasParaestatal().then(paraestatalToTree)
     promise
       .then(setTree)
       .catch(() => setTree([]))
       .finally(() => setTreeLoading(false))
-  }, [tipoAdmin])
+  }
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -789,6 +817,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   const handleSubmit = async () => {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
+    const claveErr = getClaveError(form.secretariaId, tree)
+    if (claveErr) { setClaveAlert(claveErr); return }
     setLoading(true)
     setApiError("")
     try {
@@ -851,6 +881,18 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   )
 
   return (
+    <>
+    <AlertDialog open={!!claveAlert} onOpenChange={(open) => { if (!open) setClaveAlert("") }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Secretaría sin Unidades Administrativas</AlertDialogTitle>
+          <AlertDialogDescription>{claveAlert}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setClaveAlert("")}>Entendido</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
@@ -934,10 +976,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
             <Select
               value={tipoAdmin}
-              onValueChange={(v) => {
-                setTipoAdmin(v as "centralizada" | "paraestatal")
-                setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [] }))
-              }}
+              onValueChange={handleTipoAdminChange}
               disabled={!esAdministrador}
             >
               <SelectTrigger className="bg-background h-9 text-xs">
@@ -1000,6 +1039,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         </div>
       </div>
     </div>
+    </>
   )
 }
 

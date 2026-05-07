@@ -243,6 +243,13 @@ function slaDesdeApiRestante(valor: number | null | undefined): number | null {
   return valor
 }
 
+function formatRegimen(raw: string | null | undefined): string {
+  const r = (raw ?? "").toLowerCase().trim()
+  if (r.includes("asimilado"))  return "Honorarios Asimilados  a Salarios"
+  if (r.includes("honorario"))  return "Honorarios"
+  if (r.includes("nombramiento") || r.includes("tiempo Determinado")) return "Nombramiento por Tiempo Determinado"
+  return raw || "—"
+}
 function formatEscolaridad(e: string | null | undefined): string {
   const v = (e ?? "").toLowerCase().trim()
   if (v === "bachillerato") return "Bachillerato"
@@ -487,6 +494,7 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
             <ReadOnlyField label="Denominación del Nombramiento"    value={sol.denominacion} />
             <ReadOnlyField label="Puesto del Jefe Inmediato"        value={raw?.puesto_jefe_inmediato ?? "—"} />
             <ReadOnlyField label="Tipo de Actividad"              value={raw?.tipo_actividades ?? "—"} />
+            <ReadOnlyField label="Régimen de Contratación"          value={formatRegimen(sol.regimen)} />
             <ReadOnlyField label="Número de Personas a Contratar"   value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
             <ReadOnlyField label="Tipo de Pago"                     value={raw?.tipo_importe || "Mensual"} />
             <ReadOnlyField label="Vigencia Inicio"                  value={sol.vigenciaInicio} />
@@ -498,7 +506,7 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
             <ReadOnlyField label="Número de Prestadores de Servicios" value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
             <ReadOnlyField label="Programa o Proyecto"                value={raw?.programa_proyecto ?? "—"} />
             <ReadOnlyField label="Tipo de Actividad"                value={sol.tipoActividades} />
-            <ReadOnlyField label="Régimen de Contratación"            value={sol.regimen} />
+            <ReadOnlyField label="Régimen de Contratación"            value={formatRegimen(sol.regimen)} />
             <ReadOnlyField label="Vigencia Inicio"                    value={sol.vigenciaInicio} />
             <ReadOnlyField label="Vigencia Término"                   value={sol.vigenciaFin} />
             <ReadOnlyField label="Importe Bruto"                      value={sol.importeBruto} />
@@ -1521,7 +1529,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {solicitud.folioJustificacion} — {solicitud.tipo} — {solicitud.secretaria}
+              {solicitud.tipo} — {solicitud.secretaria}
             </p>
             {solicitud.denominacion && solicitud.denominacion !== "—" && (
               <p className="text-xs text-muted-foreground font-medium">{solicitud.denominacion}</p>
@@ -1722,7 +1730,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                                             <RadioOption
                                               value="si"
                                               selected={valor === "si"}
-                                              onChange={() => updateChecklist(item.key, valor === "si" ? null : "si")}
+                                              onChange={() => updateChecklist(item.key, valor === "si" ? null : "si", "")}
                                               label="Sí"
                                               colorClass=""
                                               style={{ color: COLOR_SI_TEXT, backgroundColor: `${COLOR_SI}15`, borderColor: COLOR_SI }}
@@ -1738,7 +1746,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                                             <RadioOption
                                               value="noAplica"
                                               selected={valor === "noAplica"}
-                                              onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica")}
+                                              onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica", "")}
                                               label="No Aplica"
                                               colorClass=""
                                               style={{ color: COLOR_NO_APLICA, backgroundColor: `${COLOR_NO_APLICA}15`, borderColor: COLOR_NO_APLICA }}
