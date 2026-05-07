@@ -12,7 +12,7 @@ import {
 
   Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
-  Loader2, Shield, CheckCircle2, Eye, Unlock, Trash2,
+  Loader2, Shield, CheckCircle2, Eye, EyeOff, Unlock, Trash2, Lock, User,
 } from "lucide-react"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
@@ -477,6 +477,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
   const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     setTreeLoading(true)
@@ -583,42 +584,49 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
       </AlertDialogContent>
     </AlertDialog>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="w-full max-w-lg mx-4 rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div>
-            <h2 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
-              <UserPlus className="h-4 w-4 text-primary" />
-              Registrar Nuevo Usuario
-            </h2>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Completa los campos para concluir el registro</p>
+      <div className="w-full max-w-xl mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <UserPlus className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-card-foreground">Registrar Nuevo Usuario</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Completa los campos para concluir el registro</p>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="px-6 py-5 flex flex-col gap-5 overflow-y-auto">
+        {/* Body */}
+        <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
           {apiError && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-xs text-destructive flex items-center gap-2">
+              <X className="h-3.5 w-3.5 shrink-0" />
               {apiError}
             </div>
           )}
 
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Datos generales</span>
-              <div className="flex-1 border-t border-border" />
+          {/* Datos personales */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <User className="h-3.5 w-3.5 text-primary/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
             </div>
-            <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
+            <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                {field("nombre", "Nombre completo", "text", "Ej. Juan Pérez García")}
+                {field("nombre", "Nombre Completo", "text", "Ej. Juan Pérez García")}
               </div>
-              {field("correo",   "Correo electrónico", "email",    "usuario@gobierno.gob.mx", undefined, "email")}
+              {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx", undefined, "email")}
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Usuario</Label>
+                <Label className="text-xs font-medium text-muted-foreground">RFC / Usuario</Label>
                 <Input
                   placeholder="ABCD850101XYZ"
                   value={form.rfc}
@@ -628,9 +636,39 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                   maxLength={13}
                 />
                 {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
-                {errors.rfc  && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
+                {errors.rfc && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
               </div>
-              {field("password", "Contraseña",         "password", "Mínimo 8 caracteres", undefined, "new-password")}
+            </div>
+          </div>
+
+          {/* Acceso y permisos */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <Lock className="h-3.5 w-3.5 text-amber-600/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Acceso y permisos</span>
+            </div>
+            <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Contraseña</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Mínimo 8 caracteres"
+                    autoComplete="new-password"
+                    value={form.password}
+                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                    className={`bg-background h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowPassword((v) => !v)}
+                  >
+                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {errors.password && <span className="text-[10px] text-destructive">{errors.password}</span>}
+              </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
@@ -660,8 +698,9 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </div>
           </div>
 
+          {/* Tipo de administración */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
+            <Label className="text-xs font-medium text-muted-foreground">Tipo de Administración</Label>
             <Select
               value={tipoAdmin}
               onValueChange={(v) => {
@@ -680,11 +719,11 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Select>
           </div>
 
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
-              <div className="flex-1 border-t border-border" />
+          {/* Secretaría */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <Building2 className="h-3.5 w-3.5 text-blue-600/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
             </div>
             <SecretariaTreeSelector
               tree={tree}
@@ -706,18 +745,26 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
-          <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            size="sm"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9"
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? "Guardando..." : "Guardar usuario"}
-          </Button>
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
+          <span className="text-[11px] text-muted-foreground hidden sm:block">Los campos requeridos están marcados en rojo</span>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              onClick={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
+              ) : (
+                <><CheckCircle2 className="h-3.5 w-3.5" />Guardar usuario</>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -755,6 +802,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
   const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   useEffect(() => {
     setTreeLoading(true)
@@ -880,6 +929,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     </div>
   )
 
+  const initials = usuario.nombre.trim().split(/\s+/).slice(0, 2).map((n) => n[0]).join("").toUpperCase()
+
   return (
     <>
     <AlertDialog open={!!claveAlert} onOpenChange={(open) => { if (!open) setClaveAlert("") }}>
@@ -894,43 +945,66 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
       </AlertDialogContent>
     </AlertDialog>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="w-full max-w-lg mx-4 rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div>
-            <h2 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
-              <Pencil className="h-4 w-4 text-primary" />
-              Editar Usuario
-            </h2>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
+      <div className="w-full max-w-xl mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Pencil className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-card-foreground">Editar Usuario</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="px-6 py-5 flex flex-col gap-5 overflow-y-auto">
+        {/* User info strip */}
+        <div className="flex items-center gap-3 px-6 py-3 bg-muted/40 border-b border-border/50 shrink-0">
+          <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+            <span className="text-sm font-bold text-primary">{initials}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-foreground truncate">{usuario.nombre}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{usuario.correo} · {usuario.rol}</p>
+          </div>
+          <Badge
+            className={`shrink-0 text-[11px] ${usuario.estatus === "Activo" ? "bg-secondary/20 text-secondary-foreground border-secondary/30" : ""}`}
+            variant={usuario.estatus === "Activo" ? "outline" : "outline"}
+          >
+            {usuario.estatus}
+          </Badge>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
           {apiError && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-xs text-destructive flex items-center gap-2">
+              <X className="h-3.5 w-3.5 shrink-0" />
               {apiError}
             </div>
           )}
 
-          {}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Datos generales</span>
-              <div className="flex-1 border-t border-border" />
+          {/* Datos personales */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <User className="h-3.5 w-3.5 text-primary/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
             </div>
-            <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
+            <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 {field("nombre", "Nombre completo", "text", "Ej. Juan Pérez García")}
               </div>
               {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx")}
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Usuario</Label>
+                <Label className="text-xs font-medium text-muted-foreground">RFC / Usuario</Label>
                 <Input
                   placeholder="ABCD850101XYZ"
                   value={form.rfc}
@@ -939,8 +1013,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                   className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
                   maxLength={13}
                 />
-                {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
-                {errors.rfc  && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
+                {!errors.rfc && <span className="text-[10px] text-muted-foreground"></span>}
+                {errors.rfc && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -971,7 +1045,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           </div>
 
-
+          {/* Tipo de administración */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
             <Select
@@ -989,12 +1063,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </Select>
           </div>
 
-
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
-              <div className="flex-1 border-t border-border" />
+          {/* Secretaría */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <Building2 className="h-3.5 w-3.5 text-blue-600/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
             </div>
             <SecretariaTreeSelector
               tree={tree}
@@ -1012,30 +1085,81 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             />
           </div>
 
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Cambiar contraseña (opcional)</span>
-              <div className="flex-1 border-t border-border" />
+          {/* Cambiar contraseña */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <Lock className="h-3.5 w-3.5 text-amber-600/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cambiar contraseña</span>
+              <span className="ml-auto text-[10px] text-muted-foreground italic">opcional</span>
             </div>
-            <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
-              {field("password",        "Nueva contraseña",     "password", "Mínimo 8 caracteres ", undefined, "new-password")}
-              {field("confirmPassword", "Confirmar contraseña", "password", "Repite la nueva contraseña",        undefined, "new-password")}
+            <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Nueva contraseña</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Mínimo 8 caracteres"
+                    autoComplete="new-password"
+                    value={form.password}
+                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                    className={`bg-background h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowPassword((v) => !v)}
+                  >
+                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {errors.password && <span className="text-[10px] text-destructive">{errors.password}</span>}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Confirmar contraseña</Label>
+                <div className="relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Repite la nueva contraseña"
+                    autoComplete="new-password"
+                    value={form.confirmPassword}
+                    onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+                    className={`bg-background h-9 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && <span className="text-[10px] text-destructive">{errors.confirmPassword}</span>}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
-          <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            size="sm"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9"
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? "Guardando..." : "Guardar cambios"}
-          </Button>
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
+          <span className="text-[11px] text-muted-foreground hidden sm:block">Los campos requeridos están marcados en rojo</span>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              onClick={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
+              ) : (
+                <><CheckCircle2 className="h-3.5 w-3.5" />Guardar cambios</>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
