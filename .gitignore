@@ -39,3 +39,5 @@ public/uploads/
 # Turbo (si se usa)
 .turbo
 .env
+.env
+tsconfig.tsbuildinfo

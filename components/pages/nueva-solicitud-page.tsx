@@ -1235,6 +1235,8 @@ function FormularioPrestacion({
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState(false)
+  const [formulaObjetoShown, setFormulaObjetoShown] = useState(false)
+  const [formulaActividadesShown, setFormulaActividadesShown] = useState(false)
 
   const regimenInicial = datosRenovacion
     ? normalizaRegimen(datosRenovacion.regimen)
@@ -1246,21 +1248,21 @@ function FormularioPrestacion({
   const [regimen, setRegimen] = useState(regimenInicial)
   const regimenEfectivo = regimenPeriodo || regimen
 
-  const secInicial = datosRenovacion?.secretaria ?? secretariaFija ?? initialData?.secretaria ?? (prefilled ? "Secretaria de Administracion" : "")
+  const secInicial = datosRenovacion?.secretaria ?? initialData?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : "")
   const [secretariaInput,      setSecretariaInput]      = useState(secInicial)
   const [secretariaConfirmada, setSecretariaConfirmada] = useState(secInicial)
   const [showSugerencias,      setShowSugerencias]      = useState(false)
   const [unidadSeleccionada,   setUnidadSeleccionada]   = useState(
-    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? initialData?.unidadAdministrativa ?? ""
+    datosRenovacion?.unidadAdscripcion ?? initialData?.unidadAdministrativa ?? unidadFija ?? ""
   )
-  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? initialData?.unidadAdministrativa ?? "")
+  const [claveUA, setClaveUA] = useState(initialData?.unidadAdministrativa ?? claveReportePlazas ?? "")
   const [urgSeleccionada,      setUrgSeleccionada]      = useState(
     datosRenovacion?.unidadResponsableGasto
     ?? initialData?.unidadResponsable
     ?? (secretariaFija && unidadFija ? getClaveForUA(secretariaFija, unidadFija) : "")
     ?? ""
   )
-  const [tipoAdministracionForm, setTipoAdministracionForm] = useState<"centralizada" | "paraestatal">("centralizada")
+  const [tipoAdministracionForm, setTipoAdministracionForm] = useState<"centralizada" | "paraestatal">(initialData?.tipoAdministracionNom ?? "centralizada")
   const [programaSeleccionado, setProgramaSeleccionado] = useState(
     datosRenovacion?.programaProyecto ?? initialData?.programaProyecto ?? ""
   )
@@ -1682,7 +1684,7 @@ function FormularioPrestacion({
               />
             </div>
 
-            {}
+
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Pago
@@ -1768,7 +1770,7 @@ function FormularioPrestacion({
               </div>
             </div>
 
-            {}
+
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
               <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} />
@@ -1777,7 +1779,7 @@ function FormularioPrestacion({
         </CardContent>
       </Card>
 
-      {}
+
       <TabuladorNiveles
         nivelCategoria={datosRenovacion?.nivelCategoria}
         importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeBruto}
@@ -1786,43 +1788,60 @@ function FormularioPrestacion({
         secretaria={secretariaConfirmada || secretariaInput}
       />
 
-      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
             <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">II</span>
             Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-muted-foreground hover:text-primary transition-colors" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
+              <Info className="h-4 w-4 text-[#7B2D3E]" />
             </button>
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
           <Textarea
             value={objeto}
-            onChange={(e) => { if (!bloqueadoPorRenovacion) setObjeto(e.target.value) }}
+            onChange={(e) => {
+              if (!bloqueadoPorRenovacion) {
+                if (!formulaObjetoShown && objeto === "" && e.target.value.length > 0) {
+                  setShowFormulaModal(true)
+                  setFormulaObjetoShown(true)
+                }
+                setObjeto(e.target.value)
+              }
+            }}
             placeholder="Describa el objeto de la contratación de manera detallada..."
             className={`min-h-28 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : "bg-background"}`}
             readOnly={bloqueadoPorRenovacion}
           />
         </CardContent>
       </Card>
-
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
             <span className="flex h-7 w-7 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-muted-foreground hover:text-primary transition-colors" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
+              <Info className="h-4 w-4 text-[#7B2D3E]" />
             </button>
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
           <DynamicList
-            label="" items={actividades} onChange={setActividades}
+            label="" items={actividades}
+            onChange={(newItems) => {
+              if (!formulaActividadesShown) {
+                const itemAdded = newItems.length > actividades.length
+                const firstContent = newItems.some((v, i) => v.trim() !== "" && (actividades[i] ?? "").trim() === "")
+                if (itemAdded || firstContent) {
+                  setShowFormulaModal(true)
+                  setFormulaActividadesShown(true)
+                }
+              }
+              setActividades(newItems)
+            }}
             readonly={bloqueadoPorRenovacion}
             nivelTabulador={nivelTabulador}
           />
@@ -1926,20 +1945,27 @@ function FormularioNombramiento({
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState(false)
+  const [formulaObjetoShown, setFormulaObjetoShown] = useState(false)
+  const [formulaActividadesShown, setFormulaActividadesShown] = useState(false)
   const [importeNeto,    setImporteNeto]    = useState(
-    datosRenovacion?.importeBruto ? parseImporteBruto(datosRenovacion.importeBruto) : prefilled ? "28,500.00" : ""
+    datosRenovacion?.importeBruto ? parseImporteBruto(datosRenovacion.importeBruto)
+      : initialData?.importeBruto ? parseImporteBruto(initialData.importeBruto)
+      : prefilled ? "28,500.00" : ""
   )
-  const [tipoImporte, setTipoImporte] = useState("Mensual")
+  const [tipoImporte, setTipoImporte] = useState(initialData?.tipoImporte || "Mensual")
   const [funciones, setFunciones] = useState<string[]>(
     datosRenovacion?.actividades ? splitList(datosRenovacion.actividades)
+      : initialData?.actividades && initialData.actividades.length > 0 ? initialData.actividades
       : prefilled ? ["Coordinar procesos administrativos"] : [""]
   )
   const [responsabilidades, setResponsabilidades] = useState<string[]>(
     datosRenovacion?.responsabilidades ? splitList(datosRenovacion.responsabilidades)
+      : initialData?.responsabilidades && initialData.responsabilidades.length > 0 ? initialData.responsabilidades
       : prefilled ? ["Cumplimiento normativo del area"] : [""]
   )
   const [marcoNormativo, setMarcoNormativo] = useState<string[]>(
-    prefilled ? ["Ley Orgánica de la Administración Pública"] : [""]
+    initialData?.marcoNormativo && initialData.marcoNormativo.length > 0 ? initialData.marcoNormativo
+      : prefilled ? ["Ley Orgánica de la Administración Pública"] : [""]
   )
   const [showMarcoModal, setShowMarcoModal] = useState(false)
   const marcoModalShownRef = useRef(false)
@@ -1953,36 +1979,51 @@ function FormularioNombramiento({
     }
     setMarcoNormativo(newItems)
   }, [])
-  const [secretariaInput,      setSecretariaInput]      = useState(datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : ""))
-  const [secretariaConfirmada, setSecretariaConfirmada] = useState(datosRenovacion?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : ""))
+  const [secretariaInput,      setSecretariaInput]      = useState(datosRenovacion?.secretaria ?? secretariaFija ?? initialData?.secretaria ?? (prefilled ? "Secretaria de Administracion" : ""))
+  const [secretariaConfirmada, setSecretariaConfirmada] = useState(datosRenovacion?.secretaria ?? secretariaFija ?? initialData?.secretaria ?? (prefilled ? "Secretaria de Administracion" : ""))
   const [showSugerencias, setShowSugerencias] = useState(false)
   const [unidadAdscripcion, setUnidadAdscripcion] = useState(
-    datosRenovacion?.unidadAdscripcion ?? unidadFija ?? initialData?.unidadAdministrativa ?? ""
+    datosRenovacion?.unidadAdscripcion ?? initialData?.unidadAdministrativa ?? unidadFija ?? ""
   )
-  const [claveUA, setClaveUA] = useState(claveReportePlazas ?? initialData?.unidadAdministrativa ?? "")
+  const [claveUA, setClaveUA] = useState(initialData?.unidadAdministrativa ?? claveReportePlazas ?? "")
   const [urgSeleccionada, setUrgSeleccionada] = useState(
-    datosRenovacion?.unidadResponsableGasto ?? ""
+    datosRenovacion?.unidadResponsableGasto ?? initialData?.unidadResponsable ?? ""
   )
-  const [programaInput, setProgramaInput] = useState(datosRenovacion?.programaProyecto ?? (prefilled ? "P-005 Fortalecimiento Institucional" : ""))
-  const [vigenciaInicio, setVigenciaInicio] = useState(prefilled ? "2026-03-01" : "")
-  const [vigenciaFin,    setVigenciaFin]    = useState(prefilled ? "2026-08-31" : "")
-  const [numeroPrestadores, setNumeroPrestadores] = useState(datosRenovacion?.numPrestadores ?? (prefilled ? "2" : ""))
-  const [denominacion, setDenominacion] = useState(prefilled ? "Jefe de Departamento" : "")
-  const [puestoJefeInmediato, setPuestoJefeInmediato] = useState(prefilled ? "Director de Área" : "")
+  const [programaInput, setProgramaInput] = useState(datosRenovacion?.programaProyecto ?? initialData?.programaProyecto ?? (prefilled ? "P-005 Fortalecimiento Institucional" : ""))
+  const [vigenciaInicio, setVigenciaInicio] = useState(initialData?.vigenciaInicio ?? (prefilled ? "2026-03-01" : ""))
+  const [vigenciaFin,    setVigenciaFin]    = useState(initialData?.vigenciaFin ?? (prefilled ? "2026-08-31" : ""))
+  const [numeroPrestadores, setNumeroPrestadores] = useState(datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "2" : ""))
+  const [denominacion, setDenominacion] = useState(initialData?.denominacion ?? (prefilled ? "Jefe de Departamento" : ""))
+  const [puestoJefeInmediato, setPuestoJefeInmediato] = useState(initialData?.puestoJefeInmediato ?? (prefilled ? "Director de Área" : ""))
   const [objetoNombramiento, setObjetoNombramiento] = useState(
-    datosRenovacion?.objeto ?? (prefilled ? "Nombramiento para coordinar funciones de la unidad administrativa." : "")
+    datosRenovacion?.objeto ?? initialData?.objeto ?? (prefilled ? "Nombramiento para coordinar funciones de la unidad administrativa." : "")
   )
-  const [nivelTabulador,     setNivelTabulador]     = useState("")
-  const [categoriaTabulador, setCategoriaTabulador] = useState("")
-  const [condiciones, setCondiciones]               = useState<Record<string, string>>({})
-  const [riesgos,     setRiesgos]                   = useState<Record<string, string>>({})
-  const [resguardoActivos, setResguardoActivos]     = useState("")
-  const [escolaridad, setEscolaridad] = useState<string[]>(splitTags(datosRenovacion?.escolaridad))
-  const [compAdm,     setCompAdm]     = useState<string[]>(splitTags(datosRenovacion?.compAdm))
-  const [compTec,     setCompTec]     = useState<string[]>(splitTags(datosRenovacion?.compTec))
-  const [compSoc,     setCompSoc]     = useState<string[]>(splitTags(datosRenovacion?.compSoc))
-  const [valores,     setValores]     = useState<string[]>(splitTags(datosRenovacion?.valores))
-  const [areasExp,    setAreasExp]    = useState<string[]>(splitTags(datosRenovacion?.areasExp))
+  const [nivelTabulador,     setNivelTabulador]     = useState(initialData?.nivelTabulador ?? "")
+  const [categoriaTabulador, setCategoriaTabulador] = useState(initialData?.categoriaTabulador ?? "")
+  const [condiciones, setCondiciones]               = useState<Record<string, string>>(() => {
+    if (!initialData) return {}
+    const c: Record<string, string> = {}
+    if (initialData.condicionCambioDomicilio) c["cambio-de-domicilio"] = "si"
+    if (initialData.condicionHorario)         c["horario-especial"]    = "si"
+    if (initialData.condicionViajar)          c["viajar"]              = "si"
+    return c
+  })
+  const [riesgos,     setRiesgos]                   = useState<Record<string, string>>(() => {
+    if (!initialData) return {}
+    const r: Record<string, string> = {}
+    if (initialData.riesgoCaidas)      r["caídas"]      = initialData.riesgoCaidas
+    if (initialData.riesgoMutilaciones) r["mutilaciones"] = initialData.riesgoMutilaciones
+    if (initialData.riesgoGolpes)      r["golpes"]       = initialData.riesgoGolpes
+    if (initialData.riesgoOtros)       r["otros"]        = initialData.riesgoOtros
+    return r
+  })
+  const [resguardoActivos, setResguardoActivos]     = useState(initialData?.resguardoActivos ?? "")
+  const [escolaridad, setEscolaridad] = useState<string[]>(splitTags(datosRenovacion?.escolaridad ?? initialData?.escolaridad))
+  const [compAdm,     setCompAdm]     = useState<string[]>(splitTags(datosRenovacion?.compAdm ?? initialData?.compAdm))
+  const [compTec,     setCompTec]     = useState<string[]>(splitTags(datosRenovacion?.compTec ?? initialData?.compTec))
+  const [compSoc,     setCompSoc]     = useState<string[]>(splitTags(datosRenovacion?.compSoc ?? initialData?.compSoc))
+  const [valores,     setValores]     = useState<string[]>(splitTags(datosRenovacion?.valores ?? initialData?.valores))
+  const [areasExp,    setAreasExp]    = useState<string[]>(splitTags(datosRenovacion?.areasExp ?? initialData?.areasExp))
   const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
     datosRenovacion?.tipoActividad
       ? datosRenovacion.tipoActividad.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
@@ -2411,15 +2452,23 @@ function FormularioNombramiento({
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
             II. Objeto del Nombramiento
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-muted-foreground hover:text-primary transition-colors" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
+              <Info className="h-4 w-4 text-[#7B2D3E]" />
             </button>
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
           <Textarea
             value={objetoNombramiento}
-            onChange={(e) => { if (!bloqueadoPorRenovacion) setObjetoNombramiento(e.target.value) }}
+            onChange={(e) => {
+              if (!bloqueadoPorRenovacion) {
+                if (!formulaObjetoShown && objetoNombramiento === "" && e.target.value.length > 0) {
+                  setShowFormulaModal(true)
+                  setFormulaObjetoShown(true)
+                }
+                setObjetoNombramiento(e.target.value)
+              }
+            }}
             placeholder="Describa el objeto del nombramiento de manera detallada..."
             className={`min-h-24 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : "bg-background"}`}
             readOnly={bloqueadoPorRenovacion}
@@ -2432,14 +2481,25 @@ function FormularioNombramiento({
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
             III. Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-muted-foreground hover:text-primary transition-colors" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
+              <Info className="h-4 w-4 text-[#7B2D3E]" />
             </button>
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
           <DynamicList
-            label="" items={funciones} onChange={setFunciones}
+            label="" items={funciones}
+            onChange={(newItems) => {
+              if (!formulaActividadesShown) {
+                const itemAdded = newItems.length > funciones.length
+                const firstContent = newItems.some((v, i) => v.trim() !== "" && (funciones[i] ?? "").trim() === "")
+                if (itemAdded || firstContent) {
+                  setShowFormulaModal(true)
+                  setFormulaActividadesShown(true)
+                }
+              }
+              setFunciones(newItems)
+            }}
             readonly={bloqueadoPorRenovacion}
             nivelTabulador={nivelTabulador}
           />
@@ -2887,8 +2947,9 @@ export type EditSolicitudPayload = {
   regimen: "" | "honorarios" | "asimilados" | "nombramiento"
   periodo: string
   formData: Partial<FormularioData>
+  estado?: string
 }
-export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicitud?: EditSolicitudPayload; onAfterSave?: () => void }) {
+export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { editSolicitud?: EditSolicitudPayload; onAfterSave?: () => void; onCancel?: () => void }) {
   const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
   const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")
   const [esRenovacion,        setEsRenovacion]        = useState<string>("")
@@ -3176,9 +3237,10 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
   }
 
   const handleBack = useCallback(() => {
+    if (step === "formulario" && editSolicitud) { onCancel?.(); return }
     if (step === "formulario") setStep("renovacion")
     else if (step === "renovacion") setStep("tipo")
-  }, [step])
+  }, [step, editSolicitud, onCancel])
 
   const folioSeleccionadoData = folioSeleccionado
     ? foliosReales.find((f) => f.id === folioSeleccionado) : null
@@ -3207,6 +3269,35 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
         const json = await res.json()
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al actualizar el borrador."); setGuardandoBorrador(false); return }
         setFolioBorradorGuardado(json.data?.folio_justificacion ?? editSolicitud.id)
+        // Al guardar desde un estado observado, reenviar al estado de revisión correspondiente
+        const estadoOrig = (editSolicitud.estado ?? "").toLowerCase()
+        const nuevoEstadoTrasCorreccion = (() => {
+          if (
+            estadoOrig.includes("observada por uefa") ||
+            estadoOrig.includes("observado por uefa") ||
+            (estadoOrig.includes("observado por validacion") && !estadoOrig.includes("final"))
+          ) return "En Validacion Justificaciones"
+          if (estadoOrig.includes("observado por revisor")) return "En Revision Revisor"
+          if (estadoOrig.includes("observado por validacion final")) return "En Validacion Final"
+          if (estadoOrig.includes("observado por emisor")) return "En Revision Emisor"
+          if (estadoOrig.includes("observado do filtro 1")) return "En revision DO Filtro 1"
+          if (estadoOrig.includes("observado do filtro 2")) return "En revision DO Filtro 2"
+          if (estadoOrig.includes("observado do filtro 3")) return "En revision DO Filtro 3"
+          if (estadoOrig.includes("observado por do") || estadoOrig.includes("devuelta por do")) return "En proceso DO"
+          return null
+        })()
+        if (nuevoEstadoTrasCorreccion) {
+          await fetch("/api/validacion", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              solicitudId: Number(editSolicitud.id),
+              nuevoEstado: nuevoEstadoTrasCorreccion,
+              usuarioId,
+              comentario: "Correcciones aplicadas y reenviado a revisión por el capturista",
+            }),
+          })
+        }
       } else {
         const payload = { ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: false, esRenovacion, folioSeleccionado, formData }), estado_nombre: "Borrador" }
         const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
@@ -3689,7 +3780,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave }: { editSolicit
               unidadFija={userUAOriginal}
               claveReportePlazas={userClaveReporte}
               catalogoUAs={catalogoUAsDelUsuario}
-              tipoAdministracionUsuario={user?.tipoAdministracion ?? "centralizada"}
+              tipoAdministracionUsuario={editSolicitud?.formData?.tipoAdministracionNom ?? user?.tipoAdministracion ?? "centralizada"}
               initialData={editSolicitud?.formData}
             />
           )}
