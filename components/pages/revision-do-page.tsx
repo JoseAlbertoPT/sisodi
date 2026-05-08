@@ -158,27 +158,35 @@ function rawToEditPayload(sol: SolicitudDetalle): EditSolicitudPayload {
     tipoActividades:      raw?.tipo_actividades ?? sol.tipoActividades ?? "",
     numeroPrestadores:    raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "",
     denominacion:         sol.denominacion !== "—" ? sol.denominacion : "",
-    puestoJefeInmediato:  raw?.puesto_jefe_inmediato ?? "",
-    vigenciaInicio:       raw?.vigencia_inicio ? raw.vigencia_inicio.toString().slice(0, 10) : "",
-    vigenciaFin:          raw?.vigencia_fin   ? raw.vigencia_fin.toString().slice(0, 10) : "",
-    importeBruto:         raw?.importe_bruto  != null ? String(raw.importe_bruto) : "",
-    tipoImporte:          raw?.tipo_importe ?? "",
-    nivelTabulador:       raw?.nivel_tabulador ?? "",
-    categoriaTabulador:   raw?.categoria_tabulador ?? "",
-    objeto:               raw?.objeto ?? "",
-    actividades:          Array.isArray(raw?.actividades) ? raw.actividades : [],
-    responsabilidades:    Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : [],
-    marcoNormativo:       Array.isArray(raw?.marco_normativo) ? raw.marco_normativo : [],
-    condicionesRiesgos:   Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos : [],
-    resguardoActivos:     raw?.resguardo_activos ?? "",
-    escolaridad:          raw?.escolaridad ?? "",
-    compAdm:              raw?.comp_adm ?? "",
-    compTec:              raw?.comp_tec ?? "",
-    compSoc:              raw?.comp_soc ?? "",
-    valores:              raw?.valores ?? "",
-    areasExp:             raw?.areas_exp ?? "",
+    puestoJefeInmediato:     raw?.puesto_jefe_inmediato ?? "",
+    tipoAdministracionNom:   (raw?.tipo_administracion === "paraestatal" ? "paraestatal" : "centralizada") as "centralizada" | "paraestatal",
+    vigenciaInicio:          raw?.vigencia_inicio ? raw.vigencia_inicio.toString().slice(0, 10) : "",
+    vigenciaFin:             raw?.vigencia_fin   ? raw.vigencia_fin.toString().slice(0, 10) : "",
+    importeBruto:            raw?.importe_bruto  != null ? String(raw.importe_bruto) : "",
+    tipoImporte:             raw?.tipo_importe ?? "",
+    nivelTabulador:          raw?.nivel_tabulador ?? "",
+    categoriaTabulador:      raw?.categoria_tabulador ?? "",
+    objeto:                  raw?.objeto ?? "",
+    actividades:             Array.isArray(raw?.actividades) ? raw.actividades : [],
+    responsabilidades:       Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : [],
+    marcoNormativo:          Array.isArray(raw?.marco_normativo) ? raw.marco_normativo : [],
+    condicionesRiesgos:      Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos : [],
+    resguardoActivos:        raw?.resguardo_activos ?? "",
+    riesgoCaidas:            raw?.riesgo_caidas ?? "",
+    riesgoMutilaciones:      raw?.riesgo_mutilaciones ?? "",
+    riesgoGolpes:            raw?.riesgo_golpes ?? "",
+    riesgoOtros:             raw?.riesgo_otros ?? "",
+    condicionCambioDomicilio: raw?.condicion_cambio_domicilio ?? false,
+    condicionHorario:        raw?.condicion_horario ?? false,
+    condicionViajar:         raw?.condicion_viajar ?? false,
+    escolaridad:             raw?.escolaridad ?? "",
+    compAdm:                 raw?.comp_adm ?? "",
+    compTec:                 raw?.comp_tec ?? "",
+    compSoc:                 raw?.comp_soc ?? "",
+    valores:                 raw?.valores ?? "",
+    areasExp:                raw?.areas_exp ?? "",
   }
-  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, formData }
+  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, estado: sol.estado, formData }
 }
 interface ChecklistItem { key: string; num: number; label: string }
 const CHECKLIST_16: ChecklistItem[] = [
@@ -280,17 +288,22 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
     estadoNuevo:    h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
   }))
 
-  const observacionesPrevias = (item.historial_solicitud ?? [])
-    .filter((h: any) => {
-      const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
-      return /observad/i.test(nombre) && h.comentario
-    })
-    .map((h: any) => ({
-      fecha:      formatFechaHora(h.fecha),
-      usuario:    h.usuario?.nombre ?? "Sistema",
-      estado:     h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
-      comentario: h.comentario as string,
-    }))
+  const historialSolicitud = item.historial_solicitud ?? []
+  const reversedHistorial = [...historialSolicitud].reverse()
+  const lastObsEntry = reversedHistorial.find((h: any) => {
+    const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
+    return /observad/i.test(nombre) && h.comentario
+  })
+  const obsEsLaUltima = !!(lastObsEntry && lastObsEntry === reversedHistorial[0])
+
+  const observacionesPrevias = obsEsLaUltima && lastObsEntry
+    ? [{
+        fecha:      formatFechaHora(lastObsEntry.fecha),
+        usuario:    lastObsEntry.usuario?.nombre ?? "Sistema",
+        estado:     lastObsEntry.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+        comentario: lastObsEntry.comentario as string,
+      }]
+    : []
 
   const fechaEnvio = item.fecha_envio ?? item.fecha_recepcion ?? item.fecha_creacion ?? null
   const folioDictamen = resolverFolioDictamen(item)
@@ -1396,6 +1409,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     solicitud?.estado?.toLowerCase() === "aceptado por revisor" ||
     solicitud?.estado?.toLowerCase() === "aprobado por revisor"
   )
+  const checklistYaRealizado = filtro === 1 && (
+    (solicitud?.estado ?? "").toLowerCase().includes("observado por validacion final") ||
+    (solicitud?.estado ?? "").toLowerCase() === "observado por revisor"
+  )
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
     (modalidadFirma === "electronica"
@@ -1583,7 +1600,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                             <span className="text-[10px] font-semibold text-[#832B56] uppercase tracking-wide">{obs.estado}</span>
                             <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
                           </div>
-                          <ObservacionChecklist comentario={obs.comentario} />
+                          <p className="text-xs text-[#832B56]/90 leading-relaxed whitespace-pre-line">{obs.comentario}</p>
                         </div>
                       </div>
                     )
@@ -1629,7 +1646,21 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                     {filtro === 1 && (
                       <FolioRecepcionCard folioRecepcion={folioRecepcionResuelto} onAsignar={handleAsignarFolioRecepcion} esExtemporanea={solicitud.esExtemporanea} />
                     )}
-                    {filtro === 1 && (
+                    {filtro === 1 && checklistYaRealizado && (
+                      <Card className="shadow-sm border-2 border-secondary/40 bg-secondary/[0.04]">
+                        <CardContent className="flex items-start gap-3 p-4">
+                          <ClipboardCheck className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-semibold text-secondary">Checklist ya fue realizado</span>
+                            <p className="text-xs text-muted-foreground">
+                              El checklist normativo fue completado en la revisión anterior.
+                              Para aplicar correcciones, utilice el botón <strong>Editar</strong>.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {filtro === 1 && !checklistYaRealizado && (
                       <>
                         {}
                         <Card className={`shadow-sm border-2 ${checklistStats.hasNo ? "border-destructive/30 bg-destructive/[0.03]" : checklistStats.allDone ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>

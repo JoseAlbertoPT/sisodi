@@ -13,6 +13,7 @@ import {
   Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
   Loader2, Shield, CheckCircle2, Eye, EyeOff, Unlock, Trash2, Lock, User,
+  Landmark, Factory,
 } from "lucide-react"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
@@ -514,8 +515,10 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const handleSubmit = async () => {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
-    const claveErr = getClaveError(form.secretariaId, tree)
-    if (claveErr) { setClaveAlert(claveErr); return }
+    if (tipoAdmin === "centralizada") {
+      const claveErr = getClaveError(form.secretariaId, tree)
+      if (claveErr) { setClaveAlert(claveErr); return }
+    }
     setLoading(true)
     setApiError("")
     try {
@@ -701,22 +704,50 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
           {/* Tipo de administración */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Tipo de Administración</Label>
-            <Select
-              value={tipoAdmin}
-              onValueChange={(v) => {
-                setTipoAdmin(v as "centralizada" | "paraestatal")
-                setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
-              }}
-              disabled={!esAdministrador}
-            >
-              <SelectTrigger className="bg-background h-9 text-xs">
-                <SelectValue placeholder="Seleccione tipo de administración" />
-              </SelectTrigger>
-              <SelectContent>
-                {(esAdministrador || tipoAdminFijo === "centralizada") && <SelectItem value="centralizada">Administración Centralizada</SelectItem>}
-                {(esAdministrador || tipoAdminFijo === "paraestatal") && <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-2">
+              {(esAdministrador || tipoAdminFijo === "centralizada") && (
+                <button
+                  type="button"
+                  disabled={!esAdministrador}
+                  onClick={() => {
+                    setTipoAdmin("centralizada")
+                    setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
+                  }}
+                  className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    tipoAdmin === "centralizada"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:border-primary/40 hover:bg-muted/40"
+                  }`}
+                >
+                  <Landmark className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "centralizada" ? "text-primary" : "text-muted-foreground"}`} />
+                  <div className="flex flex-col gap-0.5">
+                    <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "centralizada" ? "text-primary" : "text-card-foreground"}`}>Centralizada</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Dependencias del gobierno federal</span>
+                  </div>
+                </button>
+              )}
+              {(esAdministrador || tipoAdminFijo === "paraestatal") && (
+                <button
+                  type="button"
+                  disabled={!esAdministrador}
+                  onClick={() => {
+                    setTipoAdmin("paraestatal")
+                    setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
+                  }}
+                  className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    tipoAdmin === "paraestatal"
+                      ? "border-secondary bg-secondary/5"
+                      : "border-border bg-background hover:border-secondary/40 hover:bg-muted/40"
+                  }`}
+                >
+                  <Factory className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-muted-foreground"}`} />
+                  <div className="flex flex-col gap-0.5">
+                    <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-card-foreground"}`}>Paraestatal</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Organismos y entidades paraestatales</span>
+                  </div>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Secretaría */}
@@ -866,8 +897,10 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   const handleSubmit = async () => {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
-    const claveErr = getClaveError(form.secretariaId, tree)
-    if (claveErr) { setClaveAlert(claveErr); return }
+    if (tipoAdmin === "centralizada") {
+      const claveErr = getClaveError(form.secretariaId, tree)
+      if (claveErr) { setClaveAlert(claveErr); return }
+    }
     setLoading(true)
     setApiError("")
     try {
@@ -1047,20 +1080,45 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
 
           {/* Tipo de administración */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
-            <Select
-              value={tipoAdmin}
-              onValueChange={handleTipoAdminChange}
-              disabled={!esAdministrador}
-            >
-              <SelectTrigger className="bg-background h-9 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(esAdministrador || tipoAdminFijo === "centralizada") && <SelectItem value="centralizada">Administración Centralizada</SelectItem>}
-                {(esAdministrador || tipoAdminFijo === "paraestatal") && <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs font-medium text-muted-foreground">Tipo de Administración</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(esAdministrador || tipoAdminFijo === "centralizada") && (
+                <button
+                  type="button"
+                  disabled={!esAdministrador}
+                  onClick={() => handleTipoAdminChange("centralizada")}
+                  className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    tipoAdmin === "centralizada"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:border-primary/40 hover:bg-muted/40"
+                  }`}
+                >
+                  <Landmark className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "centralizada" ? "text-primary" : "text-muted-foreground"}`} />
+                  <div className="flex flex-col gap-0.5">
+                    <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "centralizada" ? "text-primary" : "text-card-foreground"}`}>Centralizada</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Dependencias del gobierno federal</span>
+                  </div>
+                </button>
+              )}
+              {(esAdministrador || tipoAdminFijo === "paraestatal") && (
+                <button
+                  type="button"
+                  disabled={!esAdministrador}
+                  onClick={() => handleTipoAdminChange("paraestatal")}
+                  className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    tipoAdmin === "paraestatal"
+                      ? "border-secondary bg-secondary/5"
+                      : "border-border bg-background hover:border-secondary/40 hover:bg-muted/40"
+                  }`}
+                >
+                  <Factory className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-muted-foreground"}`} />
+                  <div className="flex flex-col gap-0.5">
+                    <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-card-foreground"}`}>Paraestatal</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Organismos y entidades paraestatales</span>
+                  </div>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Secretaría */}

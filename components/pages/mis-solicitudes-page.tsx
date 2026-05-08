@@ -134,12 +134,21 @@ interface UrgSolicitud {
   marcoNormativo: string[]
   condicionesRiesgos: string[]
   resguardoActivos: string
+  tipoAdministracionNom: "centralizada" | "paraestatal"
+  riesgoCaidas: string
+  riesgoMutilaciones: string
+  riesgoGolpes: string
+  riesgoOtros: string
+  condicionCambioDomicilio: boolean
+  condicionHorario: boolean
+  condicionViajar: boolean
   tipoImporte: string
   historial: HistorialEntryData[]
   bitacora: BitacoraEntry[]
   observacionMotivo?: string
   observacionFecha?: string
   observacionUsuario?: string
+  observacionRonda: number
   numeroDictamen?: string
   fechaDictamen?: string
   regimen: RegimenPeriodo
@@ -294,12 +303,21 @@ function normalizarComentario(comentario: string | null | undefined): string | n
 }
 
 function mapApiItem(item: any): UrgSolicitud {
-  const lastObsEntry = [...(item.historial ?? [])].reverse().find((h: any) => h.comentario)
-  const lastObservacion = normalizarComentario(lastObsEntry?.comentario) as string | undefined
-  const lastObservacionFecha   = lastObsEntry?.fecha
+  const reversedHistorial = [...(item.historial ?? [])].reverse()
+  const lastObsEntry = reversedHistorial.find((h: any) => h.comentario)
+  // Count how many observation rounds have occurred (historial entries with comentario)
+  const observacionRonda = (item.historial ?? []).filter((h: any) => !!h.comentario).length
+  // Only surface the observation if no newer historial entry exists after it
+  const obsEsLaUltima = !!(lastObsEntry && lastObsEntry === reversedHistorial[0])
+  const lastObservacion = obsEsLaUltima
+    ? (normalizarComentario(lastObsEntry?.comentario) as string | undefined)
+    : undefined
+  const lastObservacionFecha = obsEsLaUltima && lastObsEntry?.fecha
     ? new Date(lastObsEntry.fecha).toISOString().replace("T", " ").slice(0, 16)
     : undefined
-  const lastObservacionUsuario = lastObsEntry?.usuario as string | undefined
+  const lastObservacionUsuario = obsEsLaUltima
+    ? (lastObsEntry?.usuario as string | undefined)
+    : undefined
 
   const bitacoraAdjuntos: BitacoraEntry = {
     seccion: "Documentos Adjuntos",
@@ -396,16 +414,25 @@ function mapApiItem(item: any): UrgSolicitud {
     nivelTabulador:       item.nivel_tabulador        ?? "",
     categoriaTabulador:   item.categoria_tabulador   ?? "",
     puestoJefeInmediato:  item.puesto_jefe_inmediato ?? "",
-    marcoNormativo:       Array.isArray(item.marco_normativo)      ? item.marco_normativo      : [],
-    condicionesRiesgos:   Array.isArray(item.condiciones_riesgos)  ? item.condiciones_riesgos  : [],
-    resguardoActivos:     item.resguardo_activos      ?? "",
-    tipoImporte:          item.tipo_importe           ?? "",
+    marcoNormativo:          Array.isArray(item.marco_normativo)     ? item.marco_normativo     : [],
+    condicionesRiesgos:      Array.isArray(item.condiciones_riesgos) ? item.condiciones_riesgos : [],
+    resguardoActivos:        item.resguardo_activos       ?? "",
+    tipoAdministracionNom:   (item.tipo_administracion === "paraestatal" ? "paraestatal" : "centralizada") as "centralizada" | "paraestatal",
+    riesgoCaidas:            item.riesgo_caidas           ?? "",
+    riesgoMutilaciones:      item.riesgo_mutilaciones     ?? "",
+    riesgoGolpes:            item.riesgo_golpes           ?? "",
+    riesgoOtros:             item.riesgo_otros            ?? "",
+    condicionCambioDomicilio: item.condicion_cambio_domicilio ?? false,
+    condicionHorario:        item.condicion_horario       ?? false,
+    condicionViajar:         item.condicion_viajar        ?? false,
+    tipoImporte:             item.tipo_importe            ?? "",
     regimen,
     periodoAplicacion,
     slaRestante:          item.slaRestante ?? null,
     observacionMotivo:    lastObservacion,
     observacionFecha:     lastObservacionFecha,
     observacionUsuario:   lastObservacionUsuario,
+    observacionRonda,
     numeroDictamen:       item.dictamen?.folio        ?? undefined,
     fechaDictamen:        item.dictamen?.fecha_emision
       ? fmt(item.dictamen.fecha_emision)
@@ -748,32 +775,43 @@ function solToEditPayload(sol: UrgSolicitud): EditSolicitudPayload {
     tipo,
     regimen,
     periodo: sol.periodoAplicacion,
+    estado: sol.estado,
     formData: {
-      secretaria:           sol.secretaria,
-      unidadAdministrativa: sol.unidadAdministrativa,
-      unidadResponsable:    sol.unidadResponsable,
-      programaProyecto:     sol.programaProyecto,
-      regimen:              sol.regimen,
-      tipoActividades:      sol.tipoActividades,
-      numeroPrestadores:    sol.numeroPrestadores,
-      denominacion:         sol.denominacion,
-      puestoJefeInmediato:  sol.puestoJefeInmediato,
-      vigenciaInicio:       sol.vigenciaInicio,
-      vigenciaFin:          sol.vigenciaFin,
-      importeBruto:         importeNum,
-      tipoImporte:          sol.tipoImporte,
-      nivelTabulador:       sol.nivelTabulador,
-      categoriaTabulador:   sol.categoriaTabulador,
-      objeto:               sol.objeto,
-      actividades:          toList(sol.actividades),
-      responsabilidades:    toList(sol.responsabilidades),
-      marcoNormativo:       [],
-      escolaridad:          sol.escolaridad,
-      compAdm:              sol.compAdm,
-      compTec:              sol.compTec,
-      compSoc:              sol.compSoc,
-      valores:              sol.valores,
-      areasExp:             sol.areasExp,
+      secretaria:              sol.secretaria,
+      unidadAdministrativa:    sol.unidadAdministrativa,
+      unidadResponsable:       sol.unidadResponsable,
+      programaProyecto:        sol.programaProyecto,
+      regimen:                 sol.regimen,
+      tipoActividades:         sol.tipoActividades,
+      numeroPrestadores:       sol.numeroPrestadores,
+      denominacion:            sol.denominacion,
+      puestoJefeInmediato:     sol.puestoJefeInmediato,
+      tipoAdministracionNom:   sol.tipoAdministracionNom,
+      vigenciaInicio:          sol.vigenciaInicio,
+      vigenciaFin:             sol.vigenciaFin,
+      importeBruto:            importeNum,
+      tipoImporte:             sol.tipoImporte,
+      nivelTabulador:          sol.nivelTabulador,
+      categoriaTabulador:      sol.categoriaTabulador,
+      objeto:                  sol.objeto,
+      actividades:             toList(sol.actividades),
+      responsabilidades:       toList(sol.responsabilidades),
+      marcoNormativo:          sol.marcoNormativo,
+      condicionesRiesgos:      sol.condicionesRiesgos,
+      resguardoActivos:        sol.resguardoActivos,
+      riesgoCaidas:            sol.riesgoCaidas,
+      riesgoMutilaciones:      sol.riesgoMutilaciones,
+      riesgoGolpes:            sol.riesgoGolpes,
+      riesgoOtros:             sol.riesgoOtros,
+      condicionCambioDomicilio: sol.condicionCambioDomicilio,
+      condicionHorario:        sol.condicionHorario,
+      condicionViajar:         sol.condicionViajar,
+      escolaridad:             sol.escolaridad,
+      compAdm:                 sol.compAdm,
+      compTec:                 sol.compTec,
+      compSoc:                 sol.compSoc,
+      valores:                 sol.valores,
+      areasExp:                sol.areasExp,
     },
   }
 }
@@ -804,6 +842,10 @@ function DetalleView({
   const canEdit   = n === "borrador" || n === "en captura"
     || n.includes("observad")
     || n.includes("devuelta por do")
+  const canContinuarCaptura =
+    n === "borrador" || n === "en captura" ||
+    n.includes("observada por uefa") || n.includes("observado por uefa") ||
+    (n.includes("observado por validacion") && !n.includes("final"))
   const isEmitido  = n === "emitido"
   const isReadOnly = !canEdit && !isEmitido
 
@@ -919,7 +961,7 @@ function DetalleView({
             onClick={() => generateJustificacionPDF(sol.id, sol.folioJustificacion || sol.folio)}>
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
-          {canEdit && !periodoConfirmado && (
+          {canContinuarCaptura && !periodoConfirmado && (
             <>
               <Button size="sm"
                 className="bg-secondary hover:bg-secondary/90 text-secondary-foreground gap-1.5"
@@ -990,7 +1032,7 @@ function DetalleView({
                 <p className="text-xs text-muted-foreground mt-0.5">Por: {sol.observacionUsuario}</p>
               )}
               {sol.observacionMotivo && (
-                <ObservacionTimeline comentario={sol.observacionMotivo} />
+                <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{sol.observacionMotivo}</p>
               )}
             </div>
           </CardContent>
@@ -1016,7 +1058,7 @@ function DetalleView({
                 <p className="text-xs text-muted-foreground">Por: {sol.observacionUsuario}</p>
               )}
               {sol.observacionMotivo && (
-                <ObservacionTimeline comentario={sol.observacionMotivo} />
+                <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{sol.observacionMotivo}</p>
               )}
             </div>
           </CardContent>
@@ -1308,7 +1350,7 @@ function checkVigenteFromCal(
   return { vigente, limiteDO: row.limiteDO }
 }
 
-export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (payload: EditSolicitudPayload) => void }) {
+export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSolicitud?: (payload: EditSolicitudPayload) => void; initialTab?: string }) {
   const { user }    = useAuth()
   const { toast }   = useToast()
   const [data, setData]             = useState<UrgSolicitud[]>([])
@@ -1318,15 +1360,15 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
   })
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
-  const [activeTab, setActiveTab]   = useState<UrgTab>("Todas")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [calData, setCalData]       = useState<CalData>({ honorarios: [], asimilados: [], nombramiento: [] })
-
   const TABS: UrgTab[] = [
     "Borradores", "En aprobación", "Observadas / Devueltas",
     "En proceso DGDO", "Todas",
   ]
+  const validInitialTab = TABS.includes(initialTab as UrgTab) ? (initialTab as UrgTab) : "Todas"
+  const [activeTab, setActiveTab]   = useState<UrgTab>(validInitialTab)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [calData, setCalData]       = useState<CalData>({ honorarios: [], asimilados: [], nombramiento: [] })
 
   useEffect(() => {
     fetch(`/api/calendario?ejercicio=${new Date().getFullYear()}`)
@@ -1392,12 +1434,10 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
       toast({ title: "Error", description: json.error ?? "Error al reenviar", variant: "destructive" })
       return
     }
-    setData((prev) => prev.map((s) =>
-      s.id === id ? { ...s, estado: "En Validacion Justificaciones" } : s
-    ))
     toast({ title: "Reenviado", description: "La solicitud fue reenviada a Validación." })
     setSelectedId(null)
-  }, [user?.id, toast])
+    void fetchData(activeTab, searchTerm)
+  }, [user?.id, toast, fetchData, activeTab, searchTerm])
 
   const handleUpdatePeriodoYEnviar = useCallback(async (id: string, periodo: string) => {
     const resEnvio = await fetch("/api/validacion", {
@@ -1415,12 +1455,10 @@ export function MisSolicitudesPage({ onEditSolicitud }: { onEditSolicitud?: (pay
       toast({ title: "Error", description: jsonEnvio.error ?? "Error al enviar a validación", variant: "destructive" })
       return
     }
-    setData((prev) => prev.map((s) =>
-      s.id === id ? { ...s, periodoAplicacion: periodo, estado: "En Validacion Justificaciones" } : s
-    ))
     toast({ title: "Enviada a Validación", description: `Periodo actualizado a "${periodo}" y solicitud enviada a Validación.` })
     setSelectedId(null)
-  }, [user?.id, toast])
+    void fetchData(activeTab, searchTerm)
+  }, [user?.id, toast, fetchData, activeTab, searchTerm])
 
   if (selectedSolicitud) {
     return (
