@@ -205,7 +205,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
 
     if (sol.tipo_solicitud === "nombramiento" || (sol.regimen && sol.regimen.toLowerCase().includes("nombramiento"))) {
       const dataNombramiento: JustificacionNombramientoData = {
-        tipoAdministracion: (sol as any).tipo_administracion || 'centralizada',
+        tipoAdministracion: sol.tipo_administracion || 'centralizada',
         formato: firmas.formato || 'fisico',
         oficioSolicitud: "",
         secretaria: sol.secretaria ?? "",
@@ -273,7 +273,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       );
     } else {
       const dataHonorarios: JustificacionData = {
-        tipoAdministracion: (sol as any).tipo_administracion || 'centralizada',
+        tipoAdministracion: sol.tipo_administracion || 'centralizada',
         formato:            firmas.formato || 'fisico',
         secretaria:         sol.secretaria ?? "",
         unidadAdministrativa: sol.unidad_administrativa ?? "",

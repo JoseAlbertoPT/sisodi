@@ -71,13 +71,13 @@ export async function POST(req: NextRequest) {
       denominacion, vigencia_inicio, vigencia_fin, importe_bruto,
       es_renovacion, folio_anterior,
       nivel_tabulador, categoria_tabulador,
-      objeto, actividades, responsabilidades, 
+      objeto, actividades, responsabilidades,
       escolaridad, comp_adm, comp_tec, comp_soc, valores, areas_exp,
-      puesto_jefe_inmediato, marco_normativo, condiciones_riesgos, 
+      puesto_jefe_inmediato, marco_normativo, condiciones_riesgos,
       tipo_importe,
       riesgo_caidas, riesgo_mutilaciones, riesgo_golpes, riesgo_otros,
       condicion_cambio_domicilio, condicion_horario, condicion_viajar, resguardo_activos,
-      estado_nombre,
+      estado_nombre, tipo_administracion,
     } = body
 
     if (!usuarioId)      return NextResponse.json({ ok: false, error: "usuarioId es requerido" }, { status: 400 })
@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
         usuario_id:            usuarioId,
         estado_id:             estadoInicial.id,
         tipo_solicitud,
+        tipo_administracion:   tipo_administracion ?? "centralizada",
         periodo_id:            ((await resolverPeriodoId(periodoId, periodoMes, periodoAnio)) ?? periodoId ?? 1) as number,
         es_extemporanea:       esExtemporanea ?? false,
         secretaria:            secretaria ?? null,
@@ -233,6 +234,7 @@ export async function PATCH(req: NextRequest) {
 
     const data: any = {}
     const map: Record<string, string> = {
+      tipo_administracion:   "tipo_administracion",
       secretaria:            "secretaria",
       unidad_administrativa: "unidad_administrativa",
       unidad_responsable:    "unidad_responsable",

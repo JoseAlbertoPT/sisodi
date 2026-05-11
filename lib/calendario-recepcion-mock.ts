@@ -106,8 +106,8 @@ export function isPeriodoVigente(
 
 export function isRegimenTipoCompatible(
   regimen: RegimenPeriodo,
-  tipo: "Prestacion de Servicios" | "Nombramiento Tiempo Determinado",
+  tipo: "Prestacion de Servicios" | "Nombramiento Tiempo Det.",
 ): boolean {
-  if (regimen === "nombramiento") return tipo === "Nombramiento Tiempo Determinado"
+  if (regimen === "nombramiento") return tipo === "Nombramiento Tiempo Det."
   return tipo === "Prestacion de Servicios"
 }
