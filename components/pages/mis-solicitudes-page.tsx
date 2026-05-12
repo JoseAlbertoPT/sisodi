@@ -1078,7 +1078,7 @@ function DetalleView({
                   El periodo seleccionado ya no está disponible. Debes actualizarlo conforme al calendario de recepción.
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Periodo: <strong>{sol.periodoAplicacion}</strong> ({regimenLabel}) — Límite DO:{" "}
+                  Periodo: <strong>{sol.periodoAplicacion}</strong> — Límite DO:{" "}
                   <strong>{periodoCheck.limiteDO ?? "N/A"}</strong>
                 </p>
                 {permisoActivoBorrador && (
@@ -1176,7 +1176,7 @@ function DetalleView({
         </AlertDialogContent>
       </AlertDialog>
 
-      {(n === "borrador" || n === "en captura") && periodoCheck.vigente && tipoCompatible && (
+      {(n === "borrador" || n === "en captura") && periodoCheck.vigente && tipoCompatible && !isBorradorFueraDeTiempo && (
         <Card className="border-2 border-secondary/30 shadow-sm">
           <CardContent className="flex flex-col gap-3 py-4">
             <div className="flex items-start gap-3">
@@ -1184,7 +1184,7 @@ function DetalleView({
               <div className="flex-1">
                 <span className="text-sm font-medium text-secondary">En tiempo para enviar</span>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Periodo: {sol.periodoAplicacion} — Límite DO: {periodoCheck.limiteDO}
+                  Periodo: <strong>{sol.periodoAplicacion}</strong> — Límite DO: <strong>{periodoCheck.limiteDO ?? "N/A"}</strong>
                 </p>
                 {permisoDisponible && (
                   <p className="text-xs text-orange-600 font-medium mt-1.5">

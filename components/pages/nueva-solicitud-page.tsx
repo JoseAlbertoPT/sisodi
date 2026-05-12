@@ -805,10 +805,10 @@ function DynamicList({
           <Plus className="mr-1 h-4 w-4" />Agregar
         </Button>
       )}
-      {!readonly && belowMin && (
-        <p className="text-xs text-destructive flex items-center gap-1 mt-0.5">
+      {!readonly && (
+        <p className={`text-xs flex items-center gap-1 mt-0.5 ${belowMin ? "text-destructive" : "text-muted-foreground"}`}>
           <AlertCircle className="h-3 w-3 shrink-0" />
-          Se requieren al menos {minEfectivo} elementos . Llevas {filledCount}.
+          Se requieren al menos {minEfectivo} elementos. Llevas {filledCount}.
         </p>
       )}
     </div>
@@ -1605,6 +1605,7 @@ function FormularioPrestacion({
                   value={programaSeleccionado}
                   onChange={(e) => handleProgramaChange(e.target.value)}
                   placeholder="Nombre del programa" className="bg-background"
+                  maxLength={200}
                   disabled={!esRenovacion && !camposDependientesHabilitados}
                 />
               )}
@@ -1675,9 +1676,11 @@ function FormularioPrestacion({
                 Número de Prestadores de Servicios
               </Label>
               <Input
-                type="number" min={1}
+                type="number" min={1} max={9999}
+                inputMode="numeric"
                 value={numeroPrestadores}
-                onChange={(e) => setNumeroPrestadores(e.target.value)}
+                onChange={(e) => setNumeroPrestadores(e.target.value.replace(/[^0-9]/g, ""))}
+                onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Tab"].includes(e.key)) e.preventDefault() }}
                 placeholder="Ej. 5"
                 className="bg-background"
               />
@@ -1717,9 +1720,11 @@ function FormularioPrestacion({
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                 <Input
                   type="text" value={importeBruto}
-                  onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(e.target.value) }}
+                  onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(e.target.value.replace(/[^0-9.,]/g, "")) }}
+                  onKeyDown={(e) => { if (!/[0-9.,]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Tab","Home","End"].includes(e.key)) e.preventDefault() }}
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
+                  inputMode="decimal"
                   className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
@@ -2263,6 +2268,7 @@ function FormularioNombramiento({
                 value={programaInput}
                 onChange={(e) => { if (!bloqueadoPorRenovacion) setProgramaInput(e.target.value) }}
                 placeholder="Nombre del programa"
+                maxLength={200}
                 className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                 readOnly={bloqueadoPorRenovacion}
                 disabled={!bloqueadoPorRenovacion && !camposDependientesHabilitados}
@@ -2284,6 +2290,7 @@ function FormularioNombramiento({
                   value={denominacion}
                   onChange={(e) => { if (!bloqueadoPorRenovacion) setDenominacion(e.target.value) }}
                   placeholder="Ej. Subdirector de Área"
+                  maxLength={200}
                   className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
@@ -2298,6 +2305,7 @@ function FormularioNombramiento({
                   value={puestoJefeInmediato}
                   onChange={(e) => { if (!bloqueadoPorRenovacion) setPuestoJefeInmediato(e.target.value) }}
                   placeholder="Ej. Director General"
+                  maxLength={200}
                   className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
@@ -2339,9 +2347,11 @@ function FormularioNombramiento({
                   Número de Personas a Contratar
                 </Label>
                 <Input
-                  type="number" min={1}
+                  type="number" min={1} max={9999}
+                  inputMode="numeric"
                   value={numeroPrestadores}
-                  onChange={(e) => setNumeroPrestadores(e.target.value)}
+                  onChange={(e) => setNumeroPrestadores(e.target.value.replace(/[^0-9]/g, ""))}
+                  onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Tab"].includes(e.key)) e.preventDefault() }}
                   placeholder="Ej. 2"
                   className="bg-background"
                 />
@@ -2381,9 +2391,11 @@ function FormularioNombramiento({
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
                 <Input
                   type="text" value={importeNeto}
-                  onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(e.target.value) }}
+                  onChange={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(e.target.value.replace(/[^0-9.,]/g, "")) }}
+                  onKeyDown={(e) => { if (!/[0-9.,]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Tab","Home","End"].includes(e.key)) e.preventDefault() }}
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
+                  inputMode="decimal"
                   className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
