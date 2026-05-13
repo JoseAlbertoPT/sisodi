@@ -142,7 +142,7 @@ export function FirmaElectronicaTabs({
 
   const cargar = useCallback(async () => {
     try {
-      const res = await fetch(`/api/firma-efirma/estado?solicitudId=${solicitudId}`)
+      const res = await fetch(`/api/firma-efirma/estado?solicitudId=${solicitudId}`, { cache: "no-store" })
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar"); return }
       setFirma(json.firma)
@@ -202,12 +202,25 @@ export function FirmaElectronicaTabs({
     }
   }
 
-  const copiarLink = async (f: Firmante) => {
-    if (!firma?.uuid || !f.acceso_token) return
-    const origen = typeof window !== "undefined" ? window.location.origin : ""
-    const link = `${origen}/firmado/${firma.uuid}?t=${f.acceso_token}`
-    await navigator.clipboard.writeText(link)
-    setCopiadoId(f.id); setTimeout(() => setCopiadoId(null), 1500)
+  const copiarLink = async (firmanteId: number, link: string) => {
+    if (!link) return
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link)
+      } else {
+        const el = document.createElement("textarea")
+        el.value = link
+        el.style.position = "fixed"
+        el.style.opacity = "0"
+        document.body.appendChild(el)
+        el.focus(); el.select()
+        document.execCommand("copy")
+        document.body.removeChild(el)
+      }
+      setCopiadoId(firmanteId); setTimeout(() => setCopiadoId(null), 1500)
+    } catch {
+      // no se pudo copiar
+    }
   }
 
   const regenerarLink = async (firmanteId: number) => {
@@ -221,6 +234,11 @@ export function FirmaElectronicaTabs({
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "No se pudo regenerar"); return }
       await cargar()
+      if (json.acceso_token && firma?.uuid) {
+        const origen = typeof window !== "undefined" ? window.location.origin : ""
+        const link = `${origen}/firmado/${firma.uuid}?t=${json.acceso_token}`
+        await copiarLink(firmanteId, link)
+      }
     } catch {
       setError("Error de conexión")
     } finally {
@@ -326,7 +344,7 @@ export function FirmaElectronicaTabs({
               copiadoId={copiadoId}
               regenerando={regenerando}
               esSuTurno={f.orden === siguienteOrden}
-              onCopiar={() => copiarLink(f)}
+              onCopiar={(link) => copiarLink(f.id, link)}
               onRegenerar={() => regenerarLink(f.id)}
             />
           ))}
@@ -484,7 +502,7 @@ function FirmanteRow({
   uuid?: string | null
   copiadoId?: number | null
   regenerando?: number | null
-  onCopiar?: () => void
+  onCopiar?: (link: string) => void
   onRegenerar?: () => void
   esSuTurno?: boolean
   esCurrent?: boolean
@@ -525,7 +543,7 @@ function FirmanteRow({
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
             <Input readOnly value={link} className="text-[10px] font-mono" />
-            <Button size="sm" variant="outline" onClick={onCopiar} className="gap-1.5 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => onCopiar?.(link)} className="gap-1.5 shrink-0">
               <Copy className="h-3.5 w-3.5" />{copiadoId === firmante.id ? "Copiado" : "Copiar"}
             </Button>
             <Button size="sm" variant="outline" onClick={onRegenerar} disabled={regenerando === firmante.id} className="gap-1.5 shrink-0">

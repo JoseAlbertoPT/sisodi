@@ -1,9 +1,5 @@
 const DEFAULT_BASE_URL = "http://localhost:3001"
 
-function isBypass(): boolean {
-  return process.env.EFIRMA_BYPASS === "true"
-}
-
 function getBaseUrl() {
   return process.env.EFIRMA_PORTAL_URL ?? DEFAULT_BASE_URL
 }
@@ -71,27 +67,18 @@ export function normalizarEstado(portalRes: any, fallback = "iniciado"): string 
 }
 
 export const efirmaClient = {
-  iniciar: (payload: IniciarPayload) => {
-    if (isBypass()) {
-      const id = `bypass-${Date.now()}`
-      return Promise.resolve({ procesoId: id, storageKey: id })
-    }
-    return callEfirma<any>("/api/multifirma/iniciar", {
+  iniciar: (payload: IniciarPayload) =>
+    callEfirma<any>("/api/multifirma/iniciar", {
       method: "POST",
       body: JSON.stringify({ ...payload, projectToken: getProjectToken() }),
-    })
-  },
-  firmar: (payload: FirmarPayload) => {
-    if (isBypass()) return Promise.resolve({ ok: true, firmado: true })
-    return callEfirma<any>("/api/multifirma/firmar", {
+    }),
+  firmar: (payload: FirmarPayload) =>
+    callEfirma<any>("/api/multifirma/firmar", {
       method: "POST",
       body: JSON.stringify({ ...payload, projectToken: getProjectToken() }),
-    })
-  },
-  estado: (procesoId: string) => {
-    if (isBypass()) return Promise.resolve({ status: "completado", firmantesCompletados: 0 })
-    return callEfirma<any>(`/api/multifirma/${encodeURIComponent(procesoId)}/estado`, {
+    }),
+  estado: (procesoId: string) =>
+    callEfirma<any>(`/api/multifirma/${encodeURIComponent(procesoId)}/estado`, {
       method: "GET",
-    })
-  },
+    }),
 }
