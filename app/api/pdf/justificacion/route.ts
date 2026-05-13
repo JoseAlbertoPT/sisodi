@@ -177,7 +177,10 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
 
     const sol = await prisma.solicitud.findUnique({
       where: { id: Number(solicitudId) },
-      include: { dictamen: true },
+      include: {
+        dictamen: true,
+        usuario: { select: { organo_centralizado: { select: { id: true } } } },
+      },
     });
 
     const fechaDict =
@@ -201,11 +204,17 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
     // los que vinieron explícitamente en el body).
     firmas = await resolverNombresFirmantes(Number(solicitudId), firmas);
 
+    const tipoAdministracion: 'centralizada' | 'paraestatal' =
+      sol.tipo_administracion === 'paraestatal' ? 'paraestatal'
+      : sol.tipo_administracion === 'centralizada' ? 'centralizada'
+      : (sol as any).usuario?.organo_centralizado ? 'centralizada'
+      : 'paraestatal'
+
     let pdfElement: React.ReactElement;
 
     if (sol.tipo_solicitud === "nombramiento" || (sol.regimen && sol.regimen.toLowerCase().includes("nombramiento"))) {
       const dataNombramiento: JustificacionNombramientoData = {
-        tipoAdministracion: sol.tipo_administracion || 'centralizada',
+        tipoAdministracion,
         formato: firmas.formato || 'fisico',
         oficioSolicitud: "",
         secretaria: sol.secretaria ?? "",
@@ -273,7 +282,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       );
     } else {
       const dataHonorarios: JustificacionData = {
-        tipoAdministracion: sol.tipo_administracion || 'centralizada',
+        tipoAdministracion,
         formato:            firmas.formato || 'fisico',
         secretaria:         sol.secretaria ?? "",
         unidadAdministrativa: sol.unidad_administrativa ?? "",

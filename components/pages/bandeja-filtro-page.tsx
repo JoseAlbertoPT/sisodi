@@ -878,7 +878,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           <Button variant="outline" size="sm" className="gap-1.5">
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
-          {onEditSolicitud && (
+          {onEditSolicitud && classifySolicitud(solicitud, filtro) !== "observadas" && (
             <Button
               variant="outline" size="sm"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
@@ -902,7 +902,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           <Button
             variant="outline" size="sm"
             onClick={() => setShowObservarModal(true)}
-            disabled={guardando}
+            disabled={guardando || classifySolicitud(solicitud, filtro) === "observadas"}
             className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
             >
             <RotateCcw className="h-4 w-4" />Observar

@@ -684,7 +684,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
         </div>
       </SectionCard>
 
-      {}
+
 
       <SectionCard num="III" title="Objeto del Nombramiento">
         <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
@@ -839,15 +839,10 @@ function DetalleView({
   const { user } = useAuth()
   const { getPermisosUsuario, consumirPermiso } = useAutorizaciones()
   const n         = (sol.estado ?? "").toLowerCase()
-  const canEdit   = n === "borrador" || n === "en captura"
-    || n.includes("observad")
-    || n.includes("devuelta por do")
-  const canContinuarCaptura =
-    n === "borrador" || n === "en captura" ||
-    n.includes("observada por uefa") || n.includes("observado por uefa") ||
-    (n.includes("observado por validacion") && !n.includes("final"))
+  const canEdit   = true
   const isEmitido  = n === "emitido"
-  const isReadOnly = !canEdit && !isEmitido
+  const canContinuarCaptura = !isEmitido
+  const isReadOnly = false
 
   const periodoCheck   = checkVigenteFromCal(cal, sol.regimen, sol.periodoAplicacion)
   const tipoCompatible = isRegimenTipoCompatible(sol.regimen, sol.tipo)
@@ -969,7 +964,7 @@ function DetalleView({
                   ? onEditSolicitud(solToEditPayload(sol))
                   : handleDemoAction("Continuar captura")
                 }>
-                <Edit3 className="h-4 w-4" />Continuar Captura
+                <Edit3 className="h-4 w-4" />{n === "borrador" || n === "en captura" ? "Continuar Captura" : "Editar"}
               </Button>
               {(n === "borrador" || n === "en captura") && (
                 <Button size="sm"
@@ -1160,7 +1155,7 @@ function DetalleView({
               {editingModoSolo
                 ? <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}). La solicitud permanecerá en borrador. Esta acción no se puede deshacer.</>
                 : <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}) y la justificación será enviada automáticamente a Validación de Justificaciones.
-                  {permisoDisponible && " Se consumirá el token de habilitación de captura."}
+                  {permisoDisponible && " Se consumirá el token  de Habilitación de Captura."}
                   {" "}Esta acción no se puede deshacer.</>
               }
             </AlertDialogDescription>
