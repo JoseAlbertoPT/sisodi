@@ -3933,3 +3933,7 @@ export function NuevaSolicitudPage({
     </PageLayout>
   )
 }
+
+export default function Page() {
+  return <NuevaSolicitudPage />
+}
