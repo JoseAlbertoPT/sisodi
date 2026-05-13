@@ -41,3 +41,7 @@ public/uploads/
 .env
 .env
 tsconfig.tsbuildinfo
+
+# Binarios
+cloudflared-linux-amd64.deb
+*.deb
