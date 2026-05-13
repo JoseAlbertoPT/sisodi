@@ -3277,21 +3277,12 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
         const json = await res.json()
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al actualizar el borrador."); setGuardandoBorrador(false); return }
         setFolioBorradorGuardado(json.data?.folio_justificacion ?? editSolicitud.id)
-        // Al guardar desde un estado observado, reenviar al estado de revisión correspondiente
+        // Al guardar desde un estado observado, siempre reiniciar el flujo desde UEFA
         const estadoOrig = (editSolicitud.estado ?? "").toLowerCase()
         const nuevoEstadoTrasCorreccion = (() => {
-          if (
-            estadoOrig.includes("observada por uefa") ||
-            estadoOrig.includes("observado por uefa") ||
-            (estadoOrig.includes("observado por validacion") && !estadoOrig.includes("final"))
-          ) return "En Validacion Justificaciones"
-          if (estadoOrig.includes("observado por revisor")) return "En Revision Revisor"
-          if (estadoOrig.includes("observado por validacion final")) return "En Validacion Final"
-          if (estadoOrig.includes("observado por emisor")) return "En Revision Emisor"
-          if (estadoOrig.includes("observado do filtro 1")) return "En revision DO Filtro 1"
-          if (estadoOrig.includes("observado do filtro 2")) return "En revision DO Filtro 2"
-          if (estadoOrig.includes("observado do filtro 3")) return "En revision DO Filtro 3"
-          if (estadoOrig.includes("observado por do") || estadoOrig.includes("devuelta por do")) return "En proceso DO"
+          if (estadoOrig.includes("observad") || estadoOrig.includes("devuelta por do")) {
+            return "En Validacion Justificaciones"
+          }
           return null
         })()
         if (nuevoEstadoTrasCorreccion) {

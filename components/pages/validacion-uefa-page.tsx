@@ -904,6 +904,8 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
 
   const folioDictamenMostrar = solicitud.numeroDictamen
     ?? (solicitud.folioDictamen ? formatearFolio(solicitud.folioDictamen) : null)
+  const folioRecepcionValido = solicitud.folio && solicitud.folio !== `SOL-${solicitud.id}` ? solicitud.folio : null
+  const folioMostrar = folioRecepcionValido ?? solicitud.folioJustificacion
 
   return (
     <div className="flex flex-col gap-4">
@@ -918,7 +920,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
           </Button>
           <Separator orientation="vertical" className="h-6" />
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">{solicitud.folioJustificacion}</span>
+            <span className="text-sm font-semibold text-card-foreground">{folioMostrar}</span>
           </div>
           <UefaEstadoBadge estado={solicitud.estado} />
         </div>
@@ -1368,8 +1370,8 @@ export function ValidacionUefaPage() {
                     const folioDictamenLabel = sol.numeroDictamen
                       ?? (sol.folioDictamen ? formatearFolio(sol.folioDictamen) : null)
                     const folioRecepcion     = sol.folio && sol.folio !== `SOL-${sol.id}` ? sol.folio : null
-                    const usaFolioRecepcion  = solTab === "En Proceso" || solTab === "Devueltas" || solTab === "Emitidas"
-                    const folioPrincipal     = usaFolioRecepcion ? (folioRecepcion ?? sol.folioJustificacion) : sol.folioJustificacion
+                    const usaFolioRecepcion  = !!folioRecepcion
+                    const folioPrincipal     = folioRecepcion ?? sol.folioJustificacion
                     const folioSecundario    = usaFolioRecepcion && folioRecepcion
                       ? (solTab === "Emitidas" && folioDictamenLabel ? folioDictamenLabel : null)
                       : null

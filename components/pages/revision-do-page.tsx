@@ -1247,10 +1247,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     filtro === 3 ? sinObservacion
     : filtro === 2 ? (sinObservacion && hasFolioDictamen)
     : canApproveChecklist
-  const canObservar =
+  const canObservar = !/observad/i.test(solicitud?.estado ?? "") && (
     (filtro === 2 || filtro === 3)
       ? !sinObservacion
       : (checklistStats.allDone && checklistStats.hasNo && checklistStats.noWithoutObs === 0)
+  )
   const observarBlocked = false
 
   const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string, modalidadFirmaValue?: "electronica" | "autografa") => {
@@ -1404,7 +1405,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
   const isEmitido      = solicitud?.estado === "Emitido"
   const isAprobado     = solicitud?.estado === "Pendiente Firma Dictamen"
-  const isObservadaFiltro2 = filtro === 2 && /observad/i.test(solicitud?.estado ?? "")
+  const isObservada        = /observad/i.test(solicitud?.estado ?? "")
+  const isObservadaFiltro2 = filtro === 2 && isObservada
   const isAceptadoPorRevisor = filtro === 1 && (
     solicitud?.estado?.toLowerCase() === "aceptado por revisor" ||
     solicitud?.estado?.toLowerCase() === "aprobado por revisor"
@@ -1559,7 +1561,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
-          {onEditSolicitud && (
+          {onEditSolicitud && !isObservada && (
             <Button variant="outline" size="sm" className="gap-1.5"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
             >

@@ -90,9 +90,7 @@ const MESES = [
 ]
 
 function mapearDictamen(raw: any): DictamenEmitido {
-  const esParaestatal = (raw.tipoSolicitudRaw ?? raw.tipoSolicitud ?? raw.tipo ?? "")
-    .toLowerCase()
-    .includes("paraestatal")
+  const esParaestatal = (raw.tipoAdministracion ?? "centralizada") === "paraestatal"
 
   return {
     id:             String(raw.id),
@@ -702,7 +700,6 @@ export function DictamenesPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          
                           <Button
                             variant="ghost" size="sm"
                             onClick={() => descargarPdfDictamen(
