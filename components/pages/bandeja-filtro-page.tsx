@@ -16,12 +16,12 @@ import {
   Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
-  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Globe, Pencil,
+  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
-import { SeguimientoGeneralView, ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
+import { ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 
@@ -137,10 +137,21 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
     }
   }
   if (filtro === 3) {
-    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion") return "pendientes_firma"
+    if (estadoNorm === "pendiente firma dictamen") return "pendientes_firma"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
       return (s.openedInFiltro[filtro] || !!s.folioDictamen) ? "revision" : "nuevas"
     }
+    const preEmisor = new Set([
+      "pendiente do",
+      "en revision revisor",
+      "observado por revisor",
+      "aceptado por revisor",
+      "aprobado por revisor",
+      "pendiente firma justificacion",
+      "en validacion final",
+      "observado por validacion final",
+    ])
+    if (preEmisor.has(estadoNorm)) return "nuevas"
   }
   return "todas"
 }
@@ -164,7 +175,6 @@ const TAB_CONFIG_REVISION: TabCfg = {
   todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 const TAB_CONFIG_EMISION: TabCfg = {
-  solicitudes:     { label: "Solicitudes",          icon: <Globe className="h-3.5 w-3.5" />,         activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#1D4ED8", color: "#FFFFFF" } },
   nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" } },
   revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#0891B2", color: "#FFFFFF" } },
   observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
@@ -1082,7 +1092,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const [guardando,      setGuardando]      = useState(false)
   const [activeTab,      setActiveTab]      = useState<TabKey>(
     filtro === 2 ? "pendientes_asignacion"
-    : filtro === 3 ? "solicitudes"
     : "nuevas"
   )
   const [selectedId,     setSelectedId]     = useState<string | null>(null)
@@ -1374,7 +1383,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         })}
       />
 
-      {!(filtro === 3 && activeTab === "solicitudes") && (
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1395,7 +1403,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
           </SelectContent>
         </Select>
       </div>
-      )}
 
       {activeTab === "pendientes_firma" ? (
         <Card className="shadow-sm border-border">
@@ -1403,8 +1410,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
             <PendientesFirmaPanel filtro={filtro} currentUserId={(user as any)?.id ?? ""} onCountChange={setPendientesFirmaCount} />
           </CardContent>
         </Card>
-      ) : filtro === 3 && activeTab === "solicitudes" ? (
-        <SeguimientoGeneralView refreshSignal={refreshSignal} />
       ) : (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
@@ -1435,13 +1440,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Corrección</th>
                     <th className="px-4 py-3 text-left font-semibold">Ult. Observo</th>
                     <th className="px-4 py-3 text-left font-semibold">Plazo máximo de atención</th>
-                    <th className="px-4 py-3 text-left font-semibold">Acción</th>
+                    {!(filtro === 3 && activeTab === "nuevas") && (
+                      <th className="px-4 py-3 text-left font-semibold">Acción</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
+                      <td colSpan={filtro === 3 && activeTab === "nuevas" ? 8 : 9} className="px-4 py-12 text-center text-muted-foreground">
                         <div className="flex flex-col items-center gap-2">
                           <Filter className="h-8 w-8 text-muted-foreground/40" />
                           <span>No hay solicitudes en esta clasificación</span>
@@ -1517,6 +1524,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                           )}
                         </td>
                         <td className="px-4 py-3"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
+                        {!(filtro === 3 && activeTab === "nuevas") && (
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             {filtro === 2 ? (
@@ -1576,6 +1584,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                             {}
                           </div>
                         </td>
+                        )}
                       </tr>
                     )
                   })}

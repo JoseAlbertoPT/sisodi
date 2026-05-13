@@ -131,19 +131,6 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="border-primary/20 bg-primary/5 shadow-none">
-        <CardContent className="flex items-start gap-3 py-3">
-          <Info className="h-4 w-4 text-primary mt-0.5" />
-          <div className="text-xs text-card-foreground">
-            <p className="font-medium">Vista de solo consulta</p>
-            <p className="text-muted-foreground">
-              Muestra todas las solicitudes que han ingresado al flujo. Las acciones operativas
-              (aprobar, observar, asignar, emitir) sólo están disponibles cuando la solicitud llegue formalmente a tu bandeja.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="flex items-end gap-3 flex-wrap">
         <div className="flex flex-col gap-1 flex-1 min-w-[220px] max-w-sm">
           <Label className="text-xs text-muted-foreground">Búsqueda</Label>
