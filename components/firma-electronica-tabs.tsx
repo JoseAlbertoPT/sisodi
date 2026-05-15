@@ -364,7 +364,7 @@ export function FirmaElectronicaTabs({
                 firmante={f}
                 modo="interno"
                 esSuTurno={f.orden === siguienteOrden}
-                esCurrent={f.usuario_id === currentUserId}
+                esCurrent={f.usuario_id === currentUserId || (!f.usuario_id && f.orden === siguienteOrden)}
                 onFirmar={() => setFirmandoInline(f.id)}
               />
               {firmandoInline === f.id && (
@@ -380,21 +380,6 @@ export function FirmaElectronicaTabs({
                   <p className="text-xs text-muted-foreground">{f.cargo}</p>
                   <div className="flex flex-col gap-2">
                     <Label className="text-xs flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
-                    {ultimoCargo && ultimoCargo.trim().toUpperCase() !== cargoFirma.trim().toUpperCase() && (
-                      <button
-                        type="button"
-                        onClick={usarUltimoCargo}
-                        title={`Click para usar: ${ultimoCargo}`}
-                        className="group flex items-start gap-2 rounded-md border-2 border-dashed border-secondary/50 bg-secondary/5 hover:bg-secondary/10 hover:border-secondary px-3 py-2 text-left transition-colors"
-                      >
-                        <History className="h-4 w-4 shrink-0 text-secondary mt-0.5" />
-                        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                          <span className="text-[10px] uppercase tracking-wide text-secondary font-semibold">Tu último cargo registrado</span>
-                          <span className="text-sm font-medium text-card-foreground group-hover:text-secondary truncate">{ultimoCargo}</span>
-                        </div>
-                        <span className="text-[10px] text-muted-foreground group-hover:text-secondary self-center font-medium shrink-0">Usar</span>
-                      </button>
-                    )}
                     <Input
                       ref={cargoInputRef}
                       value={cargoFirma}

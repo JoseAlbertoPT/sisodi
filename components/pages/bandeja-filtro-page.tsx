@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
@@ -16,12 +17,12 @@ import {
   Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
-  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Globe, Pencil,
+  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
-import { SeguimientoGeneralView, ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
+import { ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 
@@ -111,7 +112,7 @@ function getEstadoObservado(filtro: number) {
 function classifyDO(s: FiltroSolicitud): TabKey {
   const n = s.estado.toLowerCase()
   if (n === "pendiente do" || n.includes("en revision revisor")) return "pendientes_asignacion"
-  if (n === "pendiente firma dictamen") return "pendientes_firma"
+  if (n === "pendiente firma dictamen" || n === "pendiente firma validacion") return "pendientes_firma"
   if (
     n.includes("observado por emisor") || n.includes("observado por revisor") ||
     n.includes("observado por do")     || n.includes("devuelta por do") ||
@@ -130,17 +131,28 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   const estadoNorm       = s.estado.toLowerCase()
   if (estadoNorm === estadoObservado.toLowerCase() || estadoNorm === "observado por validacion final") return "observadas"
   if (filtro === 1) {
-    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion") return "pendientes_firma"
+    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion" || estadoNorm === "pendiente firma revision") return "pendientes_firma"
     if (estadoNorm === "aceptado por revisor" || estadoNorm === "aprobado por revisor") return "revision"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
       return s.openedInFiltro[filtro] ? "revision" : "nuevas"
     }
   }
   if (filtro === 3) {
-    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion") return "pendientes_firma"
+    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma emisor") return "pendientes_firma"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
       return (s.openedInFiltro[filtro] || !!s.folioDictamen) ? "revision" : "nuevas"
     }
+    const preEmisor = new Set([
+      "pendiente do",
+      "en revision revisor",
+      "observado por revisor",
+      "aceptado por revisor",
+      "aprobado por revisor",
+      "pendiente firma justificacion",
+      "en validacion final",
+      "observado por validacion final",
+    ])
+    if (preEmisor.has(estadoNorm)) return "nuevas"
   }
   return "todas"
 }
@@ -164,7 +176,6 @@ const TAB_CONFIG_REVISION: TabCfg = {
   todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 const TAB_CONFIG_EMISION: TabCfg = {
-  solicitudes:     { label: "Solicitudes",          icon: <Globe className="h-3.5 w-3.5" />,         activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#1D4ED8", color: "#FFFFFF" } },
   nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" } },
   revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#0891B2", color: "#FFFFFF" } },
   observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
@@ -213,14 +224,6 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
       </CardHeader>
       {open && <CardContent>{children}</CardContent>}
     </Card>
-  )
-}
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      {label && <span className="text-xs text-muted-foreground">{label}</span>}
-      <span className="text-sm font-medium text-card-foreground">{value || "—"}</span>
-    </div>
   )
 }
 function parseListField(text: string | null | undefined): string[] {
@@ -734,31 +737,43 @@ function rawToEditPayload(solicitud: FiltroSolicitud): EditSolicitudPayload {
     tipo,
     regimen,
     periodo: solicitud.periodo ?? "",
+    estado: solicitud.estado,
     formData: {
-      secretaria:           raw.secretaria ?? "",
-      unidadAdministrativa: raw.clave_unidad_administrativa ?? raw.unidad_administrativa ?? "",
-      unidadResponsable:    raw.unidad_responsable ?? "",
-      programaProyecto:     raw.programa_proyecto ?? "",
-      regimen:              raw.regimen ?? "",
-      tipoActividades:      raw.tipo_actividades ?? "",
-      numeroPrestadores:    raw.numero_prestadores != null ? String(raw.numero_prestadores) : "",
-      denominacion:         raw.denominacion ?? solicitud.denominacion ?? "",
-      vigenciaInicio:       fmt(raw.vigencia_inicio),
-      vigenciaFin:          fmt(raw.vigencia_fin),
-      importeBruto:         raw.importe_bruto != null ? String(raw.importe_bruto) : "",
-      tipoImporte:          raw.tipo_importe ?? "Mensual",
-      nivelTabulador:       raw.nivel_tabulador ?? "",
-      categoriaTabulador:   raw.categoria_tabulador ?? "",
-      objeto:               raw.objeto ?? "",
-      actividades:          Array.isArray(raw.actividades) ? raw.actividades.filter(Boolean) : [],
-      responsabilidades:    Array.isArray(raw.responsabilidades) ? raw.responsabilidades.filter(Boolean) : [],
-      marcoNormativo:       Array.isArray(raw.marco_normativo) ? raw.marco_normativo.filter(Boolean) : [],
-      escolaridad:          raw.escolaridad ?? "",
-      compAdm:              raw.comp_adm ?? "",
-      compTec:              raw.comp_tec ?? "",
-      compSoc:              raw.comp_soc ?? "",
-      valores:              raw.valores ?? "",
-      areasExp:             raw.areas_exp ?? "",
+      secretaria:              raw.secretaria ?? "",
+      unidadAdministrativa:    raw.clave_unidad_administrativa ?? raw.unidad_administrativa ?? "",
+      unidadResponsable:       raw.unidad_responsable ?? "",
+      programaProyecto:        raw.programa_proyecto ?? "",
+      regimen:                 raw.regimen ?? "",
+      tipoActividades:         raw.tipo_actividades ?? "",
+      numeroPrestadores:       raw.numero_prestadores != null ? String(raw.numero_prestadores) : "",
+      denominacion:            raw.denominacion ?? solicitud.denominacion ?? "",
+      puestoJefeInmediato:     raw.puesto_jefe_inmediato ?? "",
+      tipoAdministracionNom:   (raw.tipo_administracion === "paraestatal" ? "paraestatal" : "centralizada") as "centralizada" | "paraestatal",
+      vigenciaInicio:          fmt(raw.vigencia_inicio),
+      vigenciaFin:             fmt(raw.vigencia_fin),
+      importeBruto:            raw.importe_bruto != null ? String(raw.importe_bruto) : "",
+      tipoImporte:             raw.tipo_importe ?? "Mensual",
+      nivelTabulador:          raw.nivel_tabulador ?? "",
+      categoriaTabulador:      raw.categoria_tabulador ?? "",
+      objeto:                  raw.objeto ?? "",
+      actividades:             Array.isArray(raw.actividades) ? raw.actividades.filter(Boolean) : [],
+      responsabilidades:       Array.isArray(raw.responsabilidades) ? raw.responsabilidades.filter(Boolean) : [],
+      marcoNormativo:          Array.isArray(raw.marco_normativo) ? raw.marco_normativo.filter(Boolean) : [],
+      condicionesRiesgos:      Array.isArray(raw.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : [],
+      resguardoActivos:        raw.resguardo_activos ?? "",
+      riesgoCaidas:            raw.riesgo_caidas ?? "",
+      riesgoMutilaciones:      raw.riesgo_mutilaciones ?? "",
+      riesgoGolpes:            raw.riesgo_golpes ?? "",
+      riesgoOtros:             raw.riesgo_otros ?? "",
+      condicionCambioDomicilio: raw.condicion_cambio_domicilio ?? false,
+      condicionHorario:        raw.condicion_horario ?? false,
+      condicionViajar:         raw.condicion_viajar ?? false,
+      escolaridad:             raw.escolaridad ?? "",
+      compAdm:                 raw.comp_adm ?? "",
+      compTec:                 raw.comp_tec ?? "",
+      compSoc:                 raw.comp_soc ?? "",
+      valores:                 raw.valores ?? "",
+      areasExp:                raw.areas_exp ?? "",
     },
   }
 }
@@ -856,7 +871,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           <Button variant="outline" size="sm" className="gap-1.5">
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
-          {onEditSolicitud && (
+          {onEditSolicitud && classifySolicitud(solicitud, filtro) !== "observadas" && (
             <Button
               variant="outline" size="sm"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
@@ -880,7 +895,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           <Button
             variant="outline" size="sm"
             onClick={() => setShowObservarModal(true)}
-            disabled={guardando}
+            disabled={guardando || classifySolicitud(solicitud, filtro) === "observadas"}
             className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
             >
             <RotateCcw className="h-4 w-4" />Observar
@@ -1070,7 +1085,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const [guardando,      setGuardando]      = useState(false)
   const [activeTab,      setActiveTab]      = useState<TabKey>(
     filtro === 2 ? "pendientes_asignacion"
-    : filtro === 3 ? "solicitudes"
     : "nuevas"
   )
   const [selectedId,     setSelectedId]     = useState<string | null>(null)
@@ -1362,7 +1376,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         })}
       />
 
-      {!(filtro === 3 && activeTab === "solicitudes") && (
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1383,7 +1396,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
           </SelectContent>
         </Select>
       </div>
-      )}
 
       {activeTab === "pendientes_firma" ? (
         <Card className="shadow-sm border-border">
@@ -1391,8 +1403,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
             <PendientesFirmaPanel filtro={filtro} currentUserId={(user as any)?.id ?? ""} onCountChange={setPendientesFirmaCount} />
           </CardContent>
         </Card>
-      ) : filtro === 3 && activeTab === "solicitudes" ? (
-        <SeguimientoGeneralView refreshSignal={refreshSignal} />
       ) : (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
@@ -1423,13 +1433,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Corrección</th>
                     <th className="px-4 py-3 text-left font-semibold">Ult. Observo</th>
                     <th className="px-4 py-3 text-left font-semibold">Plazo máximo de atención</th>
-                    <th className="px-4 py-3 text-left font-semibold">Acción</th>
+                    {!(filtro === 3 && activeTab === "nuevas") && (
+                      <th className="px-4 py-3 text-left font-semibold">Acción</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
+                      <td colSpan={filtro === 3 && activeTab === "nuevas" ? 8 : 9} className="px-4 py-12 text-center text-muted-foreground">
                         <div className="flex flex-col items-center gap-2">
                           <Filter className="h-8 w-8 text-muted-foreground/40" />
                           <span>No hay solicitudes en esta clasificación</span>
@@ -1505,6 +1517,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                           )}
                         </td>
                         <td className="px-4 py-3"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
+                        {!(filtro === 3 && activeTab === "nuevas") && (
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             {filtro === 2 ? (
@@ -1564,6 +1577,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                             {}
                           </div>
                         </td>
+                        )}
                       </tr>
                     )
                   })}

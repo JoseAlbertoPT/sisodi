@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -158,27 +159,35 @@ function rawToEditPayload(sol: SolicitudDetalle): EditSolicitudPayload {
     tipoActividades:      raw?.tipo_actividades ?? sol.tipoActividades ?? "",
     numeroPrestadores:    raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "",
     denominacion:         sol.denominacion !== "—" ? sol.denominacion : "",
-    puestoJefeInmediato:  raw?.puesto_jefe_inmediato ?? "",
-    vigenciaInicio:       raw?.vigencia_inicio ? raw.vigencia_inicio.toString().slice(0, 10) : "",
-    vigenciaFin:          raw?.vigencia_fin   ? raw.vigencia_fin.toString().slice(0, 10) : "",
-    importeBruto:         raw?.importe_bruto  != null ? String(raw.importe_bruto) : "",
-    tipoImporte:          raw?.tipo_importe ?? "",
-    nivelTabulador:       raw?.nivel_tabulador ?? "",
-    categoriaTabulador:   raw?.categoria_tabulador ?? "",
-    objeto:               raw?.objeto ?? "",
-    actividades:          Array.isArray(raw?.actividades) ? raw.actividades : [],
-    responsabilidades:    Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : [],
-    marcoNormativo:       Array.isArray(raw?.marco_normativo) ? raw.marco_normativo : [],
-    condicionesRiesgos:   Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos : [],
-    resguardoActivos:     raw?.resguardo_activos ?? "",
-    escolaridad:          raw?.escolaridad ?? "",
-    compAdm:              raw?.comp_adm ?? "",
-    compTec:              raw?.comp_tec ?? "",
-    compSoc:              raw?.comp_soc ?? "",
-    valores:              raw?.valores ?? "",
-    areasExp:             raw?.areas_exp ?? "",
+    puestoJefeInmediato:     raw?.puesto_jefe_inmediato ?? "",
+    tipoAdministracionNom:   (raw?.tipo_administracion === "paraestatal" ? "paraestatal" : "centralizada") as "centralizada" | "paraestatal",
+    vigenciaInicio:          raw?.vigencia_inicio ? raw.vigencia_inicio.toString().slice(0, 10) : "",
+    vigenciaFin:             raw?.vigencia_fin   ? raw.vigencia_fin.toString().slice(0, 10) : "",
+    importeBruto:            raw?.importe_bruto  != null ? String(raw.importe_bruto) : "",
+    tipoImporte:             raw?.tipo_importe ?? "",
+    nivelTabulador:          raw?.nivel_tabulador ?? "",
+    categoriaTabulador:      raw?.categoria_tabulador ?? "",
+    objeto:                  raw?.objeto ?? "",
+    actividades:             Array.isArray(raw?.actividades) ? raw.actividades : [],
+    responsabilidades:       Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : [],
+    marcoNormativo:          Array.isArray(raw?.marco_normativo) ? raw.marco_normativo : [],
+    condicionesRiesgos:      Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos : [],
+    resguardoActivos:        raw?.resguardo_activos ?? "",
+    riesgoCaidas:            raw?.riesgo_caidas ?? "",
+    riesgoMutilaciones:      raw?.riesgo_mutilaciones ?? "",
+    riesgoGolpes:            raw?.riesgo_golpes ?? "",
+    riesgoOtros:             raw?.riesgo_otros ?? "",
+    condicionCambioDomicilio: raw?.condicion_cambio_domicilio ?? false,
+    condicionHorario:        raw?.condicion_horario ?? false,
+    condicionViajar:         raw?.condicion_viajar ?? false,
+    escolaridad:             raw?.escolaridad ?? "",
+    compAdm:                 raw?.comp_adm ?? "",
+    compTec:                 raw?.comp_tec ?? "",
+    compSoc:                 raw?.comp_soc ?? "",
+    valores:                 raw?.valores ?? "",
+    areasExp:                raw?.areas_exp ?? "",
   }
-  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, formData }
+  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, estado: sol.estado, formData }
 }
 interface ChecklistItem { key: string; num: number; label: string }
 const CHECKLIST_16: ChecklistItem[] = [
@@ -243,6 +252,13 @@ function slaDesdeApiRestante(valor: number | null | undefined): number | null {
   return valor
 }
 
+function formatRegimen(raw: string | null | undefined): string {
+  const r = (raw ?? "").toLowerCase().trim()
+  if (r.includes("asimilado"))  return "Honorarios Asimilados  a Salarios"
+  if (r.includes("honorario"))  return "Honorarios"
+  if (r.includes("nombramiento") || r.includes("tiempo Determinado")) return "Nombramiento por Tiempo Determinado"
+  return raw || "—"
+}
 function formatEscolaridad(e: string | null | undefined): string {
   const v = (e ?? "").toLowerCase().trim()
   if (v === "bachillerato") return "Bachillerato"
@@ -273,17 +289,22 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
     estadoNuevo:    h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
   }))
 
-  const observacionesPrevias = (item.historial_solicitud ?? [])
-    .filter((h: any) => {
-      const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
-      return /observad/i.test(nombre) && h.comentario
-    })
-    .map((h: any) => ({
-      fecha:      formatFechaHora(h.fecha),
-      usuario:    h.usuario?.nombre ?? "Sistema",
-      estado:     h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
-      comentario: h.comentario as string,
-    }))
+  const historialSolicitud = item.historial_solicitud ?? []
+  const reversedHistorial = [...historialSolicitud].reverse()
+  const lastObsEntry = reversedHistorial.find((h: any) => {
+    const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
+    return /observad/i.test(nombre) && h.comentario
+  })
+  const obsEsLaUltima = !!(lastObsEntry && lastObsEntry === reversedHistorial[0])
+
+  const observacionesPrevias = obsEsLaUltima && lastObsEntry
+    ? [{
+        fecha:      formatFechaHora(lastObsEntry.fecha),
+        usuario:    lastObsEntry.usuario?.nombre ?? "Sistema",
+        estado:     lastObsEntry.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+        comentario: lastObsEntry.comentario as string,
+      }]
+    : []
 
   const fechaEnvio = item.fecha_envio ?? item.fecha_recepcion ?? item.fecha_creacion ?? null
   const folioDictamen = resolverFolioDictamen(item)
@@ -400,15 +421,6 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
   )
 }
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-card-foreground">{value || "—"}</span>
-    </div>
-  )
-}
-
 function ReadOnlyList({ items }: { items: string[] }) {
   return (
     <ul className="flex flex-col gap-2">
@@ -487,6 +499,7 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
             <ReadOnlyField label="Denominación del Nombramiento"    value={sol.denominacion} />
             <ReadOnlyField label="Puesto del Jefe Inmediato"        value={raw?.puesto_jefe_inmediato ?? "—"} />
             <ReadOnlyField label="Tipo de Actividad"              value={raw?.tipo_actividades ?? "—"} />
+            <ReadOnlyField label="Régimen de Contratación"          value={formatRegimen(sol.regimen)} />
             <ReadOnlyField label="Número de Personas a Contratar"   value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
             <ReadOnlyField label="Tipo de Pago"                     value={raw?.tipo_importe || "Mensual"} />
             <ReadOnlyField label="Vigencia Inicio"                  value={sol.vigenciaInicio} />
@@ -498,7 +511,7 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
             <ReadOnlyField label="Número de Prestadores de Servicios" value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
             <ReadOnlyField label="Programa o Proyecto"                value={raw?.programa_proyecto ?? "—"} />
             <ReadOnlyField label="Tipo de Actividad"                value={sol.tipoActividades} />
-            <ReadOnlyField label="Régimen de Contratación"            value={sol.regimen} />
+            <ReadOnlyField label="Régimen de Contratación"            value={formatRegimen(sol.regimen)} />
             <ReadOnlyField label="Vigencia Inicio"                    value={sol.vigenciaInicio} />
             <ReadOnlyField label="Vigencia Término"                   value={sol.vigenciaFin} />
             <ReadOnlyField label="Importe Bruto"                      value={sol.importeBruto} />
@@ -1226,10 +1239,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     filtro === 3 ? sinObservacion
     : filtro === 2 ? (sinObservacion && hasFolioDictamen)
     : canApproveChecklist
-  const canObservar =
+  const canObservar = !/observad/i.test(solicitud?.estado ?? "") && (
     (filtro === 2 || filtro === 3)
       ? !sinObservacion
       : (checklistStats.allDone && checklistStats.hasNo && checklistStats.noWithoutObs === 0)
+  )
   const observarBlocked = false
 
   const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string, modalidadFirmaValue?: "electronica" | "autografa") => {
@@ -1383,10 +1397,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
   const isEmitido      = solicitud?.estado === "Emitido"
   const isAprobado     = solicitud?.estado === "Pendiente Firma Dictamen"
-  const isObservadaFiltro2 = filtro === 2 && /observad/i.test(solicitud?.estado ?? "")
+  const isObservada        = /observad/i.test(solicitud?.estado ?? "")
+  const isObservadaFiltro2 = filtro === 2 && isObservada
   const isAceptadoPorRevisor = filtro === 1 && (
     solicitud?.estado?.toLowerCase() === "aceptado por revisor" ||
     solicitud?.estado?.toLowerCase() === "aprobado por revisor"
+  )
+  const checklistYaRealizado = filtro === 1 && (
+    (solicitud?.estado ?? "").toLowerCase().includes("observado por validacion final") ||
+    (solicitud?.estado ?? "").toLowerCase() === "observado por revisor"
   )
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
@@ -1521,7 +1540,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {solicitud.folioJustificacion} — {solicitud.tipo} — {solicitud.secretaria}
+              {solicitud.tipo} — {solicitud.secretaria}
             </p>
             {solicitud.denominacion && solicitud.denominacion !== "—" && (
               <p className="text-xs text-muted-foreground font-medium">{solicitud.denominacion}</p>
@@ -1534,7 +1553,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
-          {onEditSolicitud && (
+          {onEditSolicitud && !isObservada && (
             <Button variant="outline" size="sm" className="gap-1.5"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
             >
@@ -1575,7 +1594,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                             <span className="text-[10px] font-semibold text-[#832B56] uppercase tracking-wide">{obs.estado}</span>
                             <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
                           </div>
-                          <ObservacionChecklist comentario={obs.comentario} />
+                          <p className="text-xs text-[#832B56]/90 leading-relaxed whitespace-pre-line">{obs.comentario}</p>
                         </div>
                       </div>
                     )
@@ -1621,7 +1640,21 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                     {filtro === 1 && (
                       <FolioRecepcionCard folioRecepcion={folioRecepcionResuelto} onAsignar={handleAsignarFolioRecepcion} esExtemporanea={solicitud.esExtemporanea} />
                     )}
-                    {filtro === 1 && (
+                    {filtro === 1 && checklistYaRealizado && (
+                      <Card className="shadow-sm border-2 border-secondary/40 bg-secondary/[0.04]">
+                        <CardContent className="flex items-start gap-3 p-4">
+                          <ClipboardCheck className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-semibold text-secondary">Checklist ya fue realizado</span>
+                            <p className="text-xs text-muted-foreground">
+                              El checklist normativo fue completado en la revisión anterior.
+                              Para aplicar correcciones, utilice el botón <strong>Editar</strong>.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {filtro === 1 && !checklistYaRealizado && (
                       <>
                         {}
                         <Card className={`shadow-sm border-2 ${checklistStats.hasNo ? "border-destructive/30 bg-destructive/[0.03]" : checklistStats.allDone ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
@@ -1722,7 +1755,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                                             <RadioOption
                                               value="si"
                                               selected={valor === "si"}
-                                              onChange={() => updateChecklist(item.key, valor === "si" ? null : "si")}
+                                              onChange={() => updateChecklist(item.key, valor === "si" ? null : "si", "")}
                                               label="Sí"
                                               colorClass=""
                                               style={{ color: COLOR_SI_TEXT, backgroundColor: `${COLOR_SI}15`, borderColor: COLOR_SI }}
@@ -1738,7 +1771,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                                             <RadioOption
                                               value="noAplica"
                                               selected={valor === "noAplica"}
-                                              onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica")}
+                                              onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica", "")}
                                               label="No Aplica"
                                               colorClass=""
                                               style={{ color: COLOR_NO_APLICA, backgroundColor: `${COLOR_NO_APLICA}15`, borderColor: COLOR_NO_APLICA }}

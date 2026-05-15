@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,8 @@ import {
 
   Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
-  Loader2, Shield, CheckCircle2, Eye, Unlock, Trash2,
+  Loader2, Shield, CheckCircle2, Eye, EyeOff, Unlock, Trash2, Lock, User,
+  Landmark, Factory,
 } from "lucide-react"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
@@ -139,6 +140,26 @@ function flattenTree(
     }
   }
   return result
+}
+
+function getClaveError(secretariaId: string | null, tree: OrganoCentralizadoNode[]): string | null {
+  if (!secretariaId) return null
+  const nodePath = findNodePath(tree, secretariaId)
+  if (!nodePath) return null
+  if (nodePath.length === 1) {
+    const children = nodePath[0].children ?? []
+    if (children.length === 0) {
+      return "Esta secretaría no tiene Unidades Administrativas Registradas. Configúrelas en el catálogo antes de continuar."
+    }
+    if (!children.some((c) => c.ua_clave_administrativa)) {
+      return "Ninguna unidad de esta secretaría tiene clave administrativa. Configúrelas en el catálogo antes de continuar."
+    }
+  } else {
+    if (!nodePath[1].ua_clave_administrativa) {
+      return "La unidad seleccionada no tiene clave administrativa. Configúrela en el catálogo antes de continuar."
+    }
+  }
+  return null
 }
 
 function HighlightText({ text, query }: { text: string; query: string }) {
@@ -432,10 +453,15 @@ type NuevoUsuarioFormProps = {
   onClose: () => void
   onSaved: (u: Usuario) => void
 }
+
+const NUEVO_STEPS = ["Datos Personales", "Acceso y Permisos", "Tipo de Administración"]
+
 function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const { user: currentUser } = useAuth()
   const tipoAdminFijo = currentUser?.tipoAdministracion ?? "centralizada"
   const esAdministrador = currentUser?.rol === "Administrador"
+  const [step, setStep] = useState(1)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [form, setForm] = useState({
     nombre: "",
     correo: "",
@@ -453,9 +479,11 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState("")
+  const [claveAlert, setClaveAlert] = useState("")
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
   const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     setTreeLoading(true)
@@ -469,29 +497,41 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
       .finally(() => setTreeLoading(false))
   }, [tipoAdmin])
 
-  const unidadTree = useMemo((): OrganoCentralizadoNode[] => {
-    if (!form.secretariaId) return []
-    const path = findNodePath(tree, form.secretariaId)
-    const selectedNode = path?.[path.length - 1]
-    return selectedNode?.children ?? []
-  }, [tree, form.secretariaId])
-
-  const validate = () => {
+  const validateStep = (s: number) => {
     const e: Record<string, string> = {}
-    if (!form.nombre.trim())   e.nombre   = "El Nombre  es requerido"
-    if (!form.correo.trim())   e.correo   = "El Correo es requerido"
-    else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
-    if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC Inválido (ej. ABCD850101XYZ)"
-    if (!form.password.trim()) e.password = "La Contraseña es requerida"
-    else if (form.password.length < 8) e.password = "Mínimo 8 caracteres"
-    if (!form.rol)             e.rol      = "Seleccione un rol"
-    if (!form.secretaria)      e.secretaria = "Seleccione una secretaría"
+    if (s === 1) {
+      if (!form.nombre.trim()) e.nombre = "El Nombre es requerido"
+      if (!form.correo.trim()) e.correo = "El Correo es requerido"
+      else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
+      if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC Inválido (ej. ABCD850101XYZ)"
+    }
+    if (s === 2) {
+      if (!form.password.trim()) e.password = "La Contraseña es requerida"
+      else if (form.password.length < 8) e.password = "Mínimo 8 caracteres"
+      if (!form.rol) e.rol = "Seleccione un rol"
+    }
+    if (s === 3) {
+      if (!form.secretaria) e.secretaria = "Seleccione una secretaría"
+    }
     return e
   }
 
-  const handleSubmit = async () => {
-    const e = validate()
+  const handleNext = () => {
+    const e = validateStep(step)
     if (Object.keys(e).length) { setErrors(e); return }
+    setErrors({})
+    if (step < 3) {
+      setStep((s) => s + 1)
+    } else {
+      if (tipoAdmin === "centralizada") {
+        const claveErr = getClaveError(form.secretariaId, tree)
+        if (claveErr) { setClaveAlert(claveErr); return }
+      }
+      setShowConfirm(true)
+    }
+  }
+
+  const handleSubmit = async () => {
     setLoading(true)
     setApiError("")
     try {
@@ -506,18 +546,19 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
           ? null
           : form.secretariaId
       const nuevo = await crearUsuario({
-        nombre:          form.nombre,
-        correo:          form.correo,
-        rfc:             form.rfc.toUpperCase(),
-        password:        form.password,
-        rolNombre:       form.rol,
-        secretariaId:    rawSecretariaId,
+        nombre:       form.nombre,
+        correo:       form.correo,
+        rfc:          form.rfc.toUpperCase(),
+        password:     form.password,
+        rolNombre:    form.rol,
+        secretariaId: rawSecretariaId,
         secretariaTexto,
       })
       onSaved(nuevo)
       onClose()
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : "Error")
+      setShowConfirm(false)
     } finally {
       setLoading(false)
     }
@@ -546,146 +587,369 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     </div>
   )
 
+  const secretariaDisplay = form.secretariaPath.length > 0
+    ? form.secretariaPath.join(" › ")
+    : form.secretaria || "—"
+
   return (
+    <>
+    <AlertDialog open={!!claveAlert} onOpenChange={(open) => { if (!open) setClaveAlert("") }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Secretaría sin configuración</AlertDialogTitle>
+          <AlertDialogDescription>{claveAlert}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setClaveAlert("")}>Entendido</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Modal de confirmación */}
+    {showConfirm && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div className="w-full max-w-md mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-card-foreground">Confirmar Registro</h3>
+                <p className="text-[11px] text-muted-foreground">Revisa los datos antes de guardar</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setShowConfirm(false)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          <div className="px-6 py-4 flex flex-col gap-3 max-h-[70vh] overflow-y-auto">
+            {apiError && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive flex items-center gap-2">
+                <X className="h-3 w-3 shrink-0" />{apiError}
+              </div>
+            )}
+
+            {/* Datos personales */}
+            <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
+                <User className="h-3 w-3 text-primary/70" />
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <span className="text-muted-foreground">Nombre:</span>
+                <span className="font-medium text-card-foreground">{form.nombre}</span>
+                <span className="text-muted-foreground">Correo:</span>
+                <span className="font-medium text-card-foreground break-all">{form.correo}</span>
+                <span className="text-muted-foreground">RFC:</span>
+                <span className="font-mono font-medium text-card-foreground">{form.rfc || "—"}</span>
+              </div>
+            </div>
+
+            {/* Acceso y permisos */}
+            <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
+                <Lock className="h-3 w-3 text-amber-600/70" />
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Acceso y permisos</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <span className="text-muted-foreground">Contraseña:</span>
+                <span className="font-mono font-medium text-card-foreground">{"•".repeat(form.password.length)}</span>
+                <span className="text-muted-foreground">Rol:</span>
+                <span className="font-medium text-card-foreground">{form.rol}</span>
+                <span className="text-muted-foreground">Estatus:</span>
+                <span className="font-medium text-card-foreground">{form.estatus}</span>
+              </div>
+            </div>
+
+            {/* Administración */}
+            <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
+                <Building2 className="h-3 w-3 text-blue-600/70" />
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Administración</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <span className="text-muted-foreground">Tipo:</span>
+                <span className="font-medium text-card-foreground capitalize">{tipoAdmin}</span>
+                <span className="text-muted-foreground">Secretaría:</span>
+                <span className="font-medium text-card-foreground leading-snug">{secretariaDisplay}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20">
+            <Button variant="outline" size="sm" className="text-xs h-9" onClick={() => setShowConfirm(false)} disabled={loading}>
+              Regresar
+            </Button>
+            <Button
+              size="sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              onClick={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
+              ) : (
+                <><CheckCircle2 className="h-3.5 w-3.5" />Guardar usuario</>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="w-full max-w-lg mx-4 rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div>
-            <h2 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
-              <UserPlus className="h-4 w-4 text-primary" />
-              Registrar Nuevo Usuario
-            </h2>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Completa los campos para concluir el registro</p>
+      <div className="w-full max-w-xl mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <UserPlus className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-card-foreground">Registrar Nuevo Usuario</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{NUEVO_STEPS[step - 1]}</p>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="px-6 py-5 flex flex-col gap-5 overflow-y-auto">
+        {/* Step indicator */}
+        <div className="flex items-center gap-0 px-6 py-3 border-b border-border/50 bg-muted/20 shrink-0">
+          {NUEVO_STEPS.map((label, idx) => {
+            const n = idx + 1
+            const done = step > n
+            const active = step === n
+            return (
+              <div key={n} className="flex items-center flex-1 last:flex-none">
+                <div className="flex items-center gap-1.5">
+                  <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors ${
+                    done ? "bg-primary text-primary-foreground" : active ? "bg-primary/20 text-primary border border-primary/40" : "bg-muted text-muted-foreground"
+                  }`}>
+                    {done ? <Check className="h-3 w-3" /> : n}
+                  </div>
+                  <span className={`text-[11px] font-medium hidden sm:block ${active ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"}`}>
+                    {label}
+                  </span>
+                </div>
+                {idx < NUEVO_STEPS.length - 1 && (
+                  <div className={`flex-1 mx-2 h-px ${step > n ? "bg-primary/40" : "bg-border"}`} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
           {apiError && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
-              {apiError}
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-xs text-destructive flex items-center gap-2">
+              <X className="h-3.5 w-3.5 shrink-0" />{apiError}
             </div>
           )}
 
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Datos generales</span>
-              <div className="flex-1 border-t border-border" />
-            </div>
-            <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                {field("nombre", "Nombre completo", "text", "Ej. Juan Pérez García")}
+          {/* Step 1: Datos personales */}
+          {step === 1 && (
+            <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                <User className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
               </div>
-              {field("correo",   "Correo electrónico", "email",    "usuario@gobierno.gob.mx", undefined, "email")}
+              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  {field("nombre", "Nombre Completo", "text", "Ej. Juan Pérez García")}
+                </div>
+                {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx", undefined, "email")}
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">RFC / Usuario</Label>
+                  <Input
+                    placeholder="ABCD850101XYZ"
+                    value={form.rfc}
+                    autoComplete="off"
+                    onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
+                    className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+                    maxLength={13}
+                  />
+                  {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
+                  {errors.rfc && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Acceso y permisos */}
+          {step === 2 && (
+            <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                <Lock className="h-3.5 w-3.5 text-amber-600/70" />
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Acceso y permisos</span>
+              </div>
+              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Mínimo 8 caracteres"
+                      autoComplete="new-password"
+                      value={form.password}
+                      onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                      className={`bg-background h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowPassword((v) => !v)}
+                    >
+                      {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                  {errors.password && <span className="text-[10px] text-destructive">{errors.password}</span>}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
+                  <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
+                    <SelectTrigger className={`bg-background h-9 text-xs ${errors.rol ? "border-destructive" : ""}`}>
+                      <SelectValue placeholder="Seleccione un rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {errors.rol && <span className="text-[10px] text-destructive">{errors.rol}</span>}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Estatus inicial</Label>
+                  <Select value={form.estatus} onValueChange={(v) => setForm((f) => ({ ...f, estatus: v as "Activo" | "Inactivo" }))}>
+                    <SelectTrigger className="bg-background h-9 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Activo">Activo</SelectItem>
+                      <SelectItem value="Inactivo">Inactivo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Tipo de administración + Secretaría */}
+          {step === 3 && (
+            <>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Usuario</Label>
-                <Input
-                  placeholder="ABCD850101XYZ"
-                  value={form.rfc}
-                  autoComplete="off"
-                  onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
-                  className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
-                  maxLength={13}
+                <Label className="text-xs font-medium text-muted-foreground">Tipo de Administración</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(esAdministrador || tipoAdminFijo === "centralizada") && (
+                    <button
+                      type="button"
+                      disabled={!esAdministrador}
+                      onClick={() => {
+                        setTipoAdmin("centralizada")
+                        setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
+                      }}
+                      className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                        tipoAdmin === "centralizada"
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-background hover:border-primary/40 hover:bg-muted/40"
+                      }`}
+                    >
+                      <Landmark className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "centralizada" ? "text-primary" : "text-muted-foreground"}`} />
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "centralizada" ? "text-primary" : "text-card-foreground"}`}>Centralizada</span>
+                        <span className="text-[10px] text-muted-foreground leading-tight">Dependencias del gobierno federal</span>
+                      </div>
+                    </button>
+                  )}
+                  {(esAdministrador || tipoAdminFijo === "paraestatal") && (
+                    <button
+                      type="button"
+                      disabled={!esAdministrador}
+                      onClick={() => {
+                        setTipoAdmin("paraestatal")
+                        setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
+                      }}
+                      className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                        tipoAdmin === "paraestatal"
+                          ? "border-secondary bg-secondary/5"
+                          : "border-border bg-background hover:border-secondary/40 hover:bg-muted/40"
+                      }`}
+                    >
+                      <Factory className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-muted-foreground"}`} />
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-card-foreground"}`}>Paraestatal</span>
+                        <span className="text-[10px] text-muted-foreground leading-tight">Organismos y entidades paraestatales</span>
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                  <Building2 className="h-3.5 w-3.5 text-blue-600/70" />
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
+                </div>
+                <SecretariaTreeSelector
+                  tree={tree}
+                  treeLoading={treeLoading}
+                  selectedId={form.secretariaId}
+                  error={errors.secretaria}
+                  onSelect={(id, nombre, path) =>
+                    setForm((f) => ({
+                      ...f,
+                      secretariaId: id,
+                      secretaria: nombre,
+                      secretariaPath: path,
+                      unidad: "",
+                      unidadId: null,
+                      unidadPath: [],
+                    }))
+                  }
                 />
-                {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
-                {errors.rfc  && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
               </div>
-              {field("password", "Contraseña",         "password", "Mínimo 8 caracteres", undefined, "new-password")}
-
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
-                <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
-                  <SelectTrigger className={`bg-background h-9 text-xs ${errors.rol ? "border-destructive" : ""}`}>
-                    <SelectValue placeholder="Seleccione un rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {errors.rol && <span className="text-[10px] text-destructive">{errors.rol}</span>}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Estatus inicial</Label>
-                <Select value={form.estatus} onValueChange={(v) => setForm((f) => ({ ...f, estatus: v as "Activo" | "Inactivo" }))}>
-                  <SelectTrigger className="bg-background h-9 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Activo">Activo</SelectItem>
-                    <SelectItem value="Inactivo">Inactivo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
-            <Select
-              value={tipoAdmin}
-              onValueChange={(v) => {
-                setTipoAdmin(v as "centralizada" | "paraestatal")
-                setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
-              }}
-              disabled={!esAdministrador}
-            >
-              <SelectTrigger className="bg-background h-9 text-xs">
-                <SelectValue placeholder="Seleccione tipo de administración" />
-              </SelectTrigger>
-              <SelectContent>
-                {(esAdministrador || tipoAdminFijo === "centralizada") && <SelectItem value="centralizada">Administración Centralizada</SelectItem>}
-                {(esAdministrador || tipoAdminFijo === "paraestatal") && <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
-              <div className="flex-1 border-t border-border" />
-            </div>
-            <SecretariaTreeSelector
-              tree={tree}
-              treeLoading={treeLoading}
-              selectedId={form.secretariaId}
-              error={errors.secretaria}
-              onSelect={(id, nombre, path) =>
-                setForm((f) => ({
-                  ...f,
-                  secretariaId: id,
-                  secretaria: nombre,
-                  secretariaPath: path,
-                  unidad: "",
-                  unidadId: null,
-                  unidadPath: [],
-                }))
-              }
-            />
-          </div>
+            </>
+          )}
         </div>
 
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
-          <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            size="sm"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9"
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? "Guardando..." : "Guardar usuario"}
-          </Button>
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
+          <div>
+            {step > 1 && (
+              <Button variant="outline" size="sm" className="text-xs h-9" onClick={() => { setErrors({}); setStep((s) => s - 1) }}>
+                Atrás
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              onClick={handleNext}
+            >
+              {step < 3 ? (
+                <><ChevronRight className="h-3.5 w-3.5" />Siguiente</>
+              ) : (
+                <><CheckCircle2 className="h-3.5 w-3.5" />Aceptar</>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
+    </>
   )
 }
 
@@ -715,12 +979,13 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState("")
+  const [claveAlert, setClaveAlert] = useState("")
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
   const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
-  const initializedRef = useRef(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  
   useEffect(() => {
     setTreeLoading(true)
     fetchCentralizadaTree()
@@ -733,7 +998,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 const paraTree = paraestatalToTree(cats)
                 const paraFound = findNodePath(paraTree, `org-${usuario.secretariaId}`)
                 if (paraFound) {
-                  initializedRef.current = true
                   setTipoAdmin("paraestatal")
                   setTree(paraTree)
                   setForm((f) => ({ ...f, secretariaId: `org-${usuario.secretariaId}` }))
@@ -742,36 +1006,30 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 }
               })
               .catch(() => setTree(central))
-              .finally(() => {
-                initializedRef.current = true
-                setTreeLoading(false)
-              })
+              .finally(() => setTreeLoading(false))
             return
           }
         }
-        initializedRef.current = true
         setTree(central)
         setTreeLoading(false)
       })
-      .catch(() => {
-        initializedRef.current = true
-        setTreeLoading(false)
-      })
+      .catch(() => setTreeLoading(false))
   }, [])
 
-  
-  useEffect(() => {
-    if (!initializedRef.current) return
+  const handleTipoAdminChange = (v: string) => {
+    const newTipo = v as "centralizada" | "paraestatal"
+    setTipoAdmin(newTipo)
+    setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [] }))
     setTreeLoading(true)
     setTree([])
-    const promise = tipoAdmin === "centralizada"
+    const promise = newTipo === "centralizada"
       ? fetchCentralizadaTree()
       : fetchCategoriasParaestatal().then(paraestatalToTree)
     promise
       .then(setTree)
       .catch(() => setTree([]))
       .finally(() => setTreeLoading(false))
-  }, [tipoAdmin])
+  }
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -789,6 +1047,10 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   const handleSubmit = async () => {
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
+    if (tipoAdmin === "centralizada") {
+      const claveErr = getClaveError(form.secretariaId, tree)
+      if (claveErr) { setClaveAlert(claveErr); return }
+    }
     setLoading(true)
     setApiError("")
     try {
@@ -850,45 +1112,82 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     </div>
   )
 
+  const initials = usuario.nombre.trim().split(/\s+/).slice(0, 2).map((n) => n[0]).join("").toUpperCase()
+
   return (
+    <>
+    <AlertDialog open={!!claveAlert} onOpenChange={(open) => { if (!open) setClaveAlert("") }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Secretaría sin Unidades Administrativas</AlertDialogTitle>
+          <AlertDialogDescription>{claveAlert}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setClaveAlert("")}>Entendido</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="w-full max-w-lg mx-4 rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div>
-            <h2 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
-              <Pencil className="h-4 w-4 text-primary" />
-              Editar Usuario
-            </h2>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
+      <div className="w-full max-w-xl mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Pencil className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-card-foreground">Editar Usuario</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
+            </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="px-6 py-5 flex flex-col gap-5 overflow-y-auto">
+        {/* User info strip */}
+        <div className="flex items-center gap-3 px-6 py-3 bg-muted/40 border-b border-border/50 shrink-0">
+          <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+            <span className="text-sm font-bold text-primary">{initials}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-foreground truncate">{usuario.nombre}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{usuario.correo} · {usuario.rol}</p>
+          </div>
+          <Badge
+            className={`shrink-0 text-[11px] ${usuario.estatus === "Activo" ? "bg-secondary/20 text-secondary-foreground border-secondary/30" : ""}`}
+            variant={usuario.estatus === "Activo" ? "outline" : "outline"}
+          >
+            {usuario.estatus}
+          </Badge>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
           {apiError && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
+            <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-xs text-destructive flex items-center gap-2">
+              <X className="h-3.5 w-3.5 shrink-0" />
               {apiError}
             </div>
           )}
 
-          {}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Datos generales</span>
-              <div className="flex-1 border-t border-border" />
+          {/* Datos personales */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <User className="h-3.5 w-3.5 text-primary/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
             </div>
-            <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
+            <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 {field("nombre", "Nombre completo", "text", "Ej. Juan Pérez García")}
               </div>
               {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx")}
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Usuario</Label>
+                <Label className="text-xs font-medium text-muted-foreground">RFC / Usuario</Label>
                 <Input
                   placeholder="ABCD850101XYZ"
                   value={form.rfc}
@@ -897,8 +1196,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                   className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
                   maxLength={13}
                 />
-                {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
-                {errors.rfc  && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
+                {!errors.rfc && <span className="text-[10px] text-muted-foreground"></span>}
+                {errors.rfc && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -929,33 +1228,54 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           </div>
 
-
+          {/* Tipo de administración */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Tipo de administración</Label>
-            <Select
-              value={tipoAdmin}
-              onValueChange={(v) => {
-                setTipoAdmin(v as "centralizada" | "paraestatal")
-                setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [] }))
-              }}
-              disabled={!esAdministrador}
-            >
-              <SelectTrigger className="bg-background h-9 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(esAdministrador || tipoAdminFijo === "centralizada") && <SelectItem value="centralizada">Administración Centralizada</SelectItem>}
-                {(esAdministrador || tipoAdminFijo === "paraestatal") && <SelectItem value="paraestatal">Administración Paraestatal</SelectItem>}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs font-medium text-muted-foreground">Tipo de Administración</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(esAdministrador || tipoAdminFijo === "centralizada") && (
+                <button
+                  type="button"
+                  disabled={!esAdministrador}
+                  onClick={() => handleTipoAdminChange("centralizada")}
+                  className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    tipoAdmin === "centralizada"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:border-primary/40 hover:bg-muted/40"
+                  }`}
+                >
+                  <Landmark className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "centralizada" ? "text-primary" : "text-muted-foreground"}`} />
+                  <div className="flex flex-col gap-0.5">
+                    <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "centralizada" ? "text-primary" : "text-card-foreground"}`}>Centralizada</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Dependencias del gobierno federal</span>
+                  </div>
+                </button>
+              )}
+              {(esAdministrador || tipoAdminFijo === "paraestatal") && (
+                <button
+                  type="button"
+                  disabled={!esAdministrador}
+                  onClick={() => handleTipoAdminChange("paraestatal")}
+                  className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    tipoAdmin === "paraestatal"
+                      ? "border-secondary bg-secondary/5"
+                      : "border-border bg-background hover:border-secondary/40 hover:bg-muted/40"
+                  }`}
+                >
+                  <Factory className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-muted-foreground"}`} />
+                  <div className="flex flex-col gap-0.5">
+                    <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-card-foreground"}`}>Paraestatal</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">Organismos y entidades paraestatales</span>
+                  </div>
+                </button>
+              )}
+            </div>
           </div>
 
-
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
-              <div className="flex-1 border-t border-border" />
+          {/* Secretaría */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <Building2 className="h-3.5 w-3.5 text-blue-600/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
             </div>
             <SecretariaTreeSelector
               tree={tree}
@@ -973,33 +1293,85 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             />
           </div>
 
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Cambiar contraseña (opcional)</span>
-              <div className="flex-1 border-t border-border" />
+          {/* Cambiar contraseña */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <Lock className="h-3.5 w-3.5 text-amber-600/70" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cambiar contraseña</span>
+              <span className="ml-auto text-[10px] text-muted-foreground italic">opcional</span>
             </div>
-            <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
-              {field("password",        "Nueva contraseña",     "password", "Mínimo 8 caracteres ", undefined, "new-password")}
-              {field("confirmPassword", "Confirmar contraseña", "password", "Repite la nueva contraseña",        undefined, "new-password")}
+            <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Nueva contraseña</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Mínimo 8 caracteres"
+                    autoComplete="new-password"
+                    value={form.password}
+                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                    className={`bg-background h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowPassword((v) => !v)}
+                  >
+                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {errors.password && <span className="text-[10px] text-destructive">{errors.password}</span>}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Confirmar contraseña</Label>
+                <div className="relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Repite la nueva contraseña"
+                    autoComplete="new-password"
+                    value={form.confirmPassword}
+                    onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+                    className={`bg-background h-9 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && <span className="text-[10px] text-destructive">{errors.confirmPassword}</span>}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
-          <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            size="sm"
-            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9"
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? "Guardando..." : "Guardar cambios"}
-          </Button>
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
+          <span className="text-[11px] text-muted-foreground hidden sm:block">Los campos requeridos están marcados en rojo</span>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              onClick={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
+              ) : (
+                <><CheckCircle2 className="h-3.5 w-3.5" />Guardar cambios</>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
+    </>
   )
 }
 

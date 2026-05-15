@@ -8,7 +8,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "seed": "npx tsx prisma/seed.ts"
+    "seed": "npx tsx prisma/seed.ts",
+    "seed:roles": "npx tsx prisma/seed/roles.ts",
+    "seed:acciones": "npx tsx prisma/seed/acciones.ts",
+    "seed:areas": "npx tsx prisma/seed/areas.ts",
+    "seed:menus": "npx tsx prisma/seed/menus.ts",
+    "seed:usuarios": "npx tsx prisma/seed/usuarios.ts",
+    "seed:estados": "npx tsx prisma/seed/estados.ts",
+    "seed:periodos": "npx tsx prisma/seed/periodos.ts",
+    "seed:calendario": "npx tsx prisma/seed/calendario.ts",
+    "seed:secretarias": "npx tsx prisma/seed/secretarias.ts",
+    "seed:paraestatales": "npx tsx prisma/seed/paraestatales.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

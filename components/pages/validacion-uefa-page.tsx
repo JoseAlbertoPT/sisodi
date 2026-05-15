@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -555,14 +556,6 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
   )
 }
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      {label && <span className="text-xs text-muted-foreground">{label}</span>}
-      <span className="text-sm font-medium text-card-foreground">{value || "—"}</span>
-    </div>
-  )
-}
 
 function parseListField(text: string | null | undefined): string[] {
   if (!text || text === "—") return []
@@ -904,6 +897,8 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
 
   const folioDictamenMostrar = solicitud.numeroDictamen
     ?? (solicitud.folioDictamen ? formatearFolio(solicitud.folioDictamen) : null)
+  const folioRecepcionValido = solicitud.folio && solicitud.folio !== `SOL-${solicitud.id}` ? solicitud.folio : null
+  const folioMostrar = folioRecepcionValido ?? solicitud.folioJustificacion
 
   return (
     <div className="flex flex-col gap-4">
@@ -918,7 +913,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
           </Button>
           <Separator orientation="vertical" className="h-6" />
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">{solicitud.folioJustificacion}</span>
+            <span className="text-sm font-semibold text-card-foreground">{folioMostrar}</span>
           </div>
           <UefaEstadoBadge estado={solicitud.estado} />
         </div>
@@ -1302,7 +1297,6 @@ export function ValidacionUefaPage() {
           onGenerarPdfBase64={async () => generateJustificacionPDFBase64(firmaTargetSol.id)}
           onFinalizar={async () => { await handleFirmarJustificacion(firmaTargetSol.id) }}
           guardandoFinal={guardando}
-          selladoEtapa={firmaTargetSol.modalidadFirma === "electronica" ? "uefa" : undefined}
         />
       )}
 
@@ -1368,8 +1362,8 @@ export function ValidacionUefaPage() {
                     const folioDictamenLabel = sol.numeroDictamen
                       ?? (sol.folioDictamen ? formatearFolio(sol.folioDictamen) : null)
                     const folioRecepcion     = sol.folio && sol.folio !== `SOL-${sol.id}` ? sol.folio : null
-                    const usaFolioRecepcion  = solTab === "En Proceso" || solTab === "Devueltas" || solTab === "Emitidas"
-                    const folioPrincipal     = usaFolioRecepcion ? (folioRecepcion ?? sol.folioJustificacion) : sol.folioJustificacion
+                    const usaFolioRecepcion  = !!folioRecepcion
+                    const folioPrincipal     = folioRecepcion ?? sol.folioJustificacion
                     const folioSecundario    = usaFolioRecepcion && folioRecepcion
                       ? (solTab === "Emitidas" && folioDictamenLabel ? folioDictamenLabel : null)
                       : null

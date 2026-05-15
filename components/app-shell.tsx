@@ -30,6 +30,8 @@ export function AppShell() {
   const [editSolicitud, setEditSolicitud] = useState<EditSolicitudPayload | undefined>(undefined)
   const [hydrated, setHydrated] = useState(false)
   const [prevPage, setPrevPage] = useState<PageKey>("dashboard")
+  const [misSolicitudesRefreshKey, setMisSolicitudesRefreshKey] = useState(0)
+  const [misSolicitudesInitialTab, setMisSolicitudesInitialTab] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     const storedPage = localStorage.getItem(PAGE_KEY) as PageKey | null
@@ -60,7 +62,26 @@ export function AppShell() {
     setCurrentPage("nueva-solicitud")
   }
 
+  const handleCancelEdit = () => {
+    setEditSolicitud(undefined)
+    setCurrentPage(prevPage)
+  }
+
   const handleAfterSave = () => {
+    const estadoOrig = (editSolicitud?.estado ?? "").toLowerCase()
+    const eraObservada = estadoOrig.includes("observad") || estadoOrig.includes("devuelta")
+    const eraObservadaUEFA =
+      estadoOrig.includes("observada por uefa") ||
+      estadoOrig.includes("observado por uefa") ||
+      (estadoOrig.includes("observado por validacion") && !estadoOrig.includes("final"))
+    if (prevPage === "mis-solicitudes") {
+      setMisSolicitudesInitialTab(eraObservadaUEFA ? "En aprobación" : undefined)
+      setMisSolicitudesRefreshKey((k) => k + 1)
+    } else if (eraObservada && (
+      (prevPage as string).startsWith("bandeja-filtro") || prevPage === "revision-do"
+    )) {
+      setMisSolicitudesRefreshKey((k) => k + 1)
+    }
     setEditSolicitud(undefined)
     setCurrentPage(prevPage)
   }
@@ -81,22 +102,22 @@ export function AppShell() {
       case "dashboard":
         return <DashboardPage onNavigate={setCurrentPage} onOpenReview={handleOpenReview} />
       case "nueva-solicitud":
-        return <NuevaSolicitudPage key={editSolicitud?.id ?? "new"} editSolicitud={editSolicitud} onAfterSave={editSolicitud ? handleAfterSave : undefined} />
+        return <NuevaSolicitudPage key={editSolicitud?.id ?? "new"} editSolicitud={editSolicitud} onAfterSave={editSolicitud ? handleAfterSave : undefined} onCancel={editSolicitud ? handleCancelEdit : undefined} />
       case "mis-solicitudes":
-        return <MisSolicitudesPage key={user?.id ?? "anon"} onEditSolicitud={handleEditSolicitud} />
+        return <MisSolicitudesPage key={`${user?.id ?? "anon"}-${misSolicitudesRefreshKey}`} initialTab={misSolicitudesInitialTab} onEditSolicitud={handleEditSolicitud} />
       case "validacion-uefa":
         return <ValidacionUefaPage />
       case "bandeja-filtro1":
-        return <BandejaFiltroPage filtro={1} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
+        return <BandejaFiltroPage key={`f1-${misSolicitudesRefreshKey}`} filtro={1} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
       case "bandeja-filtro2":
-        return <BandejaFiltroPage filtro={2} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
+        return <BandejaFiltroPage key={`f2-${misSolicitudesRefreshKey}`} filtro={2} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
       case "bandeja-filtro3":
-        return <BandejaFiltroPage filtro={3} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
+        return <BandejaFiltroPage key={`f3-${misSolicitudesRefreshKey}`} filtro={3} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
       case "progreso-firmado":
         return <ProgresoFirmadoPage />
       case "revision-do":
         return reviewSolicitudId ? (
-          <RevisionDOPage solicitudId={reviewSolicitudId} filtro={reviewFiltro} onBack={handleBackFromReview} onEditSolicitud={handleEditSolicitud} />
+          <RevisionDOPage key={`rev-${misSolicitudesRefreshKey}`} solicitudId={reviewSolicitudId} filtro={reviewFiltro} onBack={handleBackFromReview} onEditSolicitud={handleEditSolicitud} />
         ) : (
           <DashboardPage onNavigate={setCurrentPage} onOpenReview={handleOpenReview} />
         )

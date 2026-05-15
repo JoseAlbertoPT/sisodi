@@ -39,3 +39,9 @@ public/uploads/
 # Turbo (si se usa)
 .turbo
 .env
+.env
+tsconfig.tsbuildinfo
+
+# Binarios
+cloudflared-linux-amd64.deb
+*.deb

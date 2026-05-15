@@ -99,6 +99,7 @@ interface FirmaNames {
 async function resolverNombresFirmantes(
   solicitudId: number,
   base: FirmaNames,
+  soloFirmanteId: number | null = null,
 ): Promise<FirmaNames> {
   const proceso = await prisma.firma_proceso.findUnique({
     where: { solicitud_id: solicitudId },
@@ -106,6 +107,7 @@ async function resolverNombresFirmantes(
       firmantes: {
         include: { usuario: { select: { id: true, nombre: true } } },
         orderBy: { orden: "asc" },
+        ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
       },
     },
   });
@@ -165,7 +167,7 @@ async function resolverNombresFirmantes(
   return out;
 }
 
-async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}) {
+async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null) {
   let firmas: FirmaNames = { ...firmasInput };
   try {
     if (!solicitudId) {
@@ -177,7 +179,10 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
 
     const sol = await prisma.solicitud.findUnique({
       where: { id: Number(solicitudId) },
-      include: { dictamen: true },
+      include: {
+        dictamen: true,
+        usuario: { select: { organo_centralizado: { select: { id: true } } } },
+      },
     });
 
     const fechaDict =
@@ -199,13 +204,19 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
 
     // Auto-completa nombres de firmantes desde firma_firmante (no sobrescribe
     // los que vinieron explícitamente en el body).
-    firmas = await resolverNombresFirmantes(Number(solicitudId), firmas);
+    firmas = await resolverNombresFirmantes(Number(solicitudId), firmas, soloFirmanteId);
+
+    const tipoAdministracion: 'centralizada' | 'paraestatal' =
+      sol.tipo_administracion === 'paraestatal' ? 'paraestatal'
+      : sol.tipo_administracion === 'centralizada' ? 'centralizada'
+      : (sol as any).usuario?.organo_centralizado ? 'centralizada'
+      : 'paraestatal'
 
     let pdfElement: React.ReactElement;
 
     if (sol.tipo_solicitud === "nombramiento" || (sol.regimen && sol.regimen.toLowerCase().includes("nombramiento"))) {
       const dataNombramiento: JustificacionNombramientoData = {
-        tipoAdministracion: (sol as any).tipo_administracion || 'centralizada',
+        tipoAdministracion,
         formato: firmas.formato || 'fisico',
         oficioSolicitud: "",
         secretaria: sol.secretaria ?? "",
@@ -273,7 +284,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       );
     } else {
       const dataHonorarios: JustificacionData = {
-        tipoAdministracion: (sol as any).tipo_administracion || 'centralizada',
+        tipoAdministracion,
         formato:            firmas.formato || 'fisico',
         secretaria:         sol.secretaria ?? "",
         unidadAdministrativa: sol.unidad_administrativa ?? "",
@@ -331,8 +342,8 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
     }
 
     const folio =
-      sol.folio_justificacion ??
       sol.folio_recepcion ??
+      sol.folio_justificacion ??
       String(sol.id);
 
     const filename = `Justificacion_${folio.replace(/\//g, "-")}.pdf`;
@@ -354,7 +365,12 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         const firmaProceso = await prisma.firma_proceso.findUnique({
           where: { solicitud_id: Number(solicitudId) },
           include: bypass
-            ? { firmantes: { orderBy: { orden: "asc" } } }
+            ? {
+                firmantes: {
+                  orderBy: { orden: "asc" },
+                  ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
+                },
+              }
             : undefined,
         });
 
@@ -365,7 +381,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
           const dummyFirmantes = (firmaProceso as any)?.firmantes ?? [];
           if (dummyFirmantes.length > 0) {
             firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
-          } else {
+          } else if (!soloFirmanteId) {
             firmasPortal = [buildFirmaFicticia({}, firmaProceso?.uuid)];
           }
         } else if (firmaProceso?.proceso_id) {
@@ -443,6 +459,18 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
+  const firmanteIdRaw = searchParams.get("firmanteId");
+  let firmanteId: number | null = null;
+  if (firmanteIdRaw !== null && firmanteIdRaw !== "") {
+    const n = Number(firmanteIdRaw);
+    if (!Number.isInteger(n) || n <= 0) {
+      return NextResponse.json(
+        { ok: false, error: "firmanteId inválido (entero positivo requerido)" },
+        { status: 400 },
+      );
+    }
+    firmanteId = n;
+  }
   const firmas: FirmaNames = {
     firmaElaboroNombre: searchParams.get("firmaElaboroNombre") || undefined,
     firmaRevisoNombre: searchParams.get("firmaRevisoNombre") || undefined,
@@ -452,5 +480,5 @@ export async function GET(req: NextRequest) {
     firmaDictEmitioNombre: searchParams.get("firmaDictEmitioNombre") || undefined,
     formato: searchParams.get("formato") === 'en_linea' ? 'en_linea' : 'fisico',
   };
-  return generatePDFResponse(solicitudId, firmas);
+  return generatePDFResponse(solicitudId, firmas, firmanteId);
 }

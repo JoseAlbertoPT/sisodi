@@ -71,13 +71,13 @@ export async function POST(req: NextRequest) {
       denominacion, vigencia_inicio, vigencia_fin, importe_bruto,
       es_renovacion, folio_anterior,
       nivel_tabulador, categoria_tabulador,
-      objeto, actividades, responsabilidades, 
+      objeto, actividades, responsabilidades,
       escolaridad, comp_adm, comp_tec, comp_soc, valores, areas_exp,
-      puesto_jefe_inmediato, marco_normativo, condiciones_riesgos, 
+      puesto_jefe_inmediato, marco_normativo, condiciones_riesgos,
       tipo_importe,
       riesgo_caidas, riesgo_mutilaciones, riesgo_golpes, riesgo_otros,
       condicion_cambio_domicilio, condicion_horario, condicion_viajar, resguardo_activos,
-      estado_nombre,
+      estado_nombre, tipo_administracion,
     } = body
 
     if (!usuarioId)      return NextResponse.json({ ok: false, error: "usuarioId es requerido" }, { status: 400 })
@@ -110,28 +110,32 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const trunc = (val: string | null | undefined, max: number): string | null =>
+      val ? val.substring(0, max) : null
+
     const nueva = await prisma.solicitud.create({
       data: {
         usuario_id:            usuarioId,
         estado_id:             estadoInicial.id,
         tipo_solicitud,
+        tipo_administracion:   trunc(tipo_administracion ?? "centralizada", 20),
         periodo_id:            ((await resolverPeriodoId(periodoId, periodoMes, periodoAnio)) ?? periodoId ?? 1) as number,
         es_extemporanea:       esExtemporanea ?? false,
-        secretaria:            secretaria ?? null,
-        unidad_administrativa: unidad_administrativa ?? null,
-        unidad_responsable:    unidad_responsable ?? null,
-        programa_proyecto:     programa_proyecto ?? null,
-        regimen:               regimen ?? null,
-        tipo_actividades:      tipo_actividades ?? null,
-        numero_prestadores:    numero_prestadores ?? null,
-        denominacion:          denominacion ?? null,
+        secretaria:            trunc(secretaria, 200),
+        unidad_administrativa: trunc(unidad_administrativa, 200),
+        unidad_responsable:    trunc(unidad_responsable, 200),
+        programa_proyecto:     trunc(programa_proyecto, 200),
+        regimen:               trunc(regimen, 100),
+        tipo_actividades:      trunc(tipo_actividades, 200),
+        numero_prestadores:    numero_prestadores != null && numero_prestadores !== "" ? Math.min(Math.max(1, Math.round(Number(numero_prestadores))), 2147483647) || null : null,
+        denominacion:          trunc(denominacion, 200),
         vigencia_inicio:       vigencia_inicio ? new Date(vigencia_inicio) : null,
         vigencia_fin:          vigencia_fin    ? new Date(vigencia_fin)    : null,
         importe_bruto:         importe_bruto ?? null,
         es_renovacion:         es_renovacion ?? false,
-        folio_anterior:        folio_anterior ?? null,
-        nivel_tabulador:       nivel_tabulador ?? null,
-        categoria_tabulador:   categoria_tabulador ?? null,
+        folio_anterior:        trunc(folio_anterior, 50),
+        nivel_tabulador:       trunc(nivel_tabulador, 20),
+        categoria_tabulador:   trunc(categoria_tabulador, 10),
         objeto:                objeto ?? null,
         actividades:           actividades ?? [],
         responsabilidades:     responsabilidades ?? [],
@@ -141,18 +145,18 @@ export async function POST(req: NextRequest) {
         comp_soc:              comp_soc ?? null,
         valores:               valores ?? null,
         areas_exp:             areas_exp ?? null,
-        puesto_jefe_inmediato: puesto_jefe_inmediato ?? null,
+        puesto_jefe_inmediato: trunc(puesto_jefe_inmediato, 200),
         marco_normativo:       marco_normativo ?? [],
         condiciones_riesgos:   condiciones_riesgos ?? [],
-        tipo_importe:          tipo_importe ?? null,
-        riesgo_caidas:              riesgo_caidas ?? null,
-        riesgo_mutilaciones:        riesgo_mutilaciones ?? null,
-        riesgo_golpes:              riesgo_golpes ?? null,
-        riesgo_otros:               riesgo_otros ?? null,
+        tipo_importe:          trunc(tipo_importe, 20),
+        riesgo_caidas:              trunc(riesgo_caidas, 20),
+        riesgo_mutilaciones:        trunc(riesgo_mutilaciones, 20),
+        riesgo_golpes:              trunc(riesgo_golpes, 20),
+        riesgo_otros:               trunc(riesgo_otros, 20),
         condicion_cambio_domicilio: condicion_cambio_domicilio ?? false,
         condicion_horario:          condicion_horario ?? false,
         condicion_viajar:           condicion_viajar ?? false,
-        resguardo_activos:          typeof resguardo_activos === "boolean" ? (resguardo_activos ? "si" : "no") : (resguardo_activos ?? null),
+        resguardo_activos:          typeof resguardo_activos === "boolean" ? (resguardo_activos ? "si" : "no") : trunc(resguardo_activos, 10),
       },
     })
 
@@ -231,8 +235,20 @@ export async function PATCH(req: NextRequest) {
     const solicitudId = Number(rawId)
     if (isNaN(solicitudId)) return NextResponse.json({ ok: false, error: "solicitudId debe ser un número" }, { status: 400 })
 
+    const trunc = (val: string | null | undefined, max: number): string | null =>
+      val ? val.substring(0, max) : null
+
     const data: any = {}
+    const varcharLimits: Record<string, number> = {
+      tipo_administracion: 20, secretaria: 200, unidad_administrativa: 200,
+      unidad_responsable: 200, programa_proyecto: 200, regimen: 100,
+      tipo_actividades: 200, denominacion: 200, folio_anterior: 50,
+      nivel_tabulador: 20, categoria_tabulador: 10, puesto_jefe_inmediato: 200,
+      tipo_importe: 20, riesgo_caidas: 20, riesgo_mutilaciones: 20,
+      riesgo_golpes: 20, riesgo_otros: 20, resguardo_activos: 10,
+    }
     const map: Record<string, string> = {
+      tipo_administracion:   "tipo_administracion",
       secretaria:            "secretaria",
       unidad_administrativa: "unidad_administrativa",
       unidad_responsable:    "unidad_responsable",
@@ -271,7 +287,11 @@ export async function PATCH(req: NextRequest) {
     for (const [k, v] of Object.entries(map)) {
       if (campos[k] !== undefined) {
         if (v === "resguardo_activos") {
-          data[v] = typeof campos[k] === "boolean" ? (campos[k] ? "si" : "no") : campos[k]
+          data[v] = typeof campos[k] === "boolean" ? (campos[k] ? "si" : "no") : trunc(campos[k], 10)
+        } else if (v === "numero_prestadores") {
+          data[v] = campos[k] != null && campos[k] !== "" ? Math.min(Math.max(1, Math.round(Number(campos[k]))), 2147483647) || null : null
+        } else if (varcharLimits[v]) {
+          data[v] = trunc(campos[k], varcharLimits[v])
         } else {
           data[v] = campos[k]
         }

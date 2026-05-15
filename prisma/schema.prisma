@@ -263,6 +263,7 @@ model solicitud {
   condiciones_riesgos   String[]              @default([])
   tipo_importe          String?               @db.VarChar(20)
   modalidad_firma       String?               @db.VarChar(20)
+  tipo_administracion   String?               @db.VarChar(20)
   adjunto               adjunto[]
   checklist_detalle     checklist_detalle[]
   dictamen              dictamen?

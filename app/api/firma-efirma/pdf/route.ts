@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { readFile } from "fs/promises"
+import { join } from "path"
 import { prisma } from "@/lib/prisma"
 
 const DEFAULT_BASE_URL = "http://localhost:3001"
+const BYPASS = process.env.EFIRMA_BYPASS === "true"
+const BYPASS_DIR = join(process.cwd(), ".firma-bypass")
 
 async function fetchPdfFromPortal(uuid: string, projectToken: string, base: string) {
   return fetch(`${base}/api/files/${encodeURIComponent(uuid)}/original`, {
@@ -43,6 +47,22 @@ export async function GET(req: NextRequest) {
     if (firmante.firma_proceso.estado === "completado") return NextResponse.json({ ok: false, error: "Proceso completado" }, { status: 409 })
     if (firmante.expira_en && firmante.expira_en < new Date()) {
       return NextResponse.json({ ok: false, error: "Link expirado" }, { status: 410 })
+    }
+
+    if (BYPASS) {
+      try {
+        const buf = await readFile(join(BYPASS_DIR, `${String(uuid)}.pdf`))
+        return new NextResponse(new Uint8Array(buf), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": "inline",
+            "Cache-Control": "no-store, private",
+          },
+        })
+      } catch {
+        return NextResponse.json({ ok: false, error: "PDF bypass no encontrado" }, { status: 404 })
+      }
     }
 
     const base = (process.env.EFIRMA_PORTAL_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "")
