@@ -99,6 +99,7 @@ interface FirmaNames {
 async function resolverNombresFirmantes(
   solicitudId: number,
   base: FirmaNames,
+  soloFirmanteId: number | null = null,
 ): Promise<FirmaNames> {
   const proceso = await prisma.firma_proceso.findUnique({
     where: { solicitud_id: solicitudId },
@@ -106,6 +107,7 @@ async function resolverNombresFirmantes(
       firmantes: {
         include: { usuario: { select: { id: true, nombre: true } } },
         orderBy: { orden: "asc" },
+        ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
       },
     },
   });
@@ -165,7 +167,7 @@ async function resolverNombresFirmantes(
   return out;
 }
 
-async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}) {
+async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null) {
   let firmas: FirmaNames = { ...firmasInput };
   try {
     if (!solicitudId) {
@@ -202,7 +204,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
 
     // Auto-completa nombres de firmantes desde firma_firmante (no sobrescribe
     // los que vinieron explícitamente en el body).
-    firmas = await resolverNombresFirmantes(Number(solicitudId), firmas);
+    firmas = await resolverNombresFirmantes(Number(solicitudId), firmas, soloFirmanteId);
 
     const tipoAdministracion: 'centralizada' | 'paraestatal' =
       sol.tipo_administracion === 'paraestatal' ? 'paraestatal'
@@ -340,8 +342,8 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
     }
 
     const folio =
-      sol.folio_justificacion ??
       sol.folio_recepcion ??
+      sol.folio_justificacion ??
       String(sol.id);
 
     const filename = `Justificacion_${folio.replace(/\//g, "-")}.pdf`;
@@ -363,7 +365,12 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         const firmaProceso = await prisma.firma_proceso.findUnique({
           where: { solicitud_id: Number(solicitudId) },
           include: bypass
-            ? { firmantes: { orderBy: { orden: "asc" } } }
+            ? {
+                firmantes: {
+                  orderBy: { orden: "asc" },
+                  ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
+                },
+              }
             : undefined,
         });
 
@@ -374,7 +381,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
           const dummyFirmantes = (firmaProceso as any)?.firmantes ?? [];
           if (dummyFirmantes.length > 0) {
             firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
-          } else {
+          } else if (!soloFirmanteId) {
             firmasPortal = [buildFirmaFicticia({}, firmaProceso?.uuid)];
           }
         } else if (firmaProceso?.proceso_id) {
@@ -452,6 +459,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
+  const firmanteId = searchParams.get("firmanteId");
   const firmas: FirmaNames = {
     firmaElaboroNombre: searchParams.get("firmaElaboroNombre") || undefined,
     firmaRevisoNombre: searchParams.get("firmaRevisoNombre") || undefined,
@@ -461,5 +469,5 @@ export async function GET(req: NextRequest) {
     firmaDictEmitioNombre: searchParams.get("firmaDictEmitioNombre") || undefined,
     formato: searchParams.get("formato") === 'en_linea' ? 'en_linea' : 'fisico',
   };
-  return generatePDFResponse(solicitudId, firmas);
+  return generatePDFResponse(solicitudId, firmas, firmanteId ? Number(firmanteId) : null);
 }

@@ -3613,7 +3613,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   ) : !hayFoliosReales ? (
                     <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-3">
                       <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">No se encontraron folios de dictamen en el Excel.</span>
+                      <span className="text-sm text-muted-foreground">No se encontraron folios de dictamenes</span>
                     </div>
                   ) : (
                     <Select value={folioSeleccionado} onValueChange={setFolioSeleccionado}>

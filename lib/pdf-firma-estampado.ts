@@ -1,4 +1,4 @@
-import { PDFDocument, PDFPage, rgb, StandardFonts, PDFFont, PDFEmbeddedPage } from "pdf-lib"
+import { PDFDocument, PDFPage, rgb, StandardFonts, PDFFont, PDFEmbeddedPage, degrees } from "pdf-lib"
 import QRCode from "qrcode"
 import path from "path"
 import fs from "fs/promises"
@@ -32,27 +32,33 @@ export interface AgregarConstanciaOpts {
 
 const PAGE_W = 612
 const PAGE_H = 792
-const MARGIN = 45
-const FOOTER_RESERVE = 100 // espacio reservado al pie (membrete inferior)
-const COL_GAP = 14 // separación horizontal entre tarjetas
-const ROW_GAP = 4 // separación vertical entre filas de tarjetas
-const ACCENT_W = 2.5
+const MARGIN = 42
+const FOOTER_RESERVE = 130
 
-const colDark = rgb(0.15, 0.15, 0.15)
-const colGray = rgb(0.4, 0.4, 0.4)
-const colSoft = rgb(0.55, 0.55, 0.55)
-const colLine = rgb(0.78, 0.78, 0.78)
-const colBrown = rgb(0.55, 0.35, 0.2)
-const colBrownSoft = rgb(0.85, 0.78, 0.7)
-const colCardBg = rgb(0.985, 0.98, 0.97)
+// Paleta institucional del HTML
+const cVerde      = rgb(40/255, 60/255, 42/255)   // #283C2A
+const cOliva      = rgb(110/255, 121/255, 90/255) // #6E795A
+const cCafe       = rgb(198/255, 156/255, 109/255) // #C69C6D
+const cCafeSoft   = rgb(246/255, 238/255, 226/255) // #F6EEE2
+const cCafeBorder = rgb(227/255, 203/255, 174/255) // #E3CBAE
+const cVino       = rgb(131/255, 40/255, 86/255)   // #832856
+const cArena      = rgb(243/255, 242/255, 238/255) // #F3F2EE
+const cArenaDark  = rgb(236/255, 234/255, 227/255) // #ECEAE3
+const cTinta      = rgb(40/255, 60/255, 42/255)    // #283C2A (igual al verde)
+const cTinta2     = rgb(63/255, 79/255, 64/255)    // #3F4F40
+const cTexto      = rgb(134/255, 133/255, 126/255) // #86857E
+const cRule       = rgb(218/255, 215/255, 203/255) // #DAD7CB
+const cRuleSoft   = rgb(232/255, 229/255, 217/255) // #E8E5D9
+const cBlanco     = rgb(1, 1, 1)
+const cVerdeSoft  = rgb(29/255, 44/255, 31/255)    // #1D2C1F
 
 interface DrawContext {
   pdfDoc: PDFDocument
   page: PDFPage
   y: number
-  membretePage: PDFEmbeddedPage | null
   font: PDFFont
   fontBold: PDFFont
+  logoImage: Awaited<ReturnType<PDFDocument["embedPng"]>> | null
 }
 
 /* ── Utilidades de texto ── */
@@ -99,53 +105,96 @@ function formatFecha(value: string | Date | null | undefined): string {
     if (isNaN(d.getTime())) return String(value)
     const dd = String(d.getDate()).padStart(2, "0")
     const mm = String(d.getMonth() + 1).padStart(2, "0")
-    const yyyy = d.getFullYear()
+    const yy = d.getFullYear()
     const hh = String(d.getHours()).padStart(2, "0")
     const mi = String(d.getMinutes()).padStart(2, "0")
-    return `${dd}/${mm}/${yyyy} ${hh}:${mi}`
-  } catch {
-    return String(value)
-  }
+    return `${dd}/${mm}/${yy} · ${hh}:${mi}`
+  } catch { return String(value) }
 }
 
-async function generarQRPng(url: string, size = 220): Promise<Buffer> {
-  const dataUrl = await QRCode.toDataURL(url, {
-    width: size,
-    margin: 1,
-    errorCorrectionLevel: "M",
+async function generarQRPng(text: string, size = 220): Promise<Buffer> {
+  return QRCode.toBuffer(text, {
+    type: "png", errorCorrectionLevel: "M",
+    margin: 1, width: size,
+    color: { dark: "#1a1208", light: "#FFFFFF" },
   })
-  const base64 = dataUrl.split(",")[1] ?? ""
-  return Buffer.from(base64, "base64")
+}
+
+/* ── Banda lateral + watermark ── */
+
+function drawBandaLateral(page: PDFPage): void {
+  const bandaW = 6
+  const altoTercio = PAGE_H / 3
+  // Verde oscuro arriba
+  page.drawRectangle({ x: 0, y: PAGE_H - altoTercio, width: bandaW, height: altoTercio, color: cVerde })
+  // Oliva en medio
+  page.drawRectangle({ x: 0, y: altoTercio, width: bandaW, height: altoTercio, color: cOliva })
+  // Café abajo
+  page.drawRectangle({ x: 0, y: 0, width: bandaW, height: altoTercio, color: cCafe })
+}
+
+function drawWatermark(page: PDFPage, font: PDFFont): void {
+  const text = "eFirma"
+  page.drawText(text, {
+    x: 110, y: 280,
+    size: 140, font, color: cCafe,
+    opacity: 0.06,
+    rotate: degrees(-22),
+  })
+}
+
+function drawFondo(page: PDFPage): void {
+  page.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: cArena })
 }
 
 /* ── Manejo de páginas ── */
 
 function nuevaPaginaConstancia(ctx: DrawContext, conTitulo: boolean): void {
   const page = ctx.pdfDoc.addPage([PAGE_W, PAGE_H])
-  if (ctx.membretePage) {
-    page.drawPage(ctx.membretePage, { x: 0, y: 0, width: PAGE_W, height: PAGE_H })
-  }
+  drawFondo(page)
+  drawBandaLateral(page)
+  drawWatermark(page, ctx.fontBold)
   ctx.page = page
-  ctx.y = PAGE_H - 80
+  ctx.y = PAGE_H - 50
 
   if (conTitulo) {
+    // ─── Header: logo + meta derecha ───
     const fechaHoy = (() => {
       const d = new Date()
       const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
       return `${String(d.getDate()).padStart(2, "0")} de ${meses[d.getMonth()]} de ${d.getFullYear()}`
     })()
-    const fechaW = ctx.font.widthOfTextAtSize(fechaHoy, 8.5)
-    ctx.page.drawText(fechaHoy, { x: PAGE_W - MARGIN - fechaW, y: ctx.y, size: 8.5, font: ctx.font, color: colDark })
-    ctx.y -= 18
+    const horaHoy = (() => {
+      const d = new Date()
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+    })()
+    const folio = `FOLIO · EF-${new Date().getFullYear()}-${String(new Date().getTime()).slice(-4)}`
 
-    ctx.page.drawText("PLATAFORMA INTEGRAL DE FIRMA ELECTRÓNICA - eFirma", {
-      x: MARGIN, y: ctx.y, size: 11, font: ctx.fontBold, color: colDark,
-    })
-    ctx.y -= 12
-    ctx.page.drawText("Constancia de firma electrónica", {
-      x: MARGIN, y: ctx.y, size: 8.5, font: ctx.font, color: colGray,
-    })
-    ctx.y -= 10
+    if (ctx.logoImage) {
+      const logoH = 32
+      const ratio = ctx.logoImage.width / ctx.logoImage.height
+      const logoW = logoH * ratio
+      ctx.page.drawImage(ctx.logoImage, {
+        x: MARGIN, y: ctx.y - logoH + 4, width: logoW, height: logoH,
+      })
+    }
+
+    // meta derecha (folio + fecha en 2 líneas)
+    const folioW = ctx.font.widthOfTextAtSize(folio, 7)
+    ctx.page.drawText(folio, { x: PAGE_W - MARGIN - folioW, y: ctx.y - 2, size: 7, font: ctx.font, color: cTexto })
+    const fechaW = ctx.fontBold.widthOfTextAtSize(fechaHoy, 9)
+    ctx.page.drawText(fechaHoy, { x: PAGE_W - MARGIN - fechaW, y: ctx.y - 13, size: 9, font: ctx.fontBold, color: cTinta })
+    const horaText = `Hora del sello · ${horaHoy}`
+    const horaW = ctx.font.widthOfTextAtSize(horaText, 6.5)
+    ctx.page.drawText(horaText, { x: PAGE_W - MARGIN - horaW, y: ctx.y - 23, size: 6.5, font: ctx.font, color: cTexto })
+
+    ctx.y -= 38
+
+    // ─── Título centrado (sin eyebrow, una sola línea) ───
+    const tituloText = "Constancia de Firma Electrónica"
+    const tituloW = ctx.fontBold.widthOfTextAtSize(tituloText, 14)
+    ctx.page.drawText(tituloText, { x: (PAGE_W - tituloW) / 2, y: ctx.y, size: 14, font: ctx.fontBold, color: cVerde })
+    ctx.y -= 14
   }
 }
 
@@ -155,58 +204,132 @@ function ensureSpace(ctx: DrawContext, needed: number): void {
   }
 }
 
-/* ── Header del documento (compacto, líneas inline) ── */
+/* ── Ficha del documento (doc-card) ── */
 
-function drawHeaderDocumento(ctx: DrawContext, nombreArchivo: string, huella: string, total: number): void {
-  ctx.page.drawText("DOCUMENTO", {
-    x: MARGIN, y: ctx.y, size: 8.5, font: ctx.fontBold, color: colBrown,
+function drawDocCard(ctx: DrawContext, nombreArchivo: string, huella: string, total: number): void {
+  const cardX = MARGIN
+  const cardW = PAGE_W - MARGIN * 2
+  const cardH = 50
+
+  // Fondo
+  ctx.page.drawRectangle({
+    x: cardX, y: ctx.y - cardH, width: cardW, height: cardH,
+    color: cCafeSoft, borderColor: cRule, borderWidth: 0.6,
   })
-  ctx.y -= 12
 
-  const drawLine = (label: string, value: string, color = colDark, valueSz = 8) => {
-    if (!value) return
-    const labelW = ctx.fontBold.widthOfTextAtSize(label, 7.5)
-    ctx.page.drawText(label, { x: MARGIN, y: ctx.y, size: 7.5, font: ctx.fontBold, color: colSoft })
-    const maxValueW = PAGE_W - MARGIN * 2 - labelW - 6
-    const truncado = truncateToWidth(value, ctx.font, valueSz, maxValueW)
-    ctx.page.drawText(truncado, {
-      x: MARGIN + labelW + 6, y: ctx.y, size: valueSz, font: ctx.font, color,
-    })
-    ctx.y -= 10
-  }
+  // Lado izquierdo: meta
+  const metaX = cardX + 10
+  const labelW = 70
+  const valueX = metaX + labelW
+  const valueMaxW = cardW - labelW - 145
+  let my = ctx.y - 12
 
-  drawLine("ARCHIVO", nombreArchivo)
-  drawLine("HUELLA SHA256", huella, colGray, 7)
-  // Estatus + total en una sola línea
-  ctx.page.drawText("ESTATUS", { x: MARGIN, y: ctx.y, size: 7.5, font: ctx.fontBold, color: colSoft })
-  ctx.page.drawText("SELLO ACTIVO", { x: MARGIN + 42, y: ctx.y, size: 8, font: ctx.fontBold, color: colBrown })
-  const totalLabel = `TOTAL DE FIRMAS: ${total}`
-  const w = ctx.fontBold.widthOfTextAtSize(totalLabel, 8)
-  ctx.page.drawText(totalLabel, { x: PAGE_W - MARGIN - w, y: ctx.y, size: 8, font: ctx.fontBold, color: colDark })
+  ctx.page.drawText("ARCHIVO", { x: metaX, y: my, size: 6, font: ctx.fontBold, color: cCafe })
+  ctx.page.drawText(truncateToWidth(nombreArchivo, ctx.fontBold, 7.5, valueMaxW), { x: valueX, y: my, size: 7.5, font: ctx.fontBold, color: cTinta })
+  my -= 12
+
+  ctx.page.drawText("HUELLA SHA-256", { x: metaX, y: my, size: 6, font: ctx.fontBold, color: cCafe })
+  ctx.page.drawText(truncateToWidth(huella, ctx.font, 6.5, valueMaxW), { x: valueX, y: my, size: 6.5, font: ctx.font, color: cTinta2 })
+  my -= 12
+
+  ctx.page.drawText("ESTATUS", { x: metaX, y: my, size: 6, font: ctx.fontBold, color: cCafe })
+  ctx.page.drawText("SELLO ACTIVO · Documento íntegro", { x: valueX, y: my, size: 7.5, font: ctx.fontBold, color: cOliva })
+
+  // Línea divisoria vertical
+  const divX = cardX + cardW - 115
+  ctx.page.drawLine({
+    start: { x: divX, y: ctx.y - 6 },
+    end:   { x: divX, y: ctx.y - cardH + 6 },
+    thickness: 0.5, color: cRule,
+  })
+
+  const stackXEnd = cardX + cardW - 10
+
+  // Pill "Vigente"
+  const pillText = "VIGENTE"
+  const pillSize = 6.5
+  const pillTextW = ctx.fontBold.widthOfTextAtSize(pillText, pillSize)
+  const pillH = 11
+  const pillW = pillTextW + 16
+  const pillY = ctx.y - 14
+  ctx.page.drawRectangle({
+    x: stackXEnd - pillW, y: pillY - pillH + 4, width: pillW, height: pillH, color: cOliva,
+  })
+  ctx.page.drawCircle({ x: stackXEnd - pillW + 6, y: pillY - 2, size: 1.8, color: cBlanco })
+  ctx.page.drawText(pillText, {
+    x: stackXEnd - pillW + 11, y: pillY - 4, size: pillSize, font: ctx.fontBold, color: cBlanco,
+  })
+
+  // Firmas count
+  const countText = String(total).padStart(2, "0")
+  const countSize = 18
+  const countW = ctx.fontBold.widthOfTextAtSize(countText, countSize)
+  ctx.page.drawText(countText, {
+    x: stackXEnd - countW, y: ctx.y - 40, size: countSize, font: ctx.fontBold, color: cCafe,
+  })
+  const subText = "FIRMAS"
+  const subW = ctx.font.widthOfTextAtSize(subText, 5)
+  ctx.page.drawText(subText, {
+    x: stackXEnd - subW, y: ctx.y - 46, size: 5, font: ctx.fontBold, color: cTexto,
+  })
+
+  ctx.y -= cardH + 8
+}
+
+/* ── Section head numerado ── */
+
+function drawSectionHead(ctx: DrawContext, num: string, titulo: string): void {
+  const numText = `§ ${num}`
+  ctx.page.drawText(numText, { x: MARGIN, y: ctx.y, size: 8, font: ctx.fontBold, color: cCafe })
+  const numW = ctx.fontBold.widthOfTextAtSize(numText, 8)
+
+  const titX = MARGIN + numW + 12
+  ctx.page.drawText(titulo.toUpperCase(), { x: titX, y: ctx.y, size: 11, font: ctx.fontBold, color: cVerde })
+  const titW = ctx.fontBold.widthOfTextAtSize(titulo.toUpperCase(), 11)
+
+  const lineX0 = titX + titW + 12
+  const lineX1 = PAGE_W - MARGIN
+  ctx.page.drawLine({
+    start: { x: lineX0, y: ctx.y + 4 },
+    end:   { x: lineX1, y: ctx.y + 4 },
+    thickness: 0.5, color: cRule,
+  })
+
   ctx.y -= 14
 }
 
-/* ── Tarjeta de firmante (compacta, layout fijo) ── */
+/* ── Tarjeta de firmante ── */
 
-/**
- * Calcula altura aproximada que ocupará la tarjeta. Útil para alinear
- * filas en grid de 2 columnas (todas las tarjetas de la fila usan el max).
- * Toma en cuenta si el rol necesita 1 o 2 líneas según el ancho disponible.
- */
-function alturaFirmanteCard(firma: FirmaPortal, fontBold: PDFFont, rolMaxW: number): number {
-  const rol = (firma.rolFirmante || "Firmante").trim().toUpperCase()
-  const rolLines = Math.min(2, wrapText(rol, fontBold, 8.5, rolMaxW).length || 1)
+function colorPorRol(rol: string): { bg: ReturnType<typeof rgb>; text: ReturnType<typeof rgb> } {
+  const r = rol.toLowerCase()
+  if (r.includes("revis")) return { bg: cOliva, text: cBlanco }
+  if (r.includes("verific")) return { bg: cVerde, text: cBlanco }
+  if (r.includes("emiti") || r.includes("emit")) return { bg: cVino, text: cBlanco }
+  return { bg: cCafe, text: cBlanco }
+}
 
-  let h = 8 // padding superior + línea acento
-  h += 11 + (rolLines - 1) * 10 // header número + rol (1 o 2 líneas)
-  h += 13 // nombre (1 línea bold)
-  h += firma.cargo ? 11 : 0 // cargo
-  h += 11 // RFC + cert (1 línea)
-  h += 10 // fecha
-  if (firma.selloDigital) h += 8 + 18 // label + 2 líneas valor
-  if (firma.rfcGEM || firma.noCertificadoGEM) h += 10 // RFC GEM · Cert GEM
-  if (firma.selloEstampadoTiempo) h += 8 + 18 // label + 2 líneas
-  h += 4 // padding inferior
+function alturaFirmanteCard(firma: FirmaPortal, font: PDFFont, fontBold: PDFFont, innerW: number): number {
+  const sealFontSize = 4
+  const lineGap = sealFontSize + 1
+  let h = 8
+  h += 14 // sig-head
+  h += 12 // sig-name
+  h += 22 // sig-meta 3 filas compactas
+  h += 4
+  if (firma.selloDigital) {
+    h += 8 // label
+    const lines = wrapText(firma.selloDigital, font, sealFontSize, innerW - 8)
+    h += lines.length * lineGap + 5
+    h += 2
+  }
+  if (firma.rfcGEM || firma.noCertificadoGEM) h += 11
+  if (firma.selloEstampadoTiempo) {
+    h += 8
+    const lines = wrapText(firma.selloEstampadoTiempo, font, sealFontSize, innerW - 8)
+    h += lines.length * lineGap + 5
+    h += 2
+  }
+  h += 5
   return h
 }
 
@@ -219,187 +342,253 @@ function drawFirmanteCard(
   w: number,
   h: number,
 ): void {
-  const padX = 8
-  const innerX = x + padX + ACCENT_W + 4
-  const innerW = w - padX * 2 - ACCENT_W - 4
+  const padX = 10
+  const innerX = x + padX
+  const innerW = w - padX * 2
 
-  // Fondo de la tarjeta
+  // Fondo blanco
   ctx.page.drawRectangle({
     x, y: y - h, width: w, height: h,
-    color: colCardBg,
-    borderColor: colLine,
-    borderWidth: 0.4,
+    color: cBlanco, borderColor: cRule, borderWidth: 0.5,
   })
-
-  // Barra de acento lateral
+  // Barra acento izquierda
   ctx.page.drawRectangle({
-    x: x + 2, y: y - h + 4, width: ACCENT_W, height: h - 8,
-    color: colBrownSoft,
+    x, y: y - h, width: 2, height: h, color: cCafe,
   })
 
-  let cy = y - 12 // baseline tras padding
+  let cy = y - 12
 
-  // Header: "01.  ROL"  (rol se envuelve a 2 líneas si es necesario)
-  const num = String(index + 1).padStart(2, "0")
-  ctx.page.drawText(`${num}.`, { x: innerX, y: cy, size: 9, font: ctx.fontBold, color: colBrown })
-  const numW = ctx.fontBold.widthOfTextAtSize(`${num}.`, 9) + 6
-  const rol = (firma.rolFirmante || "Firmante").trim().toUpperCase()
-  const rolLines = wrapText(rol, ctx.fontBold, 8.5, innerW - numW).slice(0, 2)
-  rolLines.forEach((line, idx) => {
-    ctx.page.drawText(line, {
-      x: innerX + numW, y: cy - idx * 10, size: 8.5, font: ctx.fontBold, color: colBrown,
-    })
+  // ─── sig-head ───
+  const numCenter = { x: innerX + 7, y: cy + 1 }
+  ctx.page.drawCircle({
+    x: numCenter.x, y: numCenter.y, size: 6,
+    color: cCafeSoft, borderColor: cCafeBorder, borderWidth: 0.4,
   })
-  cy -= 13 + (rolLines.length - 1) * 10
+  const numText = String(index + 1)
+  const numTW = ctx.fontBold.widthOfTextAtSize(numText, 6.5)
+  ctx.page.drawText(numText, {
+    x: numCenter.x - numTW / 2, y: numCenter.y - 2,
+    size: 6.5, font: ctx.fontBold, color: cCafe,
+  })
 
-  // Nombre completo
-  const nombre = (firma.responsable || firma.usuario || "Sin nombre").trim()
-  const nombreTrunc = truncateToWidth(nombre, ctx.fontBold, 10, innerW)
-  ctx.page.drawText(nombreTrunc, { x: innerX, y: cy, size: 10, font: ctx.fontBold, color: colDark })
-  cy -= 12
+  const rol = (firma.rolFirmante || "Firmante").trim()
+  const rolUpper = rol.toUpperCase()
+  const { bg: roleBg, text: roleText } = colorPorRol(rol)
+  const rolFontSize = 5.5
+  const rolW = ctx.fontBold.widthOfTextAtSize(rolUpper, rolFontSize) + 8
+  const rolH = 9
+  const rolX = innerX + 17
+  const rolY = cy - 3
+  ctx.page.drawRectangle({
+    x: rolX, y: rolY, width: rolW, height: rolH, color: roleBg,
+  })
+  ctx.page.drawText(rolUpper, {
+    x: rolX + 4, y: rolY + 2, size: rolFontSize, font: ctx.fontBold, color: roleText,
+  })
 
-  // Cargo (1 línea max)
   const cargo = (firma.cargo || "").trim()
   if (cargo) {
-    const cargoTrunc = truncateToWidth(cargo, ctx.font, 8, innerW)
-    ctx.page.drawText(cargoTrunc, { x: innerX, y: cy, size: 8, font: ctx.font, color: colGray })
-    cy -= 11
+    const cargoText = cargo.toUpperCase()
+    const cargoStartX = rolX + rolW + 5
+    const cargoMaxW = innerX + innerW - cargoStartX
+    const cargoTrunc = truncateToWidth(cargoText, ctx.fontBold, 5.5, cargoMaxW)
+    const lw = ctx.fontBold.widthOfTextAtSize(cargoTrunc, 5.5)
+    ctx.page.drawText(cargoTrunc, {
+      x: innerX + innerW - lw, y: cy, size: 5.5, font: ctx.fontBold, color: cTinta2,
+    })
   }
 
-  // RFC + Cert. en una sola línea: "RFC: XXX  ·  Cert.: 000..."
-  const partesRfc: string[] = []
-  if (firma.usuario) partesRfc.push(`RFC: ${firma.usuario}`)
-  if (firma.noCertificado) partesRfc.push(`Cert.: ${firma.noCertificado}`)
-  if (partesRfc.length) {
-    const lineaRfc = partesRfc.join("   ·   ")
-    const truncRfc = truncateToWidth(lineaRfc, ctx.font, 7.5, innerW)
-    ctx.page.drawText(truncRfc, { x: innerX, y: cy, size: 7.5, font: ctx.font, color: colDark })
-    cy -= 10
-  }
+  cy -= 14
 
-  // Fecha de firma
+  // ─── sig-name ───
+  const nombre = (firma.responsable || firma.usuario || "Sin nombre").trim()
+  const nombreTrunc = truncateToWidth(nombre, ctx.fontBold, 9, innerW)
+  ctx.page.drawText(nombreTrunc, {
+    x: innerX, y: cy, size: 9, font: ctx.fontBold, color: cVerde,
+  })
+  cy -= 12
+
+  // ─── sig-meta dl (compacto) ───
+  const dlLabelW = 32
+  const dlValueX = innerX + dlLabelW
+  const dlValueMaxW = innerW - dlLabelW
+  const drawDlRow = (label: string, value: string, valueColor = cTinta2) => {
+    ctx.page.drawText(label, { x: innerX, y: cy, size: 5, font: ctx.fontBold, color: cTexto })
+    ctx.page.drawText(truncateToWidth(value, ctx.font, 6.5, dlValueMaxW), {
+      x: dlValueX, y: cy, size: 6.5, font: ctx.font, color: valueColor,
+    })
+    cy -= 7
+  }
+  if (firma.usuario) drawDlRow("RFC", firma.usuario)
+  if (firma.noCertificado) drawDlRow("CERT.", firma.noCertificado)
   const fechaFirma = formatFecha(firma.estampadoTiempo || firma.firmadoEn)
-  if (fechaFirma) {
-    ctx.page.drawText(`Firmado: ${fechaFirma}`, { x: innerX, y: cy, size: 7.5, font: ctx.font, color: colSoft })
-    cy -= 11
-  }
+  if (fechaFirma) drawDlRow("FIRMADO", fechaFirma, cTinta)
 
-  // Sello digital (2 líneas max)
-  if (firma.selloDigital) {
-    ctx.page.drawText("SELLO DIGITAL", { x: innerX, y: cy, size: 6.5, font: ctx.fontBold, color: colSoft })
+  // Separador
+  cy -= 2
+  ctx.page.drawLine({
+    start: { x: innerX, y: cy + 2 },
+    end:   { x: innerX + innerW, y: cy + 2 },
+    thickness: 0.3, color: cRule, opacity: 0.5,
+  })
+  cy -= 4
+
+  // ─── Sello digital (multi-linea blob completo) ───
+  const drawSealHash = (label: string, hash: string) => {
+    ctx.page.drawText(label.toUpperCase(), { x: innerX, y: cy, size: 5.5, font: ctx.fontBold, color: cCafe })
     cy -= 8
-    const lines = wrapText(firma.selloDigital, ctx.font, 6.3, innerW)
-    for (const line of lines.slice(0, 2)) {
-      ctx.page.drawText(line, { x: innerX, y: cy, size: 6.3, font: ctx.font, color: colGray })
-      cy -= 8
+
+    const sealFontSize = 4
+    const lineGap = sealFontSize + 1
+    const padInner = 3
+    const lines = wrapText(hash, ctx.font, sealFontSize, innerW - padInner * 2)
+    const blobH = lines.length * lineGap + 5
+    ctx.page.drawRectangle({
+      x: innerX, y: cy - blobH + lineGap, width: innerW, height: blobH,
+      color: cArenaDark, borderColor: cRuleSoft, borderWidth: 0.3,
+    })
+    let by = cy
+    for (const ln of lines) {
+      ctx.page.drawText(ln, { x: innerX + padInner, y: by, size: sealFontSize, font: ctx.font, color: cTexto })
+      by -= lineGap
     }
-    cy -= 1
+    cy -= blobH + 1
   }
 
-  // RFC GEM · Cert. GEM (en una línea)
-  const partesGEM: string[] = []
-  if (firma.rfcGEM) partesGEM.push(`RFC GEM: ${firma.rfcGEM}`)
-  if (firma.noCertificadoGEM) partesGEM.push(`Cert. GEM: ${firma.noCertificadoGEM}`)
-  if (partesGEM.length) {
-    const lineaGEM = partesGEM.join("   ·   ")
-    const truncGEM = truncateToWidth(lineaGEM, ctx.font, 7, innerW)
-    ctx.page.drawText(truncGEM, { x: innerX, y: cy, size: 7, font: ctx.font, color: colDark })
+  if (firma.selloDigital) {
+    drawSealHash("Sello digital", firma.selloDigital)
+  }
+
+  // ─── gem-row compacto inline ───
+  if (firma.rfcGEM || firma.noCertificadoGEM) {
+    const parts: string[] = []
+    if (firma.rfcGEM) parts.push(`GEM: ${firma.rfcGEM}`)
+    if (firma.noCertificadoGEM) parts.push(`Cert: ${firma.noCertificadoGEM}`)
+    const line = parts.join("  ·  ")
+    ctx.page.drawText(truncateToWidth(line, ctx.font, 5.5, innerW), {
+      x: innerX, y: cy, size: 5.5, font: ctx.font, color: cTinta2,
+    })
     cy -= 9
   }
 
-  // Sello digital GEM (2 líneas max)
+  // ─── Sello digital GEM ───
   if (firma.selloEstampadoTiempo) {
-    ctx.page.drawText("SELLO DIGITAL GEM", { x: innerX, y: cy, size: 6.5, font: ctx.fontBold, color: colSoft })
-    cy -= 8
-    const lines = wrapText(firma.selloEstampadoTiempo, ctx.font, 6.3, innerW)
-    for (const line of lines.slice(0, 2)) {
-      ctx.page.drawText(line, { x: innerX, y: cy, size: 6.3, font: ctx.font, color: colGray })
-      cy -= 8
-    }
+    drawSealHash("Sello GEM", firma.selloEstampadoTiempo)
   }
 }
 
-/* ── Layout en grid de 2 columnas ── */
-
 function drawFirmantesGrid(ctx: DrawContext, firmas: FirmaPortal[]): void {
-  const cols = firmas.length >= 4 ? 2 : 1
+  const cols = firmas.length >= 2 ? 2 : 1
   const totalW = PAGE_W - MARGIN * 2
-  const cardW = cols === 2 ? (totalW - COL_GAP) / 2 : totalW
-  const padX = 8
-  const innerW = cardW - padX * 2 - ACCENT_W - 4
-  const numW = ctx.fontBold.widthOfTextAtSize("99.", 9) + 6
-  const rolMaxW = innerW - numW
+  const colGap = 10
+  const cardW = cols === 2 ? (totalW - colGap) / 2 : totalW
+  const padX = 14
+  const innerW = cardW - padX * 2
 
   for (let i = 0; i < firmas.length; i += cols) {
     const fila = firmas.slice(i, i + cols)
-    const alturaFila = Math.max(...fila.map(f => alturaFirmanteCard(f, ctx.fontBold, rolMaxW)))
+    const alturaFila = Math.max(...fila.map(f => alturaFirmanteCard(f, ctx.font, ctx.fontBold, innerW)))
 
-    // Si la fila no cabe en la página actual, salto
     if (ctx.y - alturaFila < FOOTER_RESERVE) {
       nuevaPaginaConstancia(ctx, false)
     }
 
     fila.forEach((firma, k) => {
-      const x = MARGIN + k * (cardW + COL_GAP)
+      const x = MARGIN + k * (cardW + colGap)
       drawFirmanteCard(ctx, firma, i + k, x, ctx.y, cardW, alturaFila)
     })
 
-    ctx.y -= alturaFila + ROW_GAP
+    ctx.y -= alturaFila + 10
   }
 }
 
-/* ── Bloque QR + URL al final ── */
+/* ── Sección de validación (fondo verde oscuro) ── */
 
-function drawBloqueQR(
+function drawValidacion(
   ctx: DrawContext,
-  qrImage: Awaited<ReturnType<PDFDocument["embedPng"]>>,
+  qrImage: Awaited<ReturnType<PDFDocument["embedPng"]>> | null,
   urlValidacion: string,
 ): void {
-  const qrSize = 62
-  const blockHeight = 96 // incluye espacio superior de respiración
-  ensureSpace(ctx, blockHeight)
+  const blockH = 80
+  const blockX = MARGIN
+  const blockW = PAGE_W - MARGIN * 2
+  // Posicion fija desde el fondo (sobre footer)
+  const blockY = 56
 
-  ctx.y -= 16
-  ctx.page.drawLine({
-    start: { x: MARGIN, y: ctx.y },
-    end: { x: PAGE_W - MARGIN, y: ctx.y },
-    thickness: 0.5,
-    color: colLine,
+  ctx.page.drawRectangle({
+    x: blockX, y: blockY, width: blockW, height: blockH, color: cVerde,
   })
-  ctx.y -= 11
+
+  // QR
+  const qrSize = 62
+  const qrX = blockX + 12
+  const qrY = blockY + (blockH - qrSize) / 2
+  ctx.page.drawRectangle({
+    x: qrX - 3, y: qrY - 3, width: qrSize + 6, height: qrSize + 6, color: cBlanco,
+  })
+  if (qrImage) {
+    ctx.page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize })
+  }
+
+  // Body
+  const bodyX = qrX + qrSize + 16
+  const bodyW = blockW - (bodyX - blockX) - 12
+  let by = blockY + blockH - 14
 
   ctx.page.drawText("VALIDACIÓN DEL DOCUMENTO", {
-    x: MARGIN, y: ctx.y, size: 8.5, font: ctx.fontBold, color: colBrown,
+    x: bodyX, y: by, size: 7, font: ctx.fontBold, color: cCafe,
   })
-  ctx.y -= 11
+  by -= 11
 
-  const qrX = MARGIN
-  const qrY = ctx.y - qrSize
-  ctx.page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize })
-
-  const textX = qrX + qrSize + 12
-  const textMaxW = PAGE_W - MARGIN - textX
-  let ly = ctx.y - 1
-
-  ctx.page.drawText("URL DE VALIDACIÓN", {
-    x: textX, y: ly, size: 7, font: ctx.fontBold, color: colSoft,
+  ctx.page.drawText("Verifique integridad y autoría", {
+    x: bodyX, y: by, size: 10, font: ctx.fontBold, color: cBlanco,
   })
-  ly -= 9
-  const urlLines = wrapText(urlValidacion, ctx.font, 7, textMaxW)
-  for (const line of urlLines.slice(0, 2)) {
-    ctx.page.drawText(line, { x: textX, y: ly, size: 7, font: ctx.fontBold, color: colDark })
-    ly -= 8
-  }
-  ly -= 3
+  by -= 13
 
-  const legalText = `Documento firmado mediante firma electrónica avanzada por servidor público competente, amparado en certificado digital vigente. Verifique integridad y autoría en la URL anterior o escaneando el código QR.`
-  const legalLines = wrapText(legalText, ctx.font, 6.3, textMaxW)
-  for (const line of legalLines.slice(0, 5)) {
-    ctx.page.drawText(line, { x: textX, y: ly, size: 6.3, font: ctx.font, color: colGray })
-    ly -= 7.5
+  // URL en una línea
+  if (urlValidacion) {
+    const urlOne = truncateToWidth(urlValidacion, ctx.font, 7, bodyW - 10)
+    ctx.page.drawRectangle({
+      x: bodyX, y: by - 3, width: bodyW, height: 11,
+      color: cVerdeSoft, opacity: 0.6,
+    })
+    ctx.page.drawText(urlOne, { x: bodyX + 4, y: by, size: 7, font: ctx.font, color: cCafe })
+    by -= 14
   }
 
-  ctx.y = qrY - 4
+  const legal = "Documento firmado mediante firma electrónica avanzada. Verifique integridad y autoría escaneando el QR."
+  const legalLines = wrapText(legal, ctx.font, 6.5, bodyW)
+  for (const ln of legalLines.slice(0, 2)) {
+    ctx.page.drawText(ln, { x: bodyX, y: by, size: 6.5, font: ctx.font, color: cArenaDark })
+    by -= 8
+  }
+
+  // Validacion ya esta en posicion fija, no muevo ctx.y
+}
+
+/* ── Footer ── */
+
+function drawFooter(ctx: DrawContext, uuid: string | null): void {
+  const footY = 32
+  ctx.page.drawLine({
+    start: { x: MARGIN, y: footY + 14 },
+    end:   { x: PAGE_W - MARGIN, y: footY + 14 },
+    thickness: 0.4, color: cRule,
+  })
+
+  // Stamp izquierdo
+  ctx.page.drawCircle({ x: MARGIN + 3, y: footY + 4, size: 2, color: cCafe })
+  ctx.page.drawText("Documento generado automáticamente · eFirma v3.2", {
+    x: MARGIN + 10, y: footY, size: 7, font: ctx.fontBold, color: cTexto,
+  })
+
+  // Página derecha
+  const uuidShort = uuid ? `${uuid.slice(0, 4)}…${uuid.slice(-5)}` : ""
+  const rightText = uuidShort ? `Página 1 · UUID ${uuidShort}` : "Página 1"
+  const rW = ctx.fontBold.widthOfTextAtSize(rightText, 7)
+  ctx.page.drawText(rightText, {
+    x: PAGE_W - MARGIN - rW, y: footY, size: 7, font: ctx.fontBold, color: cTexto,
+  })
 }
 
 /* ──────────────────────────────────────────────
@@ -419,81 +608,46 @@ export async function agregarConstanciaFirma(opts: AgregarConstanciaOpts): Promi
   let qrImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null
   if (urlValidacion) {
     try {
-      const png = await generarQRPng(urlValidacion, 220)
+      const png = await generarQRPng(urlValidacion, 240)
       qrImage = await pdfDoc.embedPng(png)
     } catch {
       qrImage = null
     }
   }
 
-  // ─── 1. Estampar QR + URL al pie de la última página existente ───
-  if (qrImage && urlValidacion) {
-    const ultimaPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1)
-    const { width: pw } = ultimaPage.getSize()
-    const qrSize = 46
-    const qrX = pw - MARGIN - qrSize
-    const qrY = 28
-    ultimaPage.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize })
-
-    const urlSize = 6
-    const urlLines = wrapText(urlValidacion, font, urlSize, pw - MARGIN * 2 - qrSize - 20)
-    let uy = qrY + qrSize - 6
-    for (const line of urlLines.slice(0, 4)) {
-      ultimaPage.drawText(line, { x: MARGIN, y: uy, size: urlSize, font, color: colGray })
-      uy -= urlSize + 2
-    }
-  }
-
-  // ─── 2. Cargar el membrete ───
-  let membretePage: PDFEmbeddedPage | null = null
+  // Cargar logo de Finanzas
+  let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null
   try {
-    const membretePath = path.join(process.cwd(), "public", "Membrete_Carta.pdf")
-    const membreteBytes = await fs.readFile(membretePath)
-    const embedded = await pdfDoc.embedPdf(membreteBytes, [0])
-    membretePage = embedded[0]
+    const logoPath = path.join(process.cwd(), "public", "logo-20finanzas.png")
+    const logoBytes = await fs.readFile(logoPath)
+    logoImage = await pdfDoc.embedPng(logoBytes)
   } catch {
-    membretePage = null
+    logoImage = null
   }
 
-  // ─── 3. Construir contexto y dibujar la constancia ───
+  // Construir contexto
   const ctx: DrawContext = {
     pdfDoc,
     page: null as unknown as PDFPage,
     y: 0,
-    membretePage,
     font,
     fontBold,
+    logoImage,
   }
   nuevaPaginaConstancia(ctx, true)
 
-  // Línea separadora bajo el título
-  ctx.page.drawLine({
-    start: { x: MARGIN, y: ctx.y + 2 },
-    end: { x: PAGE_W - MARGIN, y: ctx.y + 2 },
-    thickness: 0.5,
-    color: colLine,
-  })
-  ctx.y -= 12
+  // Doc card
+  drawDocCard(ctx, nombreArchivo, huella, firmas.length)
 
-  // Header del documento (compacto)
-  drawHeaderDocumento(ctx, nombreArchivo, huella, firmas.length)
-
-  // Línea separadora antes de las tarjetas de firmantes
-  ctx.page.drawLine({
-    start: { x: MARGIN, y: ctx.y + 2 },
-    end: { x: PAGE_W - MARGIN, y: ctx.y + 2 },
-    thickness: 0.5,
-    color: colLine,
-  })
-  ctx.y -= 8
-
-  // Grid de tarjetas
+  // Grid de firmantes
   drawFirmantesGrid(ctx, firmas)
 
-  // Bloque QR final
-  if (qrImage && urlValidacion) {
-    drawBloqueQR(ctx, qrImage, urlValidacion)
-  }
+  // Sección de validación
+  drawValidacion(ctx, qrImage, urlValidacion)
+
+  // Footer
+  const uuid = firmas[0]?.urlValidacion?.match(/uuid=([a-f0-9]+)/i)?.[1] ?? null
+  drawFooter(ctx, uuid)
 
   return pdfDoc.save()
 }

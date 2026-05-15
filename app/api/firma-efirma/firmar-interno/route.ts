@@ -100,6 +100,50 @@ export async function POST(req: NextRequest) {
       return { firmadosLocal, completo }
     })
 
+    // Avanzar estado de la solicitud según la bandeja del firmante que acaba de firmar.
+    // Cada bandeja interna en cascada: uefa → revision → validacion → emision.
+    if (!result.completo) {
+      const siguienteEstadoPorBandeja: Record<string, string | null> = {
+        uefa:       "Pendiente Firma Revision",
+        revision:   "Pendiente Firma Validacion",
+        validacion: "Pendiente Firma Emisor",
+      }
+      const siguienteEstado = siguienteEstadoPorBandeja[firmante.bandeja ?? ""]
+      if (siguienteEstado) {
+        try {
+          let estadoSig = await prisma.estado.findFirst({
+            where: { nombre: { equals: siguienteEstado, mode: "insensitive" } },
+          })
+          if (!estadoSig) {
+            estadoSig = await prisma.estado.create({
+              data: { nombre: siguienteEstado, descripcion: `Estado de flujo de firma: ${siguienteEstado}` },
+            })
+          }
+          const solicitudActual = await prisma.solicitud.findUnique({
+            where: { id: firmante.firma_proceso.solicitud_id },
+            select: { estado_id: true },
+          })
+          await prisma.$transaction([
+            prisma.solicitud.update({
+              where: { id: firmante.firma_proceso.solicitud_id },
+              data: { estado_id: estadoSig.id },
+            }),
+            prisma.historial_solicitud.create({
+              data: {
+                solicitud_id: firmante.firma_proceso.solicitud_id,
+                usuario_id: usuarioId,
+                estado_anterior_id: solicitudActual?.estado_id ?? null,
+                estado_nuevo_id: estadoSig.id,
+                comentario: `Firma completada en bandeja ${firmante.bandeja}. Avanza a ${siguienteEstado}.`,
+              },
+            }),
+          ])
+        } catch (e) {
+          console.error("[firma-efirma/firmar-interno] error avanzando estado solicitud:", e)
+        }
+      }
+    }
+
     // Si el proceso quedó completado, y este firmante es de emisión, emitir el dictamen.
     // Si skipEmit=true (ej. el flujo aún requiere subir sellado), no emitimos aquí —
     // se llamará al endpoint /api/firma-efirma/emitir-dictamen una vez el sellado esté listo.

@@ -112,6 +112,24 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
     }
   }
 
+  const descargarPdfFirmado = async () => {
+    try {
+      const res = await fetch(`/api/firma-efirma/descargar-firmado?uuid=${encodeURIComponent(uuid)}&t=${encodeURIComponent(token)}`, { cache: "no-store" })
+      if (!res.ok) return
+      const blob = await res.blob()
+      const cd = res.headers.get("Content-Disposition") ?? ""
+      const m  = cd.match(/filename="?([^"]+)"?/i)
+      const filename = m?.[1] ?? "documento-firmado.pdf"
+      const link = document.createElement("a")
+      link.href = URL.createObjectURL(blob)
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(link.href)
+    } catch { /* silencio */ }
+  }
+
   const handleFirmar = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!cerFile || !keyFile || !password || !usuario || !cargo.trim()) {
@@ -137,6 +155,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
       }
       setExito({ firmados: json.firmados, estado: json.estado })
       setFase("exito")
+      descargarPdfFirmado()
     } catch (e: any) {
       setError(e?.message ?? "Error de conexión")
     } finally {
@@ -269,6 +288,13 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
               {exito.estado === "completado"
                 ? "El proceso está completo."
                 : `Se han recibido ${exito.firmados} firmas hasta ahora.`}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Si la descarga no inició automáticamente,{" "}
+              <button onClick={descargarPdfFirmado} className="text-primary underline hover:text-primary/80">
+                haz clic aquí
+              </button>
+              .
             </p>
             <p className="text-xs text-muted-foreground">Ya puedes cerrar esta pestaña.</p>
           </CardContent>

@@ -111,7 +111,7 @@ function getEstadoObservado(filtro: number) {
 function classifyDO(s: FiltroSolicitud): TabKey {
   const n = s.estado.toLowerCase()
   if (n === "pendiente do" || n.includes("en revision revisor")) return "pendientes_asignacion"
-  if (n === "pendiente firma dictamen") return "pendientes_firma"
+  if (n === "pendiente firma dictamen" || n === "pendiente firma validacion") return "pendientes_firma"
   if (
     n.includes("observado por emisor") || n.includes("observado por revisor") ||
     n.includes("observado por do")     || n.includes("devuelta por do") ||
@@ -130,14 +130,14 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   const estadoNorm       = s.estado.toLowerCase()
   if (estadoNorm === estadoObservado.toLowerCase() || estadoNorm === "observado por validacion final") return "observadas"
   if (filtro === 1) {
-    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion") return "pendientes_firma"
+    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion" || estadoNorm === "pendiente firma revision") return "pendientes_firma"
     if (estadoNorm === "aceptado por revisor" || estadoNorm === "aprobado por revisor") return "revision"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
       return s.openedInFiltro[filtro] ? "revision" : "nuevas"
     }
   }
   if (filtro === 3) {
-    if (estadoNorm === "pendiente firma dictamen") return "pendientes_firma"
+    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma emisor") return "pendientes_firma"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
       return (s.openedInFiltro[filtro] || !!s.folioDictamen) ? "revision" : "nuevas"
     }
@@ -227,9 +227,9 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
 }
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 min-w-0">
       {label && <span className="text-xs text-muted-foreground">{label}</span>}
-      <span className="text-sm font-medium text-card-foreground">{value || "—"}</span>
+      <span className="text-sm font-medium text-card-foreground break-words whitespace-normal">{value || "—"}</span>
     </div>
   )
 }

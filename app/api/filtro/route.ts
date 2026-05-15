@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     const estadosNombres = [
       estadoEnRevision(filtro),
       ...(filtro === 3 ? [estadoObservado(filtro)] : []),
-      ...(filtro === 3 ? ["Pendiente Firma Dictamen"] : []),
+      ...(filtro === 3 ? ["Pendiente Firma Dictamen", "Pendiente Firma Emisor"] : []),
       ...(filtro === 3 ? [
         "Pendiente DO",
         "En Revision Revisor",
@@ -79,12 +79,15 @@ export async function GET(req: NextRequest) {
         "Aceptado por Revisor",
         "Aprobado por Revisor",
         "Pendiente Firma Justificacion",
+        "Pendiente Firma Revision",
+        "Pendiente Firma Validacion",
         "En Validacion Final",
         "Observado por Validacion Final",
       ] : []),
       ...(filtro === 1 ? [
         "Aceptado por Revisor",
         "Observado por Validacion Final",
+        "Pendiente Firma Revision",
       ] : []),
       ...(filtro === 2 ? [
         "Pendiente DO",
@@ -92,6 +95,7 @@ export async function GET(req: NextRequest) {
         "Observado por Emisor",
         "Observado por DO",
         "Observado por Revisor",
+        "Pendiente Firma Validacion",
       ] : []),
     ]
 

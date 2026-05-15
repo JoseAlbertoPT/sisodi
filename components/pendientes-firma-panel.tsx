@@ -23,6 +23,7 @@ interface ProcesoItem {
   id: number
   solicitud_id: number
   folio_justificacion: string | null
+  folio_recepcion: string | null
   folio_dictamen: string | null
   tipo_solicitud: string | null
   modalidad_firma: string | null
@@ -152,7 +153,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                   const miEmisor = p.firmantes.find(f => f.id === p.mi_firmante_emisor_id)
                   return (
                     <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/20">
-                      <td className="px-4 py-2 font-mono text-xs">{p.folio_justificacion ?? `SOL-${p.solicitud_id}`}</td>
+                      <td className="px-4 py-2 font-mono text-xs">{p.folio_recepcion ?? p.folio_justificacion ?? `SOL-${p.solicitud_id}`}</td>
                       <td className="px-4 py-2 text-xs">{p.tipo_solicitud ?? "—"}</td>
                       <td className="px-4 py-2 text-xs">{miEmisor?.rol ?? "Emitió"}</td>
                       <td className="px-4 py-2 font-mono text-xs">{p.firmados}/{p.total_firmantes}</td>
@@ -176,7 +177,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                 const esMiTurno = siguiente && miOrden === siguiente.orden
                 return (
                   <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/20">
-                    <td className="px-4 py-2 font-mono text-xs">{p.folio_justificacion ?? `SOL-${p.solicitud_id}`}</td>
+                    <td className="px-4 py-2 font-mono text-xs">{p.folio_recepcion ?? p.folio_justificacion ?? `SOL-${p.solicitud_id}`}</td>
                     <td className="px-4 py-2 text-xs">{p.tipo_solicitud ?? "—"}</td>
                     <td className="px-4 py-2 text-xs">{p.mi_firmante_pendiente?.rol}</td>
                     <td className="px-4 py-2 font-mono text-xs">{p.firmados}/{p.total_firmantes}</td>

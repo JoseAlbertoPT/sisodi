@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { randomBytes } from "crypto"
+import { mkdir, writeFile } from "fs/promises"
+import { join } from "path"
 import { prisma } from "@/lib/prisma"
 import { efirmaClient } from "@/lib/efirma-client"
 import { plantillaFirmantes, resolverUsuariosInternos, usuarioIdParaFirmante } from "@/lib/firma-plantillas"
+
+const BYPASS = process.env.EFIRMA_BYPASS === "true"
+const BYPASS_DIR = join(process.cwd(), ".firma-bypass")
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,17 +38,30 @@ export async function POST(req: NextRequest) {
 
     // Iniciar proceso en el portal SIN firmar (firmarAhora=false).
     // Sólo creamos el proceso; las firmas se registrarán después (externos por link, internos desde el app).
-    const portalRes = await efirmaClient.iniciar({
-      firmarAhora: false,
-      nombre: nombre ?? `Justificacion-${idNum}`,
-      archivo,
-      totalFirmantes,
-    })
-
-    const procesoId = portalRes?.procesoId ?? portalRes?.proceso_id
-    const storageKey = portalRes?.storageKey ?? portalRes?.uuid ?? portalRes?.procesoUuid
-    if (!procesoId || !storageKey) {
-      return NextResponse.json({ ok: false, error: "Respuesta inválida del portal de firmas", detalle: portalRes }, { status: 502 })
+    let procesoId: string
+    let storageKey: string
+    if (BYPASS) {
+      procesoId  = `bypass-${idNum}-${Date.now()}`
+      storageKey = randomBytes(16).toString("hex")
+      try {
+        await mkdir(BYPASS_DIR, { recursive: true })
+        const base64 = String(archivo).replace(/^data:application\/pdf;base64,/, "")
+        await writeFile(join(BYPASS_DIR, `${storageKey}.pdf`), Buffer.from(base64, "base64"))
+      } catch (e) {
+        console.error("[firma-efirma/iniciar] bypass: error guardando PDF local", e)
+      }
+    } else {
+      const portalRes = await efirmaClient.iniciar({
+        firmarAhora: false,
+        nombre: nombre ?? `Justificacion-${idNum}`,
+        archivo,
+        totalFirmantes,
+      })
+      procesoId  = portalRes?.procesoId ?? portalRes?.proceso_id
+      storageKey = portalRes?.storageKey ?? portalRes?.uuid ?? portalRes?.procesoUuid
+      if (!procesoId || !storageKey) {
+        return NextResponse.json({ ok: false, error: "Respuesta inválida del portal de firmas", detalle: portalRes }, { status: 502 })
+      }
     }
 
     // Resolver internos desde historial
