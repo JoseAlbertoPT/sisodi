@@ -459,7 +459,18 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
-  const firmanteId = searchParams.get("firmanteId");
+  const firmanteIdRaw = searchParams.get("firmanteId");
+  let firmanteId: number | null = null;
+  if (firmanteIdRaw !== null && firmanteIdRaw !== "") {
+    const n = Number(firmanteIdRaw);
+    if (!Number.isInteger(n) || n <= 0) {
+      return NextResponse.json(
+        { ok: false, error: "firmanteId inválido (entero positivo requerido)" },
+        { status: 400 },
+      );
+    }
+    firmanteId = n;
+  }
   const firmas: FirmaNames = {
     firmaElaboroNombre: searchParams.get("firmaElaboroNombre") || undefined,
     firmaRevisoNombre: searchParams.get("firmaRevisoNombre") || undefined,
@@ -469,5 +480,5 @@ export async function GET(req: NextRequest) {
     firmaDictEmitioNombre: searchParams.get("firmaDictEmitioNombre") || undefined,
     formato: searchParams.get("formato") === 'en_linea' ? 'en_linea' : 'fisico',
   };
-  return generatePDFResponse(solicitudId, firmas, firmanteId ? Number(firmanteId) : null);
+  return generatePDFResponse(solicitudId, firmas, firmanteId);
 }

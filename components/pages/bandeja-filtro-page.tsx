@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
@@ -223,14 +224,6 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
       </CardHeader>
       {open && <CardContent>{children}</CardContent>}
     </Card>
-  )
-}
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 min-w-0">
-      {label && <span className="text-xs text-muted-foreground">{label}</span>}
-      <span className="text-sm font-medium text-card-foreground break-words whitespace-normal">{value || "—"}</span>
-    </div>
   )
 }
 function parseListField(text: string | null | undefined): string[] {

@@ -209,12 +209,12 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
           usuarioId={currentUserId}
           titulo={
             dialogIniciarEnSellado
-              ? `Sellar y emitir — ${dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`
-              : `Firmar como ${dialogTarget.firmante.rol} — ${dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`
+              ? `Sellar y emitir — ${dialogTarget.proceso.folio_recepcion ?? dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`
+              : `Firmar como ${dialogTarget.firmante.rol} — ${dialogTarget.proceso.folio_recepcion ?? dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`
           }
           subtitulo={dialogTarget.firmante.cargo}
           bandeja={dialogTarget.firmante.bandeja}
-          folio={dialogTarget.proceso.folio_justificacion}
+          folio={dialogTarget.proceso.folio_recepcion ?? dialogTarget.proceso.folio_justificacion}
           folioDictamen={dialogTarget.proceso.folio_dictamen}
           solicitudId={dialogTarget.proceso.solicitud_id}
           iniciarEnSellado={dialogIniciarEnSellado}

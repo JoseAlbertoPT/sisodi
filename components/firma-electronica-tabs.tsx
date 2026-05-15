@@ -428,10 +428,27 @@ export function FirmaElectronicaTabs({
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 
+      {selladoEtapa && puedeContinuar && (
+        <SelladoDocumentoSection
+          solicitudId={solicitudId}
+          etapa={selladoEtapa}
+          usuarioId={currentUserId}
+          nombreDescarga={`Dictamen_${folioDictamen ?? folioJustificacion}_firmado`.replace(/[/\\]+/g, "-")}
+          onCambio={setSelladoSubido}
+          onDescargar={async () => {
+            const b64 = await onGenerarPdfBase64()
+            const bin = atob(b64)
+            const bytes = new Uint8Array(bin.length)
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+            return new Blob([bytes], { type: "application/pdf" })
+          }}
+        />
+      )}
+
       <div className="flex justify-end pt-2">
         <Button
           onClick={() => onFinalizar()}
-          disabled={!puedeContinuar || guardandoFinal}
+          disabled={!puedeContinuar || guardandoFinal || (!!selladoEtapa && !selladoSubido)}
           className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
         >
           {guardandoFinal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}

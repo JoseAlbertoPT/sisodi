@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -473,14 +474,6 @@ function SectionCard({
       </CardHeader>
       {open && <CardContent>{children}</CardContent>}
     </Card>
-  )
-}
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 min-w-0">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-card-foreground break-words whitespace-normal">{value || "—"}</span>
-    </div>
   )
 }
 function toList(val: string | string[]): string[] {

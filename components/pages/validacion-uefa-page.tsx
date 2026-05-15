@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -555,14 +556,6 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
   )
 }
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 min-w-0">
-      {label && <span className="text-xs text-muted-foreground">{label}</span>}
-      <span className="text-sm font-medium text-card-foreground break-words whitespace-normal">{value || "—"}</span>
-    </div>
-  )
-}
 
 function parseListField(text: string | null | undefined): string[] {
   if (!text || text === "—") return []
@@ -1304,7 +1297,6 @@ export function ValidacionUefaPage() {
           onGenerarPdfBase64={async () => generateJustificacionPDFBase64(firmaTargetSol.id)}
           onFinalizar={async () => { await handleFirmarJustificacion(firmaTargetSol.id) }}
           guardandoFinal={guardando}
-          selladoEtapa={firmaTargetSol.modalidadFirma === "electronica" ? "uefa" : undefined}
         />
       )}
 

@@ -110,37 +110,34 @@ export async function POST(req: NextRequest) {
       }
       const siguienteEstado = siguienteEstadoPorBandeja[firmante.bandeja ?? ""]
       if (siguienteEstado) {
-        try {
-          let estadoSig = await prisma.estado.findFirst({
-            where: { nombre: { equals: siguienteEstado, mode: "insensitive" } },
-          })
-          if (!estadoSig) {
-            estadoSig = await prisma.estado.create({
-              data: { nombre: siguienteEstado, descripcion: `Estado de flujo de firma: ${siguienteEstado}` },
-            })
-          }
-          const solicitudActual = await prisma.solicitud.findUnique({
-            where: { id: firmante.firma_proceso.solicitud_id },
-            select: { estado_id: true },
-          })
-          await prisma.$transaction([
-            prisma.solicitud.update({
-              where: { id: firmante.firma_proceso.solicitud_id },
-              data: { estado_id: estadoSig.id },
-            }),
-            prisma.historial_solicitud.create({
-              data: {
-                solicitud_id: firmante.firma_proceso.solicitud_id,
-                usuario_id: usuarioId,
-                estado_anterior_id: solicitudActual?.estado_id ?? null,
-                estado_nuevo_id: estadoSig.id,
-                comentario: `Firma completada en bandeja ${firmante.bandeja}. Avanza a ${siguienteEstado}.`,
-              },
-            }),
-          ])
-        } catch (e) {
-          console.error("[firma-efirma/firmar-interno] error avanzando estado solicitud:", e)
+        const estadoSig = await prisma.estado.findFirst({
+          where: { nombre: { equals: siguienteEstado, mode: "insensitive" } },
+        })
+        if (!estadoSig) {
+          return NextResponse.json(
+            { ok: false, error: `Estado "${siguienteEstado}" no existe en BD. Corre el seed de estados.` },
+            { status: 500 },
+          )
         }
+        const solicitudActual = await prisma.solicitud.findUnique({
+          where: { id: firmante.firma_proceso.solicitud_id },
+          select: { estado_id: true },
+        })
+        await prisma.$transaction([
+          prisma.solicitud.update({
+            where: { id: firmante.firma_proceso.solicitud_id },
+            data: { estado_id: estadoSig.id },
+          }),
+          prisma.historial_solicitud.create({
+            data: {
+              solicitud_id: firmante.firma_proceso.solicitud_id,
+              usuario_id: usuarioId,
+              estado_anterior_id: solicitudActual?.estado_id ?? null,
+              estado_nuevo_id: estadoSig.id,
+              comentario: `Firma completada en bandeja ${firmante.bandeja}. Avanza a ${siguienteEstado}.`,
+            },
+          }),
+        ])
       }
     }
 
@@ -161,13 +158,14 @@ export async function POST(req: NextRequest) {
           const folioJust = (solicitud as any).folio_justificacion ?? null
           folioDictamenFinal = (solicitud as any).folio_dictamen ?? solicitud.dictamen?.folio ?? folioJust
 
-          let estadoEmitido = await prisma.estado.findFirst({
+          const estadoEmitido = await prisma.estado.findFirst({
             where: { nombre: { equals: "Emitido", mode: "insensitive" } },
           })
           if (!estadoEmitido) {
-            estadoEmitido = await prisma.estado.create({
-              data: { nombre: "Emitido", descripcion: "Dictamen emitido tras firma completa" },
-            })
+            return NextResponse.json(
+              { ok: false, error: 'Estado "Emitido" no existe en BD. Corre el seed de estados.' },
+              { status: 500 },
+            )
           }
 
           const ops: any[] = [

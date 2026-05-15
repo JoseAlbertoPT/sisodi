@@ -49,6 +49,10 @@ export async function POST(req: NextRequest) {
         await writeFile(join(BYPASS_DIR, `${storageKey}.pdf`), Buffer.from(base64, "base64"))
       } catch (e) {
         console.error("[firma-efirma/iniciar] bypass: error guardando PDF local", e)
+        return NextResponse.json(
+          { ok: false, error: "No se pudo guardar el PDF en modo bypass" },
+          { status: 500 },
+        )
       }
     } else {
       const portalRes = await efirmaClient.iniciar({
