@@ -3562,11 +3562,39 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
           </Card>
 
           <Card className={`shadow-sm border-border ${(periodoVencido && !permisoActivo) || !calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
-            <CardContent className="flex justify-end px-2 py-2">
-              <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-                Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
-              </Button>
+            <CardHeader className="px-4 pt-3 pb-1">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+                <FilePlus className="h-4 w-4 text-secondary" />Seleccione Tipo de Solicitud
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2 px-4 pb-3 pt-0">
+              <RadioGroup value={tipo} onValueChange={(v) => {
+                const next = v as TipoSolicitud
+                if (next === "prestacion"   && regimenPeriodo === "nombramiento") return
+                if (next === "nombramiento" && regimenPeriodo !== "nombramiento") return
+                setTipo(next)
+              }} className="flex flex-col gap-3">
+                <label htmlFor="tipo-prestacion" className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-2.5 transition-colors ${tipo === "prestacion" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
+                  <RadioGroupItem value="prestacion" id="tipo-prestacion" className="mt-0.5" disabled={regimenPeriodo === "nombramiento"} />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-semibold text-card-foreground">Justificación de Prestación de Servicios</span>
+                    <span className="text-xs text-muted-foreground">Honorarios / Honorarios Asimilados a Salarios</span>
+                  </div>
+                </label>
+                <label htmlFor="tipo-nombramiento" className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-2.5 transition-colors ${tipo === "nombramiento" ? "border-primary bg-primary/5" : "border-border hover:border-secondary/50"}`}>
+                  <RadioGroupItem value="nombramiento" id="tipo-nombramiento" className="mt-0.5" disabled={regimenPeriodo !== "nombramiento"} />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-semibold text-card-foreground">Justificación para Nombramiento por Tiempo Determinado</span>
+                    <span className="text-xs text-muted-foreground">Nombramiento por Tiempo Determinado</span>
+                  </div>
+                </label>
+              </RadioGroup>
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+                  Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </>
