@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
 
+const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 async function resolverPeriodoId(periodoId?: number, mes?: number, anio?: number): Promise<number | undefined> {
   if (mes && anio) {
     let periodo = await prisma.periodo.findUnique({ where: { mes_anio: { mes, anio } } })
@@ -19,9 +21,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const estadoParam = searchParams.get("estado") ?? "En Captura"
     const usuarioId   = searchParams.get("usuarioId")
-
     const where: any = {}
-
     if (estadoParam !== "todos") {
       const estado = await prisma.estado.findFirst({ where: { nombre: estadoParam } })
       if (!estado) return NextResponse.json({ ok: true, data: [] })
@@ -79,21 +79,20 @@ export async function POST(req: NextRequest) {
       condicion_cambio_domicilio, condicion_horario, condicion_viajar, resguardo_activos,
       estado_nombre, tipo_administracion,
     } = body
-
     if (!usuarioId)      return NextResponse.json({ ok: false, error: "usuarioId es requerido" }, { status: 400 })
     if (!tipo_solicitud) return NextResponse.json({ ok: false, error: "tipo_solicitud es requerido" }, { status: 400 })
-
     const usuarioCreador = await prisma.usuario.findUnique({
       where:  { id: usuarioId },
-      select: { secretaria_id: true, area_id: true },
+      select: { secretaria_id: true, secretaria_texto: true, area_id: true },
     })
 
     const tipoFolioJUST = usuarioCreador?.secretaria_id
       ? `JUST-${usuarioCreador.secretaria_id}`
       : usuarioCreador?.area_id
         ? `JUST-A-${usuarioCreador.area_id}`
-        : "JUST-P"
-
+        : secretaria
+          ? `JUST-SEC-${secretaria.trim().toUpperCase().replace(/\s+/g, "_").slice(0, 30)}`
+          : "JUST-P"
     const estadoNombre = estado_nombre ?? "En Captura"
     let estadoInicial = await prisma.estado.findFirst({
       where: { nombre: { equals: estadoNombre, mode: "insensitive" } },
@@ -111,14 +110,19 @@ export async function POST(req: NextRequest) {
     }
 
     const trunc = (val: string | null | undefined, max: number): string | null =>
-      val ? val.substring(0, max) : null
-
+        val ? val.substring(0, max) : null
     const nueva = await prisma.solicitud.create({
       data: {
         usuario_id:            usuarioId,
         estado_id:             estadoInicial.id,
         tipo_solicitud,
-        tipo_administracion:   trunc(tipo_administracion ?? "centralizada", 20),
+        tipo_administracion:      trunc(tipo_administracion ?? "centralizada", 20),
+        secretaria_id_snapshot:   (tipo_administracion ?? "centralizada") !== "paraestatal"
+                                    ? (usuarioCreador?.secretaria_id ?? null)
+                                    : null,
+        secretaria_txt_snapshot:  (tipo_administracion ?? "centralizada") === "paraestatal"
+                                    ? (usuarioCreador?.secretaria_texto ?? null)
+                                    : null,
         periodo_id:            ((await resolverPeriodoId(periodoId, periodoMes, periodoAnio)) ?? periodoId ?? 1) as number,
         es_extemporanea:       esExtemporanea ?? false,
         secretaria:            trunc(secretaria, 200),
@@ -160,11 +164,9 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    
     const fechaCreacion = nueva.fecha_creacion ?? new Date()
     const year          = fechaCreacion.getFullYear()
     const esBorrador    = estadoNombre === "Borrador"
-
     let folioJustificacion: string | null = null
     if (!esBorrador) {
       if (esExtemporanea) {
@@ -174,7 +176,6 @@ export async function POST(req: NextRequest) {
         const ultimoConsecutivo = registroActual?.consecutivo ?? 1
         const basePadded    = String(ultimoConsecutivo).padStart(4, "0")
         const baseParaFolio = `JUST-${year}-${basePadded}`
-
         const yaExistentes = await prisma.solicitud.findMany({
           where:  { folio_justificacion: { startsWith: `${baseParaFolio}-` } },
           select: { folio_justificacion: true },
@@ -218,7 +219,7 @@ export async function POST(req: NextRequest) {
           : "Solicitud creada y enviada a validación UEFA",
       },
     })
-
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({ ok: true, data: nuevaConFolio, folio: folioJustificacion }, { status: 201 })
   } catch (error: any) {
     console.error("[POST /api/solicitudes]", error)
@@ -230,14 +231,11 @@ export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
     const { solicitudId: rawId, ...campos } = body
-
     if (!rawId) return NextResponse.json({ ok: false, error: "solicitudId es requerido" }, { status: 400 })
     const solicitudId = Number(rawId)
     if (isNaN(solicitudId)) return NextResponse.json({ ok: false, error: "solicitudId debe ser un número" }, { status: 400 })
-
     const trunc = (val: string | null | undefined, max: number): string | null =>
       val ? val.substring(0, max) : null
-
     const data: any = {}
     const varcharLimits: Record<string, number> = {
       tipo_administracion: 20, secretaria: 200, unidad_administrativa: 200,
@@ -305,6 +303,9 @@ export async function PATCH(req: NextRequest) {
       const pid = await resolverPeriodoId(undefined, Number(campos.periodoMes), Number(campos.periodoAnio))
       if (pid) data.periodo_id = pid
     }
+    const usuarioId    = campos.usuarioId ?? null
+    const historialDiff: { campo: string; de: string; a: string }[] | undefined =
+      Array.isArray(campos.historialDiff) ? campos.historialDiff : undefined
 
     const updated = await prisma.solicitud.update({
       where: { id: solicitudId },
@@ -321,6 +322,22 @@ export async function PATCH(req: NextRequest) {
       },
     })
 
+    if (usuarioId && historialDiff && historialDiff.length > 0) {
+      let estadoMod = await prisma.estado.findFirst({ where: { nombre: { equals: "Modificada", mode: "insensitive" } } })
+      if (!estadoMod) estadoMod = await prisma.estado.create({ data: { nombre: "Modificada", descripcion: "Solicitud editada por el capturista" } })
+      const estadoActual = await prisma.solicitud.findUnique({ where: { id: solicitudId }, select: { estado_id: true } })
+      await prisma.historial_solicitud.create({
+        data: {
+          solicitud_id:       solicitudId,
+          usuario_id:         usuarioId,
+          estado_anterior_id: estadoActual?.estado_id ?? null,
+          estado_nuevo_id:    estadoMod.id,
+          comentario:         JSON.stringify({ tipo: "edicion", cambios: historialDiff }),
+        },
+      })
+    }
+
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({ ok: true, data: updated })
   } catch (error: any) {
     console.error("[PATCH /api/solicitudes]", error)

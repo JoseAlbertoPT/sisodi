@@ -8,6 +8,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })
     }
 
+    const viewer = await prisma.usuario.findUnique({
+      where:  { id: usuarioId },
+      select: { rol: { select: { nombre: true } } },
+    })
+    const esAdmin = viewer?.rol?.nombre?.toLowerCase() === "administrador"
+
     const { searchParams } = new URL(req.url)
     const tab        = searchParams.get("tab")        ?? "Todas"
     const search     = searchParams.get("search")     ?? ""
@@ -32,12 +38,14 @@ export async function GET(req: NextRequest) {
         "Observado por UEFA",
         "Observado por Revisor",
         "Observado por DO",
-        "Observado por Emisor",
-        "Observado por Validacion Final",
         "Devuelta por DO",
         "Observado DO Filtro 1",
         "Observado DO Filtro 2",
         "Observado DO Filtro 3",
+        "Observado por Emisor",
+        "Observada por Emisor",
+        "Observado por Validacion Final",
+        "Observada por Validacion Final",
       ],
       "En proceso DGDO": [
         "Pendiente DO",
@@ -60,9 +68,8 @@ export async function GET(req: NextRequest) {
     }
 
     const estadoNames = tabToEstados[tab] ?? []
-
     const where: Parameters<typeof prisma.solicitud.findMany>[0]["where"] = {
-      usuario_id: usuarioId,
+      ...(!esAdmin && { usuario_id: usuarioId }),
       ...(estadoNames.length > 0 && {
         estado: { nombre: { in: estadoNames, mode: "insensitive" } },
       }),
@@ -156,14 +163,20 @@ export async function GET(req: NextRequest) {
       valores:               s.valores,
       areas_exp:             s.areas_exp,
       puesto_jefe_inmediato: s.puesto_jefe_inmediato ?? null,
-      marco_normativo:       s.marco_normativo ?? [],
-      condiciones_riesgos:   s.condiciones_riesgos ?? [],
-      resguardo_activos:     s.resguardo_activos ?? null,
-      tipo_importe:          s.tipo_importe ?? null,
+      marco_normativo:           s.marco_normativo ?? [],
+      condiciones_riesgos:       s.condiciones_riesgos ?? [],
+      resguardo_activos:         s.resguardo_activos ?? null,
+      tipo_importe:              s.tipo_importe ?? null,
+      riesgo_caidas:             s.riesgo_caidas ?? null,
+      riesgo_mutilaciones:       s.riesgo_mutilaciones ?? null,
+      riesgo_golpes:             s.riesgo_golpes ?? null,
+      riesgo_otros:              s.riesgo_otros ?? null,
+      condicion_cambio_domicilio: s.condicion_cambio_domicilio ?? false,
+      condicion_horario:         s.condicion_horario ?? false,
+      condicion_viajar:          s.condicion_viajar ?? false,
       es_extemporanea:       s.es_extemporanea,
       fecha_creacion:        s.fecha_creacion,
       fecha_envio:           s.fecha_envio,
-
       fecha_emision:         s.fecha_emision,
       estado:   { id: s.estado.id, nombre: s.estado.nombre },
       periodo:  {
@@ -179,6 +192,17 @@ export async function GET(req: NextRequest) {
         comentario:      h.comentario ?? null,
         estado_anterior: h.estado_historial_solicitud_estado_anterior_idToestado?.nombre ?? null,
       })),
+      reingresoCount: (() => {
+        const hist = s.historial_solicitud
+        const firstObsIdx = hist.findIndex((h) =>
+          (h.estado_historial_solicitud_estado_nuevo_idToestado.nombre ?? "").toLowerCase().includes("observad")
+        )
+        if (firstObsIdx === -1) return 0
+        return hist.slice(firstObsIdx + 1).filter((h) => {
+          const nn = (h.estado_historial_solicitud_estado_nuevo_idToestado.nombre ?? "").toLowerCase()
+          return nn.includes("enviada a validacion") || nn.includes("en validacion justificaciones")
+        }).length
+      })(),
       adjuntos: s.adjunto.map((a) => ({
         id:             a.id,
         nombre_archivo: a.nombre_archivo,
@@ -196,10 +220,9 @@ export async function GET(req: NextRequest) {
         : null,
       slaRestante,
     })})
-
     const counts = await prisma.solicitud.groupBy({
       by: ["estado_id"],
-      where: { usuario_id: usuarioId },
+      where: esAdmin ? {} : { usuario_id: usuarioId },
       _count: { id: true },
     })
     const allEstados = await prisma.estado.findMany({ select: { id: true, nombre: true } })

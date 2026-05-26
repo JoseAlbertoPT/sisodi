@@ -67,14 +67,8 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar"); return }
       const procesos: ProcesoItem[] = json.procesos ?? []
-      // Filtrar: incluir
-      //   (a) procesos donde es MI TURNO de firmar (siguiente firmante pendiente).
-      //   (b) procesos donde ya firmé como EMISOR pero el dictamen aún no se ha emitido
-      //       (falta subir el sellado y emitir).
       const filtrados = procesos.filter(p => {
-        // (b) — solo aplica al filtro de emisión
         if (bandejaActual === "emision" && p.pendiente_emision_por_mi) return true
-        // (a)
         if (!p.mi_firmante_pendiente || p.mi_firmante_pendiente.bandeja !== bandejaActual) return false
         const miFirmante = p.firmantes.find(f => f.id === p.mi_firmante_pendiente!.id)
         if (!miFirmante) return false
@@ -103,7 +97,6 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
     return null
   })()
 
-  // Si el target es el firmante emisor que ya firmó, abrimos el dialog en paso 2 (sellado + emitir).
   const dialogIniciarEnSellado = !!(
     dialogTarget &&
     dialogTarget.firmante.bandeja === "emision" &&
@@ -117,10 +110,6 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Stamp className="h-4 w-4 text-secondary" /> Justificaciones pendientes de firmar como {bandejaActual}
         </h3>
-        <Button variant="outline" size="sm" onClick={cargar} disabled={loading} className="gap-1.5">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Actualizar
-        </Button>
       </div>
 
       {error && (
@@ -148,7 +137,6 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
             </thead>
             <tbody>
               {items.map(p => {
-                // Caso especial: emisor que ya firmó y le falta sellar + emitir
                 if (p.pendiente_emision_por_mi) {
                   const miEmisor = p.firmantes.find(f => f.id === p.mi_firmante_emisor_id)
                   return (

@@ -24,11 +24,11 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-/* ── Helper: Convierte un string separado por comas O saltos de línea en array ── */
+/* ── Helper: Convierte un string separado por saltos de línea en array ── */
 function splitToArray(str: string | null | undefined): string[] {
   if (!str || str.trim() === "") return [];
   return str
-    .split(/[,\n]+/)
+    .split(/\n+/)
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
 }
@@ -75,7 +75,6 @@ function buildFirmaFicticia(firmante: any, uuid?: string | null): FirmaPortal {
 
 /* ── POST /api/pdf/justificacion ── */
 
-// Firma names interface
 interface FirmaNames {
   firmaElaboroNombre?: string;
   firmaRevisoNombre?: string;
@@ -202,8 +201,6 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       );
     }
 
-    // Auto-completa nombres de firmantes desde firma_firmante (no sobrescribe
-    // los que vinieron explícitamente en el body).
     firmas = await resolverNombresFirmantes(Number(solicitudId), firmas, soloFirmanteId);
 
     const tipoAdministracion: 'centralizada' | 'paraestatal' =
@@ -348,15 +345,8 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
 
     const filename = `Justificacion_${folio.replace(/\//g, "-")}.pdf`;
 
-    // ─── Render del PDF base ───
-    // Usamos renderToStream en lugar de renderToBuffer: cuando NO se requiere
-    // post-procesado (formato físico) podemos enviar el stream directo a la
-    // respuesta y el navegador empieza a pintar el iframe en cuanto llegan los
-    // primeros bytes (mejor TTFB). Si hay que estampar la constancia, drenamos
-    // el stream a un Buffer.
     const pdfStream = await renderToStream(pdfElement as any);
 
-    // ─── Post-procesamiento: estampar constancia de firma electrónica ───
     if (firmas.formato === "en_linea") {
       let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
       try {
@@ -377,7 +367,6 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         let firmasPortal: FirmaPortal[] = [];
 
         if (bypass) {
-          // ── Modo prueba: usar firmantes locales + sellos ficticios ──
           const dummyFirmantes = (firmaProceso as any)?.firmantes ?? [];
           if (dummyFirmantes.length > 0) {
             firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
@@ -385,7 +374,6 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
             firmasPortal = [buildFirmaFicticia({}, firmaProceso?.uuid)];
           }
         } else if (firmaProceso?.proceso_id) {
-          // ── Modo real: consultar al portal e.firma ──
           const estado: any = await efirmaClient.estado(firmaProceso.proceso_id);
           firmasPortal = Array.isArray(estado?.firmas)
             ? estado.firmas.map((f: any) => ({
@@ -425,7 +413,6 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       });
     }
 
-    // ─── Camino rápido: streamear el PDF directamente (sin constancia) ───
     const webStream = Readable.toWeb(pdfStream as Readable) as ReadableStream;
     return new NextResponse(webStream, {
       status: 200,

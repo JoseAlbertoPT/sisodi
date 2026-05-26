@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Label } from "@/components/ui/label"
@@ -21,10 +21,12 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
 import { ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { useRealtime } from "@/hooks/use-realtime"
 
 interface FiltroSolicitud {
   id: string
@@ -56,6 +58,11 @@ const FILTRO_LABELS: Record<number, string> = {
   2: "Validación Final",
   3: "Emisor",
 }
+const FILTRO_STAGE_LABELS: Record<number, string> = {
+  1: "Revision",
+  2: "Validacion DGDO",
+  3: "Emision",
+}
 const MESES = [
   { value: "01", label: "Enero" }, { value: "02", label: "Febrero" },
   { value: "03", label: "Marzo" }, { value: "04", label: "Abril" },
@@ -70,15 +77,29 @@ const INICIALES_MES_MAP: Record<string, string> = {
   "05": "MY", "06": "JN", "07": "JL", "08": "AG",
   "09": "SE", "10": "OC", "11": "NO", "12": "DI",
 }
+function ordinalRegreso(n: number): string {
+  if (n === 1) return "1er Regreso"
+  if (n === 2) return "2do Regreso"
+  if (n === 3) return "3er Regreso"
+  return `${n}° Regreso`
+}
+
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio) return "---"
   const match = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
   if (match) return `${match[1]}/${match[2].padStart(2, "0")}/${match[3]}`
   return folio
 }
+function parseDateLocal(v: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const [y, m, d] = v.split("-").map(Number)
+    return new Date(y, m - 1, d)
+  }
+  return new Date(v)
+}
 function formatFecha(v: string | null | undefined) {
   if (!v) return "—"
-  const d = new Date(v)
+  const d = parseDateLocal(v)
   if (isNaN(d.getTime())) return v
   return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
@@ -106,15 +127,16 @@ function getEstadoEnRevision(filtro: number) {
 }
 function getEstadoObservado(filtro: number) {
   if (filtro === 1) return "Observado por Revisor"
-  if (filtro === 2) return "Observado por Validacion Final"
+  if (filtro === 2) return "Observado por Validacion DGDO"
   return "Observado por Emisor"
 }
 function classifyDO(s: FiltroSolicitud): TabKey {
   const n = s.estado.toLowerCase()
   if (n === "pendiente do" || n.includes("en revision revisor")) return "pendientes_asignacion"
   if (n === "pendiente firma dictamen" || n === "pendiente firma validacion") return "pendientes_firma"
+  if (n.includes("observado por emisor")) return "en_validacion"
   if (
-    n.includes("observado por emisor") || n.includes("observado por revisor") ||
+    n.includes("observado por validacion final") ||
     n.includes("observado por do")     || n.includes("devuelta por do") ||
     n.includes("observado do filtro")
   ) return "observadas"
@@ -129,13 +151,13 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   const estadoEnRevision = getEstadoEnRevision(filtro)
   const estadoObservado  = getEstadoObservado(filtro)
   const estadoNorm       = s.estado.toLowerCase()
-  if (estadoNorm === estadoObservado.toLowerCase() || estadoNorm === "observado por validacion final") return "observadas"
+  if (filtro === 3 && estadoNorm === "observado por validacion final") return "todas"
+  if (filtro === 1 && estadoNorm === "observado por validacion final") return "revision"
+  if (estadoNorm === estadoObservado.toLowerCase()) return "observadas"
   if (filtro === 1) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion" || estadoNorm === "pendiente firma revision") return "pendientes_firma"
     if (estadoNorm === "aceptado por revisor" || estadoNorm === "aprobado por revisor") return "revision"
-    if (estadoNorm === estadoEnRevision.toLowerCase()) {
-      return s.openedInFiltro[filtro] ? "revision" : "nuevas"
-    }
+    if (estadoNorm === estadoEnRevision.toLowerCase()) return "nuevas"
   }
   if (filtro === 3) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma emisor") return "pendientes_firma"
@@ -150,17 +172,21 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
       "aprobado por revisor",
       "pendiente firma justificacion",
       "en validacion final",
-      "observado por validacion final",
     ])
     if (preEmisor.has(estadoNorm)) return "nuevas"
   }
   return "todas"
 }
+function getSlaColor(dias: number | null): string {
+  if (dias === null) return "#64748b"
+  if (dias <= 0)  return "#832B56"
+  if (dias <= 7)  return "#832B56"
+  if (dias <= 15) return "#C69C6D"
+  return "#4a7a55"
+}
 function getSlaStyle(dias: number | null): React.CSSProperties {
-  if (dias === null) return { backgroundColor: "#e2e8f0", color: "#64748b" }
-  if (dias <= 0)  return { backgroundColor: "#832B56", color: "#FFFFFF" }
-  if (dias <= 7)  return { backgroundColor: "#C69C6D", color: "#FFFFFF" }
-  return { backgroundColor: "#283C2A", color: "#FFFFFF" }
+  const c = getSlaColor(dias)
+  return { backgroundColor: `${c}18`, color: c }
 }
 function getSlaLabel(dias: number | null) {
   if (dias === null) return "Sin periodo"
@@ -191,11 +217,13 @@ const TAB_CONFIG_DO: TabCfg = {
 }
 
 function SlaIndicator({ diasRestantes }: { diasRestantes: number | null }) {
+  const color = getSlaColor(diasRestantes)
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-      style={getSlaStyle(diasRestantes)}
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+      style={{ backgroundColor: `${color}18`, color }}
     >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
       {getSlaLabel(diasRestantes)}
     </span>
   )
@@ -228,7 +256,7 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
 }
 function parseListField(text: string | null | undefined): string[] {
   if (!text || text === "—") return []
-  return text.split(/[\n•·,]+/).map(s => s.trim()).filter(Boolean)
+  return text.split(/[\n\r•·]+/).map(s => s.trim()).filter(Boolean)
 }
 function PerfilListField({ label, value }: { label: string; value: string | null | undefined }) {
   const items = parseListField(value)
@@ -255,13 +283,16 @@ function ListaItems({ items }: { items: string[] }) {
   const validItems = (items ?? []).filter(Boolean)
   if (validItems.length === 0) return <span className="text-sm text-muted-foreground">—</span>
   return (
-    <ul className="flex flex-col gap-2">
+    <ul
+      className="scroll-thin flex flex-col gap-2"
+      style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
+    >
       {validItems.map((item, i) => (
-        <li key={i} className="flex gap-2 text-sm text-card-foreground">
+        <li key={i} className="flex gap-2 text-sm text-card-foreground min-w-0">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary mt-0.5">
             {i + 1}
           </span>
-          <span>{item}</span>
+          <span style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{item}</span>
         </li>
       ))}
     </ul>
@@ -289,7 +320,10 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
         </div>
       </SectionCard>
       <SectionCard title="I.1 Objeto de la Contratación">
-        <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+        <p
+          className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap"
+          style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
+        >
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
@@ -299,7 +333,6 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
       <SectionCard title="I.3 Responsabilidades">
         <ListaItems items={Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : []} />
       </SectionCard>
-
       {esNombramiento && (raw?.nivel_tabulador || raw?.categoria_tabulador) && (
         <SectionCard title="Tabulador — Nivel y Categoría">
           <div className="grid gap-4 md:grid-cols-2">
@@ -308,25 +341,21 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
           </div>
         </SectionCard>
       )}
-
       {esNombramiento && marcoNormativo.length > 0 && (
         <SectionCard title="V. Marco Normativo">
           <ListaItems items={marcoNormativo} />
         </SectionCard>
       )}
-
       {esNombramiento && condicionesRiesgos.length > 0 && (
         <SectionCard title="VI. Condiciones y Riesgos">
           <ListaItems items={condicionesRiesgos} />
         </SectionCard>
       )}
-
       {esNombramiento && raw?.resguardo_activos && (
         <SectionCard title="VII. Resguardo Personalizado de Activos">
           <ReadOnlyField label="Resguardo de Activos" value={raw.resguardo_activos === "si" ? "Sí" : raw.resguardo_activos === "no" ? "No" : raw.resguardo_activos} />
         </SectionCard>
       )}
-
       {!hidePerfil && (
         <SectionCard num="II" title="Perfil">
           <div className="grid gap-4 md:grid-cols-2">
@@ -339,6 +368,7 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
           </div>
         </SectionCard>
       )}
+
       <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
         {raw?.adjunto?.length > 0 ? (
           <div className="flex flex-col gap-2">
@@ -362,7 +392,6 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
     </div>
   )
 }
-
 function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel, icon }: {
   open: boolean; onClose: () => void; onConfirm: () => void
   title: string; description: string; confirmLabel: string; icon?: React.ReactNode
@@ -386,14 +415,12 @@ function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLab
     </Dialog>
   )
 }
-
 function ObservarModal({ open, onClose, onConfirm, folio }: {
   open: boolean; onClose: () => void; onConfirm: (obs: string) => void; folio: string
 }) {
   const [step, setStep] = useState<"confirm" | "write">("confirm")
   const [obs, setObs]   = useState("")
   const handleClose = () => { setStep("confirm"); setObs(""); onClose() }
-
   if (step === "confirm") return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
@@ -414,7 +441,6 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
       </DialogContent>
     </Dialog>
   )
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg">
@@ -458,7 +484,6 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
   const [revisores,  setRevisores]  = useState<RevisorInfo[]>([])
   const [loading,    setLoading]    = useState(false)
   const [selectedId, setSelectedId] = useState("")
-
   useEffect(() => {
     if (!open) return
     setSelectedId("")
@@ -606,7 +631,6 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
     </Dialog>
   )
 }
-
 const MESES_DICT = [
   { value: "01", label: "ENERO(01)" }, { value: "02", label: "FEBRERO(02)" },
   { value: "03", label: "MARZO(03)" }, { value: "04", label: "ABRIL(04)" },
@@ -732,12 +756,20 @@ function rawToEditPayload(solicitud: FiltroSolicitud): EditSolicitudPayload {
     : "honorarios"
   const tipo: EditSolicitudPayload["tipo"] = regimen === "nombramiento" ? "nombramiento" : "prestacion"
   const fmt = (d: any) => d ? new Date(d).toISOString().slice(0, 10) : ""
+  function getEstadoSig(estado: string): string | undefined {
+    const n = estado.toLowerCase()
+    if (n.includes("observado por validacion final")) return "En Validacion Final"
+    if (n.includes("observado por emisor"))           return "En Revision Emisor"
+    if (n.includes("observado por do") || n.includes("devuelta por do")) return "Pendiente DO"
+    return undefined
+  }
   return {
     id: solicitud.id,
     tipo,
     regimen,
     periodo: solicitud.periodo ?? "",
     estado: solicitud.estado,
+    estadoSiguienteTrasSave: getEstadoSig(solicitud.estado),
     formData: {
       secretaria:              raw.secretaria ?? "",
       unidadAdministrativa:    raw.clave_unidad_administrativa ?? raw.unidad_administrativa ?? "",
@@ -791,7 +823,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
   const [showAprobarModal,        setShowAprobarModal]        = useState(false)
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
   const [showObservarModal,       setShowObservarModal]       = useState(false)
-  const [activePanel,             setActivePanel]             = useState<"revision" | "historial">("revision")
+  const [activePanel,             setActivePanel]             = useState<"revision" | "observaciones" | "historial">("revision")
   const [folioDictamen,           setFolioDictamen]           = useState<string | null>(
     solicitud._raw?.folio_dictamen ?? solicitud._raw?.dictamen?.folio ?? null
   )
@@ -811,30 +843,50 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
     const json = await res.json()
     if (json.ok) setFolioDictamen(folio)
   }
-
   const yaEstuvoEnRevisor = (solicitud._raw?.historial_solicitud ?? []).some(
     (h: any) => (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "")
       .toLowerCase().includes("en revision revisor")
   )
-
   const labelAprobar =
     filtro === 1 ? "Aprobar → Validación"
     : filtro === 2 ? (yaEstuvoEnRevisor ? "Aprobar → Emisor" : "Aprobar → Revisor")
     : solicitud.estado.toLowerCase().includes("pendiente firma dictamen")
       ? "Firmar Dictamen → Emitir"
       : "Aprobar → Firma Justificación"
-
   const folioFormateado = formatearFolio(solicitud.folioRecepcion)
-
   const historial: HistorialEntryData[] =
     (raw?.historial_solicitud ?? []).map((h: any) => ({
       fecha:          h.fecha ?? "",
       usuario:        h.usuario?.nombre ?? "Sistema",
       estadoAnterior: h.estado_historial_solicitud_estado_anterior_idToestado?.nombre ?? null,
       estadoNuevo:    h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+      comentario:     h.comentario ?? null,
     }))
-
   const observacionesUefa: string = raw?.observaciones_uefa ?? raw?.observacion_uefa ?? ""
+  const observacionesUefaActiva: boolean = (() => {
+    if (!observacionesUefa) return false
+    const historialItems: any[] = raw?.historial_solicitud ?? []
+    let lastUefaObsIdx = -1
+    historialItems.forEach((h: any, idx: number) => {
+      const n = (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+      if (
+        n.includes("observada por ufa") ||
+        n.includes("observado por ufa") ||
+        (n.includes("observado por validacion") && !n.includes("final"))
+      ) {
+        lastUefaObsIdx = idx
+      }
+    })
+    if (lastUefaObsIdx === -1) return false
+    return !historialItems.slice(lastUefaObsIdx + 1).some((h2: any) => {
+      const n2 = (h2.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+      return (
+        n2.includes("enviada a validacion") ||
+        n2.includes("en validacion justificaciones") ||
+        n2 === "pendiente do"
+      )
+    })
+  })()
 
   const ultimaObsDo: string | null = (() => {
     const entrada = (raw?.historial_solicitud ?? []).find((h: any) => {
@@ -844,38 +896,66 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
     return entrada?.comentario ?? null
   })()
 
+  const historialItems: any[] = raw?.historial_solicitud ?? []
+  const observacionesFiltro: { estado: string; fecha: string; usuario: string; comentario: string }[] =
+    historialItems
+      .filter((h: any, idx: number) => {
+        const nombre = (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+        if (!nombre.includes("observad") || !h.comentario) return false
+        const historialAfter = historialItems.slice(idx + 1)
+        return !historialAfter.some((h2: any) => {
+          const n2 = (h2.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+          return !n2.includes("observad")
+        })
+      })
+      .map((h: any) => ({
+        estado:     h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+        fecha:      h.fecha ? new Date(h.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
+        usuario:    h.usuario?.nombre ?? "Sistema",
+        comentario: h.comentario as string,
+      }))
+
   const denominacion = raw?.denominacion || raw?.tipo_solicitud || solicitud.denominacion || solicitud.tipo || "—"
 
   return (
     <div className="flex flex-col gap-4">
-      {}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost" size="sm" onClick={onBack}
-            className="gap-1.5 text-muted-foreground hover:text-card-foreground"
+            className="gap-1.5"
           >
             <ArrowLeft className="h-4 w-4" />Volver a bandeja
           </Button>
           <Separator orientation="vertical" className="h-6" />
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-card-foreground">{folioFormateado}</span>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-semibold text-foreground">
+                {folioFormateado || <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>}
+              </h2>
+              <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>
+              {folioDictamen && (
+                <Badge className="bg-secondary/15 text-secondary border-0 text-xs gap-1">
+                  <Stamp className="h-3 w-3" />Dict. {folioDictamen}
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{solicitud.tipo} — {solicitud.secretaria}</p>
             {denominacion !== "—" && (
-              <span className="text-xs text-muted-foreground">{denominacion}</span>
+              <p className="text-xs text-muted-foreground font-medium">{denominacion}</p>
             )}
           </div>
-          <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>
+        </div>
+        <div className="flex items-center gap-3">
           <SlaIndicator diasRestantes={solicitud.slaRestante} />
-          </div>
-          <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5">
+          <Button size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0">
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
-          {onEditSolicitud && classifySolicitud(solicitud, filtro) !== "observadas" && (
+          {onEditSolicitud && (
             <Button
-              variant="outline" size="sm"
+              size="sm"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
-              className="gap-1.5"
+              className="gap-1.5 bg-primary hover:bg-primary/90 text-white border-0"
             >
               <Pencil className="h-4 w-4" />Editar
             </Button>
@@ -895,7 +975,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           <Button
             variant="outline" size="sm"
             onClick={() => setShowObservarModal(true)}
-            disabled={guardando || classifySolicitud(solicitud, filtro) === "observadas"}
+            disabled={guardando}
             className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
             >
             <RotateCcw className="h-4 w-4" />Observar
@@ -903,14 +983,13 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         </div>
       </div>
 
-      {}
       {solicitud.reingresoCount > 0 && (
         <Card className="border-2 border-accent/30 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
             <Info className="h-5 w-5 text-accent-foreground shrink-0 mt-0.5" />
             <div>
               <span className="text-sm font-semibold text-accent-foreground">
-                Reingreso #{solicitud.reingresoCount}
+                {ordinalRegreso(solicitud.reingresoCount)}
               </span>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Solicitud corregida y reenviada por la URG.
@@ -926,7 +1005,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         </Card>
       )}
 
-      {observacionesUefa && (
+      {observacionesUefaActiva && (
         <Card className="border-2 border-[#832B56]/30 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
             <AlertTriangle className="h-5 w-5 text-[#832B56] shrink-0 mt-0.5" />
@@ -937,7 +1016,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           </CardContent>
         </Card>
       )}
-      {}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 flex flex-col gap-4">
           <ExpedienteCompleto raw={raw} hidePerfil={filtro === 1} />
@@ -954,6 +1033,21 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             >
               <FileSearch className="h-4 w-4" />Revisión
             </button>
+            {observacionesFiltro.length > 0 && (
+              <button
+                onClick={() => setActivePanel("observaciones")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors relative ${
+                  activePanel === "observaciones"
+                    ? "bg-[#832B56] text-white"
+                    : "bg-card text-[#832B56] hover:bg-[#832B56]/10"
+                }`}
+              >
+                <AlertTriangle className="h-4 w-4" />Observaciones
+                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white leading-none">
+                  {observacionesFiltro.length}
+                </span>
+              </button>
+            )}
             <button
               onClick={() => setActivePanel("historial")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
@@ -965,6 +1059,37 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               <History className="h-4 w-4" />Historial
             </button>
           </div>
+
+          {activePanel === "observaciones" && observacionesFiltro.length > 0 && (
+            <div className="overflow-hidden rounded-xl border border-border shadow-md">
+              <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                  <AlertTriangle className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-white">Observaciones</span>
+                  <span className="text-[10px] text-white/60">
+                    {observacionesFiltro.length} observación{observacionesFiltro.length !== 1 ? "es" : ""}
+                  </span>
+                </div>
+                <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                  <span className="text-[11px] font-semibold text-white/90">{observacionesFiltro.length} obs.</span>
+                </div>
+              </div>
+              <div className="bg-card p-4 flex flex-col gap-2">
+                {observacionesFiltro.map((obs, i) => (
+                  <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                      <span className="text-[10px] text-muted-foreground">{obs.fecha}{obs.usuario && ` — ${obs.usuario}`}</span>
+                    </div>
+                    <p className="text-xs text-card-foreground leading-relaxed whitespace-pre-line">{obs.comentario}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activePanel === "revision" && (
             <Card className="shadow-sm border-border">
               <CardContent className="pt-4 flex flex-col gap-4">
@@ -995,24 +1120,23 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                   <span className="text-xs text-muted-foreground">Fecha de Recepción DO</span>
                   <span className="text-sm font-medium text-card-foreground">
                     {solicitud.fechaRecepcionDO
-                      ? new Date(solicitud.fechaRecepcionDO).toLocaleDateString("es-MX")
+                      ? (() => { const [y,m,d] = solicitud.fechaRecepcionDO!.split("-"); return new Date(+y,+m-1,+d).toLocaleDateString("es-MX") })()
                       : "—"}
                   </span>
                 </div>
                 {solicitud.reingresoCount > 0 && (
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Reingresos</span>
+                    <span className="text-xs text-muted-foreground">Regreso</span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-1 text-xs font-medium text-accent-foreground w-fit">
-                      <RotateCcw className="h-3 w-3" />#{solicitud.reingresoCount}
+                      <RotateCcw className="h-3 w-3" />{ordinalRegreso(solicitud.reingresoCount)}
                     </span>
                   </div>
                 )}
-                {solicitud.lastObservedStage && (
+                {solicitud.reingresoCount > 0 && solicitud.lastObservedStage && (
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Última observación desde</span>
+                    <span className="text-xs text-muted-foreground">Última Observacion desde</span>
                     <span className="text-sm font-medium text-card-foreground">
-                      Filtro {solicitud.lastObservedStage}
-                      {solicitud.lastObservedDate && ` — ${solicitud.lastObservedDate}`}
+                      {solicitud.lastObservedDate ?? "—"}
                     </span>
                   </div>
                 )}
@@ -1028,21 +1152,29 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           )}
 
           {activePanel === "historial" && (
-            <Card className="shadow-sm border-border sticky top-4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-secondary" />Historial de la solicitud
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="overflow-hidden rounded-xl border border-border shadow-md sticky top-4">
+              <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                  <Clock className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-white">Historial de Estatus</span>
+                  <span className="text-[10px] text-white/60">
+                    {historial.length} entrada{historial.length !== 1 ? "s" : ""} registrada{historial.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                  <span className="text-[11px] font-semibold text-white/90">{historial.length} entrada{historial.length !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+              <div className="bg-card px-5 pt-4 pb-2">
                 <HistorialTimeline entries={historial} />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      {}
       <ConfirmModal
         open={showAprobarModal}
         onClose={() => setShowAprobarModal(false)}
@@ -1080,6 +1212,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const [pendientesFirmaCount, setPendientesFirmaCount] = useState(0)
   const [solicitudesCount, setSolicitudesCount] = useState(0)
   const [refreshSignal, setRefreshSignal] = useState(0)
+  const loadGenRef  = useRef(0)
+  const hasDataRef  = useRef(false)
   const [loading,        setLoading]        = useState(true)
   const [error,          setError]          = useState<string | null>(null)
   const [guardando,      setGuardando]      = useState(false)
@@ -1097,8 +1231,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const [filterRegimen, setFilterRegimen] = useState("todos")
 
   const cargar = useCallback(async () => {
-    setLoading(true); setError(null)
+    if (!hasDataRef.current) setLoading(true)
+    setError(null)
     setRefreshSignal(v => v + 1)
+    const gen = ++loadGenRef.current
     try {
       const userId = (user as any)?.id ?? ""
       const url = filtro === 1 && userId
@@ -1106,12 +1242,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         : `/api/filtro?filtro=${filtro}&userId=${userId}`
       const res  = await fetch(url)
       const json = await res.json()
+      if (gen !== loadGenRef.current) return
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar"); return }
       setSolicitudes(json.data ?? [])
+      hasDataRef.current = true
       if (filtro === 3) {
         fetch("/api/solicitudes-seguimiento", { cache: "no-store" })
           .then(r => r.json())
           .then(j => {
+            if (gen !== loadGenRef.current) return
             if (!j.ok) return
             const visibles = (j.data ?? []).filter((s: any) =>
               ESTADOS_VISIBLES_EMISION.has((s.estado ?? "").toLowerCase())
@@ -1120,14 +1259,12 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
           })
           .catch(() => {})
       }
-    } catch { setError("Error de conexión al servidor") }
-    finally { setLoading(false) }
+    } catch { if (gen === loadGenRef.current) setError("Error de conexión al servidor") }
+    finally { if (gen === loadGenRef.current) setLoading(false) }
   }, [filtro, user])
 
   useEffect(() => { cargar() }, [cargar])
-
-  // Para la bandeja de Emisor: precargar el conteo de la vista global "Solicitudes"
-  // (todas las que han ingresado al flujo) para mostrarlo en la tab sin tener que abrirla.
+  useRealtime(["filtro"], cargar)
   useEffect(() => {
     if (filtro !== 3) return
     let aborted = false
@@ -1143,8 +1280,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       .catch(() => {})
     return () => { aborted = true }
   }, [filtro])
-
-  // Precargar conteo de "Pendientes de firma" para todas las bandejas (sin tener que abrir la tab).
   useEffect(() => {
     const userId = (user as any)?.id ?? ""
     if (!userId) return
@@ -1156,9 +1291,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         if (aborted || !json.ok) return
         const procesos = json.procesos ?? []
         const count = procesos.filter((p: any) => {
-          // Caso (b): emisor que ya firmó, falta sellar/emitir
           if (bandejaActual === "emision" && p.pendiente_emision_por_mi) return true
-          // Caso (a): es mi turno de firmar
           if (!p.mi_firmante_pendiente || p.mi_firmante_pendiente.bandeja !== bandejaActual) return false
           const miFirmante = p.firmantes.find((f: any) => f.id === p.mi_firmante_pendiente.id)
           if (!miFirmante) return false
@@ -1187,10 +1320,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? "Error al aprobar"); return }
-      setSolicitudes(prev =>
-        prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
-      )
       setSelectedId(null)
+      void cargar()
     } catch { alert("Error de conexión al aprobar") }
     finally { setGuardando(false); setAprobarTarget(null) }
   }, [filtro, user])
@@ -1211,11 +1342,9 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? "Error al observar"); return }
-      setSolicitudes(prev =>
-        prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
-      )
       setSelectedId(null); setObservarTarget(null)
       setActiveTab("observadas")
+      void cargar()
     } catch { alert("Error de conexión al observar") }
     finally { setGuardando(false) }
   }, [filtro, user])
@@ -1234,13 +1363,13 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { alert(json.error ?? "Error al aceptar"); return }
+      // Update state so the row moves from "Asignadas" tab to "En revisión" tab
       setSolicitudes(prev =>
-        prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
+        prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? "Aceptado por Revisor" } : s)
       )
     } catch { alert("Error de conexión al aceptar") }
     finally { setGuardando(false) }
   }, [user])
-
   const handleAsignarRevisor = useCallback(async (id: string, revisorId: string) => {
     setGuardando(true)
     try {
@@ -1284,8 +1413,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const filtered = useMemo(() =>
     solicitudes
       .filter(s => {
-        if (activeTab !== "todas") return classifySolicitud(s, filtro) === activeTab
-        if (filtro === 2) return classifySolicitud(s, filtro) !== "pendientes_asignacion"
+        const tab = classifySolicitud(s, filtro)
+        if (filtro === 3 && tab === "todas") return false
+        if (activeTab !== "todas") return tab === activeTab
+        if (filtro === 2) return tab !== "pendientes_asignacion"
         return true
       })
       .filter(s => {
@@ -1342,10 +1473,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
               : "Gestiona la emisión de las solicitudes, realizando la dictaminación final y la generación de dictámenes u opiniones técnicas."}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={cargar} disabled={loading} className="gap-1.5">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Actualizar
-        </Button>
       </div>
 
       {error && (
@@ -1357,9 +1484,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
           </CardContent>
         </Card>
       )}
-
-
-
 
       <FilterTabs
         value={activeTab}
@@ -1458,28 +1582,36 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                         <div className="flex flex-col gap-1">
                             {filtro === 2 && tab === "pendientes_asignacion" && sol.revisorAsignado ? (
                               <span
-                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                                style={{ backgroundColor: "#0E7490", color: "#FFFFFF" }}
+                                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+                                style={{ backgroundColor: "#0E749018", color: "#0E7490" }}
                               >
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#0E7490]" />
                                 Pendiente de aceptación
                               </span>
                             ) : (
                               <span
-                                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                                style={config.badgeStyle}
+                                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+                                style={{ backgroundColor: `${(config.badgeStyle.backgroundColor as string)}18`, color: config.badgeStyle.backgroundColor as string }}
                               >
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: config.badgeStyle.backgroundColor as string }} />
                                 {config.label}
+                              </span>
+                            )}
+                            {((filtro === 1 && sol.estado.toLowerCase() === "observado por validacion final") ||
+                              (filtro === 2 && sol.estado.toLowerCase().includes("observado por emisor"))) && (
+                              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit" style={{ backgroundColor: "#BE185D18", color: "#BE185D" }}>
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#BE185D]" />
+                                Observada
                               </span>
                             )}
                             {sol.reingresoCount > 0 && (
                               <span className="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent-foreground">
-                                Reingreso #{sol.reingresoCount}
+                                {ordinalRegreso(sol.reingresoCount)}
                               </span>
                             )}
                           </div>
                         </td>
 
-                        {}
                         <td className="px-4 py-3 font-medium text-card-foreground">
                           <div className="flex flex-col gap-1">
                             {sol.folioRecepcion
@@ -1488,23 +1620,20 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                             }
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs max-w-[180px]">
+                        <td className="px-4 py-3 text-muted-foreground text-xs max-w-[180px] break-words">
                           <span className="line-clamp-2">{formatRegimen(sol._raw?.regimen)}</span>
                         </td>
 
                         {}
-                        <td className="px-4 py-3 text-muted-foreground text-xs">{sol.secretaria}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs break-words max-w-[200px]">{sol.secretaria}</td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
                           {sol.fechaRecepcionDO
-                            ? new Date(sol.fechaRecepcionDO).toLocaleDateString("es-MX")
+                            ? (() => { const [y,m,d] = sol.fechaRecepcionDO!.split("-"); return new Date(+y,+m-1,+d).toLocaleDateString("es-MX") })()
                             : "---"}
                         </td>
                         <td className="px-4 py-3">
-                          {sol.lastObservedStage ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs text-card-foreground">Filtro {sol.lastObservedStage}</span>
-                              <span className="text-[10px] text-muted-foreground">{sol.lastObservedDate}</span>
-                            </div>
+                          {sol.lastObservedDate ? (
+                            <span className="text-xs text-card-foreground">{sol.lastObservedDate}</span>
                           ) : (
                             <span className="text-xs text-muted-foreground">---</span>
                           )}
@@ -1574,7 +1703,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                 <FileSearch className="h-4 w-4" />Revisar
                               </Button>
                             )}
-                            {}
                           </div>
                         </td>
                         )}
@@ -1632,4 +1760,3 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
     </PageLayout>
   )
 }
-

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { writeFile, unlink } from "fs/promises"
 import path from "path"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
+
+const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
 const ETAPAS_VALIDAS = ["uefa", "emision"] as const
 type Etapa = (typeof ETAPAS_VALIDAS)[number]
@@ -103,10 +106,10 @@ export async function POST(req: NextRequest) {
       try {
         await unlink(path.join(process.cwd(), "public", previo.archivo.replace(/^\//, "")))
       } catch {
-        // archivo previo ya no existe; ignorar
       }
     }
 
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({ ok: true, sellado: data })
   } catch (error: any) {
     console.error("[POST /api/documento-sellado]", error)
@@ -141,7 +144,6 @@ export async function DELETE(req: NextRequest) {
     try {
       await unlink(path.join(process.cwd(), "public", existente.archivo.replace(/^\//, "")))
     } catch {
-      // archivo físico ya no existe
     }
 
     return NextResponse.json({ ok: true })

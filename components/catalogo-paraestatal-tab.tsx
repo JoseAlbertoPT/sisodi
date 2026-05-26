@@ -140,7 +140,7 @@ function OrganoRow({
           onDragOver={(e) => onDragOver(e, index)}
           onDrop={() => onDrop(index)}
           className={`flex items-center gap-2 py-3 px-4 rounded-xl border transition-all
-            ${isDragging ? "opacity-40 border-dashed border-emerald-500 bg-emerald-500/5" : "border-border bg-card hover:border-emerald-400/40 hover:shadow-sm"}`}
+            ${isDragging ? "opacity-40 border-dashed border-[#832B56] bg-[#832B56]/5" : "border-border bg-card hover:border-[#832B56]/40 hover:shadow-sm"}`}
         >
           <GripVertical className="h-4 w-4 text-muted-foreground/30 cursor-grab shrink-0" />
           <CollapsibleTrigger asChild>
@@ -153,7 +153,7 @@ function OrganoRow({
             <span className="text-xs text-muted-foreground">{areas.length} area{areas.length !== 1 ? "s" : ""}</span>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 gap-1"
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-[#832B56] hover:bg-[#832B56]/10 gap-1"
               onClick={(e) => { e.stopPropagation(); setAreaNombre(""); setFormError(""); setAddAreaOpen(true) }}>
               <Plus className="h-3.5 w-3.5" /> Agregar area
             </Button>
@@ -178,10 +178,10 @@ function OrganoRow({
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => handleAreaDrop(i)}
                 className={`group flex items-center gap-2 py-2 px-3 rounded-lg border transition-all
-                  ${areaDragging === i ? "opacity-40 border-dashed border-emerald-500" : "border-transparent hover:border-border hover:bg-muted/40"}`}
+                  ${areaDragging === i ? "opacity-40 border-dashed border-[#832B56]" : "border-transparent hover:border-border hover:bg-muted/40"}`}
               >
                 <GripVertical className="h-3.5 w-3.5 text-muted-foreground/30 cursor-grab shrink-0" />
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-[#832B56]/50 shrink-0" />
                 <span className="text-sm flex-1 truncate">{area.nombre}</span>
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary"
@@ -342,12 +342,12 @@ export function CatalogoParaestatalTab() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Landmark className="h-4 w-4 text-emerald-500" />
+                <Landmark className="h-4 w-4 text-[#832B56]" />
                 Administracion Publica Paraestatal
               </CardTitle>
               <CardDescription>{!loading && `${organismos.length} organismos · ${totalAreas} areas`}</CardDescription>
             </div>
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setNewOrgNombre(""); setFormError(""); setAddOrgOpen(true) }}>
+            <Button size="sm" className="bg-[#832B56] hover:bg-[#6B2347] text-white" onClick={() => { setNewOrgNombre(""); setFormError(""); setAddOrgOpen(true) }}>
               <Plus className="h-4 w-4 mr-1" /> Agregar organismo
             </Button>
           </div>
@@ -393,7 +393,7 @@ export function CatalogoParaestatalTab() {
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
+            <Button className="bg-[#832B56] hover:bg-[#6B2347]" onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Crear
             </Button>
           </DialogFooter>

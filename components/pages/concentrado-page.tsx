@@ -124,7 +124,7 @@ export function ConcentradoPage() {
               <tbody>
                 {concentradoData.map((row) => (
                   <tr key={row.secretaria} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-card-foreground">{row.secretaria}</td>
+                    <td className="px-4 py-3 font-medium text-card-foreground break-words max-w-[220px]">{row.secretaria}</td>
                     <td className="px-4 py-3 text-right text-card-foreground font-semibold">{row.total}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{row.emitidas}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{row.proceso}</td>

@@ -58,7 +58,6 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
   const [emitiendo, setEmitiendo] = useState(false)
   const cargoInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Si se reabre el modal desde "pendiente de emitir", asegurar arrancar en paso 2
   useEffect(() => {
     if (open && iniciarEnSellado) setFirmaCompleta(true)
   }, [open, iniciarEnSellado])
@@ -118,19 +117,16 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
           firmanteId, usuarioId,
           cargoFirmante: cargo.trim(),
           certificado: cerB64, clavePrivada: keyB64, fraseClavePrivada: password,
-          // Para emisor con sellado pendiente, no auto-emite — se hace en paso 2.
           skipEmit: requiereSellado,
         }),
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al firmar"); return }
 
-      // Si es emisor con sellado pendiente: paso 2 (sellado + emitir).
       if (requiereSellado) {
         setFirmaCompleta(true)
         return
       }
-      // Para revisor / validador: cerramos directo.
       setExito(true)
       setTimeout(() => { onFirmado?.(); reset(); onClose() }, 1500)
     } catch (e: any) {
@@ -220,7 +216,6 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
             </p>
           </div>
         ) : firmaCompleta ? (
-          // ── PASO 2 (solo emisor con sellado): firma OK → sellar y emitir ──
           <div className="flex flex-col gap-4 pt-2">
             <div className="rounded-md border border-secondary/40 bg-secondary/10 p-3 flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
@@ -266,7 +261,6 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
             </div>
           </div>
         ) : (
-          // ── PASO 1: firma electrónica ──
           <form onSubmit={handleSubmit} className="flex flex-col gap-3 pt-2">
             {esEmisor && (
               <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-2">

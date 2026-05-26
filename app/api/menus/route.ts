@@ -13,6 +13,7 @@ interface MenuNode {
 
 export async function GET(req: NextRequest) {
   const rolNombre = req.nextUrl.searchParams.get("rol")
+  const userId    = req.nextUrl.searchParams.get("userId")
   if (!rolNombre) {
     return NextResponse.json({ error: "Falta parámetro 'rol'" }, { status: 400 })
   }
@@ -26,7 +27,8 @@ export async function GET(req: NextRequest) {
 
     const rolId: number = rolRes.rows[0].id
 
-    const menuRes = await pool.query(
+    // Query 1: menus from role (always)
+    const rolMenuRes = await pool.query(
       `SELECT DISTINCT m.id, m.nombre, m.ruta, m.orden, m.activo, m.icono, m.key, m.parent_id
        FROM menu m
        INNER JOIN rol_menu rm ON rm.menu_id = m.id
@@ -35,23 +37,46 @@ export async function GET(req: NextRequest) {
       [rolId]
     )
 
-    const assignedIds = new Set<number>(menuRes.rows.map((r: any) => r.id))
+    // Query 2: extra menus for this specific user (optional — ignore if table missing)
+    let userMenuRows: any[] = []
+    if (userId) {
+      try {
+        const userMenuRes = await pool.query(
+          `SELECT DISTINCT m.id, m.nombre, m.ruta, m.orden, m.activo, m.icono, m.key, m.parent_id
+           FROM menu m
+           INNER JOIN usuario_menu um ON um.menu_id = m.id
+           WHERE um.usuario_id = $1 AND m.activo = true`,
+          [userId]
+        )
+        userMenuRows = userMenuRes.rows
+      } catch {
+        // usuario_menu may not exist yet — silently ignore
+      }
+    }
 
-    const parentIds = menuRes.rows
-      .filter((r: any) => r.parent_id && !assignedIds.has(r.parent_id))
-      .map((r: any) => r.parent_id as number)
+    // Combine, deduplicating by id
+    const seenIds = new Set<number>()
+    const combined: any[] = []
+    for (const row of [...rolMenuRes.rows, ...userMenuRows]) {
+      if (!seenIds.has(row.id)) { seenIds.add(row.id); combined.push(row) }
+    }
 
-    let allRows = menuRes.rows
+    // Fetch parent sections for any menu whose parent isn't already included
+    const parentIds = combined
+      .filter((r) => r.parent_id && !seenIds.has(r.parent_id))
+      .map((r) => r.parent_id as number)
 
+    let allRows = combined
     if (parentIds.length > 0) {
       const parentRes = await pool.query(
         `SELECT id, nombre, ruta, orden, activo, icono, key, parent_id
          FROM menu WHERE id = ANY($1::int[]) AND activo = true`,
         [parentIds]
       )
-      allRows = [...parentRes.rows, ...menuRes.rows]
+      allRows = [...parentRes.rows, ...combined]
     }
 
+    // Build tree
     const nodeMap = new Map<number, MenuNode>()
     for (const m of allRows) {
       if (!nodeMap.has(m.id)) {

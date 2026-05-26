@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,7 +13,7 @@ import { PageLayout } from "@/components/page-layout"
 import {
   Search, Eye, Edit3, Download, FileCheck,
   ChevronDown, ChevronRight, Info, History, FileText,
-  ArrowLeft, AlertTriangle, Lock, Loader2,
+  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
@@ -38,6 +39,8 @@ import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { useRealtime } from "@/hooks/use-realtime"
 type UrgTab =
   | "Borradores"
   | "En aprobación"
@@ -150,6 +153,8 @@ interface UrgSolicitud {
   observacionFecha?: string
   observacionUsuario?: string
   observacionRonda: number
+  reingresoCount: number
+  todasObservaciones: { estado: string; fecha: string; usuario: string; comentario: string }[]
   numeroDictamen?: string
   fechaDictamen?: string
   regimen: RegimenPeriodo
@@ -160,7 +165,6 @@ interface UrgSolicitud {
 function FoliosCell({ sol }: { sol: UrgSolicitud }) {
   const efectivaTab = getTab(sol.estado)
   const entries: { label: string; value: string; highlight?: boolean }[] = []
-
   if (efectivaTab === "Borradores") {
     entries.push({ label: "Borrador", value: "—", highlight: false })
   } else if (sol.folioRecepcion) {
@@ -196,16 +200,25 @@ function FoliosCell({ sol }: { sol: UrgSolicitud }) {
     </div>
   )
 }
-
+function ordinalRegreso(n: number): string {
+  if (n === 1) return "1er Regreso"
+  if (n === 2) return "2do Regreso"
+  if (n === 3) return "3er Regreso"
+  return `${n}° Regreso`
+}
 function getFolioHeader(_tab: UrgTab): string {
   return "Folios"
 }
-
 function getTab(estado: UrgEstado): UrgTab {
   const n = (estado ?? "").toLowerCase()
   if (n === "borrador" || n === "en captura") return "Borradores"
   if (n === "emitido") return "Emitidas"
-  if (n.includes("observad") || n.includes("devuelta por do")) return "Observadas / Devueltas"
+  if (
+    (n.includes("observado por validacion") && !n.includes("final")) ||
+    n.includes("observada por uefa") || n.includes("observado por uefa") ||
+    n.includes("observado por revisor") || n.includes("observado por do") ||
+    n.includes("devuelta por do") || n.includes("observado do filtro")
+  ) return "Observadas / Devueltas"
   if (n.includes("en revision") || n.includes("en validacion final") ||
       n === "pendiente do" || n.includes("pendiente firma") ||
       n === "aprobado por revisor" || n === "aceptado por revisor" || n === "en proceso do" || n === "aprobado")
@@ -225,90 +238,84 @@ function getObservador(estado: UrgEstado): string | null {
   if (n.includes("observado por emisor")) return "Emision DGDO"
   return null
 }
-
 function getSubEstadoDGDO(estado: UrgEstado): string | null {
   const n = (estado ?? "").toLowerCase()
-  if (n === "pendiente do" || n.includes("en revision revisor") || n === "aprobado por revisor" ||
-      n.includes("en revision do"))
+  if (n === "pendiente do" || n.includes("en revision do"))
     return "En Revisión"
-  if (n.includes("en validacion final") || n === "aprobado")
-    return "En Validacion DGDO"
-  if (n.includes("en revision emisor") || n.includes("pendiente firma dictamen"))
+  if (n.includes("pendiente firma dictamen"))
     return "En Emisión"
   return null
 }
-
 function estadoBadge(estado: UrgEstado) {
   const n = (estado ?? "").toLowerCase()
-  let style: React.CSSProperties = { backgroundColor: "#e2e8f0", color: "#64748b" }
+  let color = "#64748b"
   let label: string = estado ?? "—"
-
   if (n === "borrador" || n === "en captura") {
-    style = { backgroundColor: "#94a3b8", color: "#FFFFFF" }
-    label = "Borrador"
+    color = "#94a3b8"; label = "Borrador"
   } else if (
     n.includes("en validacion justificaciones") || n.includes("enviada a validacion") ||
     n.includes("pendiente firma justificacion")
   ) {
-    style = { backgroundColor: "#2563EB", color: "#FFFFFF" }
-    label = "En Aprobación"
+    color = "#2563EB"; label = "En Aprobación"
   } else if (n.includes("observada por uefa") || n.includes("observado por uefa") ||
     (n.includes("observado por validacion") && !n.includes("final"))) {
-    style = { backgroundColor: "#832B56", color: "#FFFFFF" }
-    label = "Observada por Validacion UEFA"
+    color = "#832B56"; label = "Obs. UEFA"
   } else if (n.includes("observado por revisor")) {
-    style = { backgroundColor: "#9D174D", color: "#FFFFFF" }
-    label = "Observada por Revision DGDO"
+    color = "#9D174D"; label = "Obs. Revisión"
   } else if (n.includes("observado por validacion final")) {
-    style = { backgroundColor: "#BE185D", color: "#FFFFFF" }
-    label = "Observada por Validacion DGDO"
+    color = "#BE185D"; label = "Obs. Validación"
   } else if (n.includes("observado por emisor")) {
-    style = { backgroundColor: "#DB2777", color: "#FFFFFF" }
-    label = "Observada por Emision DGDO"
+    color = "#DB2777"; label = "Obs. Emisión"
   } else if (
     n.includes("devuelta por do") || n.includes("observado do filtro") || n.includes("observado por do")
   ) {
-    style = { backgroundColor: "#EA580C", color: "#FFFFFF" }
-    label = "Devuelta por DO"
+    color = "#EA580C"; label = "Devuelta por DO"
   } else if (n.includes("en revision revisor") || n === "aprobado por revisor" || n === "aceptado por revisor") {
-    style = { backgroundColor: "#0F766E", color: "#FFFFFF" }
-    label = "En Revisión"
+    color = "#0F766E"; label = "En Revisión"
   } else if (n.includes("en validacion final") || n === "aprobado") {
-    style = { backgroundColor: "#7C3AED", color: "#FFFFFF" }
-    label = "En Validación"
+    color = "#7C3AED"; label = "En Validación"
   } else if (n.includes("en revision emisor")) {
-    style = { backgroundColor: "#0891B2", color: "#FFFFFF" }
-    label = "En Emisión"
+    color = "#0891B2"; label = "En Emisión"
   } else if (n.includes("pendiente firma dictamen")) {
-    style = { backgroundColor: "#6D28D9", color: "#FFFFFF" }
-    label = "Pendiente Firma"
+    color = "#6D28D9"; label = "Pendiente Firma"
   } else if (n.includes("en revision do") || n === "en proceso do" || n === "pendiente do") {
-    style = { backgroundColor: "#4F46E5", color: "#FFFFFF" }
-    label = "En Proceso DGDO"
+    color = "#4F46E5"; label = "En Proceso DGDO"
   } else if (n === "emitido") {
-    style = { backgroundColor: "#283C2A", color: "#FFFFFF" }
-    label = "Emitido"
+    color = "#15803d"; label = "Emitido"
   }
-
   return (
-    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" style={style}>
+    <span
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+      style={{ backgroundColor: `${color}18`, color }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
       {label}
     </span>
   )
 }
 
+function esJsonEdicion(comentario: string | null | undefined): boolean {
+  if (!comentario) return false
+  const t = comentario.trim()
+  if (!t.startsWith("{")) return false
+  try { const p = JSON.parse(t); return p?.tipo === "edicion" } catch { return false }
+}
+
 function normalizarComentario(comentario: string | null | undefined): string | null | undefined {
   if (!comentario) return comentario
+  if (esJsonEdicion(comentario)) return null
   if (/ \| \d+\./.test(comentario)) return comentario.split(" | ").join("\n")
   return comentario
 }
 
 function mapApiItem(item: any): UrgSolicitud {
   const reversedHistorial = [...(item.historial ?? [])].reverse()
-  const lastObsEntry = reversedHistorial.find((h: any) => h.comentario)
-  // Count how many observation rounds have occurred (historial entries with comentario)
-  const observacionRonda = (item.historial ?? []).filter((h: any) => !!h.comentario).length
-  // Only surface the observation if no newer historial entry exists after it
+  const lastObsEntry = reversedHistorial.find(
+    (h: any) => h.comentario && !esJsonEdicion(h.comentario) && /observad/i.test(h.accion ?? "")
+  )
+  const observacionRonda = (item.historial ?? []).filter(
+    (h: any) => !!h.comentario && !esJsonEdicion(h.comentario)
+  ).length
   const obsEsLaUltima = !!(lastObsEntry && lastObsEntry === reversedHistorial[0])
   const lastObservacion = obsEsLaUltima
     ? (normalizarComentario(lastObsEntry?.comentario) as string | undefined)
@@ -341,7 +348,6 @@ function mapApiItem(item: any): UrgSolicitud {
       descripcion: h.accion,
     })),
   }
-
   const bitacora: BitacoraEntry[] =
     bitacoraAdjuntos.eventos.length > 0
       ? [bitacoraHistorial, bitacoraAdjuntos]
@@ -349,8 +355,13 @@ function mapApiItem(item: any): UrgSolicitud {
   const importeBruto = item.importe_bruto != null
     ? `$${Number(item.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
     : "—"
-  const fmt = (d: string | null | undefined) =>
-    d ? new Date(d).toISOString().slice(0, 10) : ""
+  const fmt = (d: string | null | undefined) => {
+    if (!d) return ""
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(d)
+      ? (() => { const [y, m, day] = d.split("-").map(Number); return new Date(y, m - 1, day) })()
+      : new Date(d)
+    return isNaN(parsed.getTime()) ? "" : parsed.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })
+  }
   const regimen = (item.regimen ?? "honorarios") as RegimenPeriodo
   const _MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
   const periodoAplicacion = item.periodo
@@ -434,6 +445,21 @@ function mapApiItem(item: any): UrgSolicitud {
     observacionFecha:     lastObservacionFecha,
     observacionUsuario:   lastObservacionUsuario,
     observacionRonda,
+    reingresoCount:     item.reingresoCount ?? 0,
+    todasObservaciones: obsEsLaUltima
+      ? (item.historial ?? [])
+          .filter((h: any, idx: number) => {
+            if (!h.comentario || !/observad/i.test(h.accion ?? "")) return false
+            const after = (item.historial ?? []).slice(idx + 1)
+            return !after.some((h2: any) => !/observad/i.test(h2.accion ?? ""))
+          })
+          .map((h: any) => ({
+            estado:     h.accion ?? "—",
+            fecha:      h.fecha ? new Date(h.fecha).toISOString().replace("T", " ").slice(0, 16) : "",
+            usuario:    typeof h.usuario === "string" ? h.usuario : (h.usuario?.nombre ?? "Sistema"),
+            comentario: normalizarComentario(h.comentario) as string,
+          }))
+      : [],
     numeroDictamen:       item.dictamen?.folio        ?? undefined,
     fechaDictamen:        item.dictamen?.fecha_emision
       ? fmt(item.dictamen.fecha_emision)
@@ -443,6 +469,7 @@ function mapApiItem(item: any): UrgSolicitud {
       usuario:        h.usuario,
       estadoAnterior: h.estado_anterior ?? null,
       estadoNuevo:    h.accion ?? "—",
+      comentario:     h.comentario ?? null,
     })),
     bitacora,
   }
@@ -479,12 +506,12 @@ function SectionCard({
 function toList(val: string | string[]): string[] {
   if (Array.isArray(val)) return val.filter(Boolean)
   if (!val) return []
-  return val.split(/[\n,•·]+/).map((s) => s.trim()).filter(Boolean)
+  return val.split(/[\n\r•·]+/).map((s) => s.trim()).filter(Boolean)
 }
-function ReadOnlyList({ label, value, sub }: { label: string; value: string | string[]; sub?: string }) {
+function ReadOnlyList({ label, value, sub, noScroll }: { label: string; value: string | string[]; sub?: string; noScroll?: boolean }) {
   const items = toList(value)
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
         {sub && (
           <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
@@ -494,13 +521,16 @@ function ReadOnlyList({ label, value, sub }: { label: string; value: string | st
       {items.length === 0 ? (
         <span className="text-sm text-muted-foreground italic px-3">—</span>
       ) : (
-        <div className="flex flex-col gap-0.5">
+        <div
+          className={noScroll ? "flex flex-col gap-0.5" : "scroll-thin flex flex-col gap-0.5"}
+          style={noScroll ? undefined : { maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
+        >
           {items.map((item, idx) => (
-            <div key={idx} className="flex items-center gap-2 rounded-lg px-3 py-1.5">
+            <div key={idx} className="flex items-start gap-2 rounded-lg px-3 py-1 min-w-0">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
                 {idx + 1}
               </span>
-              <span className="text-sm text-card-foreground">{item}</span>
+              <span className="text-sm text-card-foreground" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{item}</span>
             </div>
           ))}
         </div>
@@ -513,12 +543,11 @@ function ReadOnlyTextarea({ label, value }: { label: string; value: string }) {
     <div className="flex flex-col gap-1 col-span-2">
       <span className="text-xs text-muted-foreground">{label}</span>
       {value
-        ? <p className="text-sm text-card-foreground whitespace-pre-line leading-relaxed border border-border rounded-md px-3 py-2 bg-muted/30">{value}</p>
+        ? <p className="scroll-thin text-sm text-card-foreground whitespace-pre-line leading-relaxed border border-border rounded-md px-3 py-2 bg-muted/30" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden" }}>{value}</p>
         : <span className="text-sm text-muted-foreground italic">—</span>}
     </div>
   )
 }
-
 function ObservacionTimeline({ comentario }: { comentario: string }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
@@ -559,6 +588,63 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
     </div>
   )
 }
+
+function DevolucionObs({ comentario }: { comentario: string }) {
+  const lineas = comentario.split("\n").filter(Boolean)
+  const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
+  const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join("\n").trim()
+  const tieneChecks   = itemsChecklist.length > 0
+  const tieneGeneral  = comentarioGeneral.length > 0
+  return (
+    <div className="flex flex-col gap-0">
+      {tieneChecks && (
+        <div className="flex flex-col gap-0">
+          {itemsChecklist.map((linea, idx) => {
+            const [titulo, obs] = linea.split("::")
+            const numMatch = titulo.match(/^(\d+)\./)
+            const num   = numMatch ? numMatch[1] : String(idx + 1)
+            const label = titulo.replace(/^\d+\.\s*/, "").trim()
+            const isLast = idx === itemsChecklist.length - 1
+            return (
+              <div key={idx} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/50 bg-[#832B56]/5 text-[10px] font-bold text-[#832B56]">
+                    {num}
+                  </div>
+                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[#832B56]/15 my-0.5" />}
+                </div>
+                <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
+                  <span className="text-xs font-semibold text-[#832B56] leading-snug">{label}</span>
+                  {obs?.trim() && (
+                    <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                      {obs.trim()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {tieneChecks && tieneGeneral && (
+        <div className="flex gap-3">
+          <div className="flex flex-col items-center">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/30 bg-white text-[10px] text-[#832B56]/50">
+              <span className="text-[8px]">✎</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-0.5 flex-1 pb-0">
+            <span className="text-[10px] font-semibold text-[#832B56]/60 uppercase tracking-wide">Observación general</span>
+            <p className="text-xs text-[#832B56]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+          </div>
+        </div>
+      )}
+      {!tieneChecks && tieneGeneral && (
+        <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+      )}
+    </div>
+  )
+}
 function ParsedObservacion({ comentario, borderColor = "orange" }: { comentario: string; borderColor?: "orange" | "red" }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const esChecklist = lineas.some(l => /^\d+\.\s.+::/.test(l))
@@ -595,22 +681,18 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
     <div className="flex flex-col gap-4">
       <SectionCard num="I" title="Datos Generales">
         <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Secretaría / Dependencia / Organismo"                                value={solicitud.secretaria} />
+          <ReadOnlyField label="Secretaría / Dependencia / Organismo"   value={solicitud.secretaria} />
           <ReadOnlyField label="Unidad Administrativa de Adscripción"   value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
           <ReadOnlyField label="Unidad Responsable del Gasto"           value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
           <ReadOnlyField label="Número de Prestadores de Servicios"     value={solicitud.numeroPrestadores} />
           <ReadOnlyField label="Programa o Proyecto"                    value={solicitud.programaProyecto} />
-          <ReadOnlyField label="Tipo de Actividad"                    value={solicitud.tipoActividades} />
+          <ReadOnlyField label="Tipo de Actividad"                      value={solicitud.tipoActividades} />
           <ReadOnlyField label="Régimen de Contratación"                value={formatRegimen(solicitud.regimen)} />
-         {}
           <ReadOnlyField label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                       value={solicitud.vigenciaFin} />
           <ReadOnlyField label="Importe Bruto"                          value={solicitud.importeBruto} />
         </div>
       </SectionCard>
-
-     {}
-
       <SectionCard title="Tabulador — Nivel y Categoría">
         <div className="grid gap-4 md:grid-cols-2">
           <ReadOnlyField label="Nivel"     value={solicitud.nivelTabulador     || "—"} />
@@ -632,23 +714,82 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
       </SectionCard>
 
       <SectionCard num="V" title="Perfil">
-        <div className="grid gap-5 md:grid-cols-2">
-          <ReadOnlyList sub="II.1" label="Competencias Administrativas" value={solicitud.compAdm} />
-          <ReadOnlyList sub="II.2" label="Competencias Técnicas"        value={solicitud.compTec} />
-          <ReadOnlyList sub="II.3" label="Competencias Sociales"        value={solicitud.compSoc} />
-          <ReadOnlyList label="Escolaridad Mínima"    value={solicitud.escolaridad} />
-          <ReadOnlyList label="Áreas de Experiencia"  value={solicitud.areasExp} />
-          <ReadOnlyList label="Valores"               value={solicitud.valores} />
+        <div className="flex items-start gap-4">
+          <div className="flex flex-col gap-4 flex-1">
+            <ReadOnlyList noScroll label="Escolaridad Mínima"                      value={solicitud.escolaridad} />
+            <ReadOnlyList noScroll sub="II.2" label="Competencias Técnicas"       value={solicitud.compTec} />
+            <ReadOnlyList noScroll label="Valores"                                 value={solicitud.valores} />
+          </div>
+          <div className="flex flex-col gap-4 flex-1">
+            <ReadOnlyList noScroll sub="II.1" label="Competencias Administrativas" value={solicitud.compAdm} />
+            <ReadOnlyList noScroll sub="II.3" label="Competencias Sociales"        value={solicitud.compSoc} />
+            <ReadOnlyList noScroll label="Áreas de Experiencia"                    value={solicitud.areasExp} />
+          </div>
         </div>
       </SectionCard>
-
       <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
         <AdjuntosSection bitacora={solicitud.bitacora} />
       </SectionCard>
     </div>
   )
 }
-
+function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
+  const condiciones = [
+    { label: "Cambio de domicilio", value: solicitud.condicionCambioDomicilio },
+    { label: "Horario especial",    value: solicitud.condicionHorario },
+    { label: "Viajar",              value: solicitud.condicionViajar },
+  ]
+  const riesgos = [
+    { label: "Caídas",       value: solicitud.riesgoCaidas },
+    { label: "Mutilaciones", value: solicitud.riesgoMutilaciones },
+    { label: "Golpes",       value: solicitud.riesgoGolpes },
+    { label: "Otros",        value: solicitud.riesgoOtros },
+  ]
+  const noBool = (v: boolean | null | undefined) =>
+    v ? <span className="text-secondary font-semibold">Sí</span> : <span className="text-muted-foreground">No</span>
+  const nivel = (v: string | null | undefined) =>
+    v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="overflow-hidden rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-muted/50">
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Condición</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Aplica</th>
+            </tr>
+          </thead>
+          <tbody>
+            {condiciones.map((c, i) => (
+              <tr key={c.label} className={`border-t border-border/60 ${i % 2 === 0 ? "bg-card" : "bg-muted/20"}`}>
+                <td className="px-3 py-2 text-sm text-card-foreground">{c.label}</td>
+                <td className="px-3 py-2 text-center">{noBool(c.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="overflow-hidden rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-muted/50">
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Riesgo</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Nivel</th>
+            </tr>
+          </thead>
+          <tbody>
+            {riesgos.map((r, i) => (
+              <tr key={r.label} className={`border-t border-border/60 ${i % 2 === 0 ? "bg-card" : "bg-muted/20"}`}>
+                <td className="px-3 py-2 text-sm text-card-foreground">{r.label}</td>
+                <td className="px-3 py-2 text-center">{nivel(r.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
 function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
   return (
     <div className="flex flex-col gap-4">
@@ -669,54 +810,46 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Vigencia Término"                      value={solicitud.vigenciaFin} />
         </div>
       </SectionCard>
-
       <SectionCard num="II" title="Tabulador">
         <div className="grid gap-4 md:grid-cols-2">
           <ReadOnlyField label="Nivel de Tabulador"  value={solicitud.nivelTabulador} />
           <ReadOnlyField label="Categoría Tabulador" value={solicitud.categoriaTabulador} />
         </div>
       </SectionCard>
-
-
-
       <SectionCard num="III" title="Objeto del Nombramiento">
         <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
       </SectionCard>
-
       <SectionCard num="IV" title="Actividades a Realizar">
         <ReadOnlyList label="Actividades" value={solicitud.actividades} />
       </SectionCard>
-
       <SectionCard num="V" title="Responsabilidades">
         <ReadOnlyList label="Responsabilidades" value={solicitud.responsabilidades} />
       </SectionCard>
-
       {solicitud.marcoNormativo.length > 0 && (
         <SectionCard num="VI" title="Marco Normativo">
           <ReadOnlyList label="" value={solicitud.marcoNormativo} />
         </SectionCard>
       )}
-
-      {solicitud.condicionesRiesgos.length > 0 && (
-        <SectionCard num="VII" title="Condiciones y Riesgos">
-          <ReadOnlyList label="" value={solicitud.condicionesRiesgos} />
-        </SectionCard>
-      )}
-
+      <SectionCard num="VII" title="Condiciones y Riesgos">
+        <SeccionCondicionesRiesgos solicitud={solicitud} />
+      </SectionCard>
       {solicitud.resguardoActivos && (
         <SectionCard num="VIII" title="Resguardo Personalizado de Activos">
           <ReadOnlyField label="Resguardo de Activos" value={solicitud.resguardoActivos === "si" ? "Sí" : solicitud.resguardoActivos === "no" ? "No" : solicitud.resguardoActivos} />
         </SectionCard>
       )}
-
       <SectionCard num="IX" title="Perfil">
-        <div className="grid gap-5 md:grid-cols-2">
-          <ReadOnlyList label="Escolaridad Mínima"            value={solicitud.escolaridad} />
-          <ReadOnlyList sub="VIII.1" label="Competencias Administrativas" value={solicitud.compAdm} />
-          <ReadOnlyList sub="VIII.2" label="Competencias Técnicas"        value={solicitud.compTec} />
-          <ReadOnlyList sub="VIII.3" label="Competencias Sociales"        value={solicitud.compSoc} />
-          <ReadOnlyList label="Áreas de Experiencia"          value={solicitud.areasExp} />
-          <ReadOnlyList label="Valores"                       value={solicitud.valores} />
+        <div className="flex items-start gap-4">
+          <div className="flex flex-col gap-4 flex-1">
+            <ReadOnlyList noScroll label="Escolaridad Mínima"                       value={solicitud.escolaridad} />
+            <ReadOnlyList noScroll sub="VIII.2" label="Competencias Técnicas"      value={solicitud.compTec} />
+            <ReadOnlyList noScroll label="Valores"                                  value={solicitud.valores} />
+          </div>
+          <div className="flex flex-col gap-4 flex-1">
+            <ReadOnlyList noScroll sub="VIII.1" label="Competencias Administrativas" value={solicitud.compAdm} />
+            <ReadOnlyList noScroll sub="VIII.3" label="Competencias Sociales"        value={solicitud.compSoc} />
+            <ReadOnlyList noScroll label="Áreas de Experiencia"                      value={solicitud.areasExp} />
+          </div>
         </div>
       </SectionCard>
 
@@ -726,7 +859,6 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
     </div>
   )
 }
-
 function AdjuntosSection({ bitacora }: { bitacora: BitacoraEntry[] }) {
   const adjuntosSection = bitacora.find((b) =>
     b.seccion.toLowerCase().includes("adjunto")
@@ -738,7 +870,6 @@ function AdjuntosSection({ bitacora }: { bitacora: BitacoraEntry[] }) {
       </p>
     )
   }
-
   return (
     <ul className="flex flex-col gap-2">
       {adjuntosSection.eventos.map((ev, i) => (
@@ -806,6 +937,10 @@ function solToEditPayload(sol: UrgSolicitud): EditSolicitudPayload {
       valores:                 sol.valores,
       areasExp:                sol.areasExp,
     },
+    folio:                   sol.folioJustificacion ?? sol.folio,
+    observacionMotivo:       sol.observacionMotivo ?? undefined,
+    reingresoCount:          sol.reingresoCount > 0 ? sol.reingresoCount : undefined,
+    isCapturadorCorrection:  true,
   }
 }
 function formatRegimen(raw: string): string {
@@ -832,7 +967,12 @@ function DetalleView({
   const { user } = useAuth()
   const { getPermisosUsuario, consumirPermiso } = useAutorizaciones()
   const n         = (sol.estado ?? "").toLowerCase()
-  const canEdit   = true
+  const isDevueltaPorUrgObservador =
+    (n.includes("observado por validacion") && !n.includes("final")) ||
+    n.includes("observada por ufa") || n.includes("observado por ufa") ||
+    n.includes("observado por revisor") ||
+    n.includes("observado por do") || n.includes("devuelta por do") || n.includes("observado do filtro")
+  const canEdit   = n === "borrador" || n === "en captura" || isDevueltaPorUrgObservador
   const isEmitido  = n === "emitido"
   const canContinuarCaptura = !isEmitido
   const isReadOnly = false
@@ -850,15 +990,17 @@ function DetalleView({
         (p) => p.regimen === (sol.regimen as string) && p.active && !p.used
       ) ?? null)
     : null
-
   const permisoActivoBorrador = isBorradorFueraDeTiempo ? permisoDisponible : null
-
   const [editingPeriodo,     setEditingPeriodo]     = useState(false)
   const [editingModoSolo,    setEditingModoSolo]    = useState(false)
   const [newPeriodo,         setNewPeriodo]         = useState(sol.periodoAplicacion)
   const [guardandoReenvio,   setGuardandoReenvio]   = useState(false)
   const [showConfirmPeriodo, setShowConfirmPeriodo] = useState(false)
   const [periodoConfirmado,  setPeriodoConfirmado]  = useState(false)
+  const hasObs = sol.todasObservaciones.length > 0 || !!sol.observacionMotivo
+  const [rightTab, setRightTab] = useState<"historial" | "bitacora" | "observaciones">(
+    hasObs ? "observaciones" : "historial"
+  )
 
   const regimenLabel = formatRegimen(sol.regimen)
 
@@ -945,14 +1087,14 @@ function DetalleView({
           {estadoBadge(sol.estado)}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5"
+          <Button size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
             onClick={() => generateJustificacionPDF(sol.id, sol.folioJustificacion || sol.folio)}>
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
-          {canContinuarCaptura && !periodoConfirmado && (
+          {canEdit && !periodoConfirmado && (
             <>
               <Button size="sm"
-                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground gap-1.5"
+                className="gap-1.5 bg-primary hover:bg-primary/90 text-white border-0"
                 onClick={() => onEditSolicitud
                   ? onEditSolicitud(solToEditPayload(sol))
                   : handleDemoAction("Continuar captura")
@@ -977,7 +1119,6 @@ function DetalleView({
           )}
           {isEmitido && (
             <>
-
             </>
           )}
           {isReadOnly && (
@@ -1002,56 +1143,6 @@ function DetalleView({
           </CardContent>
         </Card>
       )}
-
-      {getObservador(sol.estado) === "Validacion UEFA" || getObservador(sol.estado) === "Validacion DGDO" ? (
-        <Card className="border-2 border-[#832B56]/40 shadow-sm">
-          <CardContent className="flex items-start gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-[#832B56] shrink-0 mt-0.5" />
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-sm font-medium text-[#832B56]">
-                  Observación de {getObservador(sol.estado)}
-                </span>
-                {sol.observacionFecha && (
-                  <span className="text-[10px] text-muted-foreground">{sol.observacionFecha}</span>
-                )}
-              </div>
-              {sol.observacionUsuario && (
-                <p className="text-xs text-muted-foreground mt-0.5">Por: {sol.observacionUsuario}</p>
-              )}
-              {sol.observacionMotivo && (
-                <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{sol.observacionMotivo}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {getObservador(sol.estado) !== null &&
-       getObservador(sol.estado) !== "Validacion UEFA" &&
-       getObservador(sol.estado) !== "Validacion DGDO" ? (
-        <Card className="border-2 border-[#832B56]/40 shadow-sm">
-          <CardContent className="flex items-start gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-[#832B56] shrink-0 mt-0.5" />
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-sm font-medium text-[#832B56]">
-                  Devolución — {getObservador(sol.estado)}
-                </span>
-                {sol.observacionFecha && (
-                  <span className="text-[10px] text-muted-foreground">{sol.observacionFecha}</span>
-                )}
-              </div>
-              {sol.observacionUsuario && (
-                <p className="text-xs text-muted-foreground">Por: {sol.observacionUsuario}</p>
-              )}
-              {sol.observacionMotivo && (
-                <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{sol.observacionMotivo}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
 
       {isBorradorFueraDeTiempo && (
         <Card className={`border-2 shadow-sm ${permisoActivoBorrador ? "border-orange-400/50" : "border-destructive/40"}`}>
@@ -1108,7 +1199,7 @@ function DetalleView({
                     </SelectContent>
                   </Select>
                 </div>
-                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90"
+                <Button size="sm" className="bg-secondary hover:bg-secondary/90 text-white"
                   disabled={newPeriodo === sol.periodoAplicacion || (
                     !checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente &&
                     !(permisoActivoBorrador && newPeriodo === permisoActivoBorrador.periodo)
@@ -1139,7 +1230,6 @@ function DetalleView({
           </CardContent>
         </Card>
       )}
-
       <AlertDialog open={showConfirmPeriodo} onOpenChange={setShowConfirmPeriodo}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1210,7 +1300,7 @@ function DetalleView({
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  <Button size="sm" className="bg-secondary hover:bg-secondary/90 text-white"
                     disabled={newPeriodo === sol.periodoAplicacion || (
                       !checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente &&
                       !(permisoDisponible && newPeriodo === permisoDisponible.periodo)
@@ -1233,7 +1323,6 @@ function DetalleView({
           </CardContent>
         </Card>
       )}
-
       {isEmitido && sol.numeroDictamen && (
         <Card className="border-2 border-emerald-400/40 shadow-sm">
           <CardContent className="flex items-center gap-3 py-4">
@@ -1247,48 +1336,169 @@ function DetalleView({
           </CardContent>
         </Card>
       )}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          {sol.tipo === "Prestacion de Servicios"
-            ? <ExpedientePrestacion solicitud={sol} />
-            : <ExpedienteNombramiento solicitud={sol} />}
-        </div>
-        <div className="lg:col-span-1 flex flex-col gap-4 sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto pr-0.5">
-          <Card className="shadow-sm border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                <History className="h-4 w-4 text-secondary" />Historial de Estatus
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <HistorialTimeline entries={sol.historial} />
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                <Info className="h-4 w-4 text-secondary" />Bitácora de Captura
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-3">
-                {sol.bitacora.map((entry, i) => (
-                  <div key={i}>
-                    <p className="text-xs font-semibold text-card-foreground mb-1.5">{entry.seccion}</p>
-                    <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-border">
-                      {entry.eventos.map((ev, j) => (
-                        <div key={j} className="flex flex-col">
-                          <span className="text-xs text-card-foreground">{ev.descripcion}</span>
-                          <span className="text-[10px] text-muted-foreground">{ev.fecha} — {ev.usuario}</span>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
+        <ScrollArea className="h-[calc(100vh-220px)]">
+          <div className="flex flex-col gap-4 pr-4">
+            {sol.tipo === "Prestacion de Servicios"
+              ? <ExpedientePrestacion solicitud={sol} />
+              : <ExpedienteNombramiento solicitud={sol} />}
+          </div>
+        </ScrollArea>
+
+        <ScrollArea className="h-[calc(100vh-220px)]">
+          <div className="flex flex-col gap-4 pr-4">
+            <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+              <button
+                onClick={() => setRightTab("historial")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  rightTab === "historial"
+                    ? "bg-card text-card-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-card-foreground"
+                }`}
+              >
+                <History className="mr-1.5 inline h-4 w-4" />Historial
+              </button>
+              <button
+                onClick={() => setRightTab("bitacora")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  rightTab === "bitacora"
+                    ? "bg-card text-card-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-card-foreground"
+                }`}
+              >
+                <Info className="mr-1.5 inline h-4 w-4" />Bitácora
+              </button>
+              <button
+                onClick={() => setRightTab("observaciones")}
+                className={`relative flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  rightTab === "observaciones"
+                    ? "bg-card text-card-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-card-foreground"
+                }`}
+              >
+                <AlertTriangle className="mr-1.5 inline h-4 w-4" />Observaciones
+                {hasObs && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white">
+                    {sol.todasObservaciones.length || 1}
+                  </span>
+                )}
+              </button>
+            </div>
+            {rightTab === "historial" && (
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                    <History className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white">Historial de Estatus</span>
+                    <span className="text-[10px] text-white/60">
+                      {sol.historial.length} entrada{sol.historial.length !== 1 ? "s" : ""} registrada{sol.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">
+                      {sol.historial.length} entrada{sol.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-card px-5 pt-4 pb-2">
+                  <HistorialTimeline entries={sol.historial} />
+                </div>
+              </div>
+            )}
+
+            {rightTab === "bitacora" && (
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                {/* Header */}
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #A0845C 0%, #C4A882 100%)" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                    <Info className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white">Bitácora de Captura</span>
+                    <span className="text-[10px] text-white/60">
+                      {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} eventos registrados
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">
+                      {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} evento{sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0) !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Timeline */}
+                <div className="bg-card px-5 pt-4 pb-2">
+                  <HistorialTimeline
+                    entries={sol.bitacora.flatMap((entry) =>
+                      entry.eventos.map((ev) => ({
+                        fecha: ev.fecha,
+                        usuario: ev.usuario,
+                        estadoAnterior: null,
+                        estadoNuevo: ev.descripcion.replace("Archivo cargado: ", ""),
+                        comentario: null,
+                      } satisfies HistorialEntryData))
+                    )}
+                  />
+                </div>
+              </div>
+            )}
+
+            {rightTab === "observaciones" && (
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                    <AlertTriangle className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white">
+                      {(() => {
+                        const obs = getObservador(sol.estado)
+                        if (!obs) return "Observaciones"
+                        const tipo = obs === "Validacion UEFA" || obs === "Validacion DGDO" ? "Observación" : "Devolución"
+                        return `${tipo} — ${obs}`
+                      })()}
+                    </span>
+                    <span className="text-[10px] text-white/60">
+                      {sol.todasObservaciones.length > 0
+                        ? `${sol.todasObservaciones.length} observación${sol.todasObservaciones.length !== 1 ? "es" : ""}`
+                        : sol.observacionMotivo ? "1 observación" : "Sin observaciones"}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">
+                      {sol.todasObservaciones.length > 0 ? sol.todasObservaciones.length : sol.observacionMotivo ? 1 : 0} obs.
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-card p-4">
+                  {sol.todasObservaciones.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {sol.todasObservaciones.map((obs, i) => (
+                        <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
+                          </div>
+                          <DevolucionObs comentario={obs.comentario} />
                         </div>
                       ))}
                     </div>
-                  </div>
-                ))}
+                  ) : sol.observacionMotivo ? (
+                    <div className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                      {sol.observacionFecha && <span className="text-[10px] text-muted-foreground">{sol.observacionFecha}</span>}
+                      {sol.observacionUsuario && <span className="text-[10px] text-muted-foreground">Por: {sol.observacionUsuario}</span>}
+                      <DevolucionObs comentario={sol.observacionMotivo} />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
+                  )}
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   )
@@ -1346,6 +1556,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
     Borradores: 0, "En aprobación": 0, "Observadas / Devueltas": 0,
     "En proceso DGDO": 0, Emitidas: 0, Todas: 0,
   })
+  const hasDataRef                   = useRef(false)
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
   const TABS: UrgTab[] = [
@@ -1370,7 +1581,8 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
   }, [])
 
   const fetchData = useCallback(async (tab: UrgTab, search: string) => {
-    setLoading(true); setError(null)
+    if (!hasDataRef.current) setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({ tab, search, pageSize: "200" })
       const res = await fetch(`/api/mi-justificacion?${params}`, {
@@ -1386,6 +1598,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
         Borradores: 0, "En aprobación": 0, "Observadas / Devueltas": 0,
         "En proceso DGDO": 0, Emitidas: 0, Todas: 0,
       })
+      hasDataRef.current = true
     } catch (err: any) {
       setError(err.message ?? "Error desconocido")
     } finally {
@@ -1400,6 +1613,9 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
     )
     return () => clearTimeout(timer)
   }, [activeTab, searchTerm, fetchData])
+
+  const reloadCurrent = useCallback(() => { fetchData(activeTab, searchTerm) }, [fetchData, activeTab, searchTerm])
+  useRealtime(["solicitudes"], reloadCurrent)
 
   const filtered          = data
   const selectedSolicitud = selectedId
@@ -1555,7 +1771,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                       <td className="px-4 py-3">
                         <FoliosCell sol={sol} />
                       </td>
-                      <td className="px-4 py-3 text-xs">
+                      <td className="px-4 py-3 text-xs break-words max-w-[180px]">
                         <span className="text-card-foreground font-medium">
                           {formatRegimen(sol.regimen)}
                         </span>
@@ -1589,11 +1805,6 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                                   <span> — {sol.observacionFecha}</span>
                                 )}
                               </span>
-                              {sol.observacionMotivo && (
-                                <span className="text-[10px] text-muted-foreground line-clamp-1 max-w-[220px]">
-                                  {sol.observacionMotivo}
-                                </span>
-                              )}
                             </div>
                           )}
                         </div>
@@ -1601,20 +1812,19 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                       <td className="px-4 py-3 text-center">
                         {sol.slaRestante == null ? (
                           <span className="text-xs text-muted-foreground">—</span>
-                        ) : (
-                          <span
-                            className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold"
-                            style={
-                              sol.slaRestante <= 0
-                                ? { backgroundColor: "#832B56", color: "#FFFFFF" }
-                                : sol.slaRestante <= 7
-                                ? { backgroundColor: "#C69C6D", color: "#FFFFFF" }
-                                : { backgroundColor: "#283C2A", color: "#FFFFFF" }
-                            }
-                          >
-                            {sol.slaRestante <= 0 ? "Cerrada" : `${sol.slaRestante} ${sol.slaRestante === 1 ? "día" : "días"}`}
-                          </span>
-                        )}
+                        ) : (() => {
+                          const color = sol.slaRestante <= 0 ? "#832B56" : sol.slaRestante <= 7 ? "#832B56" : sol.slaRestante <= 15 ? "#C69C6D" : "#4a7a55"
+                          const label = sol.slaRestante <= 0 ? "Cerrada" : `${sol.slaRestante} ${sol.slaRestante === 1 ? "día" : "días"}`
+                          return (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+                              style={{ backgroundColor: `${color}18`, color }}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                              {label}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
@@ -1623,7 +1833,6 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                             className="text-secondary hover:text-primary gap-1.5">
                             <Eye className="h-4 w-4" />Ver
                           </Button>
-
                         </div>
                       </td>
                     </tr>

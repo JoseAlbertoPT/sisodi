@@ -219,7 +219,6 @@ export function FirmaElectronicaTabs({
       }
       setCopiadoId(firmanteId); setTimeout(() => setCopiadoId(null), 1500)
     } catch {
-      // no se pudo copiar
     }
   }
 
@@ -254,7 +253,6 @@ export function FirmaElectronicaTabs({
     )
   }
 
-  // Si no hay proceso aún, mostrar botón de iniciar.
   if (!firma) {
     return (
       <div className="flex flex-col gap-4">
@@ -283,20 +281,14 @@ export function FirmaElectronicaTabs({
 
   const externos = firmantes.filter(f => f.tipo === "externo")
   const internosTodos = firmantes.filter(f => f.tipo === "interno")
-  // Scope: si el user actual es un interno, sólo se muestra su fila (y las de externos).
   const miInterno = internosTodos.find(f => f.usuario_id === currentUserId) ?? null
   const internos = miInterno ? [miInterno] : internosTodos
 
-  // Turno actual: el firmante con menor orden que aún no firma.
   const siguienteFirmante = firmantes
     .filter(f => !f.firmado)
     .sort((a, b) => a.orden - b.orden)[0] ?? null
   const siguienteOrden = siguienteFirmante?.orden ?? Infinity
 
-  // Gate de "Enviar":
-  //   - Si soy UEFA: cuando mi firma + todas las anteriores están listas (estricto).
-  //   - Si soy otro interno: cuando mi firma está lista.
-  //   - Si no soy ninguno identificado (admin): cuando TODO esté firmado.
   const puedeContinuar = (() => {
     if (miInterno) {
       return miInterno.firmado
@@ -330,7 +322,6 @@ export function FirmaElectronicaTabs({
             <Users className="h-4 w-4 text-secondary" /> Externos
             <span className="text-xs text-muted-foreground ml-1">(firman primero)</span>
           </CardTitle>
-          <Button size="icon" variant="ghost" onClick={cargar} title="Actualizar"><RefreshCw className="h-4 w-4" /></Button>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {externos.length === 0 ? (

@@ -17,6 +17,7 @@ import {
   Settings,
   Menu as MenuIcon,
   ChevronRight,
+  ChevronLeft,
   ChevronUp,
   X,
   LogOut,
@@ -175,9 +176,9 @@ function SidebarSection({
   const [hovered, setHovered] = useState(false)
 
   const btnStyle: React.CSSProperties = expanded
-    ? { backgroundColor: "rgb(94 23 51)", color: "#FFFFFF" }
+    ? { backgroundColor: "rgba(94,23,51,0.18)", color: "#5e1733" }
     : hovered
-    ? { backgroundColor: "#722F3718", color: "#5e1733" }
+    ? { backgroundColor: "rgba(94,23,51,0.10)", color: "#5e1733" }
     : { backgroundColor: "transparent", color: "#283c2a" }
 
   return (
@@ -237,12 +238,22 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
     let cancelled = false
     setMenusLoading(true)
     setMenusError(null)
-    fetchMyMenus(user.rol)
+    fetchMyMenus(user.rol, user.id)
       .then((data) => { if (!cancelled) setMenuTree(data) })
       .catch((e) => { if (!cancelled) setMenusError(e instanceof Error ? e.message : "Error al cargar menú") })
       .finally(() => { if (!cancelled) setMenusLoading(false) })
     return () => { cancelled = true }
-  }, [user?.rol, retryCount])
+  }, [user?.rol, user?.id, retryCount])
+
+  // Redirige a dashboard si la página actual no está disponible para este rol
+  const INTERNAL_PAGES = useMemo(() => new Set(["revision-do", "progreso-firmado", "perfil", "nueva-solicitud"]), [])
+  useEffect(() => {
+    if (menusLoading || !menuTree) return
+    const availableKeys = new Set(collectLeafNodes(menuTree).filter((n) => n.key).map((n) => n.key!))
+    if (currentPage !== "dashboard" && !INTERNAL_PAGES.has(currentPage) && !availableKeys.has(currentPage)) {
+      onNavigate("dashboard")
+    }
+  }, [menuTree, menusLoading, currentPage, onNavigate, INTERNAL_PAGES])
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     justificaciones: true,
@@ -282,8 +293,8 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
       >
         <div
           className={cn(
-            "flex flex-col items-center gap-2 border-b border-border/60 py-3.5",
-            collapsed ? "px-1.5" : "px-3"
+            "flex items-center border-b border-border/60",
+            collapsed ? "justify-center px-1.5 py-3" : "gap-2 px-3 py-2"
           )}
         >
           {collapsed ? (
@@ -305,37 +316,29 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
             )
           ) : (
             <>
-              <div className="flex w-full items-center justify-between">
-                <span className="text-sm font-semibold leading-tight text-foreground">
-
-                </span>
-                {onToggleSidebar && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={onToggleSidebar}
-                        className="shrink-0 rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
-                        aria-label="Cerrar menú"
-                        aria-expanded={true}
-                      >
-                        <span className="text-base leading-none"> ⟵ </span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Cerrar menú</TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-              <div className="flex w-full items-center justify-center rounded-md bg-white/10 p-1">
+              <div className="flex-1 min-w-0">
                 <img
                   src="/logo-20finanzas.png"
                   alt="Finanzas"
                   className="w-full h-14 object-contain"
                 />
               </div>
-              <span className="text-[10px] leading-tight text-muted-foreground">
-
-              </span>
+              {onToggleSidebar && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={onToggleSidebar}
+                      className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-foreground/8 border border-border/50 hover:border-border transition-colors"
+                      aria-label="Cerrar menú"
+                      aria-expanded={true}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Cerrar menú</TooltipContent>
+                </Tooltip>
+              )}
             </>
           )}
         </div>

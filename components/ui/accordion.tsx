@@ -55,10 +55,13 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm"
+      // Sin overflow-hidden en el wrapper externo: el elemento está en flujo normal
+      // y empuja el layout hacia abajo al expandirse.
+      // grid-template-rows anima de 0fr→1fr; overflow-hidden solo en el div interno (clip visual).
+      className="grid text-sm transition-[grid-template-rows] duration-200 ease-out data-[state=open]:[grid-template-rows:1fr] data-[state=closed]:[grid-template-rows:0fr]"
       {...props}
     >
-      <div className={cn('pt-0 pb-4', className)}>{children}</div>
+      <div className={cn('overflow-hidden min-h-0 pt-0 pb-4', className)}>{children}</div>
     </AccordionPrimitive.Content>
   )
 }

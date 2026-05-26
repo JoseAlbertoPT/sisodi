@@ -38,7 +38,7 @@
   --sidebar-border: #344636;
   --sidebar-ring: #c69c6d;
   --sidebar-bg-light: #F3F2EE;
-  --sidebar-dropdown: #832B56;
+  --sidebar-dropdown: #6B2347;
   --title: #C69C6D;
   --subtitle: #6E795A;
   --warning: #832b56;
@@ -46,8 +46,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -92,11 +92,41 @@
   --color-warning-foreground: var(--warning-foreground);
 }
 
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scroll-thin:hover {
+  scrollbar-color: var(--border) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+}
+.scroll-thin:hover::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  td, th {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  p, span, div, label {
+    overflow-wrap: break-word;
   }
 }

@@ -72,18 +72,19 @@ export async function PATCH(
     const actualizado = await prisma.usuario.update({
       where: { id },
       data,
-      include: { rol: true, area: true },
+      include: { rol: true, area: true, organo_centralizado: true },
     })
 
     return NextResponse.json({
-      id:           actualizado.id,
-      nombre:       actualizado.nombre,
-      correo:       actualizado.correo,
-      rfc:          actualizado.rfc ?? null,
-      rol:          actualizado.rol.nombre,
-      secretaria:   actualizado.secretaria_texto ?? actualizado.area?.nombre ?? "Sin área",
-      secretariaId: actualizado.secretaria_id ?? null,
-      estatus:      actualizado.activo ? "Activo" : "Inactivo",
+      id:                 actualizado.id,
+      nombre:             actualizado.nombre,
+      correo:             actualizado.correo,
+      rfc:                actualizado.rfc ?? null,
+      rol:                actualizado.rol.nombre,
+      secretaria:         actualizado.secretaria_texto ?? actualizado.area?.nombre ?? "Sin área",
+      secretariaId:       actualizado.secretaria_id ?? null,
+      estatus:            actualizado.activo ? "Activo" : "Inactivo",
+      tipoAdministracion: actualizado.organo_centralizado ? "centralizada" : "paraestatal",
     })
 
   } catch (e) {

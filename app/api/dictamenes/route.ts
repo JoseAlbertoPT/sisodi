@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
+
+const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
 async function generarFolioDictamen(tipo: "dictamen" | "opinion"): Promise<string> {
   const ahora = new Date()
@@ -289,6 +292,7 @@ export async function POST(req: NextRequest) {
       }),
     ])
 
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({
       ok:           true,
       folio,
@@ -333,6 +337,7 @@ export async function PATCH(req: NextRequest) {
       data:  { archivo_pdf: archivoPdf },
     })
 
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({ ok: true, data: actualizado })
   } catch (error: any) {
     console.error("[PATCH /api/emision]", error)

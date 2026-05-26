@@ -24,25 +24,21 @@ import {
 import { DatePickerHabil, dmyToDate, dateToDmy } from "@/components/ui/date-picker-habil"
 
 type TabRecepcion = "honorarios" | "asimilados" | "nombramiento"
-
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ]
-
 const QUINCENA_NAMES: string[] = MESES.flatMap((mes) => {
   const qs: string[] = []
   if (mes !== "Enero") qs.push(`1ra ${mes}`)
   if (mes !== "Diciembre") qs.push(`2da ${mes}`)
   return qs
 })
-
 const MESES_CORTO: Record<string, string> = {
   "01": "Ene", "02": "Feb", "03": "Mar", "04": "Abr",
   "05": "May", "06": "Jun", "07": "Jul", "08": "Ago",
   "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dic",
 }
-
 function DayMonthInput({
   value,
   mesName,
@@ -62,7 +58,6 @@ function DayMonthInput({
   const buildDate = (d: string, m: string) => {
     return d ? `${d}/${m}/${year}` : `/${m}/${year}`
   }
-
   const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, "").slice(0, 2)
     if (raw === "") { onChange(buildDate("", currentMonth)); return }
@@ -70,11 +65,9 @@ function DayMonthInput({
     if (num < 1 || num > 31) return
     onChange(buildDate(raw, currentMonth))
   }
-
   const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onChange(buildDate(day, e.target.value))
   }
-
   return (
     <div className={`
       inline-flex items-center h-9 rounded-lg text-sm transition-colors
@@ -110,7 +103,6 @@ function DayMonthInput({
     </div>
   )
 }
-
 function DateCell({ value }: { value: string }) {
   if (!value) return <span className="text-muted-foreground/40">--/--/----</span>
   const parts = value.split("/")
@@ -125,7 +117,6 @@ function DateCell({ value }: { value: string }) {
     </span>
   )
 }
-
 export function CalendarioPage() {
   const { toast } = useToast()
   const {
@@ -133,24 +124,18 @@ export function CalendarioPage() {
     honorarios, asimilados, nombramiento,
     loading, error, refetch,
   } = useCalendario()
-
   const [tabRecepcion, setTabRecepcion] = useState<TabRecepcion>("honorarios")
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editData, setEditData] = useState<CalendarioResponse | null>(null)
-
   const isEmpty = !loading && honorarios.length === 0 && asimilados.length === 0 && nombramiento.length === 0
-
   const handleCreateYear = () => {
     const template = buildEmptyCalendario(ejercicio)
     setEditData(template)
     setEditing(true)
     toast({ title: `Año ${ejercicio}`, description: "Complete solo el día en cada campo y presione Guardar." })
   }
-
   const handleStartEdit = () => {
-    
-    
     setEditData({
       honorarios: MESES.map((mes) =>
         honorarios.find((r) => r.mes === mes) ?? { mes, limiteDO: "", limiteDGRH: "", fechaInicio: "", fechaFin: "" }
@@ -164,9 +149,7 @@ export function CalendarioPage() {
     })
     setEditing(true)
   }
-
   const handleCancelEdit = () => { setEditData(null); setEditing(false) }
-
   const handleSaveEdit = async () => {
     if (!editData) return
     const payload: CalendarioResponse = {
@@ -191,7 +174,6 @@ export function CalendarioPage() {
       setSaving(false)
     }
   }
-
   const updateEditRow = (
     regimen: "honorarios" | "asimilados" | "nombramiento",
     key: string,
@@ -212,18 +194,16 @@ export function CalendarioPage() {
       return next
     })
   }
-
   const [availableYears, setAvailableYears] = useState<number[]>(() => {
     const current = new Date().getFullYear()
     return [current]
   })
   const [showNewYearInput, setShowNewYearInput] = useState(false)
   const [newYearValue, setNewYearValue] = useState("")
-
   const handleAddYear = () => {
     const year = parseInt(newYearValue, 10)
     if (!year || year < 2020 || year > 2099) {
-      toast({ variant: "destructive", title: "Año inválido", description: "Ingrese un año entre 2020 y 2099." })
+      toast({ variant: "destructive", title: "Año inválido", description: "Ingrese un año entre 2020 y 3000." })
       return
     }
     if (availableYears.includes(year)) {
@@ -235,40 +215,32 @@ export function CalendarioPage() {
     setNewYearValue("")
     setShowNewYearInput(false)
   }
-
   const displayData = editing && editData ? editData : { honorarios, asimilados, nombramiento }
-
   const quincenaOrder = (q: string) => {
     const mitad = q.startsWith("1ra") ? 0 : 1
     const mes = q.replace(/^(1ra|2da)\s+/, "")
     return MESES.indexOf(mes) * 2 + mitad
   }
-
   const honorariosSorted = MESES.map((mes) =>
     displayData.honorarios.find((r) => r.mes === mes) ?? { mes, limiteDO: "", limiteDGRH: "" }
   )
-
   const buildSortedQuincenas = (rows: typeof displayData.asimilados) =>
     QUINCENA_NAMES
       .map((q) => rows.find((r) => r.quincena === q) ?? { quincena: q, limiteDO: "", limiteDGRH: "" })
       .sort((a, b) => quincenaOrder(a.quincena) - quincenaOrder(b.quincena))
-
   const asimiladosSorted   = buildSortedQuincenas(displayData.asimilados)
   const nombramientoSorted = buildSortedQuincenas(displayData.nombramiento)
-
   const filledCount = {
     honorarios: displayData.honorarios.filter((r) => r.limiteDO && !r.limiteDO.startsWith("/")).length,
     asimilados: displayData.asimilados.filter((r) => r.limiteDO && !r.limiteDO.startsWith("/")).length,
     nombramiento: displayData.nombramiento.filter((r) => r.limiteDO && !r.limiteDO.startsWith("/")).length,
   }
-
   return (
     <PageLayout
       title="Calendario de Recepción"
       description={`Periodo de aceptación y fechas límite para la recepción de solicitudes - Ejercicio ${ejercicio}`}
-    >
+      >
       <div className="flex flex-col gap-6">
-        {}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/10">
@@ -282,7 +254,6 @@ export function CalendarioPage() {
               <p className="text-[11px] text-muted-foreground">Fechas límite de recepción para dictaminación</p>
             </div>
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
             <Select value={String(ejercicio)} onValueChange={(v) => setEjercicio(Number(v))} disabled={editing}>
               <SelectTrigger className="w-[90px] h-9 text-xs font-mono"><SelectValue placeholder="Año" /></SelectTrigger>
@@ -290,9 +261,8 @@ export function CalendarioPage() {
                 {availableYears.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
             </Select>
-
             {!editing && !showNewYearInput && (
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9" onClick={() => setShowNewYearInput(true)}>
+              <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0" onClick={() => setShowNewYearInput(true)}>
                 <Plus className="h-3.5 w-3.5" />Nuevo año
               </Button>
             )}
@@ -308,16 +278,14 @@ export function CalendarioPage() {
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => setShowNewYearInput(false)}><X className="h-3 w-3" /></Button>
               </div>
             )}
-
             {!editing && !showNewYearInput && <div className="h-5 w-px bg-border" />}
-
             {!editing ? (
               isEmpty ? (
                 <Button size="sm" className="gap-1.5 text-xs h-9 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleCreateYear} disabled={loading}>
                   <CalendarPlus className="h-3.5 w-3.5" />Crear año {ejercicio}
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9" onClick={handleStartEdit} disabled={loading}>
+                <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0" onClick={handleStartEdit} disabled={loading}>
                   <Pencil className="h-3.5 w-3.5" />Editar fechas
                 </Button>
               )
@@ -359,13 +327,12 @@ export function CalendarioPage() {
                   Cree el calendario para generar automáticamente los 12 meses y 24 quincenas. Solo deberá completar el día de cada fecha límite.
                 </p>
               </div>
-              <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleCreateYear}>
+              <Button className="gap-2 bg-[#832B56] hover:bg-[#832B56]/90 text-white" onClick={handleCreateYear}>
                 <CalendarPlus className="h-4 w-4" />Crear calendario {ejercicio}
               </Button>
             </CardContent>
           </Card>
         )}
-
         {!loading && (!isEmpty || editing) && (
           <>
             <FilterTabs
@@ -381,8 +348,8 @@ export function CalendarioPage() {
             {editing && (
               <div className="flex items-center gap-2 rounded-lg bg-secondary/5 border border-secondary/20 px-4 py-2.5">
                 <Pencil className="h-3.5 w-3.5 text-secondary shrink-0" />
-                <span className="text-xs text-secondary">
-                  Modo edición — ingrese el día en cada celda. El mes y año se asignan automáticamente.
+                <span className="text-sm font-bold text-black">
+                  En Modo Edición — Ingrese el Día en Cada celda. El Mes y Año se Asignan Automáticamente.
                 </span>
               </div>
             )}
@@ -393,12 +360,13 @@ export function CalendarioPage() {
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
                       <th className="px-5 py-3 text-left font-semibold">Mes de aplicación</th>
-                      <th className="px-5 py-3 text-center font-semibold">Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)</th>
+                      <th className="px-5 py-3 text-center font-semibold">Fecha límite de recepción de solicitudes de<br />dictámen/opiniónes técnicas funcionales (DGDO)</th>
                       <th className="px-5 py-3 text-center font-semibold">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {honorariosSorted.map((row, idx) => (
+
+                  {honorariosSorted.map((row, idx) => (
                       <tr key={row.mes} className={`border-t border-border/60 transition-colors ${idx % 2 === 0 ? "bg-card" : "bg-muted/20"} ${!editing && row.limiteDO && !row.limiteDO.startsWith("/") ? "hover:bg-muted/40" : ""}`}>
                         <td className="px-5 py-3"><span className="font-medium text-card-foreground">{row.mes}</span></td>
                         {editing ? (
@@ -441,8 +409,8 @@ export function CalendarioPage() {
 
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
-                      <th className="px-5 py-3 text-left font-semibold w-48">Mes de Aplicacion</th>
-                      <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)</th>
+                      <th className="px-5 py-3 text-left font-semibold w-48">Quincena de Aplicacion</th>
+                      <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de<br />dictámen/opiniónes técnicas funcionales (DGDO)</th>
                       <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
                     </tr>
                   </thead>
@@ -484,12 +452,12 @@ export function CalendarioPage() {
                 </table>
               </div>
             )}
-            <div className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+             <div className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
               <Info className="h-4 w-4 shrink-0 text-muted-foreground/60" />
-              <span className="text-[11px] text-muted-foreground leading-relaxed">
+              <span className="text-xs font-bold text-black leading-relaxed">
                 Información de referencia. Los cambios están sujetos a validación administrativa.
                 {!editing && !isEmpty && (
-                  <> — <strong>{filledCount.honorarios}</strong> meses, <strong>{filledCount.asimilados}</strong> quincenas asimilados, <strong>{filledCount.nombramiento}</strong> quincenas nombramiento configurados.</>
+                  <> — {filledCount.honorarios} meses, {filledCount.asimilados} quincenas asimilados, {filledCount.nombramiento} quincenas nombramiento configurados.</>
                 )}
               </span>
             </div>

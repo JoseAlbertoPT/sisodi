@@ -8,7 +8,6 @@ export type RangoTabulador = {
 }
 
 export const RANGOS_TABULADOR: RangoTabulador[] = [
-  //{ min: 32124.36, max: 49846.50, nivel: "105", categoria: "A",      puesto: "Subdirector de Área" },
 
   { min: 24380.00, max: 32123.30, nivel: "106", categoria: "A",      puesto: "" },
   { min: 19080.00, max: 24369.40, nivel: "107", categoria: "A",      puesto: "" },

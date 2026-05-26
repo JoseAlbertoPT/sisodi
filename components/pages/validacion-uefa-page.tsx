@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
+import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +14,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
+} from "@/components/ui/accordion"
 import {
   Eye, CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
@@ -56,6 +60,7 @@ interface UefaSolicitud {
   numeroPrestadores: string
   vigenciaInicio: string
   vigenciaFin: string
+  fechaEnvio: string
   importeBruto: string
   esRenovacion: boolean
   esExtemporanea: boolean
@@ -65,6 +70,7 @@ interface UefaSolicitud {
   observadoPor?: string
   fechaObservacion?: string
   tipoObservacion?: string
+  todasObservaciones: { estado: string; fecha: string; usuario: string; comentario: string }[]
   numeroDictamen?: string
   fechaDictamen?: string
   tipoFirma?: string | null
@@ -80,6 +86,7 @@ interface UefaSolicitud {
   compSoc: string
   valores: string
   areasExp: string
+  reingresoCount: number
   _raw?: any
 }
 
@@ -104,9 +111,16 @@ function formatearFolio(folio: string | null | undefined): string {
   return folio
 }
 
+function parseDateLocal(v: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const [y, m, d] = v.split("-").map(Number)
+    return new Date(y, m - 1, d)
+  }
+  return new Date(v)
+}
 function formatFecha(v: string | null | undefined) {
   if (!v) return "—"
-  const d = new Date(v)
+  const d = parseDateLocal(v)
   if (isNaN(d.getTime())) return v
   return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
@@ -133,6 +147,7 @@ function getTabForEstado(estado: string): UefaTab {
   if (n.includes("observado por")) return "Observadas/Devueltas"
   if (n === "emitido") return "Emitidas"
 
+  if (n.includes("observado por validacion final")) return "Observadas/Devueltas"
   if (
     n.includes("en revision") ||
     n.includes("en validacion final") ||
@@ -140,7 +155,6 @@ function getTabForEstado(estado: string): UefaTab {
     n.includes("pendiente do") ||
     n.includes("aceptado por revisor") ||
     n.includes("aprobado por revisor") ||
-    n.includes("observado por validacion final") ||
     n.includes("observado por emisor")
   ) return "En Proceso"
   return "Nuevas"
@@ -177,17 +191,43 @@ function resolverFolioDictamen(item: any): string | null {
   )
 }
 
+function ordinalRegreso(n: number): string {
+  if (n === 1) return "1er Regreso"
+  if (n === 2) return "2do Regreso"
+  if (n === 3) return "3er Regreso"
+  return `${n}° Regreso`
+}
+
+function getDevolucionLabel(estado: string): string {
+  const n = norm(estado)
+  if (n.includes("emisor"))           return "Emisión DGDO"
+  if (n.includes("validacion final")) return "Validación Final DGDO"
+  if (n.includes("revisor"))          return "Revisión DGDO"
+  if (n.includes("validacion"))       return "Validacion UEFA"
+  return "DGDO"
+}
+function calcReingresoCount(historialSolicitud: any[]): number {
+  const firstObsIdx = historialSolicitud.findIndex((h: any) =>
+    (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase().includes("observad")
+  )
+  if (firstObsIdx === -1) return 0
+  return historialSolicitud.slice(firstObsIdx + 1).filter((h: any) => {
+    const n = (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+    return n.includes("enviada a validacion") || n.includes("en validacion justificaciones")
+  }).length
+}
+
 function mapBDtoSolicitud(item: any): UefaSolicitud {
   const historial: HistorialEntryData[] = (item.historial_solicitud ?? []).map((h: any) => ({
     fecha:          h.fecha ?? "",
     usuario:        h.usuario?.nombre ?? "Sistema",
     estadoAnterior: h.estado_historial_solicitud_estado_anterior_idToestado?.nombre ?? null,
     estadoNuevo:    h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+    comentario:     h.comentario ?? null,
   }))
 
   const folioDictamenRaw = resolverFolioDictamen(item)
   const numeroDictamen   = folioDictamenRaw ? formatearFolio(folioDictamenRaw) : undefined
-
   const emisorEntry = [...(item.historial_solicitud ?? [])].find((h: any) => {
     const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
     return nombre.toLowerCase().includes("emitido")
@@ -197,12 +237,35 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     const match = emisorEntry.comentario.match(/Destinatarios:\s*(.+)/i)
     if (match) destinatarios = match[1].split("|").map((d: string) => d.trim()).filter(Boolean)
   }
-
-  const observacionUefaEntry = (item.historial_solicitud ?? []).find((h: any) => {
-    const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
-    return nombre.toLowerCase().includes("observad") && h.comentario
+  const histArr = item.historial_solicitud ?? []
+  const lastResubmitIdx = histArr.reduce((last: number, h: any, idx: number) => {
+    const n = (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+    return (n.includes("en validacion justificaciones") || n.includes("enviada a validacion") || n === "en captura")
+      ? idx
+      : last
+  }, -1)
+  const obsMap = new Map<string, { estado: string; fecha: string; usuario: string; comentario: string }>()
+  histArr.forEach((h: any, idx: number) => {
+    if (idx <= lastResubmitIdx) return
+    const n = (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+    if (!(n.includes("observad") || n.includes("devuelta")) || !h.comentario) return
+    const estado = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "Observación"
+    obsMap.set(estado, {
+      estado,
+      fecha:      h.fecha ? formatFechaHora(h.fecha) : "—",
+      usuario:    h.usuario?.nombre ?? "—",
+      comentario: h.comentario ?? "",
+    })
   })
-
+  const todasObservaciones = Array.from(obsMap.values())
+  const observacionUefaEntry = [...histArr]
+    .map((h, idx) => ({ h, idx }))
+    .filter(({ idx }) => idx > lastResubmitIdx)
+    .reverse()
+    .find(({ h }) => {
+      const n = (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+      return (n.includes("observad") || n.includes("devuelta")) && h.comentario
+    })?.h ?? null
   const revisorEntry = (item.historial_solicitud ?? []).find((h: any) => {
     const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
     return nombre.toLowerCase().includes("filtro 2")
@@ -225,6 +288,8 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     fecha:                item.fecha_creacion ? formatFecha(item.fecha_creacion) : "—",
     vigenciaInicio:       item.vigencia_inicio ? formatFecha(item.vigencia_inicio) : "—",
     vigenciaFin:          item.vigencia_fin    ? formatFecha(item.vigencia_fin)    : "—",
+    fechaEnvio:           item.fecha_envio     ? formatFecha(item.fecha_envio)
+                          : item.fecha_creacion ? formatFecha(item.fecha_creacion) : "—",
     importeBruto:         item.importe_bruto
       ? `$${Number(item.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       : "—",
@@ -248,13 +313,15 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     compSoc:              item.comp_soc ?? "—",
     valores:              item.valores ?? "—",
     areasExp:             item.areas_exp ?? "—",
+    reingresoCount:       calcReingresoCount(item.historial_solicitud ?? []),
     historial,
-    observacionesUefa:    observacionUefaEntry?.comentario ?? item.observaciones_uefa ?? item.observacion_uefa ?? "",
+    observacionesUefa:    observacionUefaEntry?.comentario ?? "",
     observadoPor:         observacionUefaEntry?.usuario?.nombre ?? undefined,
     fechaObservacion:     observacionUefaEntry?.fecha ? formatFechaHora(observacionUefaEntry.fecha) : undefined,
     tipoObservacion:      observacionUefaEntry
       ? (observacionUefaEntry.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "Observación")
       : undefined,
+    todasObservaciones,
     fechaDictamen:        item.dictamen?.fecha_emision ? formatFecha(item.dictamen.fecha_emision) : undefined,
     tipoFirma:            item.dictamen?.tipo_firma ?? null,
     destinatarios,
@@ -267,7 +334,6 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     _raw: item,
   }
 }
-
 function DictamenModal({
   solicitud,
   onClose,
@@ -277,10 +343,8 @@ function DictamenModal({
 }) {
   const esParaestatal = solicitud.tipo.toLowerCase().includes("paraestatal")
   const titulo = esParaestatal ? "OPINIÓN TÉCNICA FUNCIONAL" : "DICTAMEN TÉCNICO FUNCIONAL"
-
   const folioDictamenFormateado  = formatearFolio(solicitud.folioDictamen)
   const folioRecepcionFormateado = formatearFolio(solicitud.folio)
-
   const handlePrint = () => {
     const pw = window.open("", "_blank")
     if (!pw) return
@@ -349,15 +413,12 @@ function DictamenModal({
         </CardHeader>
         <ScrollArea className="flex-1 px-6 pb-6">
           <div className="bg-card rounded-lg p-6 border border-border flex flex-col gap-4">
-            {}
             <div className="text-center border-b-2 border-primary pb-4">
               <p className="text-xs text-muted-foreground">GOBIERNO DEL ESTADO</p>
               <p className="text-xs text-muted-foreground">SECRETARÍA DE ADMINISTRACIÓN</p>
               <p className="text-xs text-muted-foreground">DIRECCIÓN DE ORGANIZACIÓN</p>
               <p className="text-base font-bold text-card-foreground mt-2 tracking-wide">{titulo}</p>
             </div>
-
-            {}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="text-xs text-muted-foreground block">Número</span>
@@ -385,7 +446,6 @@ function DictamenModal({
               </div>
             </div>
 
-            {}
             <div>
               <span className="text-xs text-muted-foreground block mb-1">Destinatarios</span>
               {(solicitud.destinatarios ?? []).length > 0 ? (
@@ -399,7 +459,6 @@ function DictamenModal({
               )}
             </div>
 
-            {}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="text-xs text-muted-foreground block">Secretaría</span>
@@ -421,7 +480,6 @@ function DictamenModal({
               </div>
             </div>
 
-            {}
             <div className="grid grid-cols-3 gap-3 mt-2">
               {(["reviso", "valido", "emitio"] as const).map((rol) => (
                 <div key={rol} className="flex flex-col items-center gap-1 rounded-lg border border-border p-3">
@@ -434,7 +492,6 @@ function DictamenModal({
                 </div>
               ))}
             </div>
-
             <div className="text-center py-3 border-2 border-primary text-primary font-bold tracking-widest text-lg mt-2">
               DICTAMINADO
             </div>
@@ -447,46 +504,95 @@ function DictamenModal({
 
 function UefaEstadoBadge({ estado }: { estado: string }) {
   const n = norm(estado)
-
-  let style: React.CSSProperties = { backgroundColor: "#e2e8f0", color: "#64748b" }
+  let color = "#64748b"
   let label = estado
-
   if (n === "en captura" || n.includes("en validacion justificaciones") || n.includes("enviada a validacion")) {
-    style = { backgroundColor: "#2563EB", color: "#FFFFFF" }
-    label = "En Validacion UEFA"
+    color = "#2563EB"; label = "En Validación"
   } else if (n.includes("observado por revisor")) {
-    style = { backgroundColor: "#9D174D", color: "#FFFFFF" }
-    label = "Observada por Revision DGDO"
+    color = "#9D174D"; label = "Obs. Revisión"
   } else if (n.includes("observado por validacion final")) {
-    style = { backgroundColor: "#BE185D", color: "#FFFFFF" }
-    label = "Observada por Validacion DGDO"
+    color = "#BE185D"; label = "Obs. Validación"
   } else if (n.includes("observado por emisor")) {
-    style = { backgroundColor: "#DB2777", color: "#FFFFFF" }
-    label = "Observada por Emision DGDO"
+    color = "#DB2777"; label = "Obs. Emisión"
   } else if (n.includes("observado") || n.includes("devuelta")) {
-    style = { backgroundColor: "#832B56", color: "#FFFFFF" }
-    label = "Observada"
+    color = "#832B56"; label = "Observada"
   } else if (n.includes("pendiente firma dictamen")) {
-    style = { backgroundColor: "#6D28D9", color: "#FFFFFF" }
-    label = "Pendiente Firma Dictamen"
+    color = "#6D28D9"; label = "Pdte. Firma"
   } else if (n.includes("en revision revisor")) {
-    style = { backgroundColor: "#0F766E", color: "#FFFFFF" }
-    label = "En Revisión"
+    color = "#0F766E"; label = "En Revisión"
   } else if (n.includes("en validacion final")) {
-    style = { backgroundColor: "#7C3AED", color: "#FFFFFF" }
-    label = "En Validación DGDO"
+    color = "#7C3AED"; label = "En Validación DGDO"
   } else if (n.includes("en revision emisor")) {
-    style = { backgroundColor: "#0891B2", color: "#FFFFFF" }
-    label = "En Emisión"
+    color = "#0891B2"; label = "En Emisión"
   } else if (n === "emitido" || n.includes("emitido")) {
-    style = { backgroundColor: "#283C2A", color: "#FFFFFF" }
-    label = "Emitido"
+    color = "#15803d"; label = "Emitido"
   }
 
   return (
-    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap" style={style}>
+    <span
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+      style={{ backgroundColor: `${color}18`, color }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
       {label}
     </span>
+  )
+}
+
+function DevolucionObs({ comentario }: { comentario: string }) {
+  const lineas = comentario.split("\n").filter(Boolean)
+  const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
+  const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join("\n").trim()
+  const tieneChecks  = itemsChecklist.length > 0
+  const tieneGeneral = comentarioGeneral.length > 0
+  return (
+    <div className="flex flex-col gap-0">
+      {tieneChecks && (
+        <div className="flex flex-col gap-0">
+          {itemsChecklist.map((linea, idx) => {
+            const [titulo, obs] = linea.split("::")
+            const numMatch = titulo.match(/^(\d+)\./)
+            const num   = numMatch ? numMatch[1] : String(idx + 1)
+            const label = titulo.replace(/^\d+\.\s*/, "").trim()
+            const isLast = idx === itemsChecklist.length - 1
+            return (
+              <div key={idx} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/50 bg-[#832B56]/5 text-[10px] font-bold text-[#832B56]">
+                    {num}
+                  </div>
+                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[#832B56]/15 my-0.5" />}
+                </div>
+                <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
+                  <span className="text-xs font-semibold text-[#832B56] leading-snug">{label}</span>
+                  {obs?.trim() && (
+                    <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                      {obs.trim()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {tieneChecks && tieneGeneral && (
+        <div className="flex gap-3">
+          <div className="flex flex-col items-center">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/30 bg-white text-[10px] text-[#832B56]/50">
+              <span className="text-[8px]">✎</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-0.5 flex-1 pb-0">
+            <span className="text-[10px] font-semibold text-[#832B56]/60 uppercase tracking-wide">Observación general</span>
+            <p className="text-xs text-[#832B56]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+          </div>
+        </div>
+      )}
+      {!tieneChecks && tieneGeneral && (
+        <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+      )}
+    </div>
   )
 }
 
@@ -538,7 +644,7 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
   const [open, setOpen] = useState(defaultOpen)
   return (
     <Card className="shadow-sm border-border">
-      <CardHeader className="pb-3 cursor-pointer" onClick={() => setOpen(!open)}>
+      <CardHeader className="pb-3 cursor-pointer select-none" onClick={() => setOpen(!open)}>
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
           {num && (
             <span className="flex h-6 w-6 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
@@ -547,21 +653,29 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
           )}
           {icon}{title}
           <span className="ml-auto">
-            {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            <ChevronDown
+              className="h-4 w-4 text-muted-foreground transition-transform duration-200"
+              style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+            />
           </span>
         </CardTitle>
       </CardHeader>
-      {open && <CardContent>{children}</CardContent>}
+      <div
+        className="grid transition-[grid-template-rows] duration-200 ease-out"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden min-h-0">
+          <CardContent>{children}</CardContent>
+        </div>
+      </div>
     </Card>
   )
 }
 
-
 function parseListField(text: string | null | undefined): string[] {
   if (!text || text === "—") return []
-  return text.split(/[\n•·,]+/).map(s => s.trim()).filter(Boolean)
+  return text.split(/[\n\r•·]+/).map(s => s.trim()).filter(Boolean)
 }
-
 function PerfilListField({ label, value }: { label: string; value: string | null | undefined }) {
   const items = parseListField(value)
   return (
@@ -587,16 +701,79 @@ function ListaItems({ items }: { items: string[] }) {
   const validItems = items.filter(Boolean)
   if (validItems.length === 0) return <span className="text-sm text-muted-foreground">—</span>
   return (
-    <ul className="flex flex-col gap-2">
+    <ul
+      className="scroll-thin flex flex-col gap-2"
+      style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
+    >
       {validItems.map((item, i) => (
-        <li key={i} className="flex gap-2 text-sm text-card-foreground">
+        <li key={i} className="flex gap-2 text-sm text-card-foreground min-w-0">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary mt-0.5">
             {i + 1}
           </span>
-          <span>{item}</span>
+          <span style={{ wordBreak: "break-word", overflowWrap: "break-word", whiteSpace: "normal" }}>
+            {item}
+          </span>
         </li>
       ))}
     </ul>
+  )
+}
+
+function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
+  const condiciones = [
+    { label: "Cambio de domicilio", value: raw?.condicion_cambio_domicilio },
+    { label: "Horario especial",    value: raw?.condicion_horario },
+    { label: "Viajar",              value: raw?.condicion_viajar },
+  ]
+  const riesgos = [
+    { label: "Caídas",       value: raw?.riesgo_caidas },
+    { label: "Mutilaciones", value: raw?.riesgo_mutilaciones },
+    { label: "Golpes",       value: raw?.riesgo_golpes },
+    { label: "Otros",        value: raw?.riesgo_otros },
+  ]
+  const noBool = (v: boolean | null | undefined) =>
+    v ? <span className="text-secondary font-semibold">Sí</span> : <span className="text-muted-foreground">No</span>
+  const nivel = (v: string | null | undefined) =>
+    v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="overflow-hidden rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-muted/50">
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Condición</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Aplica</th>
+            </tr>
+          </thead>
+          <tbody>
+            {condiciones.map((c, i) => (
+              <tr key={c.label} className={`border-t border-border/60 ${i % 2 === 0 ? "bg-card" : "bg-muted/20"}`}>
+                <td className="px-3 py-2 text-sm text-card-foreground">{c.label}</td>
+                <td className="px-3 py-2 text-center">{noBool(c.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="overflow-hidden rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-muted/50">
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Riesgo</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Nivel</th>
+            </tr>
+          </thead>
+          <tbody>
+            {riesgos.map((r, i) => (
+              <tr key={r.label} className={`border-t border-border/60 ${i % 2 === 0 ? "bg-card" : "bg-muted/20"}`}>
+                <td className="px-3 py-2 text-sm text-card-foreground">{r.label}</td>
+                <td className="px-3 py-2 text-center">{nivel(r.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }
 
@@ -634,8 +811,6 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
         </div>
       </SectionCard>
 
-      {}
-
       <SectionCard title="Tabulador — Nivel y Categoría">
         <div className="grid gap-4 md:grid-cols-2">
           <ReadOnlyField label="Nivel"     value={raw?.nivel_tabulador     ?? "—"} />
@@ -644,7 +819,10 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
       </SectionCard>
 
       <SectionCard title="I.1 Objeto de la Contratación">
-        <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+        <p
+          className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap"
+          style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
+        >
           {solicitud.objeto && solicitud.objeto !== "—"
             ? solicitud.objeto
             : <span className="text-muted-foreground">—</span>}
@@ -665,9 +843,9 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
         </SectionCard>
       )}
 
-      {esNombramiento && condRiesgos.length > 0 && (
+      {esNombramiento && (
         <SectionCard title="VI. Condiciones y Riesgos">
-          <ListaItems items={condRiesgos} />
+          <SeccionCondicionesRiesgos raw={raw} />
         </SectionCard>
       )}
 
@@ -678,13 +856,17 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
       )}
 
       <SectionCard title="Perfil Requerido">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(solicitud.escolaridad)} />
-          <PerfilListField label="Competencias Administrativas"  value={solicitud.compAdm} />
-          <PerfilListField label="Competencias Técnicas"         value={solicitud.compTec} />
-          <PerfilListField label="Competencias Sociales"         value={solicitud.compSoc} />
-          <PerfilListField label="Valores"                       value={solicitud.valores} />
-          <PerfilListField label="Áreas de Experiencia"          value={solicitud.areasExp} />
+        <div className="flex items-start gap-4">
+          <div className="flex flex-col gap-4 flex-1">
+            <ReadOnlyField   label="Escolaridad Mínima"          value={formatEscolaridad(solicitud.escolaridad)} />
+            <PerfilListField label="Competencias Técnicas"        value={solicitud.compTec} />
+            <PerfilListField label="Valores"                      value={solicitud.valores} />
+          </div>
+          <div className="flex flex-col gap-4 flex-1">
+            <PerfilListField label="Competencias Administrativas" value={solicitud.compAdm} />
+            <PerfilListField label="Competencias Sociales"        value={solicitud.compSoc} />
+            <PerfilListField label="Áreas de Experiencia"         value={solicitud.areasExp} />
+          </div>
         </div>
       </SectionCard>
 
@@ -766,7 +948,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
       </DialogContent>
     </Dialog>
   )
-
+  
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg">
@@ -883,16 +1065,22 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
   onAprobar: (id: number) => void; onObservar: (id: number) => void
   onFirmarJustificacion: (id: number) => void; guardando: boolean
 }) {
-  const [showFirmarConfirm, setShowFirmarConfirm] = useState(false)
-  const [showDictamen,      setShowDictamen]      = useState(false)
+  const [showFirmarConfirm,  setShowFirmarConfirm]  = useState(false)
+  const [showDictamen,       setShowDictamen]       = useState(false)
   const [showAprobarConfirm, setShowAprobarConfirm] = useState(false)
-
   const tab                = getTabForEstado(solicitud.estado)
+  const _n                 = norm(solicitud.estado)
   const isNueva            = tab === "Nuevas"
-  const isEmitida          = norm(solicitud.estado) === "emitido"
+  const isEmitida          = _n === "emitido"
   const isPendienteFirma   = tab === "Pendiente Firma"
-  const isObservada        = tab === "Observadas"
-  const isDevuelta         = tab === "Devueltas"
+  const isObservada        = (_n.includes("observado por validacion") && !_n.includes("final")) ||
+                             _n.includes("observado por ufa") || _n.includes("observada por ufa")
+  const isDevuelta         = !isObservada && (_n.includes("observad") || _n.includes("devuelta"))
+  const tieneObsActivas    = (isObservada || isDevuelta) && solicitud.todasObservaciones.length > 0
+
+  const [rightTab, setRightTab] = useState<"historial" | "observaciones">(
+    tieneObsActivas ? "observaciones" : "historial"
+  )
   const isEnProceso        = tab === "En Proceso"
 
   const folioDictamenMostrar = solicitud.numeroDictamen
@@ -908,18 +1096,29 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 text-muted-foreground hover:text-card-foreground">
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
             <ArrowLeft className="h-4 w-4" />Volver a bandeja
           </Button>
           <Separator orientation="vertical" className="h-6" />
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">{folioMostrar}</span>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-semibold text-foreground">{folioMostrar}</h2>
+              <UefaEstadoBadge estado={solicitud.estado} />
+              {folioDictamenMostrar && (
+                <Badge className="bg-secondary/15 text-secondary border-0 text-xs gap-1">
+                  <Stamp className="h-3 w-3" />Dict. {folioDictamenMostrar}
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{solicitud.tipo} — {solicitud.secretaria}</p>
+            {solicitud.denominacion && solicitud.denominacion !== "—" && solicitud.denominacion !== solicitud.tipo && (
+              <p className="text-xs text-muted-foreground font-medium">{solicitud.denominacion}</p>
+            )}
           </div>
-          <UefaEstadoBadge estado={solicitud.estado} />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
-            variant="outline" size="sm" className="gap-1.5"
+            size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
             onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
@@ -976,41 +1175,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         </div>
       </div>
 
-      {isObservada && (
-        <Card className="border-2 border-[#832B56]/40 shadow-sm">
-          <CardContent className="flex items-start gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-[#832B56] shrink-0 mt-0.5" />
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-sm font-medium text-[#832B56]">
-                  {solicitud.tipoObservacion ?? "Observación"}
-                </span>
-                {solicitud.fechaObservacion && (
-                  <span className="text-[10px] text-muted-foreground">{solicitud.fechaObservacion}</span>
-                )}
-              </div>
-              {solicitud.observadoPor && (
-                <p className="text-xs text-muted-foreground mt-0.5">Por: {solicitud.observadoPor}</p>
-              )}
-              {solicitud.observacionesUefa && (
-                <ObservacionTimeline comentario={solicitud.observacionesUefa} />
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {isDevuelta && (
-        <Card className="border-2 border-[#832B56]/30 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-[#832B56]" />
-            <div>
-              <span className="text-sm font-medium text-[#832B56]">Devuelta con Observaciones</span>
-              <p className="text-xs text-muted-foreground">Observada por Revision DGDO, Validacion DGDO o Emision DGDO. Pendiente de corrección por la URG.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {isPendienteFirma && (
         <Card className="border-2 border-accent/30 bg-accent/5 shadow-sm">
@@ -1050,22 +1214,124 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ExpedienteGenerico solicitud={solicitud} />
-        </div>
-        <div className="lg:col-span-1">
-          <Card className="shadow-sm border-border sticky top-4">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                <History className="h-4 w-4 text-secondary" />Historial
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <HistorialTimeline entries={solicitud.historial} />
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
+        <ScrollArea className="h-[calc(100vh-220px)]">
+          <div className="flex flex-col gap-4 pr-4">
+            <ExpedienteGenerico solicitud={solicitud} />
+          </div>
+        </ScrollArea>
+
+        <ScrollArea className="h-[calc(100vh-220px)]">
+          <div className="flex flex-col gap-4 pr-4">
+            <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+              <button
+                onClick={() => setRightTab("historial")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  rightTab === "historial"
+                    ? "bg-card text-card-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-card-foreground"
+                }`}
+              >
+                <History className="mr-1.5 inline h-4 w-4" />Historial
+              </button>
+              <button
+                onClick={() => setRightTab("observaciones")}
+                className={`relative flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  rightTab === "observaciones"
+                    ? "bg-card text-card-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-card-foreground"
+                }`}
+              >
+                <AlertTriangle className="mr-1.5 inline h-4 w-4" />Observaciones
+                {tieneObsActivas && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white">
+                    {solicitud.todasObservaciones.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {rightTab === "historial" && (
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                    <History className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white">Historial de Estatus</span>
+                    <span className="text-[10px] text-white/60">
+                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""} registrada{solicitud.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">
+                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-card px-5 pt-4 pb-2">
+                  <HistorialTimeline entries={solicitud.historial} />
+                </div>
+              </div>
+            )}
+
+            {rightTab === "observaciones" && (
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                    <AlertTriangle className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white">
+                      {isObservada
+                        ? "Observación de Validacion UEFA"
+                        : isDevuelta
+                          ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
+                          : "Observaciones"}
+                    </span>
+                    <span className="text-[10px] text-white/60">
+                      {tieneObsActivas
+                        ? `${solicitud.todasObservaciones.length} observación${solicitud.todasObservaciones.length !== 1 ? "es" : ""}`
+                        : "Sin observaciones activas"}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">
+                      {tieneObsActivas ? solicitud.todasObservaciones.length : 0} obs.
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-card p-4">
+                  {tieneObsActivas ? (
+                    <div className="flex flex-col gap-2">
+                      {solicitud.todasObservaciones.map((obs, i) => (
+                        <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
+                          </div>
+                          <DevolucionObs comentario={obs.comentario} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (isObservada || isDevuelta) && solicitud.observacionesUefa ? (
+                    <div className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                      {solicitud.fechaObservacion && (
+                        <span className="text-[10px] text-muted-foreground">{solicitud.fechaObservacion}</span>
+                      )}
+                      {solicitud.observadoPor && (
+                        <span className="text-[10px] text-muted-foreground">Por: {solicitud.observadoPor}</span>
+                      )}
+                      <DevolucionObs comentario={solicitud.observacionesUefa} />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       </div>
 
       <ConfirmModal
@@ -1093,6 +1359,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
 export function ValidacionUefaPage() {
   const { user } = useAuth()
 
+  const hasDataRef                               = useRef(false)
   const [solicitudes,      setSolicitudes]      = useState<UefaSolicitud[]>([])
   const [loading,          setLoading]          = useState(true)
   const [error,            setError]            = useState<string | null>(null)
@@ -1105,13 +1372,15 @@ export function ValidacionUefaPage() {
   const [firmaTargetId,    setFirmaTargetId]    = useState<number | null>(null)
 
   const cargarSolicitudes = useCallback(async () => {
-    setLoading(true); setError(null)
+    if (!hasDataRef.current) setLoading(true)
+    setError(null)
     try {
-        const viewerId = (user as any)?.id ?? ""
-        const res  = await fetch(`/api/validacion?estado=todos&viewerId=${viewerId}`)
+      const viewerId = (user as any)?.id ?? ""
+      const res  = await fetch(`/api/validacion?estado=todos&viewerId=${viewerId}`)
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar solicitudes"); return }
       setSolicitudes((json.data ?? []).map(mapBDtoSolicitud))
+      hasDataRef.current = true
     } catch {
       setError("Error de conexión al servidor")
     } finally {
@@ -1120,6 +1389,7 @@ export function ValidacionUefaPage() {
   }, [])
 
   useEffect(() => { cargarSolicitudes() }, [cargarSolicitudes])
+  useRealtime(["validacion"], cargarSolicitudes)
 
   const handleAprobar = useCallback(async (id: number) => {
     setGuardando(true)
@@ -1305,10 +1575,6 @@ export function ValidacionUefaPage() {
           <h2 className="text-xl font-semibold text-foreground">Bandeja de validación de justificaciones</h2>
           <p className="text-sm text-muted-foreground">Gestiona y da seguimiento a las justificaciones durante su proceso de validación y emisión.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={cargarSolicitudes} disabled={loading} className="gap-1.5">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Actualizar
-        </Button>
       </div>
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
@@ -1378,8 +1644,17 @@ export function ValidacionUefaPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{formatRegimen(sol.regimen)}</td>
                         <td className="px-4 py-3 text-muted-foreground">{sol.fecha}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{sol.vigenciaInicio}</td>
-                        <td className="px-4 py-3"><UefaEstadoBadge estado={sol.estado} /></td>
+                        <td className="px-4 py-3 text-muted-foreground">{sol.fechaEnvio}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <UefaEstadoBadge estado={sol.estado} />
+                            {sol.reingresoCount > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-[#832B56]/10 px-2 py-0.5 text-[10px] font-medium text-[#832B56] w-fit">
+                                <RotateCcw className="h-3 w-3" />{ordinalRegreso(sol.reingresoCount)}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         {activeTab === "Emitidas" && (
                           <td className="px-4 py-3">
                             {sol.modalidadFirma === "electronica" ? (

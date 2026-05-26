@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
+
+const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
 const INICIALES_MES: Record<number, string> = {
   1: "EN", 2: "FE", 3: "MR", 4: "AB",
@@ -248,6 +251,7 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({ ok: true, data: updated })
   } catch (error: any) {
     console.error("[PATCH /api/emision]", error)

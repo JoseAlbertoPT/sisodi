@@ -64,7 +64,6 @@ export interface JustificacionNombramientoData {
   firmaDictRevisoNombre?: string;
   firmaDictVerificoNombre?: string;
   firmaDictEmitioNombre?: string;
-  // Fecha en que se emitió el dictamen (mostrada en el bloque de dictaminación)
   fechaDictaminacion?: string;
 }
 

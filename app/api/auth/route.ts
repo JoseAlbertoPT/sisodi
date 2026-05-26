@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
         area:                usuario.area?.nombre ?? null,
         secretariaTexto:     usuario.secretaria_texto ?? usuario.organo_centralizado?.nombre ?? null,
         secretariaId:        usuario.secretaria_id ?? null,
+        organoNombre:        usuario.organo_centralizado?.nombre ?? null,
         claveReportePlazas:  usuario.organo_centralizado?.clave_reporte_plazas ?? null,
         mustChangePassword:  usuario.must_change_password ?? false,
         tipoAdministracion:  usuario.organo_centralizado ? "centralizada" : "paraestatal",

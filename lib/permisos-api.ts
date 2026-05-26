@@ -14,8 +14,9 @@ export interface PermisosUser {
   menuActions: Record<string, string[]>
 }
 
-export async function fetchMyMenus(rolNombre: string): Promise<MenuNode[]> {
-  const res = await fetch(`/api/menus?rol=${encodeURIComponent(rolNombre)}`)
+export async function fetchMyMenus(rolNombre: string, userId?: string): Promise<MenuNode[]> {
+  const url = `/api/menus?rol=${encodeURIComponent(rolNombre)}${userId ? `&userId=${encodeURIComponent(userId)}` : ""}`
+  const res = await fetch(url)
   if (res.status === 404) return []
   if (!res.ok) throw new Error(`Error al cargar menús (${res.status})`)
   const data = await res.json()

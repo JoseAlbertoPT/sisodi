@@ -1,18 +1,28 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ChevronUp, UserCircle, CornerDownRight } from "lucide-react"
+import { ChevronDown, ChevronUp, UserCircle, CornerDownRight, Pencil, MoveRight, X } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export interface HistorialEntryData {
   fecha: string
   usuario: string
   estadoAnterior: string | null
   estadoNuevo: string
+  comentario?: string | null
 }
 
 const VISIBLE_DEFAULT = 4
 
-type Tipo = "captura" | "normal" | "observacion" | "emision"
+type Tipo = "captura" | "normal" | "observacion" | "emision" | "edicion"
 
 function fmtFecha(v: string): string {
   if (!v) return "—"
@@ -26,14 +36,27 @@ function fmtFecha(v: string): string {
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`
 }
 
+function parseDiff(comentario: string | null | undefined): { campo: string; de: string; a: string }[] | null {
+  if (!comentario) return null
+  try {
+    const parsed = JSON.parse(comentario)
+    if (parsed?.tipo === "edicion" && Array.isArray(parsed.cambios)) return parsed.cambios
+  } catch { /* not JSON */ }
+  return null
+}
+
 function getEvento(
   anterior: string | null,
   nuevo:    string,
   fecha:    string,
+  comentario?: string | null,
 ): { label: string; accion: string; tipo: Tipo } {
   const n = (nuevo    ?? "").toLowerCase().trim()
   const a = (anterior ?? "").toLowerCase().trim()
   const f = fmtFecha(fecha)
+
+  if (n === "modificada" || parseDiff(comentario) !== null)
+    return { label: "Solicitud modificada", accion: f, tipo: "edicion" }
 
   if (n === "en captura" || n === "borrador")
     return { label: "Solicitud creada", accion: f, tipo: "captura" }
@@ -69,7 +92,7 @@ function getEvento(
     return { label: "En Validación DO", accion: `Recibida Validación DO · ${f}`, tipo: "normal" }
 
   if (n === "observado por validacion final")
-    return { label: "Observada — Validación Final", accion: `Observada Validación Final · ${f}`, tipo: "observacion" }
+    return { label: "Observada — Validación DGDO", accion: `Observada Validación DGDO · ${f}`, tipo: "observacion" }
 
   if (n === "en revision emisor")
     return { label: "Enviada a Emisor", accion: `Recibida por Emisor · ${f}`, tipo: "normal" }
@@ -89,6 +112,117 @@ function getEvento(
   return { label: nuevo, accion: f, tipo: "normal" }
 }
 
+const VINO  = "#7D1128"
+const OLIVO = "#556b2f"
+
+function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de: string; a: string }[]; usuario: string; fecha: string }) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-[#C4A882]/50 bg-[#F5F0E8] px-2.5 py-1 text-[10px] font-semibold text-[#A0845C] transition-all hover:bg-[#EDE8DE] hover:border-[#A0845C]/60 hover:shadow-sm">
+          <Pencil className="h-2.5 w-2.5" />
+          {cambios.length} campo{cambios.length !== 1 ? "s" : ""} modificado{cambios.length !== 1 ? "s" : ""}
+        </button>
+      </DialogTrigger>
+
+      <DialogContent showCloseButton={false} className="max-w-2xl p-0 gap-0 overflow-hidden rounded-2xl border border-border/50 shadow-2xl">
+
+        {/* Header */}
+        <div className="relative flex items-center gap-4 bg-white px-6 py-5 border-b border-border/60">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#A0845C]/10 border border-[#A0845C]/20">
+            <Pencil className="h-5 w-5 text-[#A0845C]" />
+          </div>
+          <div className="flex flex-col gap-1 min-w-0 flex-1">
+            <DialogHeader>
+              <DialogTitle className="text-[15px] font-bold text-foreground leading-none">
+                Modificación de solicitud
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+              <UserCircle className="h-3.5 w-3.5 shrink-0" />
+              <span className="font-semibold text-foreground/70">{usuario}</span>
+              <span className="text-border">·</span>
+              <span>{fecha}</span>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#A0845C]/10 px-3 py-1 text-[11px] font-semibold text-[#A0845C] shrink-0">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#A0845C] text-[9px] font-black text-white">
+              {cambios.length}
+            </span>
+            campo{cambios.length !== 1 ? "s" : ""} modificado{cambios.length !== 1 ? "s" : ""}
+          </span>
+          <DialogClose className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-all hover:bg-muted hover:text-foreground focus:outline-none">
+            <X className="h-3.5 w-3.5" />
+            <span className="sr-only">Cerrar</span>
+          </DialogClose>
+        </div>
+
+        {/* Lista de cambios */}
+        <ScrollArea className="max-h-[65vh] bg-muted/20">
+          <div className="flex flex-col divide-y divide-border/50">
+            {cambios.map((c, i) => (
+              <div key={i} className="px-6 py-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#A0845C]/15 text-[10px] font-black text-[#A0845C]">
+                    {i + 1}
+                  </span>
+                  <span className="text-[13px] font-bold text-foreground">{c.campo}</span>
+                </div>
+
+                <div className="grid grid-cols-[1fr_40px_1fr] items-start gap-3">
+
+                  {/* Antes */}
+                  <div className="rounded-xl border shadow-sm px-4 py-3" style={{ backgroundColor: `${VINO}0F`, borderColor: `${VINO}35` }}>
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: VINO }}>
+                      <span className="inline-block h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: VINO }} />
+                      Antes
+                    </p>
+                    {c.de
+                      ? c.de.split("\n").map((item, idx) => (
+                          <div key={idx} className="flex items-start gap-1.5 mb-1 last:mb-0">
+                            <span className="mt-1 shrink-0 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `${VINO}60` }} />
+                            <p className="text-[12px] leading-relaxed" style={{ color: VINO }}>{item}</p>
+                          </div>
+                        ))
+                      : <p className="text-[12px]" style={{ color: VINO }}>—</p>
+                    }
+                  </div>
+
+                  {/* Flecha */}
+                  <div className="flex items-center justify-center pt-6">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F0EBE2] border border-[#D8CFC0] shadow-sm">
+                      <MoveRight className="h-3.5 w-3.5 text-[#9A8E7A]" />
+                    </div>
+                  </div>
+
+                  {/* Después */}
+                  <div className="rounded-xl border shadow-sm px-4 py-3" style={{ backgroundColor: `${OLIVO}0F`, borderColor: `${OLIVO}35` }}>
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: OLIVO }}>
+                      <span className="inline-block h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: OLIVO }} />
+                      Después
+                    </p>
+                    {c.a
+                      ? c.a.split("\n").map((item, idx) => (
+                          <div key={idx} className="flex items-start gap-1.5 mb-1 last:mb-0">
+                            <span className="mt-1 shrink-0 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: `${OLIVO}60` }} />
+                            <p className="text-[12px] font-medium leading-relaxed" style={{ color: OLIVO }}>{item}</p>
+                          </div>
+                        ))
+                      : <p className="text-[12px]" style={{ color: OLIVO }}>—</p>
+                    }
+                  </div>
+
+                </div>
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -97,6 +231,7 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
 
   const reversed = [...entries].reverse().filter((e, i, arr) =>
     i === 0 || e.estadoNuevo.toLowerCase().trim() !== arr[i - 1].estadoNuevo.toLowerCase().trim()
+      || e.estadoNuevo.toLowerCase().trim() === "modificada"
   )
 
   const showToggle = reversed.length > VISIBLE_DEFAULT
@@ -109,18 +244,18 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
           entry.estadoAnterior,
           entry.estadoNuevo,
           entry.fecha,
+          entry.comentario,
         )
-        const isObs     = tipo === "observacion"
-        const isEmit    = tipo === "emision"
-        const isCaptura = tipo === "captura"
+        const diff = parseDiff(entry.comentario)
+        const isObs  = tipo === "observacion"
+        const isEdit = tipo === "edicion"
         const isLast    = i === visible.length - 1 && !showToggle
 
-        const dotBorder  = isObs ? "border-[#832B56]"  : isEmit ? "border-emerald-600" : isCaptura ? "border-[#6e795a]" : "border-secondary"
-        const dotFill    = isObs ? "bg-[#832B56]"       : isEmit ? "bg-emerald-600"     : isCaptura ? "bg-[#6e795a]"     : "bg-secondary"
-        const labelColor = isObs ? "text-[#832B56]"     : isEmit ? "text-emerald-700"   : isCaptura ? "text-[#6e795a]"   : "text-card-foreground"
-        const userColor  = isObs ? "text-[#832B56]/80"  : isEmit ? "text-emerald-700/80": isCaptura ? "text-[#6e795a]/80": "text-secondary/90"
+        const dotBorder  = isObs ? "border-[#832B56]" : isEdit ? "border-[#C4A882]"  : "border-[#6e795a]"
+        const labelColor = isObs ? "text-[#832B56]"   : isEdit ? "text-[#A0845C]"   : "text-[#6e795a]"
+        const userColor  = isObs ? "text-[#832B56]/80": isEdit ? "text-[#A0845C]/80": "text-[#6e795a]/80"
 
-        const showTransicion = entry.estadoAnterior &&
+        const showTransicion = !isEdit && entry.estadoAnterior &&
           entry.estadoAnterior.trim() !== "" &&
           entry.estadoAnterior.toLowerCase().trim() !== entry.estadoNuevo.toLowerCase().trim()
 
@@ -131,7 +266,10 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
           <div key={i} className="flex gap-3">
             <div className="flex flex-col items-center">
               <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${dotBorder} bg-card`}>
-                <div className={`h-2 w-2 rounded-full ${dotFill}`} />
+                {isEdit
+                  ? <Pencil className="h-2.5 w-2.5 text-[#A0845C]" />
+                  : <div className={`h-2 w-2 rounded-full ${isObs ? "bg-[#832B56]" : "bg-[#6e795a]"}`} />
+                }
               </div>
               {!isLast && <div className="w-px flex-1 bg-border" />}
             </div>
@@ -149,6 +287,7 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
                   <span className="font-medium">{entry.estadoNuevo}</span>
                 </span>
               )}
+              {diff && <DiffDialog cambios={diff} usuario={entry.usuario} fecha={accion} />}
               {showNextActor && (
                 <div className="flex items-center gap-1 mt-1">
                   <CornerDownRight className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0" />
@@ -161,7 +300,6 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
           </div>
         )
       })}
-
       {showToggle && (
         <button
           onClick={() => setExpanded((v) => !v)}

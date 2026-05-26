@@ -121,5 +121,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  td, th {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  p, span, div, label {
+    overflow-wrap: break-word;
   }
 }

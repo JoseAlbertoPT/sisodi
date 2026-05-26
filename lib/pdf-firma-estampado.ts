@@ -35,22 +35,21 @@ const PAGE_H = 792
 const MARGIN = 42
 const FOOTER_RESERVE = 130
 
-// Paleta institucional del HTML
-const cVerde      = rgb(40/255, 60/255, 42/255)   // #283C2A
-const cOliva      = rgb(110/255, 121/255, 90/255) // #6E795A
-const cCafe       = rgb(198/255, 156/255, 109/255) // #C69C6D
-const cCafeSoft   = rgb(246/255, 238/255, 226/255) // #F6EEE2
-const cCafeBorder = rgb(227/255, 203/255, 174/255) // #E3CBAE
-const cVino       = rgb(131/255, 40/255, 86/255)   // #832856
-const cArena      = rgb(243/255, 242/255, 238/255) // #F3F2EE
-const cArenaDark  = rgb(236/255, 234/255, 227/255) // #ECEAE3
-const cTinta      = rgb(40/255, 60/255, 42/255)    // #283C2A (igual al verde)
-const cTinta2     = rgb(63/255, 79/255, 64/255)    // #3F4F40
-const cTexto      = rgb(134/255, 133/255, 126/255) // #86857E
-const cRule       = rgb(218/255, 215/255, 203/255) // #DAD7CB
-const cRuleSoft   = rgb(232/255, 229/255, 217/255) // #E8E5D9
+const cVerde      = rgb(40/255, 60/255, 42/255)
+const cOliva      = rgb(110/255, 121/255, 90/255)
+const cCafe       = rgb(198/255, 156/255, 109/255)
+const cCafeSoft   = rgb(246/255, 238/255, 226/255)
+const cCafeBorder = rgb(227/255, 203/255, 174/255)
+const cVino       = rgb(131/255, 40/255, 86/255)
+const cArena      = rgb(243/255, 242/255, 238/255)
+const cArenaDark  = rgb(236/255, 234/255, 227/255)
+const cTinta      = rgb(40/255, 60/255, 42/255)
+const cTinta2     = rgb(63/255, 79/255, 64/255)
+const cTexto      = rgb(134/255, 133/255, 126/255)
+const cRule       = rgb(218/255, 215/255, 203/255)
+const cRuleSoft   = rgb(232/255, 229/255, 217/255)
 const cBlanco     = rgb(1, 1, 1)
-const cVerdeSoft  = rgb(29/255, 44/255, 31/255)    // #1D2C1F
+const cVerdeSoft  = rgb(29/255, 44/255, 31/255)
 
 interface DrawContext {
   pdfDoc: PDFDocument
@@ -125,11 +124,8 @@ async function generarQRPng(text: string, size = 220): Promise<Buffer> {
 function drawBandaLateral(page: PDFPage): void {
   const bandaW = 6
   const altoTercio = PAGE_H / 3
-  // Verde oscuro arriba
   page.drawRectangle({ x: 0, y: PAGE_H - altoTercio, width: bandaW, height: altoTercio, color: cVerde })
-  // Oliva en medio
   page.drawRectangle({ x: 0, y: altoTercio, width: bandaW, height: altoTercio, color: cOliva })
-  // Café abajo
   page.drawRectangle({ x: 0, y: 0, width: bandaW, height: altoTercio, color: cCafe })
 }
 
@@ -158,7 +154,6 @@ function nuevaPaginaConstancia(ctx: DrawContext, conTitulo: boolean): void {
   ctx.y = PAGE_H - 50
 
   if (conTitulo) {
-    // ─── Header: logo + meta derecha ───
     const fechaHoy = (() => {
       const d = new Date()
       const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
@@ -179,7 +174,6 @@ function nuevaPaginaConstancia(ctx: DrawContext, conTitulo: boolean): void {
       })
     }
 
-    // meta derecha (folio + fecha en 2 líneas)
     const folioW = ctx.font.widthOfTextAtSize(folio, 7)
     ctx.page.drawText(folio, { x: PAGE_W - MARGIN - folioW, y: ctx.y - 2, size: 7, font: ctx.font, color: cTexto })
     const fechaW = ctx.fontBold.widthOfTextAtSize(fechaHoy, 9)
@@ -190,7 +184,6 @@ function nuevaPaginaConstancia(ctx: DrawContext, conTitulo: boolean): void {
 
     ctx.y -= 38
 
-    // ─── Título centrado (sin eyebrow, una sola línea) ───
     const tituloText = "Constancia de Firma Electrónica"
     const tituloW = ctx.fontBold.widthOfTextAtSize(tituloText, 14)
     ctx.page.drawText(tituloText, { x: (PAGE_W - tituloW) / 2, y: ctx.y, size: 14, font: ctx.fontBold, color: cVerde })
@@ -211,13 +204,11 @@ function drawDocCard(ctx: DrawContext, nombreArchivo: string, huella: string, to
   const cardW = PAGE_W - MARGIN * 2
   const cardH = 50
 
-  // Fondo
   ctx.page.drawRectangle({
     x: cardX, y: ctx.y - cardH, width: cardW, height: cardH,
     color: cCafeSoft, borderColor: cRule, borderWidth: 0.6,
   })
 
-  // Lado izquierdo: meta
   const metaX = cardX + 10
   const labelW = 70
   const valueX = metaX + labelW
@@ -235,7 +226,6 @@ function drawDocCard(ctx: DrawContext, nombreArchivo: string, huella: string, to
   ctx.page.drawText("ESTATUS", { x: metaX, y: my, size: 6, font: ctx.fontBold, color: cCafe })
   ctx.page.drawText("SELLO ACTIVO · Documento íntegro", { x: valueX, y: my, size: 7.5, font: ctx.fontBold, color: cOliva })
 
-  // Línea divisoria vertical
   const divX = cardX + cardW - 115
   ctx.page.drawLine({
     start: { x: divX, y: ctx.y - 6 },
@@ -245,7 +235,6 @@ function drawDocCard(ctx: DrawContext, nombreArchivo: string, huella: string, to
 
   const stackXEnd = cardX + cardW - 10
 
-  // Pill "Vigente"
   const pillText = "VIGENTE"
   const pillSize = 6.5
   const pillTextW = ctx.fontBold.widthOfTextAtSize(pillText, pillSize)
@@ -260,7 +249,6 @@ function drawDocCard(ctx: DrawContext, nombreArchivo: string, huella: string, to
     x: stackXEnd - pillW + 11, y: pillY - 4, size: pillSize, font: ctx.fontBold, color: cBlanco,
   })
 
-  // Firmas count
   const countText = String(total).padStart(2, "0")
   const countSize = 18
   const countW = ctx.fontBold.widthOfTextAtSize(countText, countSize)
@@ -312,12 +300,12 @@ function alturaFirmanteCard(firma: FirmaPortal, font: PDFFont, fontBold: PDFFont
   const sealFontSize = 4
   const lineGap = sealFontSize + 1
   let h = 8
-  h += 14 // sig-head
-  h += 12 // sig-name
-  h += 22 // sig-meta 3 filas compactas
+  h += 14
+  h += 12
+  h += 22
   h += 4
   if (firma.selloDigital) {
-    h += 8 // label
+    h += 8
     const lines = wrapText(firma.selloDigital, font, sealFontSize, innerW - 8)
     h += lines.length * lineGap + 5
     h += 2
@@ -346,19 +334,16 @@ function drawFirmanteCard(
   const innerX = x + padX
   const innerW = w - padX * 2
 
-  // Fondo blanco
   ctx.page.drawRectangle({
     x, y: y - h, width: w, height: h,
     color: cBlanco, borderColor: cRule, borderWidth: 0.5,
   })
-  // Barra acento izquierda
   ctx.page.drawRectangle({
     x, y: y - h, width: 2, height: h, color: cCafe,
   })
 
   let cy = y - 12
 
-  // ─── sig-head ───
   const numCenter = { x: innerX + 7, y: cy + 1 }
   ctx.page.drawCircle({
     x: numCenter.x, y: numCenter.y, size: 6,
@@ -400,7 +385,6 @@ function drawFirmanteCard(
 
   cy -= 14
 
-  // ─── sig-name ───
   const nombre = (firma.responsable || firma.usuario || "Sin nombre").trim()
   const nombreTrunc = truncateToWidth(nombre, ctx.fontBold, 9, innerW)
   ctx.page.drawText(nombreTrunc, {
@@ -408,7 +392,6 @@ function drawFirmanteCard(
   })
   cy -= 12
 
-  // ─── sig-meta dl (compacto) ───
   const dlLabelW = 32
   const dlValueX = innerX + dlLabelW
   const dlValueMaxW = innerW - dlLabelW
@@ -424,7 +407,6 @@ function drawFirmanteCard(
   const fechaFirma = formatFecha(firma.estampadoTiempo || firma.firmadoEn)
   if (fechaFirma) drawDlRow("FIRMADO", fechaFirma, cTinta)
 
-  // Separador
   cy -= 2
   ctx.page.drawLine({
     start: { x: innerX, y: cy + 2 },
@@ -433,7 +415,6 @@ function drawFirmanteCard(
   })
   cy -= 4
 
-  // ─── Sello digital (multi-linea blob completo) ───
   const drawSealHash = (label: string, hash: string) => {
     ctx.page.drawText(label.toUpperCase(), { x: innerX, y: cy, size: 5.5, font: ctx.fontBold, color: cCafe })
     cy -= 8
@@ -459,7 +440,6 @@ function drawFirmanteCard(
     drawSealHash("Sello digital", firma.selloDigital)
   }
 
-  // ─── gem-row compacto inline ───
   if (firma.rfcGEM || firma.noCertificadoGEM) {
     const parts: string[] = []
     if (firma.rfcGEM) parts.push(`GEM: ${firma.rfcGEM}`)
@@ -471,7 +451,6 @@ function drawFirmanteCard(
     cy -= 9
   }
 
-  // ─── Sello digital GEM ───
   if (firma.selloEstampadoTiempo) {
     drawSealHash("Sello GEM", firma.selloEstampadoTiempo)
   }
@@ -512,14 +491,12 @@ function drawValidacion(
   const blockH = 80
   const blockX = MARGIN
   const blockW = PAGE_W - MARGIN * 2
-  // Posicion fija desde el fondo (sobre footer)
   const blockY = 56
 
   ctx.page.drawRectangle({
     x: blockX, y: blockY, width: blockW, height: blockH, color: cVerde,
   })
 
-  // QR
   const qrSize = 62
   const qrX = blockX + 12
   const qrY = blockY + (blockH - qrSize) / 2
@@ -530,7 +507,6 @@ function drawValidacion(
     ctx.page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize })
   }
 
-  // Body
   const bodyX = qrX + qrSize + 16
   const bodyW = blockW - (bodyX - blockX) - 12
   let by = blockY + blockH - 14
@@ -545,7 +521,6 @@ function drawValidacion(
   })
   by -= 13
 
-  // URL en una línea
   if (urlValidacion) {
     const urlOne = truncateToWidth(urlValidacion, ctx.font, 7, bodyW - 10)
     ctx.page.drawRectangle({
@@ -563,7 +538,6 @@ function drawValidacion(
     by -= 8
   }
 
-  // Validacion ya esta en posicion fija, no muevo ctx.y
 }
 
 /* ── Footer ── */
@@ -576,13 +550,11 @@ function drawFooter(ctx: DrawContext, uuid: string | null): void {
     thickness: 0.4, color: cRule,
   })
 
-  // Stamp izquierdo
   ctx.page.drawCircle({ x: MARGIN + 3, y: footY + 4, size: 2, color: cCafe })
   ctx.page.drawText("Documento generado automáticamente · eFirma v3.2", {
     x: MARGIN + 10, y: footY, size: 7, font: ctx.fontBold, color: cTexto,
   })
 
-  // Página derecha
   const uuidShort = uuid ? `${uuid.slice(0, 4)}…${uuid.slice(-5)}` : ""
   const rightText = uuidShort ? `Página 1 · UUID ${uuidShort}` : "Página 1"
   const rW = ctx.fontBold.widthOfTextAtSize(rightText, 7)
@@ -615,7 +587,6 @@ export async function agregarConstanciaFirma(opts: AgregarConstanciaOpts): Promi
     }
   }
 
-  // Cargar logo de Finanzas
   let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null
   try {
     const logoPath = path.join(process.cwd(), "public", "logo-20finanzas.png")
@@ -625,7 +596,6 @@ export async function agregarConstanciaFirma(opts: AgregarConstanciaOpts): Promi
     logoImage = null
   }
 
-  // Construir contexto
   const ctx: DrawContext = {
     pdfDoc,
     page: null as unknown as PDFPage,
@@ -636,16 +606,12 @@ export async function agregarConstanciaFirma(opts: AgregarConstanciaOpts): Promi
   }
   nuevaPaginaConstancia(ctx, true)
 
-  // Doc card
   drawDocCard(ctx, nombreArchivo, huella, firmas.length)
 
-  // Grid de firmantes
   drawFirmantesGrid(ctx, firmas)
 
-  // Sección de validación
   drawValidacion(ctx, qrImage, urlValidacion)
 
-  // Footer
   const uuid = firmas[0]?.urlValidacion?.match(/uuid=([a-f0-9]+)/i)?.[1] ?? null
   drawFooter(ctx, uuid)
 

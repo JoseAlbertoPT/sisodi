@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { efirmaClient, firmadosCount, normalizarEstado } from "@/lib/efirma-client"
+import { broadcastUpdate } from "@/lib/sse-manager"
+
+const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
 const BYPASS = process.env.EFIRMA_BYPASS === "true"
 
@@ -33,7 +36,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "El link expiró. Solicita uno nuevo al responsable." }, { status: 410 })
     }
 
-    // Orden estricto: todos los firmantes con orden menor deben estar firmados.
     const anterioresPendientes = firmante.firma_proceso.firmantes.filter(
       f => f.orden < firmante.orden && !f.firmado
     )
@@ -100,6 +102,7 @@ export async function POST(req: NextRequest) {
       return { firmadosLocal, completo }
     })
 
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({
       ok: true,
       firmados: result.firmadosLocal,

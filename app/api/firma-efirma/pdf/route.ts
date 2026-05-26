@@ -36,8 +36,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Faltan parámetros" }, { status: 400 })
     }
 
-    // Permitir lookup tanto por token de firmante (link público) como por
-    // token del propio usuario autenticado (interno — no aplica aquí).
     const firmante = await prisma.firma_firmante.findUnique({
       where: { acceso_token: String(token) },
       include: { firma_proceso: true },

@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
     const cookieName = cookieNameFor(String(token))
     const cookieVal  = req.cookies.get(cookieName)?.value
 
-    // Caso A: primer acceso
     if (!firmante.accedido_en || !firmante.session_id) {
       const sessionId = randomBytes(32).toString("hex")
       const expiraEn  = new Date(ahora.getTime() + TTL_MINUTES * 60 * 1000)
@@ -54,7 +53,6 @@ export async function POST(req: NextRequest) {
       return res
     }
 
-    // Caso B: misma sesión
     if (cookieVal === firmante.session_id) {
       return NextResponse.json({
         ok: true,
@@ -64,7 +62,6 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Caso C: otra sesión
     return NextResponse.json({
       ok: false,
       status: "otra_sesion",

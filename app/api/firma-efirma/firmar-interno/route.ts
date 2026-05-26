@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { efirmaClient, firmadosCount, normalizarEstado } from "@/lib/efirma-client"
+import { broadcastUpdate } from "@/lib/sse-manager"
+
+const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
 const BYPASS = process.env.EFIRMA_BYPASS === "true"
 
@@ -25,7 +28,6 @@ export async function POST(req: NextRequest) {
     })
     if (!firmante)                          return NextResponse.json({ ok: false, error: "Firmante no encontrado" }, { status: 404 })
     if (firmante.tipo !== "interno")        return NextResponse.json({ ok: false, error: "Este firmante no es interno" }, { status: 400 })
-    // Slot sin asignar → lo reclama el usuario actual (flujo cascada: el interno real se materializa al firmar).
     const slotSinAsignar = !firmante.usuario_id
     if (!BYPASS && !slotSinAsignar && firmante.usuario_id !== usuarioId) {
       return NextResponse.json({ ok: false, error: "No te corresponde firmar este bloque" }, { status: 403 })
@@ -38,7 +40,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Proceso sin identificador del portal" }, { status: 500 })
     }
 
-    // Orden estricto: todos los firmantes con orden menor deben estar firmados.
     const anterioresPendientes = firmante.firma_proceso.firmantes.filter(
       f => f.orden < firmante.orden && !f.firmado
     )
@@ -50,7 +51,6 @@ export async function POST(req: NextRequest) {
       }, { status: 412 })
     }
 
-    // Si el slot no tenía usuario asignado, materializamos al usuario actual como dueño del firmante.
     const usuarioEfectivo = slotSinAsignar
       ? await prisma.usuario.findUnique({ where: { id: usuarioId } })
       : firmante.usuario
@@ -81,7 +81,6 @@ export async function POST(req: NextRequest) {
           rfc: rfcUsuario.toUpperCase(),
           nombre: usuarioEfectivo?.nombre ?? portalRes?.firma?.responsable ?? null,
           cargo_firmante: String(cargoFirmante).trim(),
-          // Reclamamos el slot para el usuario que firma si aún no estaba asignado.
           ...(slotSinAsignar ? { usuario_id: usuarioId } : {}),
         },
       })
@@ -100,8 +99,6 @@ export async function POST(req: NextRequest) {
       return { firmadosLocal, completo }
     })
 
-    // Avanzar estado de la solicitud según la bandeja del firmante que acaba de firmar.
-    // Cada bandeja interna en cascada: uefa → revision → validacion → emision.
     if (!result.completo) {
       const siguienteEstadoPorBandeja: Record<string, string | null> = {
         uefa:       "Pendiente Firma Revision",
@@ -141,9 +138,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Si el proceso quedó completado, y este firmante es de emisión, emitir el dictamen.
-    // Si skipEmit=true (ej. el flujo aún requiere subir sellado), no emitimos aquí —
-    // se llamará al endpoint /api/firma-efirma/emitir-dictamen una vez el sellado esté listo.
     let emisionHecha = false
     let folioDictamenFinal: string | null = null
     if (result.completo && firmante.bandeja === "emision" && !skipEmit) {
@@ -211,6 +205,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({
       ok: true,
       firmados: result.firmadosLocal,

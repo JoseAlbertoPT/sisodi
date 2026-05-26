@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/solicitudes-seguimiento
-// Devuelve TODAS las solicitudes que han ingresado al flujo con info consolidada
-// para un visor de consulta global (uso en Emisión, solo lectura).
 export async function GET(_req: NextRequest) {
   try {
     const solicitudes = await prisma.solicitud.findMany({
@@ -45,8 +42,6 @@ export async function GET(_req: NextRequest) {
   }
 }
 
-// Mapea un estado específico a una etapa macro del flujo.
-// Etapas: captura → uefa → revisor → validador → emisor → firmado → emitido
 function mapEtapa(estado: string): string {
   const n = estado.toLowerCase()
   if (n.includes("captura") || n === "borrador") return "captura"
@@ -61,8 +56,6 @@ function mapEtapa(estado: string): string {
   return "captura"
 }
 
-// Responsable = a quien está asignada la solicitud. Si no hay asignación → "Sin asignar".
-// Hoy solo existe asignación formal a nivel Revisor (revisor_asignado_id).
 function resolverResponsable(s: any, estado: string): { nombre: string; detalle: string } {
   const n = estado.toLowerCase()
   const etapa = mapEtapa(estado)

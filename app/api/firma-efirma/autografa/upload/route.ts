@@ -3,7 +3,7 @@ import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { prisma } from "@/lib/prisma"
 
-const MAX_SIZE = 15 * 1024 * 1024 // 15 MB
+const MAX_SIZE = 15 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
   try {

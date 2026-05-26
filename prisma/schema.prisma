@@ -261,10 +261,12 @@ model solicitud {
   revisor_asignado_id   String?               @db.Uuid
   puesto_jefe_inmediato String?               @db.VarChar(200)
   condiciones_riesgos   String[]              @default([])
-  tipo_importe          String?               @db.VarChar(20)
-  modalidad_firma       String?               @db.VarChar(20)
-  tipo_administracion   String?               @db.VarChar(20)
-  adjunto               adjunto[]
+  tipo_importe             String?               @db.VarChar(20)
+  modalidad_firma          String?               @db.VarChar(20)
+  tipo_administracion      String?               @db.VarChar(20)
+  secretaria_id_snapshot   String?               @db.Uuid
+  secretaria_txt_snapshot  String?               @db.VarChar(512)
+  adjunto                  adjunto[]
   checklist_detalle     checklist_detalle[]
   dictamen              dictamen?
   documento_sellado     documento_sellado[]

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
+
+const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
 const INICIALES_MES: Record<number, string> = {
   1: "EN", 2: "FE", 3: "MR", 4: "AB",
@@ -86,15 +89,17 @@ export async function GET(req: NextRequest) {
       ] : []),
       ...(filtro === 1 ? [
         "Aceptado por Revisor",
+        "Observado por Revisor",
         "Observado por Validacion Final",
         "Pendiente Firma Revision",
       ] : []),
       ...(filtro === 2 ? [
+        "Aprobado por Revisor",
         "Pendiente DO",
         "En Revision Revisor",
         "Observado por Emisor",
         "Observado por DO",
-        "Observado por Revisor",
+        "Observado por Validacion Final",
         "Pendiente Firma Validacion",
       ] : []),
     ]
@@ -139,17 +144,19 @@ export async function GET(req: NextRequest) {
         if (!esRolRevisor && filtro === 1) {
           if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
             organoFilter = {
-              usuario: {
-                organo_centralizado: { isNot: null },
-                secretaria_id: viewer.secretaria_id,
-              },
+              tipo_administracion: { not: "paraestatal" },
+              OR: [
+                { secretaria_id_snapshot: viewer.secretaria_id },
+                { secretaria_id_snapshot: null, usuario: { secretaria_id: viewer.secretaria_id } },
+              ],
             }
           } else {
             organoFilter = {
-              usuario: {
-                organo_centralizado: { is: null },
-                secretaria_texto: viewer.secretaria_texto,
-              },
+              tipo_administracion: "paraestatal",
+              OR: [
+                { secretaria_txt_snapshot: viewer.secretaria_texto },
+                { secretaria_txt_snapshot: null, usuario: { organo_centralizado: { is: null }, secretaria_texto: viewer.secretaria_texto } },
+              ],
             }
           }
         }
@@ -201,13 +208,63 @@ export async function GET(req: NextRequest) {
       orderBy: { fecha_creacion: "desc" },
     })
 
-    const enriched = solicitudes.map((sol) => {
+    // --- ownership filter --------------------------------------------------
+    // Some estados appear in multiple filtros' lists so they can be "tracked"
+    // across the pipeline. But a solicitud should only appear in a filtro that
+    // currently owns it: a filtro OWNS a solicitud when the solicitud has
+    // previously reached its primary state (or it IS its primary state now).
+    //
+    // filtro=2 primary: "En Validacion Final"
+    // filtro=3 primary: "En Revision Emisor"
+    //
+    // Rules:
+    //  • filtro=2 – "En Revision Revisor" only visible when the solicitud was
+    //    PREVIOUSLY in "En Validacion Final" (DGDO sent it back to Revisor).
+    //  • filtro=3 – all pre-emission intermediate states only visible when the
+    //    solicitud PREVIOUSLY reached "En Revision Emisor" (i.e. Emisor already
+    //    took ownership at some point in a prior cycle).
+    //    "Pendiente DO" is always visible to filtro=3 because it is the entry
+    //    point: a solicitud in that state is arriving for the first time.
+    const FILTRO3_RESTRINGIDOS = new Set([
+      "en revision revisor",
+      "observado por revisor",
+      "aceptado por revisor",
+      "aprobado por revisor",
+      "pendiente firma justificacion",
+      "pendiente firma revision",
+      "pendiente firma validacion",
+      "en validacion final",
+      "observado por validacion final",
+    ])
+
+    const solicitudesFiltradas = filtro === 1
+      ? solicitudes
+      : solicitudes.filter((sol) => {
+          const actual = sol.estado.nombre.toLowerCase()
+          const enHistorial = (nombre: string) =>
+            sol.historial_solicitud.some(
+              (h) => (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase() === nombre
+            )
+
+          // "En Revision Revisor" always belongs to filtro=2: it is only
+          // ever created when filtro=2 assigns a reviewer.
+          if (filtro === 2 && actual === "en revision revisor") return true
+          if (filtro === 3 && FILTRO3_RESTRINGIDOS.has(actual)) {
+            return enHistorial("en revision emisor")
+          }
+          return true
+        })
+    // -----------------------------------------------------------------------
+
+    const enriched = solicitudesFiltradas.map((sol) => {
       const historial = sol.historial_solicitud
 
-      const reingresoCount = historial.filter((h) => {
-        const nombre =
-          h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
-        return nombre.toLowerCase().includes("observad")
+      const firstObsIdx = historial.findIndex((h) =>
+        (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase().includes("observad")
+      )
+      const reingresoCount = firstObsIdx === -1 ? 0 : historial.slice(firstObsIdx + 1).filter((h) => {
+        const n2 = (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+        return n2.includes("enviada a validacion") || n2.includes("en validacion justificaciones")
       }).length
 
       const lastObservacion = historial.find((h) => {
@@ -244,9 +301,29 @@ export async function GET(req: NextRequest) {
 
       const etapaFiltro    = `F${filtro}`
       const tieneFolioDictamen = !!(sol.dictamen?.folio ?? (sol as any).folio_dictamen)
-      const openedInFiltro = sol.checklist_detalle.some(
-        (cd) => cd.checklist?.etapa === etapaFiltro
-      ) || tieneFolioDictamen
+
+      const lastAsignacionIdx = (() => {
+        for (let i = historial.length - 1; i >= 0; i--) {
+          const n = (historial[i].estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+          if (filtro === 1 && n === "en revision revisor")  return i
+          if (filtro === 2 && n === "en validacion final")  return i
+          if (filtro === 3 && n === "en revision emisor")   return i
+        }
+        return -1
+      })()
+      const lastAccionFiltroIdx = (() => {
+        for (let i = historial.length - 1; i >= 0; i--) {
+          const n = (historial[i].estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+          if (filtro === 1 && (n.includes("observado por revisor") || n.includes("aceptado por revisor") || n.includes("aprobado por revisor"))) return i
+          if (filtro === 2 && (n.includes("observado por validacion final") || n.includes("en revision emisor"))) return i
+          if (filtro === 3 && (n.includes("observado por emisor") || n.includes("pendiente firma dictamen"))) return i
+        }
+        return -1
+      })()
+      const esReingresoCiclo = lastAccionFiltroIdx >= 0 && lastAsignacionIdx > lastAccionFiltroIdx
+      const openedInFiltro = esReingresoCiclo
+        ? false
+        : sol.checklist_detalle.some((cd) => cd.checklist?.etapa === etapaFiltro) || tieneFolioDictamen
 
       const fueObservadaEnEsteFiltro = historial.some((h) => {
         const nombre =
@@ -423,6 +500,7 @@ export async function PATCH(req: NextRequest) {
         }
       } catch {  }
 
+      broadcastUpdate(ALL_APARTADOS)
       return NextResponse.json({
         ok:            true,
         accion:        "asignarFolio",
@@ -487,6 +565,7 @@ export async function PATCH(req: NextRequest) {
         }
       } catch {  }
 
+      broadcastUpdate(ALL_APARTADOS)
       return NextResponse.json({ ok: true, accion: "asignarFolioRecepcion", folioRecepcion })
     }
 
@@ -526,6 +605,7 @@ export async function PATCH(req: NextRequest) {
           comentario:         "Enviada a revisión con revisor asignado desde Validación Final",
         },
       })
+      broadcastUpdate(ALL_APARTADOS)
       return NextResponse.json({
         ok: true, accion: "asignarRevisor",
         estadoNuevo: "En Revision Revisor",
@@ -553,6 +633,7 @@ export async function PATCH(req: NextRequest) {
           comentario:         "Revisión aceptada por el Revisor",
         },
       })
+      broadcastUpdate(ALL_APARTADOS)
       return NextResponse.json({ ok: true, estadoNuevo: "Aceptado por Revisor" })
     }
 
@@ -741,6 +822,7 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({
       ok:            true,
       estadoNuevo:   nombreEstadoNuevo,

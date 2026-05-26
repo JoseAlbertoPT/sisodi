@@ -3,11 +3,11 @@ import { isMain, runStandalone } from "./_runner"
 
 export const ROLES = [
   "Administrador",
-  "Director Operativo",
-  "Analista",
+  "Emisor",
+  "Validador",
   "Revisor",
   "Capturista",
-  "Enlace DO",
+  "UEFA",
   "Enlace DGRH",
   "Consulta",
 ]

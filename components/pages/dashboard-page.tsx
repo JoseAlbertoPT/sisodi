@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
@@ -534,11 +535,12 @@ function KpiCard({
 export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpenReview?: (...args: any[]) => void }) {
   const [anio,    setAnio]    = useState(String(new Date().getFullYear()))
   const [mes,     setMes]     = useState("todos")
+  const hasDataRef               = useRef(false)
   const [data,    setData]    = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
   const fetchData = useCallback(async () => {
-    setLoading(true)
+    if (!hasDataRef.current) setLoading(true)
     setError(null)
     try {
       const params = new URLSearchParams({ anio })
@@ -547,6 +549,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar datos"); return }
       setData(json.data)
+      hasDataRef.current = true
     } catch {
       setError("Error de conexión al servidor")
     } finally {
@@ -554,6 +557,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
     }
   }, [anio, mes])
   useEffect(() => { fetchData() }, [fetchData])
+  useRealtime(["dashboard"], fetchData)
   const kpis = [
     { label: "Total de solicitudes Recibidas",                           value: data?.totalRecibidas ?? 0, icon: FileText,    color: C_VERDE_OSCURO },
     { label: "Justificaciones por Honorarios",                           value: data?.honorarios    ?? 0, icon: Briefcase,   color: C_OLIVA       },
@@ -601,10 +605,6 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} className="gap-1.5">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Actualizar
-        </Button>
 
         {error && (
           <Badge variant="destructive" className="text-xs gap-1">

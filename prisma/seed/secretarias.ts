@@ -44,7 +44,6 @@ export const CENTRALIZADAS: Secretaria[] = [
       { nombre: "Subsecretaría de Gobierno", clave: c("2 01 2 0 0 0 0") },
       { nombre: "Dirección General de Atención a Municipios", clave: c("2 01 7 0 0 0 0") },
       { nombre: "Dirección General de Registro Civil", clave: c("2 01 8 0 0 0 0") },
-      // FIX: nombre truncado en data ("Dirección General de Asu") con clave 2.01.9 — confirmar nombre completo
       { nombre: "Dirección General de Derechos Humanos", clave: c("2 01 10 0 0 0 0") },
       { nombre: "Dirección General Jurídica", clave: c("2 01 12 0 0 0 0") },
       { nombre: "Dirección General de Vinculación Operativa y de Gestión", clave: c("2 01 13 0 0 0 0") },
@@ -71,7 +70,6 @@ export const CENTRALIZADAS: Secretaria[] = [
       { nombre: "Dirección General de Desarrollo Organizacional", clave: c("3 03 14 0 0 0 0") },
       { nombre: "Dirección General de Servicios", clave: c("3 03 15 0 0 0 0") },
       { nombre: "Subsecretaría de Ingresos", clave: c("3 04 4 0 0 0 0") },
-      // FIX: data truncada — clave 3.04.16 sin nombre claro (¿Dirección General de Recaudación?)
       { nombre: "Dirección General de Auditoría Fiscal", clave: c("3 04 17 0 0 0 0") },
       { nombre: "Dirección General de Coordinación Hacendaria", clave: c("3 04 18 0 0 0 0") },
       { nombre: "Subsecretaría de Egresos", clave: c("3 05 5 0 0 0 0") },
@@ -82,7 +80,6 @@ export const CENTRALIZADAS: Secretaria[] = [
       { nombre: "Tesorería General", clave: c("3 06 6 0 0 0 0") },
       { nombre: "Dirección General de Caja y Control Financiero", clave: c("3 06 23 0 0 0 0") },
       { nombre: "Procuraduría Fiscal", clave: c("3 07 7 0 0 0 0") },
-      // FIX: fila corrupta ("Subprocuradur�") — falta nombre, probablemente clave 3.07.24
       { nombre: "Subprocuraduría de lo Contencioso", clave: c("3 07 25 0 0 0 0") },
       { nombre: "Subprocuraduría de Recursos y Procedimientos Administrativos", clave: c("3 07 26 0 0 0 0") },
       { nombre: "Unidad de Planeación", clave: c("3 08 8 0 0 0 0") },
@@ -97,7 +94,6 @@ export const CENTRALIZADAS: Secretaria[] = [
     orden: 4,
     unidades: [
       { nombre: "Oficina de la Persona Titular de la Secretaría de Desarrollo Económico y del Trabajo", clave: c("4 01 1 0 0 0 0") },
-      // FIX: fila corrupta ("Secretaría de Desarrollo Económico y del Tra0 0 0 0") — confirmar
       { nombre: "Unidad de Enlace Jurídico de la Secretaría de Desarrollo Económico y del Trabajo", clave: c("4 01 13 0 0 0 0") },
       { nombre: "Unidad de Enlace Financiero Administrativo de la Secretaría de Desarrollo Económico y del Trabajo", clave: c("4 01 14 0 0 0 0") },
       { nombre: "Subsecretaría de Desarrollo Económico", clave: c("4 02 3 0 0 0 0") },
@@ -226,7 +222,6 @@ export const CENTRALIZADAS: Secretaria[] = [
       { nombre: "Comisión Estatal de Evaluación del Desarrollo Social", clave: c("13 40 7 0 0 0 0") },
       { nombre: "Instituto Morelense de las Personas Adolescentes y Jóvenes", clave: c("13 40 8 0 0 0 0") },
       { nombre: "Instituto de los Pueblos y Comunidades Indígenas y Afromexicanas de Morelos", clave: c("13 40 9 0 0 0 0") },
-      // FIX: nombre completo del Fondo "Agustín ???" cortado en data, clave también
     ],
   },
   {
@@ -241,7 +236,6 @@ export const CENTRALIZADAS: Secretaria[] = [
       { nombre: "Dirección General de Mejoramiento Ecosistémico y Cambio Climático", clave: c("14 01 6 0 0 0 0") },
       { nombre: "Dirección General de Consultoría, Asuntos Jurídicos y Normatividad", clave: c("14 01 7 0 0 0 0") },
       { nombre: "Dirección General de Proyectos y Gestión Administrativa", clave: c("14 01 8 0 0 0 0") },
-      // FIX: clave de "Procuraduría de Protección al Ambiente del Estado de Morelos" cortada en data (14.40.?)
       { nombre: "Comisión Estatal de Biodiversidad", clave: c("14 40 10 0 0 0 0") },
     ],
   },
@@ -281,7 +275,6 @@ export const CENTRALIZADAS: Secretaria[] = [
       { nombre: "Dirección General Operativa Penitenciaria", clave: c("16 03 10 0 0 0 0") },
       { nombre: "Coordinación de Desarrollo y Fortalecimiento Institucional", clave: c("16 04 11 0 0 0 0") },
       { nombre: "Dirección General de Prestación de Servicios de Personal Operativo", clave: c("16 04 12 0 0 0 0") },
-      // FIX: nombre truncado en data ("o y Logística Operativa") con clave 16.04.13 — confirmar
       { nombre: "Dirección General de Control de Gasto Operativo", clave: c("16 04 14 0 0 0 0") },
       { nombre: "Centro Estatal de Prevención Social de la Violencia y la Delincuencia con Participación Ciudadana", clave: c("16 40 24 0 0 0 0") },
       { nombre: "Secretariado Ejecutivo del Sistema Estatal de Seguridad Pública", clave: c("16 40 25 0 0 0 0") },

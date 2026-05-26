@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
+
+const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
 const ESTADOS_EXCLUIDOS_UEFA = ["En Captura", "Borrador"]
 
@@ -19,15 +22,17 @@ export async function GET(req: NextRequest) {
       })
       if (viewer) {
         if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
-          where.usuario = {
-            organo_centralizado: { isNot: null },
-            secretaria_id: viewer.secretaria_id,
-          }
+          where.tipo_administracion = { not: "paraestatal" }
+          where.OR = [
+            { secretaria_id_snapshot: viewer.secretaria_id },
+            { secretaria_id_snapshot: null, usuario: { secretaria_id: viewer.secretaria_id } },
+          ]
         } else {
-          where.usuario = {
-            organo_centralizado: { is: null },
-            secretaria_texto: viewer.secretaria_texto,
-          }
+          where.tipo_administracion = "paraestatal"
+          where.OR = [
+            { secretaria_txt_snapshot: viewer.secretaria_texto },
+            { secretaria_txt_snapshot: null, usuario: { organo_centralizado: { is: null }, secretaria_texto: viewer.secretaria_texto } },
+          ]
         }
       }
     }
@@ -200,6 +205,8 @@ export async function PATCH(req: NextRequest) {
         tipoFolio = `JUST-${solicitud.usuario.secretaria_id}`
       } else if (solicitud.usuario?.area_id) {
         tipoFolio = `JUST-A-${solicitud.usuario.area_id}`
+      } else if ((solicitud as any).secretaria) {
+        tipoFolio = `JUST-SEC-${String((solicitud as any).secretaria).trim().toUpperCase().replace(/\s+/g, "_").slice(0, 30)}`
       } else {
         tipoFolio = "JUST-P"
       }
@@ -233,6 +240,7 @@ export async function PATCH(req: NextRequest) {
       },
     })
 
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({
       ok:    true,
       data:  solicitudActualizada,

@@ -93,10 +93,6 @@ export function ProgresoFirmadoPage() {
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">Estado de los procesos de firma electrónica de justificaciones.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={cargar} disabled={loading} className="gap-1.5">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Actualizar
-        </Button>
       </div>
 
       {error && (

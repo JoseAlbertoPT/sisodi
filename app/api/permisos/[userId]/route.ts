@@ -20,27 +20,33 @@ export async function GET(
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
   }
 
+  // Menus from role (defaults)
   const rolMenus = await prisma.rol_menu.findMany({
     where: { rol_id: user.rol_id },
     include: {
-      rol_menu_accion: {
-        where: { activo: true },
-        include: { accion: true },
-      },
+      rol_menu_accion: { where: { activo: true }, include: { accion: true } },
     },
   })
 
-  const menuIds = rolMenus.map((rm) => String(rm.menu_id))
+  // Extra menus assigned individually to this user
+  const userMenus = await prisma.usuario_menu.findMany({
+    where: { usuario_id: userId },
+  })
+
+  const rolMenuIdSet = new Set(rolMenus.map((rm) => String(rm.menu_id)))
+  const extraMenuIds = userMenus
+    .map((um) => String(um.menu_id))
+    .filter((id) => !rolMenuIdSet.has(id))
+
+  const menuIds = [...rolMenuIdSet, ...extraMenuIds]
+
   const menuActions: Record<string, string[]> = {}
   for (const rm of rolMenus) {
     const actions = rm.rol_menu_accion.map((rma) => rma.accion.nombre)
-    if (actions.length > 0) {
-      menuActions[String(rm.menu_id)] = actions
-    }
+    if (actions.length > 0) menuActions[String(rm.menu_id)] = actions
   }
 
-  const result: PermisosUser = { menuIds, menuActions }
-  return NextResponse.json(result)
+  return NextResponse.json({ menuIds, menuActions } satisfies PermisosUser)
 }
 
 export async function PUT(
@@ -58,56 +64,42 @@ export async function PUT(
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
   }
 
-  const rolId = user.rol_id
-
-  await prisma.rol_menu_accion.deleteMany({
-    where: { rol_menu: { rol_id: rolId } },
+  // Role defaults — never modified
+  const rolMenus = await prisma.rol_menu.findMany({
+    where: { rol_id: user.rol_id },
   })
-  await prisma.rol_menu.deleteMany({
-    where: { rol_id: rolId },
-  })
+  const rolMenuIdSet = new Set(rolMenus.map((rm) => String(rm.menu_id)))
 
-  for (const menuIdStr of body.menuIds) {
-    const menuId = parseInt(menuIdStr, 10)
-    const rolMenu = await prisma.rol_menu.create({
-      data: { rol_id: rolId, menu_id: menuId },
-    })
+  // Only save extras (menus beyond the role defaults) to usuario_menu
+  const extraMenuIds = body.menuIds
+    .filter((id) => !rolMenuIdSet.has(id))
+    .map((id) => parseInt(id, 10))
+    .filter((id) => !isNaN(id))
 
-    const actionNames = body.menuActions[menuIdStr] ?? []
-    if (actionNames.length > 0) {
-      const acciones = await prisma.accion.findMany({
-        where: { nombre: { in: actionNames } },
-      })
-      for (const accion of acciones) {
-        await prisma.rol_menu_accion.create({
-          data: {
-            rol_menu_id: rolMenu.id,
-            accion_id: accion.id,
-            activo: true,
-          },
-        })
-      }
-    }
+  // Replace this user's extras
+  await prisma.usuario_menu.deleteMany({ where: { usuario_id: userId } })
+  for (const menuId of extraMenuIds) {
+    await prisma.usuario_menu.create({ data: { usuario_id: userId, menu_id: menuId } })
   }
 
-  const rolMenus = await prisma.rol_menu.findMany({
-    where: { rol_id: rolId },
+  // Return combined result
+  const userMenus = await prisma.usuario_menu.findMany({ where: { usuario_id: userId } })
+  const allMenuIds = [
+    ...rolMenus.map((rm) => String(rm.menu_id)),
+    ...userMenus.map((um) => String(um.menu_id)),
+  ]
+
+  const rolMenusFull = await prisma.rol_menu.findMany({
+    where: { rol_id: user.rol_id },
     include: {
-      rol_menu_accion: {
-        where: { activo: true },
-        include: { accion: true },
-      },
+      rol_menu_accion: { where: { activo: true }, include: { accion: true } },
     },
   })
-
-  const menuIds = rolMenus.map((rm) => String(rm.menu_id))
   const menuActions: Record<string, string[]> = {}
-  for (const rm of rolMenus) {
+  for (const rm of rolMenusFull) {
     const actions = rm.rol_menu_accion.map((rma) => rma.accion.nombre)
-    if (actions.length > 0) {
-      menuActions[String(rm.menu_id)] = actions
-    }
+    if (actions.length > 0) menuActions[String(rm.menu_id)] = actions
   }
 
-  return NextResponse.json({ menuIds, menuActions })
+  return NextResponse.json({ menuIds: allMenuIds, menuActions } satisfies PermisosUser)
 }

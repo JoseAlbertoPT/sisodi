@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Eye, EyeOff, Lock, CheckCircle2, AlertCircle, KeyRound,
-  ArrowLeft, IdCard, Mail,
+  Eye, EyeOff, Lock, CheckCircle2, KeyRound, User,
 } from "lucide-react"
 import Image from "next/image"
 
@@ -290,7 +289,6 @@ function ModalCambioContrasena({
   const [showConfirmar, setShowConfirmar] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [exito, setExito] = useState(false)
 
   const todasOk =
     nuevaPassword.length >= 8 && nuevaPassword === confirmarPassword
@@ -307,8 +305,8 @@ function ModalCambioContrasena({
       })
       if (!res.ok) { setError("La contraseña actual es incorrecta."); setLoading(false); return }
       await changePassword(username, nuevaPassword)
-      setExito(true)
-      setTimeout(() => { logout(); onSuccess() }, 2500)
+      logout()
+      onSuccess()
     } catch { setError("Error al cambiar la contraseña. Intente de nuevo.") }
     finally { setLoading(false) }
   }
@@ -324,16 +322,7 @@ function ModalCambioContrasena({
           <p className="text-xs text-white/50 text-center">Debe establecer una nueva contraseña para continuar</p>
         </div>
 
-        {exito ? (
-          <div className="flex flex-col items-center gap-3 px-10 py-10">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/20">
-              <CheckCircle2 className="h-8 w-8 text-green-400" />
-            </div>
-            <span className="text-base font-semibold text-white">¡Contraseña actualizada!</span>
-            <span className="text-sm text-white/60 text-center">Inicie sesión con su nueva contraseña.</span>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-5 px-10 py-6">
+        <div className="flex flex-col gap-5 px-10 py-6">
             <div className="rounded-2xl bg-white/10 px-4 py-3">
               <p className="text-xs text-white/60 leading-relaxed">
                 Por seguridad . Debe establecer una nueva contraseña personal.
@@ -375,7 +364,6 @@ function ModalCambioContrasena({
               </button>
             </div>
           </div>
-        )}
       </div>
     </div>
   )
@@ -397,112 +385,330 @@ export function ForzarCambioContrasena() {
   )
 }
 export function LoginForm() {
-  const { login, logout } = useAuth()
+  const { login, logout, changePassword } = useAuth()
 
-  const rfcRegex = /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/i
-
-  const [rfc, setRfc] = useState("")
-  const [password, setPassword] = useState("")
+  // Login
+  const [rfc,          setRfc]          = useState("")
+  const [password,     setPassword]     = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [mostrarModalCambio, setMostrarModalCambio] = useState(false)
+  const [error,        setError]        = useState("")
+  const [loading,      setLoading]      = useState(false)
   const [mostrarModalRecuperar, setMostrarModalRecuperar] = useState(false)
+
+  // Cambio de contraseña inline
+  const [mustChangePassword, setMustChangePassword] = useState(false)
+  const [nuevaPassword,      setNuevaPassword]      = useState("")
+  const [confirmarPassword,  setConfirmarPassword]  = useState("")
+  const [showNueva,          setShowNueva]          = useState(false)
+  const [showConfirmar,      setShowConfirmar]      = useState(false)
+  const [changeLoading,      setChangeLoading]      = useState(false)
+
   if (mostrarModalRecuperar) {
     return <ModalRecuperarContrasena onClose={() => setMostrarModalRecuperar(false)} />
   }
+
+  const reglas = [
+    { label: "Mínimo 8 caracteres",    ok: nuevaPassword.length >= 8 },
+    { label: "Al menos una mayúscula", ok: /[A-Z]/.test(nuevaPassword) },
+    { label: "Al menos un número",     ok: /[0-9]/.test(nuevaPassword) },
+    { label: "Las contraseñas coinciden", ok: nuevaPassword.length > 0 && nuevaPassword === confirmarPassword },
+  ]
+  const todasOk = reglas.every((r) => r.ok)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    if (!rfc || !password) {
-      setError("Por favor complete todos los campos")
+
+    if (mustChangePassword) {
+      if (!todasOk) { setError("Por favor cumpla todos los requisitos."); return }
+      setChangeLoading(true)
+      try {
+        await changePassword(rfc.trim().toUpperCase(), nuevaPassword)
+        logout()
+        setMustChangePassword(false)
+        setRfc(""); setPassword(""); setNuevaPassword(""); setConfirmarPassword("")
+      } catch { setError("Error al cambiar la contraseña. Intente de nuevo.") }
+      finally { setChangeLoading(false) }
       return
     }
+
+    if (!rfc || !password) { setError("Por favor complete todos los campos"); return }
     setLoading(true)
     try {
       const result = await login(rfc.trim().toUpperCase(), password)
-      if (!result) {
-        setError("Credenciales incorrectas")
-        return
-      }
-      if (result.mustChangePassword) {
-        setMostrarModalCambio(true)
-      }
-    } catch {
-      setError("Error de conexión. Intente de nuevo.")
-    } finally {
-      setLoading(false)
-    }
+      if (!result) { setError("Credenciales incorrectas"); return }
+      if (result.mustChangePassword) { setMustChangePassword(true) }
+    } catch { setError("Error de conexión. Intente de nuevo.") }
+    finally { setLoading(false) }
   }
   return (
     <>
-      <div
-        className="relative flex min-h-screen items-center bg-cover bg-center bg-no-repeat px-6"
-        style={{ backgroundImage: "url('/LOG-IN_SISODIJ-01.jpg')" }}
-      >
-        <div className="w-full max-w-xl ml-auto mr-[5%] lg:mr-[8%] mb-[8%]">
-          <div className="rounded-3xl bg-[#808078]/75 backdrop-blur-md shadow-2xl px-16 py-20 flex flex-col items-center gap-12">
+      <div className="flex min-h-screen h-screen overflow-hidden relative">
 
-            <div className="flex flex-col items-center gap-4">
-              <Image src="/LogoQuetzal.svg" alt="Logo Quetzal" width={110} height={110} className="opacity-90" />
-              <h1 className="text-2xl font-medium text-white/90 tracking-wide">Inicia sesión</h1>
+        {/* Panel izquierdo */}
+        <div
+          className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative overflow-hidden"
+          style={{
+            gap: 'clamp(16px, 4vh, 48px)',
+            paddingTop: 'clamp(20px, 3vh, 60px)',
+            paddingBottom: 'clamp(200px, 30vh, 360px)',
+            paddingLeft: 'clamp(24px, 4vw, 64px)',
+            paddingRight: 'clamp(24px, 4vw, 64px)',
+          }}
+        >
+          <Image
+            src="/fondo-login-verde.webp"
+            alt=""
+            fill
+            priority
+            sizes="50vw"
+            style={{ objectFit: 'cover', objectPosition: '65% 35%', zIndex: 0 }}
+          />
+          <Image
+            src="/FINANZAS COLOR VERTICAL 2.png"
+            alt="Secretaría de Administración y Finanzas"
+            width={0}
+            height={0}
+            sizes="(max-width: 1024px) 0px, 33vw"
+            priority
+            style={{
+              height: 'clamp(120px, 22vh, 280px)',
+              width: 'auto',
+              objectFit: 'contain',
+              position: 'relative',
+              zIndex: 1,
+            }}
+          />
+          <Image
+            src="/log-name-sisodij (1).png"
+            alt="SISODIJ"
+            width={0}
+            height={0}
+            sizes="(max-width: 1024px) 0px, 33vw"
+            priority
+            style={{
+              height: 'clamp(100px, 20vh, 240px)',
+              width: 'auto',
+              objectFit: 'contain',
+              position: 'relative',
+              zIndex: 1,
+              marginTop: '16px',
+            }}
+          />
+        </div>
+
+        {/* Panel derecho */}
+        <div
+          className="relative flex w-full lg:w-1/2 items-center justify-center overflow-hidden"
+          style={{
+            paddingTop: 'clamp(40px, 8vh, 120px)',
+            paddingBottom: 'clamp(80px, 12vh, 180px)',
+            paddingLeft: 'clamp(16px, 3vw, 48px)',
+            paddingRight: 'clamp(16px, 3vw, 48px)',
+          }}
+        >
+          <Image
+            src="/fondo-login-blanco.png"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            style={{ objectFit: 'cover', objectPosition: 'center', zIndex: 0 }}
+          />
+
+          {/* Tarjeta de login */}
+          <div
+            className="relative z-10 w-full rounded-3xl flex flex-col items-center overflow-hidden"
+            style={{
+              backgroundColor: 'rgba(42, 59, 41, 0.72)',
+              maxWidth: 'clamp(320px, 28vw, 480px)',
+              gap: 'clamp(16px, 3vh, 32px)',
+              paddingTop: 'clamp(24px, 5vh, 56px)',
+              paddingBottom: 'clamp(24px, 5vh, 56px)',
+              paddingLeft: 'clamp(24px, 3vw, 56px)',
+              paddingRight: 'clamp(24px, 3vw, 56px)',
+            }}
+          >
+            {/* Logo + título */}
+            <div className="flex flex-col items-center" style={{ gap: 'clamp(8px, 1.5vh, 16px)' }}>
+              <Image
+                src="/LogoQuetzal.svg"
+                alt="Logo Quetzal"
+                width={0}
+                height={0}
+                sizes="20vw"
+                priority
+                style={{
+                  height: mustChangePassword ? 'clamp(48px, 8vh, 80px)' : 'clamp(72px, 13vh, 140px)',
+                  width:  mustChangePassword ? 'clamp(48px, 8vh, 80px)' : 'clamp(72px, 13vh, 140px)',
+                  objectFit: 'contain',
+                  filter: 'brightness(0) invert(1)',
+                  transition: 'height 0.3s, width 0.3s',
+                }}
+              />
+              <p className="text-white font-light tracking-wide" style={{ fontSize: 'clamp(14px, 1.6vh, 20px)' }}>
+                {mustChangePassword ? "Cambio de contraseña" : "Inicia sesión"}
+              </p>
+              {mustChangePassword && (
+                <p className="text-white/55 text-xs text-center leading-relaxed px-2">
+                  Debes establecer una nueva contraseña para continuar
+                </p>
+              )}
             </div>
+
             {error && (
-              <div className="w-full rounded-full bg-red-500/20 px-5 py-3 text-base text-white text-center border border-red-400/30">
+              <div className="w-full rounded-full bg-red-500/20 px-5 py-3 text-sm text-white text-center border border-red-400/30">
                 {error}
               </div>
             )}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-7 w-full">
-              <Input
-                id="rfc"
-                type="text"
-                placeholder="RFC"
-                value={rfc}
-                onChange={(e) => { setRfc(e.target.value.toUpperCase()); setError("") }}
-                className="h-14 rounded-full bg-white border-0 text-base px-6 text-foreground placeholder:text-muted-foreground shadow-sm uppercase tracking-widest"
-                maxLength={13}
-              />
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Contraseña"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-14 rounded-full bg-white border-0 text-base px-6 pr-12 text-foreground placeholder:text-muted-foreground shadow-sm"
-                />
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
+                {/* RFC — bloqueado al cambiar contraseña */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Usuario"
+                    value={rfc}
+                    onChange={(e) => { if (!mustChangePassword) { setRfc(e.target.value.toUpperCase()); setError("") } }}
+                    readOnly={mustChangePassword}
+                    maxLength={13}
+                    autoComplete="username"
+                    className={`w-full rounded-full px-5 py-3 pr-11 text-sm outline-none uppercase tracking-widest transition-opacity ${
+                      mustChangePassword
+                        ? "bg-white/20 text-white/50 placeholder:text-white/30 cursor-not-allowed"
+                        : "bg-white text-gray-800 placeholder:text-gray-400"
+                    }`}
+                  />
+                  {mustChangePassword
+                    ? <Lock size={15} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/40" />
+                    : <User size={16} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#2A3B29' }} />
+                  }
+                </div>
+
+                {/* Contraseña actual — bloqueada al cambiar */}
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Contraseña"
+                    value={password}
+                    onChange={(e) => { if (!mustChangePassword) setPassword(e.target.value) }}
+                    readOnly={mustChangePassword}
+                    autoComplete="current-password"
+                    className={`w-full rounded-full px-5 py-3 pr-12 text-sm outline-none transition-opacity ${
+                      mustChangePassword
+                        ? "border border-white/20 bg-transparent text-white/40 placeholder:text-white/25 cursor-not-allowed"
+                        : "border border-white/50 bg-transparent text-white placeholder:text-white/60"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { if (!mustChangePassword) setShowPassword(!showPassword) }}
+                    tabIndex={mustChangePassword ? -1 : 0}
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 transition-opacity ${mustChangePassword ? "opacity-30 pointer-events-none" : ""}`}
+                    style={{ color: '#2A3B29' }}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+
+                {/* Campos nueva contraseña — solo cuando mustChangePassword */}
+                {mustChangePassword && (
+                  <>
+                    <div className="flex items-center gap-3 my-1">
+                      <div className="flex-1 h-px bg-white/20" />
+                      <span className="text-[11px] text-white/45 uppercase tracking-wider">Nueva contraseña</span>
+                      <div className="flex-1 h-px bg-white/20" />
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showNueva ? "text" : "password"}
+                        placeholder="Nueva contraseña"
+                        value={nuevaPassword}
+                        onChange={(e) => { setNuevaPassword(e.target.value); setError("") }}
+                        autoFocus
+                        autoComplete="new-password"
+                        className="w-full rounded-full border border-white/50 bg-transparent px-5 py-3 pr-12 text-sm text-white placeholder:text-white/60 outline-none"
+                      />
+                      <button type="button" onClick={() => setShowNueva(!showNueva)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
+                        {showNueva ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showConfirmar ? "text" : "password"}
+                        placeholder="Confirmar contraseña"
+                        value={confirmarPassword}
+                        onChange={(e) => { setConfirmarPassword(e.target.value); setError("") }}
+                        autoComplete="new-password"
+                        className="w-full rounded-full border border-white/50 bg-transparent px-5 py-3 pr-12 text-sm text-white placeholder:text-white/60 outline-none"
+                      />
+                      <button type="button" onClick={() => setShowConfirmar(!showConfirmar)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
+                        {showConfirmar ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+
+                    {/* Reglas de contraseña */}
+                    {(nuevaPassword.length > 0 || confirmarPassword.length > 0) && (
+                      <div className="flex flex-col gap-1.5 px-1">
+                        {reglas.map((r) => (
+                          <div key={r.label} className="flex items-center gap-2">
+                            <div className={`h-1.5 w-1.5 rounded-full shrink-0 transition-colors ${r.ok ? "bg-green-400" : "bg-white/30"}`} />
+                            <span className={`text-[11px] transition-colors ${r.ok ? "text-green-300" : "text-white/45"}`}>{r.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  type="submit"
+                  disabled={loading || changeLoading || (mustChangePassword && !todasOk)}
+                  className="w-full rounded-full py-3 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:opacity-50 mt-1"
+                  style={{ backgroundColor: '#2A3B29' }}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {changeLoading ? "ACTUALIZANDO..." : loading ? "INGRESANDO..." : mustChangePassword ? "ACTUALIZAR CONTRASEÑA" : "INICIAR SESIÓN"}
                 </button>
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="h-14 w-full rounded-full bg-[#4A5249] hover:bg-[#3d443c] text-white font-medium text-lg tracking-wider uppercase mt-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? "INGRESANDO..." : "LOGIN"}
-              </button>
-            </form>
+
+                {mustChangePassword && (
+                  <button
+                    type="button"
+                    onClick={() => { logout(); setMustChangePassword(false); setRfc(""); setPassword(""); setNuevaPassword(""); setConfirmarPassword(""); setError("") }}
+                    className="text-white/40 hover:text-white/70 text-xs text-center transition-colors"
+                  >
+                    Cerrar sesión
+                  </button>
+                )}
+              </form>
           </div>
+        </div>
+
+        {/* Pleca inferior */}
+        <div
+          className="hidden lg:block absolute z-20 pointer-events-none select-none overflow-hidden"
+          style={{ bottom: '-24px', left: 0, right: 0 }}
+        >
+          <Image
+            src="/down_login_pleca_Manuales.png"
+            alt="Gobierno del Estado de Morelos"
+            width={0}
+            height={0}
+            sizes="100vw"
+            priority
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              margin: 0,
+              padding: 0,
+              verticalAlign: 'bottom',
+            }}
+          />
         </div>
       </div>
 
-      {mostrarModalCambio && (
-        <ModalCambioContrasena
-          username={rfc.trim().toUpperCase()}
-          onSuccess={() => { setMostrarModalCambio(false); setRfc(""); setPassword("") }}
-          onCancel={() => {
-            logout()
-            setMostrarModalCambio(false)
-            setRfc("")
-            setPassword("")
-          }}
-        />
-      )}
     </>
   )
 }

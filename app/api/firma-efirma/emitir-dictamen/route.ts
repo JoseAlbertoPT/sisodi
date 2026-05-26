@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
+
+const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
 /**
  * Emite el dictamen una vez que el emisor ya firmó electrónicamente Y subió
@@ -109,6 +112,7 @@ export async function POST(req: NextRequest) {
     }
     await prisma.$transaction(ops)
 
+    broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({ ok: true, folio: folioDictamenFinal })
   } catch (error: any) {
     console.error("[POST /api/firma-efirma/emitir-dictamen]", error)

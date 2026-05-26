@@ -41,13 +41,11 @@ export interface JustificacionData {
   firmaDictRevisoNombre?: string;
   firmaDictVerificoNombre?: string;
   firmaDictEmitioNombre?: string;
-  // Cargos capturados (si están definidos, reemplazan el placeholder institucional)
   firmaElaboroCargo?: string;
   firmaRevisoCargo?: string;
   firmaDictRevisoCargo?: string;
   firmaDictVerificoCargo?: string;
   firmaDictEmitioCargo?: string;
-  // Fecha en que se emitió el dictamen (mostrada en el bloque de dictaminación)
   fechaDictaminacion?: string;
 }
 
@@ -579,10 +577,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         ))}
 
-        {/* ══════ BLOQUE DE CIERRE (leyenda + firmas) ══════
-             Se mantiene como un solo bloque inseparable (wrap={false}) para
-             evitar que la leyenda quede sola al final de una página y las
-             firmas en la siguiente. */}
         <View wrap={false} style={{ marginTop: 25 }}>
           {data.formato === 'en_linea' && (
             <View style={{ marginBottom: 15, alignItems: 'center' }}>
@@ -627,7 +621,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
       </Page>
 
       <Page size="LETTER" style={s.page} wrap>
-        {/* ══════ MARCO NEGRO FIJO (todas las páginas) ══════ */}
         <View style={s.pageFrame} fixed />
 
         <View style={s.watermarkContainer} fixed>
@@ -649,10 +642,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         </View>
 
-        {/* ══════ TODO EL CONTENIDO DEL DICTAMEN VA EN UN SOLO BLOQUE ══════
-         *  wrap={false} fuerza a React-PDF a mantener todo este contenido en
-         *  una misma página: si no entra, lo empuja completo a la siguiente.
-         *  ════════════════════════════════════════════════════════════ */}
         <View wrap={false}>
         {data.tipoAdministracion === "centralizada" ? (
           <>
@@ -707,7 +696,6 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         </View>
 
-        {/* ══════ BLOQUE DE CIERRE (leyenda + firmas) — inseparable ══════ */}
         <View wrap={false} style={{ marginTop: 25 }}>
           {data.formato === 'en_linea' && (
             <View style={{ marginBottom: 15, alignItems: 'center' }}>

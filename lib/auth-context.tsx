@@ -12,6 +12,7 @@ interface User {
   area: string | null
   secretariaTexto: string | null
   secretariaId: string | null
+  organoNombre: string | null
   claveReportePlazas: string | null
   mustChangePassword: boolean
   tipoAdministracion: "centralizada" | "paraestatal"
@@ -66,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       if (!res.ok) return null
       const data: User = await res.json()
-      setUser(data)
+      if (!data.mustChangePassword) setUser(data)
       return { mustChangePassword: data.mustChangePassword }
     } catch {
       return null

@@ -70,12 +70,13 @@ export function AppShell() {
   const handleAfterSave = () => {
     const estadoOrig = (editSolicitud?.estado ?? "").toLowerCase()
     const eraObservada = estadoOrig.includes("observad") || estadoOrig.includes("devuelta")
-    const eraObservadaUEFA =
-      estadoOrig.includes("observada por uefa") ||
-      estadoOrig.includes("observado por uefa") ||
-      (estadoOrig.includes("observado por validacion") && !estadoOrig.includes("final"))
+    const getInitialTab = (): string | undefined => {
+      if (!eraObservada) return undefined
+      // All corrections now restart from "En Validacion Justificaciones" → "En aprobación" tab
+      return "En aprobación"
+    }
     if (prevPage === "mis-solicitudes") {
-      setMisSolicitudesInitialTab(eraObservadaUEFA ? "En aprobación" : undefined)
+      setMisSolicitudesInitialTab(getInitialTab())
       setMisSolicitudesRefreshKey((k) => k + 1)
     } else if (eraObservada && (
       (prevPage as string).startsWith("bandeja-filtro") || prevPage === "revision-do"

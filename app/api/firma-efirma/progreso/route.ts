@@ -65,9 +65,6 @@ export async function GET(req: NextRequest) {
         const externosTotal = p.firmantes.filter(f => f.tipo === "externo").length
         const externosFirmados = p.firmantes.filter(f => f.tipo === "externo" && f.firmado).length
         const externosCompletos = externosTotal === 0 || externosFirmados === externosTotal
-        // Mi firma pendiente: primero busco un slot asignado a mí; si no hay, busco uno interno sin asignar
-        // (usuario_id === null) que podré reclamar al firmar. Esto permite que el flujo cascada funcione
-        // aunque el historial no tenga todavía las aprobaciones cuando UEFA inicia la firma.
         const miFirmaPendiente = usuarioId
           ? (
               p.firmantes.find(f => f.tipo === "interno" && f.usuario_id === usuarioId && !f.firmado)
@@ -78,7 +75,6 @@ export async function GET(req: NextRequest) {
         const estadoSolicitud = p.solicitud?.estado?.nombre ?? null
         const yaEmitido = (estadoSolicitud ?? "").toLowerCase() === "emitido"
         const tieneSelladoEmision = ((p.solicitud as any)?.documento_sellado?.length ?? 0) > 0
-        // Mi firma de emisor ya hecha pero pendiente de emitir el dictamen
         const miEmisorFirmado = usuarioId
           ? p.firmantes.find(f => f.tipo === "interno" && f.bandeja === "emision" && f.usuario_id === usuarioId && f.firmado) ?? null
           : null

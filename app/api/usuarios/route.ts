@@ -9,8 +9,19 @@ function err(msg: string, status = 400) {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const rolFiltro         = searchParams.get("rol")
+    const rolFiltro          = searchParams.get("rol")
     const secretariaIdFiltro = searchParams.get("secretariaId")
+    const checkCorreo        = searchParams.get("checkCorreo")
+    const checkRfc           = searchParams.get("checkRfc")
+
+    if (checkCorreo) {
+      const existe = await prisma.usuario.findFirst({ where: { correo: checkCorreo.trim().toLowerCase() } })
+      return NextResponse.json({ existe: !!existe })
+    }
+    if (checkRfc) {
+      const existe = await prisma.usuario.findFirst({ where: { rfc: checkRfc.trim().toUpperCase() } })
+      return NextResponse.json({ existe: !!existe })
+    }
 
     const where: any = {}
     if (rolFiltro) {
@@ -22,20 +33,21 @@ export async function GET(req: NextRequest) {
 
     const usuarios = await prisma.usuario.findMany({
       where,
-      include: { rol: true, area: true },
+      include: { rol: true, area: true, organo_centralizado: true },
       orderBy: { nombre: "asc" },
     })
 
     return NextResponse.json(
       usuarios.map((u) => ({
-        id:              u.id,
-        nombre:          u.nombre,
-        correo:          u.correo,
-        rfc:             u.rfc ?? null,
-        rol:             u.rol.nombre,
-        secretaria:      u.secretaria_texto ?? u.area?.nombre ?? "Sin área",
-        secretariaId:    u.secretaria_id ?? null,
-        estatus:         u.activo ? "Activo" : "Inactivo",
+        id:                 u.id,
+        nombre:             u.nombre,
+        correo:             u.correo,
+        rfc:                u.rfc ?? null,
+        rol:                u.rol.nombre,
+        secretaria:         u.secretaria_texto ?? u.area?.nombre ?? "Sin área",
+        secretariaId:       u.secretaria_id ?? null,
+        estatus:            u.activo ? "Activo" : "Inactivo",
+        tipoAdministracion: u.organo_centralizado ? "centralizada" : "paraestatal",
       }))
     )
   } catch (e) {
@@ -89,18 +101,19 @@ export async function POST(req: NextRequest) {
         activo:           true,
         must_change_password: false,
       },
-      include: { rol: true, area: true },
+      include: { rol: true, area: true, organo_centralizado: true },
     })
 
     return NextResponse.json({
-      id:           nuevo.id,
-      nombre:       nuevo.nombre,
-      correo:       nuevo.correo,
-      rfc:          nuevo.rfc ?? null,
-      rol:          nuevo.rol.nombre,
-      secretaria:   nuevo.secretaria_texto ?? nuevo.area?.nombre ?? "Sin área",
-      secretariaId: nuevo.secretaria_id ?? null,
-      estatus:      "Activo",
+      id:                 nuevo.id,
+      nombre:             nuevo.nombre,
+      correo:             nuevo.correo,
+      rfc:                nuevo.rfc ?? null,
+      rol:                nuevo.rol.nombre,
+      secretaria:         nuevo.secretaria_texto ?? nuevo.area?.nombre ?? "Sin área",
+      secretariaId:       nuevo.secretaria_id ?? null,
+      estatus:            "Activo",
+      tipoAdministracion: nuevo.organo_centralizado ? "centralizada" : "paraestatal",
     }, { status: 201 })
 
   } catch (e) {

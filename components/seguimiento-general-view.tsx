@@ -37,8 +37,6 @@ const FLUJO_ETAPAS: { key: string; label: string; short: string }[] = [
   { key: "emitido",   label: "Emitido",    short: "OK" },
 ]
 
-// Estados visibles en el visor de Emisión: solo el juego entre Validación (DGDO/Filtro 2) y Revisión (Filtro 1).
-// Una vez que Validación envía a Emisor, la solicitud desaparece de esta vista.
 export const ESTADOS_VISIBLES_EMISION = new Set<string>([
   "pendiente do",
   "en revision revisor",
@@ -57,12 +55,20 @@ function labelEstado(estado: string): string {
 }
 
 function EstadoBadge({ estado, etapa }: { estado: string; etapa: string }) {
-  const cls =
-    etapa === "emitido" ? "bg-secondary/15 text-secondary"
-    : etapa === "rechazado" ? "bg-destructive/15 text-destructive"
-    : etapa === "emisor" ? "bg-primary/15 text-primary"
-    : "bg-muted text-card-foreground"
-  return <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${cls}`}>{labelEstado(estado)}</span>
+  const color =
+    etapa === "emitido"   ? "#15803d"
+    : etapa === "rechazado" ? "#dc2626"
+    : etapa === "emisor"    ? "#0891B2"
+    : "#64748b"
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+      style={{ backgroundColor: `${color}18`, color }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      {labelEstado(estado)}
+    </span>
+  )
 }
 
 function formatFecha(v: string | null) {
@@ -82,7 +88,6 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
   const [filterSecretaria, setFilterSecretaria] = useState("todas")
   const [filterEtapa, setFilterEtapa] = useState("todas")
   const [filterEstado, setFilterEstado] = useState("todos")
-  // Por defecto pinta las que NO están asignadas para priorizar asignación.
   const [filterResponsable, setFilterResponsable] = useState("Sin asignar")
 
   const cargar = useCallback(async () => {
@@ -98,7 +103,6 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
 
   useEffect(() => { cargar() }, [cargar, refreshSignal])
 
-  // Solo considera solicitudes en el juego Validación↔Revisión (todo lo demás se excluye).
   const dataVisible = useMemo(
     () => data.filter(s => ESTADOS_VISIBLES_EMISION.has(s.estado.toLowerCase())),
     [data]

@@ -65,18 +65,41 @@ export async function seedMenus(prisma: PrismaClient) {
   }
   console.log(`Menús: ${MENUS.length}`)
 
-  const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: "Administrador" } })
-  for (const m of MENUS) {
-    const rm = await prisma.rol_menu.create({
-      data: { rol_id: rolAdmin.id, menu_id: m.id },
-    })
-    for (let i = 0; i < ACCIONES.length; i++) {
-      await prisma.rol_menu_accion.create({
-        data: { rol_menu_id: rm.id, accion_id: i + 1, activo: true },
-      })
-    }
+  // menu IDs: 2=dashboard, 3=nueva-solicitud, 4=mis-solicitudes, 5=validacion-uefa
+  //           7=bandeja-filtro1, 8=bandeja-filtro2, 9=bandeja-filtro3, 10=dictamenes
+  //           12=calendario, 13=usuarios, 14=configuracion
+  const ROL_MENUS: Record<string, number[]> = {
+    "Administrador": MENUS.map((m) => m.id),
+    "Capturista":    [2, 3, 4],
+    "UEFA":          [2, 5],
+    "Enlace DGRH":   [2, 5],
+    "Revisor":       [2, 7],
+    "Validador":     [2, 8],
+    "Emisor":        [2, 9, 10],
+    "Consulta":      [2],
   }
-  console.log("Permisos asignados a Administrador")
+
+  for (const [rolNombre, menuIds] of Object.entries(ROL_MENUS)) {
+    const rol = await prisma.rol.findUnique({ where: { nombre: rolNombre } })
+    if (!rol) continue
+    for (const menuId of menuIds) {
+      const rm = await prisma.rol_menu.upsert({
+        where: { rol_id_menu_id: { rol_id: rol.id, menu_id: menuId } },
+        update: {},
+        create: { rol_id: rol.id, menu_id: menuId },
+      })
+      if (rolNombre === "Administrador") {
+        for (let i = 0; i < ACCIONES.length; i++) {
+          await prisma.rol_menu_accion.upsert({
+            where: { rol_menu_id_accion_id: { rol_menu_id: rm.id, accion_id: i + 1 } },
+            update: { activo: true },
+            create: { rol_menu_id: rm.id, accion_id: i + 1, activo: true },
+          })
+        }
+      }
+    }
+    console.log(`Permisos asignados a ${rolNombre}: menus [${menuIds.join(",")}]`)
+  }
 
   const max = Math.max(...MENUS.map((m) => m.id))
   await prisma.$executeRawUnsafe(

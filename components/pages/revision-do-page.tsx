@@ -1,6 +1,6 @@
 "use client"
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
@@ -31,12 +31,10 @@ import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 import { FirmaModal } from "@/components/firma-modal"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
-
 const COLOR_SI        = "#6E795A"
 const COLOR_SI_TEXT   = "#283c2a"
 const COLOR_NO        = "#832B56"
 const COLOR_NO_APLICA = "#B8860B"
-
 const INICIALES_MES_MAP: Record<string, string> = {
   "01": "EN",
   "02": "FE",
@@ -51,7 +49,6 @@ const INICIALES_MES_MAP: Record<string, string> = {
   "11": "NO",
   "12": "DI",
 }
-
 const MESES_RECEPCION = [
   { num: 1,  code: "EN", label: "Enero"      },
   { num: 2,  code: "FE", label: "Febrero"    },
@@ -66,7 +63,6 @@ const MESES_RECEPCION = [
   { num: 11, code: "NO", label: "Noviembre"  },
   { num: 12, code: "DI", label: "Diciembre"  },
 ]
-
 function generarFolioTemporal(id: number, fecha: Date | null | undefined): string {
   const f      = fecha ?? new Date()
   const mes    = f.getMonth() + 1
@@ -75,20 +71,17 @@ function generarFolioTemporal(id: number, fecha: Date | null | undefined): strin
   const num    = String(id).padStart(3, "0")
   return `${ini}-${num}`
 }
-
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio) return "---"
   const match = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
   if (match) return `${match[1]}/${match[2].padStart(2, "0")}/${match[3]}`
   return folio
 }
-
 function resolverFolioRecepcion(item: any): string {
   if (item.folio_recepcion) return formatearFolio(item.folio_recepcion)
   const fechaRaw = item.fecha_envio ?? item.fecha_creacion ?? null
   return generarFolioTemporal(item.id, fechaRaw ? new Date(fechaRaw) : null)
 }
-
 function resolverFolioDictamen(item: any): string | null {
   if (!item) return null
   return (
@@ -128,12 +121,12 @@ interface SolicitudDetalle {
   slaRestante: number | null
   historial: HistorialEntryData[]
   observacionesPrevias: { fecha: string; usuario: string; estado: string; comentario: string }[]
+  observacionesTodas: { fecha: string; usuario: string; estado: string; comentario: string }[]
   checklistDO: Record<string, { valor: "si" | "no" | "noAplica" | null; observacion: string }>
   _raw: any
 }
-
 type ChecklistValor = "si" | "no" | "noAplica" | null
-type ActiveTab = "review" | "emision" | "historial"
+type ActiveTab = "review" | "emision" | "observaciones" | "historial"
 interface RevisionDOPageProps {
   solicitudId: string
   filtro: 1 | 2 | 3
@@ -141,13 +134,21 @@ interface RevisionDOPageProps {
   onEditSolicitud?: (payload: EditSolicitudPayload) => void
 }
 
+function getEstadoSiguienteTrasSave(estado: string): string | undefined {
+  const n = estado.toLowerCase()
+  if (n.includes("observado por validacion final")) return "En Validacion Final"
+  if (n.includes("observado por emisor"))           return "En Revision Emisor"
+  if (n.includes("observado por do") || n.includes("devuelta por do")) return "Pendiente DO"
+  return undefined
+}
+
 function rawToEditPayload(sol: SolicitudDetalle): EditSolicitudPayload {
   const raw = sol._raw
   const regimenRaw = (raw?.regimen ?? sol.regimen ?? "").toLowerCase()
   const regimen: EditSolicitudPayload["regimen"] =
     regimenRaw.includes("asimilado") ? "asimilados" :
-    regimenRaw.includes("honorario") ? "honorarios" :
-    regimenRaw.includes("nombramiento") ? "nombramiento" : ""
+    regimenRaw.includes("nombramiento") || regimenRaw.includes("tiempo determi  nado") ? "nombramiento" :
+    regimenRaw.includes("honorario") ? "honorarios" : "honorarios"
   const tipo: EditSolicitudPayload["tipo"] =
     (raw?.tipo_solicitud ?? sol.tipo ?? "").toLowerCase().includes("nombramiento") ? "nombramiento" : "prestacion"
   const formData: Partial<FormularioData> = {
@@ -187,7 +188,7 @@ function rawToEditPayload(sol: SolicitudDetalle): EditSolicitudPayload {
     valores:                 raw?.valores ?? "",
     areasExp:                raw?.areas_exp ?? "",
   }
-  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, estado: sol.estado, formData }
+  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, estado: sol.estado, estadoSiguienteTrasSave: getEstadoSiguienteTrasSave(sol.estado), formData }
 }
 interface ChecklistItem { key: string; num: number; label: string }
 const CHECKLIST_16: ChecklistItem[] = [
@@ -202,7 +203,6 @@ const CHECKLIST_16: ChecklistItem[] = [
   { key: "c9",  num: 9,  label: "Ordenamientos legales y administrativos citados" },
   { key: "c10", num: 10, label: "Oficio de suficiencia presupuestal adjunto" },
 ]
-
 const CHECKLIST_NOMBRAMIENTO: ChecklistItem[] = [
   { key: "n1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
   { key: "n2",  num: 2,  label: "Unidad Responsable del Gasto" },
@@ -235,9 +235,16 @@ function getChecklistItems(filtro: 1 | 2 | 3, tipo?: string | null): ChecklistIt
   if (t.includes("nombramiento"))                           return CHECKLIST_NOMBRAMIENTO
   return CHECKLIST_16
 }
+function parseDateLocal(v: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const [y, m, d] = v.split("-").map(Number)
+    return new Date(y, m - 1, d)
+  }
+  return new Date(v)
+}
 function formatFecha(v: string | null | undefined): string {
   if (!v) return "—"
-  const d = new Date(v)
+  const d = parseDateLocal(v)
   if (isNaN(d.getTime())) return v
   return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
@@ -269,43 +276,45 @@ function formatEscolaridad(e: string | null | undefined): string {
   return e || "—"
 }
 
+function getSlaColor(dias: number | null): string {
+  if (dias === null) return "#64748b"
+  if (dias <= 0)    return "#832B56"
+  return "#283C2A"
+}
 function getSlaStyle(dias: number | null): React.CSSProperties {
-  if (dias === null) return { backgroundColor: "#e2e8f0", color: "#64748b" }
-  if (dias <= 0)  return { backgroundColor: "#832B56", color: "#FFFFFF" }
-  if (dias <= 7)  return { backgroundColor: "#C69C6D", color: "#FFFFFF" }
-  return { backgroundColor: "#283C2A", color: "#FFFFFF" }
+  const c = getSlaColor(dias)
+  return { backgroundColor: `${c}18`, color: c }
 }
 function getSlaLabel(dias: number | null) {
   if (dias === null) return "Sin periodo"
   if (dias <= 0) return "Cerrada"
   return `${dias} día${dias !== 1 ? "s" : ""} al cierre`
 }
-
 function mapBDtoDetalle(item: any): SolicitudDetalle {
   const historial: HistorialEntryData[] = (item.historial_solicitud ?? []).map((h: any) => ({
     fecha:          h.fecha ?? "",
     usuario:        h.usuario?.nombre ?? "Sistema",
     estadoAnterior: h.estado_historial_solicitud_estado_anterior_idToestado?.nombre ?? null,
     estadoNuevo:    h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+    comentario:     h.comentario ?? null,
   }))
-
   const historialSolicitud = item.historial_solicitud ?? []
-  const reversedHistorial = [...historialSolicitud].reverse()
-  const lastObsEntry = reversedHistorial.find((h: any) => {
-    const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
-    return /observad/i.test(nombre) && h.comentario
-  })
-  const obsEsLaUltima = !!(lastObsEntry && lastObsEntry === reversedHistorial[0])
-
-  const observacionesPrevias = obsEsLaUltima && lastObsEntry
-    ? [{
-        fecha:      formatFechaHora(lastObsEntry.fecha),
-        usuario:    lastObsEntry.usuario?.nombre ?? "Sistema",
-        estado:     lastObsEntry.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
-        comentario: lastObsEntry.comentario as string,
-      }]
-    : []
-
+  const observacionesPrevias = (historialSolicitud as any[])
+    .filter((h, idx) => {
+      const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
+      if (!/observad/i.test(nombre) || !h.comentario) return false
+      const historialAfter = (historialSolicitud as any[]).slice(idx + 1)
+      return !historialAfter.some((h2: any) => {
+        const n2 = (h2.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+        return !n2.includes("observad")
+      })
+    })
+    .map((h) => ({
+      fecha:      formatFechaHora(h.fecha),
+      usuario:    h.usuario?.nombre ?? "Sistema",
+      estado:     h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+      comentario: h.comentario as string,
+    }))
   const fechaEnvio = item.fecha_envio ?? item.fecha_recepcion ?? item.fecha_creacion ?? null
   const folioDictamen = resolverFolioDictamen(item)
   return {
@@ -338,19 +347,41 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
     slaRestante:          slaDesdeApiRestante(item.slaRestante),
     historial,
     observacionesPrevias,
+    observacionesTodas: (historialSolicitud as any[])
+      .filter((h: any, idx: number) => {
+        const nombre = h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
+        if (!/observad/i.test(nombre) || !h.comentario) return false
+        const after = (historialSolicitud as any[]).slice(idx + 1)
+        return !after.some((h2: any) => {
+          const n2 = (h2.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+          return !n2.includes("observad")
+        })
+      })
+      .map((h: any) => ({
+        fecha:      formatFechaHora(h.fecha),
+        usuario:    h.usuario?.nombre ?? "Sistema",
+        estado:     h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
+        comentario: h.comentario as string,
+      })),
     checklistDO:          {},
     _raw:                 item,
   }
 }
 
+function getSlaSubtitle(dias: number | null) {
+  if (dias === null) return "Sin información de periodo"
+  if (dias <= 0) return "El periodo ya cerró"
+  return "días restantes al cierre"
+}
+
 function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) {
-  const slaStyle = getSlaStyle(diasRestantes)
+  const bg = diasRestantes === null ? "#64748b" : diasRestantes <= 7 ? "#832B56" : diasRestantes <= 15 ? "#C69C6D" : "#4a7a55"
   return (
-    <div className="flex items-center gap-2 rounded-lg px-4 py-2.5" style={slaStyle}>
+    <div className="flex items-center gap-2 rounded-lg px-4 py-2.5" style={{ backgroundColor: bg, color: "#FFFFFF" }}>
       <Clock className="h-5 w-5" />
       <div className="flex flex-col">
         <span className="text-sm font-semibold">{getSlaLabel(diasRestantes)}</span>
-        <span className="text-[10px] opacity-75">Días al cierre del periodo</span>
+        <span className="text-[10px] opacity-75">{getSlaSubtitle(diasRestantes)}</span>
       </div>
     </div>
   )
@@ -396,7 +427,6 @@ function ObservacionChecklist({ comentario }: { comentario: string }) {
     </div>
   )
 }
-
 function SectionCard({ num, title, icon, children, defaultOpen = true }: {
   num?: string; title: string; icon?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean
 }) {
@@ -420,16 +450,76 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
     </Card>
   )
 }
+function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
+  const condiciones = [
+    { label: "Cambio de domicilio", value: raw?.condicion_cambio_domicilio },
+    { label: "Horario especial",    value: raw?.condicion_horario },
+    { label: "Viajar",              value: raw?.condicion_viajar },
+  ]
+  const riesgos = [
+    { label: "Caídas",       value: raw?.riesgo_caidas },
+    { label: "Mutilaciones", value: raw?.riesgo_mutilaciones },
+    { label: "Golpes",       value: raw?.riesgo_golpes },
+    { label: "Otros",        value: raw?.riesgo_otros },
+  ]
+  const noBoolDot = (v: boolean | null | undefined) =>
+    v ? <span className="text-secondary font-semibold">Sí</span> : <span className="text-muted-foreground">No</span>
+  const nivelDot = (v: string | null | undefined) =>
+    v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
 
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="overflow-hidden rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-muted/50">
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Condición</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Aplica</th>
+            </tr>
+          </thead>
+          <tbody>
+            {condiciones.map((c, i) => (
+              <tr key={c.label} className={`border-t border-border/60 ${i % 2 === 0 ? "bg-card" : "bg-muted/20"}`}>
+                <td className="px-3 py-2 text-sm text-card-foreground">{c.label}</td>
+                <td className="px-3 py-2 text-center">{noBoolDot(c.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="overflow-hidden rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-muted/50">
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Riesgo</th>
+              <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Nivel</th>
+            </tr>
+          </thead>
+          <tbody>
+            {riesgos.map((r, i) => (
+              <tr key={r.label} className={`border-t border-border/60 ${i % 2 === 0 ? "bg-card" : "bg-muted/20"}`}>
+                <td className="px-3 py-2 text-sm text-card-foreground">{r.label}</td>
+                <td className="px-3 py-2 text-center">{nivelDot(r.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
 function ReadOnlyList({ items }: { items: string[] }) {
   return (
-    <ul className="flex flex-col gap-2">
+    <ul
+      className="scroll-thin flex flex-col gap-2"
+      style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
+    >
       {items.map((item, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm text-card-foreground">
+        <li key={i} className="flex items-start gap-2 text-sm text-card-foreground min-w-0">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-[10px] font-medium text-secondary mt-0.5">
             {i + 1}
           </span>
-          {item}
+          <span style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{item}</span>
         </li>
       ))}
     </ul>
@@ -460,7 +550,7 @@ function RadioOption({ value, selected, onChange, label, colorClass, style }: {
 
 function PerfilList({ value }: { value: string }) {
   if (!value || value === "—") return <span className="text-sm text-muted-foreground">—</span>
-  const items = value.split(/[\n•·,]+/).map(s => s.trim()).filter(Boolean)
+  const items = value.split(/[\n\r•·]+/).map(s => s.trim()).filter(Boolean)
   if (items.length === 0) return <span className="text-sm text-muted-foreground">—</span>
   return (
     <ul className="flex flex-col gap-1">
@@ -521,13 +611,11 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
     </SectionCard>
   )
 }
-
 function SeccionRenovacion({ sol }: { sol: SolicitudDetalle }) {
   const folioDictamen =
     sol.folioDictamen ??
     resolverFolioDictamen(sol._raw) ??
     null
-
   return (
     <SectionCard title="Renovación">
       <div className="grid gap-4 md:grid-cols-2">
@@ -544,13 +632,17 @@ function SeccionRenovacion({ sol }: { sol: SolicitudDetalle }) {
 function SeccionPerfil({ raw }: { raw: any }) {
   return (
     <SectionCard num="II" title="Perfil Requerido">
-      <div className="grid gap-4 md:grid-cols-2">
-        <ReadOnlyField   label="Escolaridad Mínima"          value={formatEscolaridad(raw?.escolaridad)} />
-        <PerfilListField label="Competencias Administrativas" value={raw?.comp_adm ?? "—"} />
-        <PerfilListField label="Competencias Técnicas"        value={raw?.comp_tec ?? "—"} />
-        <PerfilListField label="Competencias Sociales"        value={raw?.comp_soc ?? "—"} />
-        <PerfilListField label="Valores"                      value={raw?.valores ?? "—"} />
-        <PerfilListField label="Áreas de Experiencia"         value={raw?.areas_exp ?? "—"} />
+      <div className="flex items-start gap-4">
+        <div className="flex flex-col gap-4 flex-1">
+          <ReadOnlyField   label="Escolaridad Mínima"         value={formatEscolaridad(raw?.escolaridad)} />
+          <PerfilListField label="Competencias Técnicas"       value={raw?.comp_tec ?? "—"} />
+          <PerfilListField label="Valores"                     value={raw?.valores ?? "—"} />
+        </div>
+        <div className="flex flex-col gap-4 flex-1">
+          <PerfilListField label="Competencias Administrativas" value={raw?.comp_adm ?? "—"} />
+          <PerfilListField label="Competencias Sociales"        value={raw?.comp_soc ?? "—"} />
+          <PerfilListField label="Áreas de Experiencia"         value={raw?.areas_exp ?? "—"} />
+        </div>
       </div>
     </SectionCard>
   )
@@ -603,7 +695,7 @@ function ExpedienteFiltro1({ sol, hidePerfil }: { sol: SolicitudDetalle; hidePer
         </SectionCard>
       )}
       <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
-        <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+        <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
@@ -619,7 +711,7 @@ function ExpedienteFiltro1({ sol, hidePerfil }: { sol: SolicitudDetalle; hidePer
             {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
           </SectionCard>
           <SectionCard title="VII. Condiciones y Riesgos">
-            {condicionesRiesgos.length > 0 ? <ReadOnlyList items={condicionesRiesgos} /> : <p className="text-sm text-muted-foreground">—</p>}
+            <SeccionCondicionesRiesgos raw={raw} />
           </SectionCard>
           <SectionCard title="VIII. Resguardo Personalizado de Activos">
             <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
@@ -653,7 +745,7 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
         </SectionCard>
       )}
       <SectionCard title={esNombramientoTD ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
-        <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+        <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
@@ -669,7 +761,7 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
             {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
           </SectionCard>
           <SectionCard title="VII. Condiciones y Riesgos">
-            {condicionesRiesgos.length > 0 ? <ReadOnlyList items={condicionesRiesgos} /> : <p className="text-sm text-muted-foreground">—</p>}
+            <SeccionCondicionesRiesgos raw={raw} />
           </SectionCard>
           <SectionCard title="VIII. Resguardo Personalizado de Activos">
             <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
@@ -701,7 +793,7 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
         </SectionCard>
       )}
       <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
-        <p className="text-sm text-card-foreground leading-relaxed whitespace-pre-wrap">
+        <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
           {raw?.objeto || <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
@@ -717,7 +809,7 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
             {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
           </SectionCard>
           <SectionCard title="VII. Condiciones y Riesgos">
-            {condicionesRiesgos.length > 0 ? <ReadOnlyList items={condicionesRiesgos} /> : <p className="text-sm text-muted-foreground">—</p>}
+            <SeccionCondicionesRiesgos raw={raw} />
           </SectionCard>
           <SectionCard title="VIII. Resguardo Personalizado de Activos">
             <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
@@ -745,7 +837,6 @@ function FolioDictamenCard({
   const [guardando,   setGuardando]   = useState(false)
   const autoCalledRef = useRef(false)
   const hasFetchedRef = useRef(false)
-
   useEffect(() => {
     const mesNum  = today.getMonth() + 1
     const anioNum = today.getFullYear()
@@ -871,16 +962,13 @@ function FolioRecepcionCard({
   const mesNumHoy  = today.getMonth() + 1
   const anioNum    = today.getFullYear()
   const mesCodeHoy = INICIALES_MES_MAP[String(mesNumHoy).padStart(2, "0")] ?? "XX"
-
   const [siguienteFrec, setSiguienteFrec] = useState<number | null>(null)
   const [ultimoFrec,    setUltimoFrec]    = useState<number | null>(null)
   const [siguienteExt,  setSiguienteExt]  = useState<number | null>(null)
-
   const [mesDefinitivo,      setMesDefinitivo]      = useState<number>(mesNumHoy)
   const [anioDefinitivo,     setAnioDefinitivo]     = useState<string>(String(anioNum))
   const [siguienteDefinitivo, setSiguienteDefinitivo] = useState<number | null>(null)
   const [cargandoDefinitivo,  setCargandoDefinitivo]  = useState(false)
-
   const [guardando,    setGuardando]    = useState(false)
   const autoCalledRef = useRef(false)
 
@@ -1017,7 +1105,6 @@ function FolioRecepcionCard({
       </Card>
     )
   }
-
   const listoTemporal = ultimoFrec !== null && siguienteExt !== null
   return (
     <Card className="shadow-sm border-border">
@@ -1044,7 +1131,6 @@ function FolioRecepcionCard({
     </Card>
   )
 }
-
 interface RevisorInfo { id: string; nombre: string; correo: string }
 function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
   open: boolean
@@ -1135,6 +1221,7 @@ const AVAILABLE_DESTINATARIOS = [
 
 export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }: RevisionDOPageProps) {
   const { user } = useAuth()
+  const hasDataRef                   = useRef(false)
   const [solicitud,  setSolicitud]  = useState<SolicitudDetalle | null>(null)
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
@@ -1159,7 +1246,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [firmaEmisionAbierta,   setFirmaEmisionAbierta]   = useState(false)
 
   const cargar = useCallback(async () => {
-    setLoading(true); setError(null)
+    if (!hasDataRef.current) setLoading(true)
+    setError(null)
     try {
       const userId = (user as any)?.id ?? ""
       const res  = await fetch(`/api/filtro?filtro=${filtro}&userId=${userId}`)
@@ -1171,7 +1259,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         const res2  = await fetch(`/api/solicitudes?id=${solicitudId}`)
         const json2 = await res2.json()
         const item2 = json2.ok ? (json2.data ?? []).find((d: any) => String(d.id) === String(solicitudId)) : null
-        if (item2) { setSolicitud(mapBDtoDetalle(item2._raw ?? item2)); return }
+        if (item2) { setSolicitud(mapBDtoDetalle(item2._raw ?? item2)); hasDataRef.current = true; return }
         setError("Solicitud no encontrada en este filtro")
         return
       }
@@ -1183,10 +1271,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         ...rawBase,
         folioDictamen: folioDictamenResuelto,
         dictamen:      rawBase.dictamen ?? item.dictamen ?? null,
+        slaRestante:   item.slaRestante ?? null,
         _raw:          rawBase,
       }
       const mapped = mapBDtoDetalle(merged)
       setSolicitud(mapped)
+      hasDataRef.current = true
 
       if (filtro === 3) {
         const urgDefault = "URG-01 Oficina del Secretario"
@@ -1197,6 +1287,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     finally { setLoading(false) }
   }, [solicitudId, filtro])
   useEffect(() => { cargar() }, [cargar])
+  useRealtime(["revision"], cargar)
   const updateChecklist = useCallback((key: string, valor: ChecklistValor, obs?: string) => {
     setSolicitud(prev => {
       if (!prev) return prev
@@ -1239,7 +1330,18 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     filtro === 3 ? sinObservacion
     : filtro === 2 ? (sinObservacion && hasFolioDictamen)
     : canApproveChecklist
-  const canObservar = !/observad/i.test(solicitud?.estado ?? "") && (
+  const checklistYaRealizado = filtro === 1 && (
+    (solicitud?.estado ?? "").toLowerCase().includes("observado por validacion final") ||
+    (solicitud?.estado ?? "").toLowerCase() === "observado por revisor"
+  )
+  const isEnTabObservadas = (() => {
+    const n = (solicitud?.estado ?? "").toLowerCase()
+    if (filtro === 1) return n === "observado por revisor"
+    if (filtro === 3) return n === "observado por emisor"
+    return (n.includes("observad") || n.includes("devuelta")) && !n.includes("por emisor")
+  })()
+  const isCheckboxSinObsDisabled = (solicitud?.estado ?? "").toLowerCase().includes("observad")
+  const canObservar = isEnTabObservadas || (filtro === 1 && checklistYaRealizado) || (
     (filtro === 2 || filtro === 3)
       ? !sinObservacion
       : (checklistStats.allDone && checklistStats.hasNo && checklistStats.noWithoutObs === 0)
@@ -1282,8 +1384,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   , [solicitud])
   const handleAprobar = async (revisorId?: string) => {
     if (filtro === 3) {
-      // Si la modalidad ya fue definida (por UEFA o una aprobación previa del Emisor),
-      // no preguntamos de nuevo — aprobamos directo con esa modalidad.
       const modalidadExistente = (solicitud as any)?.modalidadFirma as "electronica" | "autografa" | null | undefined
       if (modalidadExistente === "electronica" || modalidadExistente === "autografa") {
         const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadExistente)
@@ -1310,11 +1410,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     }
   }
   const handleObservar = async () => {
-    if (filtro === 2 || filtro === 3) {
+    if (filtro === 2 || filtro === 3 || (filtro === 1 && checklistYaRealizado)) {
       if (!observacionGeneral.trim()) { setObservacionError("Escribe una observación para devolver el expediente."); return }
       setObservacionError("")
       const nuevoEstado = await patchEstado("observar", observacionGeneral.trim())
-      if (nuevoEstado) { setObservacionGeneral(""); setShowConfirmacion("Solicitud observada y regresada a URG.") }
+      if (nuevoEstado) { setObservacionGeneral(""); setShowConfirmacion("Solicitud observada y regresada.") }
       return
     }
     const errors: Record<string, boolean> = {}
@@ -1397,20 +1497,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
   const isEmitido      = solicitud?.estado === "Emitido"
   const isAprobado     = solicitud?.estado === "Pendiente Firma Dictamen"
-  const isObservada        = /observad/i.test(solicitud?.estado ?? "")
-  const isObservadaFiltro2 = filtro === 2 && isObservada
   const isAceptadoPorRevisor = filtro === 1 && (
     solicitud?.estado?.toLowerCase() === "aceptado por revisor" ||
     solicitud?.estado?.toLowerCase() === "aprobado por revisor"
   )
-  const checklistYaRealizado = filtro === 1 && (
-    (solicitud?.estado ?? "").toLowerCase().includes("observado por validacion final") ||
-    (solicitud?.estado ?? "").toLowerCase() === "observado por revisor"
-  )
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
     (modalidadFirma === "electronica"
-      ? true // Para electrónica el gate vive dentro del FirmaModal (firma + sellado)
+      ? true
       : (autografaDescargado && archivoSubido))
 
   if (loading) return (
@@ -1446,7 +1540,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           </Card>
         </div>
       )}
-
       {showConfirmacion && isEmitido && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
           <Card className="w-full max-w-md shadow-lg border-primary/30 border-2">
@@ -1510,7 +1603,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         guardando={guardando}
       />
 
-      {}
+
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => onBack(filtro)} className="gap-1.5">
@@ -1542,19 +1635,19 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
             <p className="text-xs text-muted-foreground">
               {solicitud.tipo} — {solicitud.secretaria}
             </p>
-            {solicitud.denominacion && solicitud.denominacion !== "—" && (
+            {solicitud.denominacion && solicitud.denominacion !== "—" && !isCheckboxSinObsDisabled && (
               <p className="text-xs text-muted-foreground font-medium">{solicitud.denominacion}</p>
             )}
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="gap-1.5"
+          <Button size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
             onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
-          {onEditSolicitud && !isObservada && (
-            <Button variant="outline" size="sm" className="gap-1.5"
+          {onEditSolicitud && !isEnTabObservadas && (
+            <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-white border-0"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
             >
               <Pencil className="h-4 w-4" />Editar
@@ -1564,51 +1657,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         </div>
       </div>
 
-      {}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
-            {solicitud.observacionesPrevias.length > 0 && (
-              <Card className="shadow-sm border-[#832B56]/30 border-2 bg-[#832B56]/[0.02]">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#832B56]">
-                    <AlertCircle className="h-4 w-4" />Observaciones Previas
-                    <span className="ml-auto text-[10px] font-normal bg-[#832B56]/10 text-[#832B56] rounded px-2 py-0.5">
-                      {solicitud.observacionesPrevias.length} {solicitud.observacionesPrevias.length === 1 ? "observación" : "observaciones"}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-0 pt-0">
-                  {solicitud.observacionesPrevias.map((obs, i) => {
-                    const isLast = i === solicitud.observacionesPrevias.length - 1
-                    return (
-                      <div key={i} className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/50 bg-white">
-                            <XCircle className="h-3.5 w-3.5 text-[#832B56]" />
-                          </div>
-                          {!isLast && <div className="w-px flex-1 bg-[#832B56]/20 my-1" />}
-                        </div>
-                        <div className={`flex flex-col gap-1.5 flex-1 ${!isLast ? "pb-4" : "pb-1"}`}>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] font-semibold text-[#832B56] uppercase tracking-wide">{obs.estado}</span>
-                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
-                          </div>
-                          <p className="text-xs text-[#832B56]/90 leading-relaxed whitespace-pre-line">{obs.comentario}</p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </CardContent>
-              </Card>
-            )}
             {filtro === 1 && <ExpedienteFiltro1 sol={solicitud} />}
             {filtro === 2 && <ExpedienteFiltro2 sol={solicitud} />}
             {filtro === 3 && <ExpedienteFiltro3 sol={solicitud} />}
           </div>
         </ScrollArea>
-
-        {}
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
             <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
@@ -1624,6 +1681,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                   <Stamp className="mr-1.5 inline h-4 w-4" />Emisión
                 </button>
               )}
+              {solicitud.observacionesTodas.length > 0 && (
+                <button onClick={() => setActiveTab("observaciones")}
+                  className={`relative flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "observaciones" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
+                  <AlertCircle className="mr-1.5 inline h-4 w-4" />Observaciones
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white">
+                    {solicitud.observacionesTodas.length}
+                  </span>
+                </button>
+              )}
               <button onClick={() => setActiveTab("historial")}
                 className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "historial" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
                 <History className="mr-1.5 inline h-4 w-4" />Historial
@@ -1632,7 +1698,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
             {activeTab === "review" && !isEmitido && (
               <>
-                {filtro !== 3 && (
+                {filtro !== 3 && !isEnTabObservadas && (
                   <>
                     {filtro === 1 && (
                       <FolioDictamenCard folioDictamen={folioDictamenResuelto} onAsignar={handleAsignarFolioDictamen} esExtemporanea={solicitud.esExtemporanea} />
@@ -1819,7 +1885,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       </Card>
                     )}
 
-                    {filtro === 1 && (
+                    {filtro === 1 && !isEnTabObservadas && (
                       <Card className="shadow-sm border-border">
                         <CardHeader className="pb-3">
                           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1836,44 +1902,57 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                   </>
                 )}
 
-                {(filtro === 2 || filtro === 3) && (
-                  <Card className={`shadow-sm border-2 ${isObservadaFiltro2 ? "border-border bg-muted/30 opacity-60" : sinObservacion ? "border-secondary/30 bg-secondary/[0.03]" : "border-border"}`}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                        <Shield className="h-4 w-4 text-primary" />Revisión de Dirección General
-                        {isObservadaFiltro2 && <Lock className="h-3.5 w-3.5 text-muted-foreground ml-1" />}
-                      </CardTitle>
-                      <CardDescription className="text-xs">
-                        {isObservadaFiltro2
-                          ? "Solicitud en estado observado — no disponible para edición."
-                          : "Determine si procede la emisión o requiere observaciones."}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-4">
-                      <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3">
+                {filtro !== 1 && (
+                  <div className={`overflow-hidden rounded-xl border border-border shadow-md transition-opacity ${isEnTabObservadas ? "opacity-60" : ""}`}>
+                    <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #A0845C 0%, #C4A882 100%)" }}>
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                        <Shield className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-white flex items-center gap-2">
+                          Revisión de Dirección General
+                          {isEnTabObservadas && <Lock className="h-3.5 w-3.5 text-white/60" />}
+                        </span>
+                        <span className="text-xs font-semibold text-white/90">
+                          {isEnTabObservadas
+                            ? `Solicitud en estado "${solicitud?.estado}" — no disponible para edición.`
+                            : "Determine si procede la emisión o requiere observaciones."}
+                        </span>
+                      </div>
+                      {sinObservacion && (
+                        <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                          <span className="text-[11px] font-semibold text-white/90">Sin obs.</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-card p-4 flex flex-col gap-4">
+                      <div className={`flex items-start gap-3 rounded-lg border p-3 ${isCheckboxSinObsDisabled ? "pointer-events-none border-destructive/30 bg-destructive/[0.04]" : "border-border bg-muted/30"}`}>
                         <Checkbox id="sin-obs-dg" checked={sinObservacion}
-                          disabled={isObservadaFiltro2}
-                          onCheckedChange={v => { if (isObservadaFiltro2) return; setSinObservacion(!!v); if (v) { setObservacionGeneral(""); setObservacionError("") } }} />
+                          disabled={isCheckboxSinObsDisabled}
+                          onCheckedChange={v => { if (isCheckboxSinObsDisabled) return; setSinObservacion(!!v); if (v) { setObservacionGeneral(""); setObservacionError("") } }} />
                         <div className="flex flex-col gap-0.5">
-                          <Label htmlFor="sin-obs-dg" className={`text-sm font-medium ${isObservadaFiltro2 ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer"}`}>No hay ninguna observación</Label>
+                          <Label htmlFor="sin-obs-dg" className={`text-sm font-medium ${isCheckboxSinObsDisabled ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer"}`}>No hay ninguna observación</Label>
                           <span className="text-xs text-muted-foreground">
-                            {sinObservacion ? "El expediente está listo para continuar." : "Desmarque para agregar observaciones y devolver el expediente."}
+                            {isCheckboxSinObsDisabled
+                              ? "La solicitud se encuentra observada — esta opción no está disponible."
+                              : sinObservacion
+                                ? "El expediente está listo para continuar. Desmarque para agregar observaciones y devolver el expediente."
+                                : "Marque para confirmar que no hay observaciones y continuar con el proceso."}
                           </span>
                         </div>
                       </div>
-                      {!sinObservacion && (
+                      {!sinObservacion && !isEnTabObservadas && (
                         <div className="flex flex-col gap-2">
                           <Label className="text-sm font-medium text-card-foreground">Observación</Label>
                           <Textarea value={observacionGeneral}
-                            disabled={isObservadaFiltro2}
-                            onChange={e => { if (isObservadaFiltro2) return; setObservacionGeneral(e.target.value); if (e.target.value.trim()) setObservacionError("") }}
+                            onChange={e => { setObservacionGeneral(e.target.value); if (e.target.value.trim()) setObservacionError("") }}
                             placeholder="Describa las observaciones para devolver el expediente..."
                             className={`bg-background min-h-24 ${observacionError ? "border-destructive" : ""}`} />
                           {observacionError && <span className="text-xs text-destructive">{observacionError}</span>}
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )}
 
                 {filtro === 1 && !canApprove && !canObservar && checklistStats.completed === checklistStats.total && checklistStats.hasNo && checklistStats.noWithoutObs > 0 && (
@@ -2028,18 +2107,56 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               )
             )}
 
+            {activeTab === "observaciones" && (
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                    <AlertCircle className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white">Observaciones</span>
+                    <span className="text-[10px] text-white/60">
+                      {solicitud.observacionesTodas.length} observación{solicitud.observacionesTodas.length !== 1 ? "es" : ""}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">{solicitud.observacionesTodas.length} obs.</span>
+                  </div>
+                </div>
+                <div className="bg-card p-4 flex flex-col gap-2">
+                  {solicitud.observacionesTodas.map((obs, i) => (
+                    <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                        <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
+                      </div>
+                      <p className="text-xs text-card-foreground leading-relaxed whitespace-pre-line">{obs.comentario}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activeTab === "historial" && (
-              <Card className="shadow-sm border-border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-                    <History className="h-4 w-4 text-secondary" />Historial del Expediente
-                  </CardTitle>
-                  <CardDescription className="text-xs">Línea de tiempo de movimientos</CardDescription>
-                </CardHeader>
-                <CardContent>
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                    <History className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white">Historial del Expediente</span>
+                    <span className="text-[10px] text-white/60">
+                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""} registrada{solicitud.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">{solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""}</span>
+                  </div>
+                </div>
+                <div className="bg-card px-5 pt-4 pb-2">
                   <HistorialTimeline entries={solicitud.historial} />
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </div>
         </ScrollArea>

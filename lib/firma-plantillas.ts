@@ -5,8 +5,8 @@ export type FirmanteBandeja = "uefa" | "revision" | "validacion" | "emision"
 
 export interface FirmanteTemplate {
   orden: number
-  rol: string            // "Elaboró" | "Revisó" | "Verificó" | "Emitió" | "Vo. Bo."
-  cargo: string          // texto que aparece en el PDF
+  rol: string
+  cargo: string
   tipo: FirmanteTipo
   bandeja?: FirmanteBandeja
 }

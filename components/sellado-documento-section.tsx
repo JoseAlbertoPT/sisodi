@@ -59,7 +59,6 @@ export function SelladoDocumentoSection({
         setSellado(json.sellado ?? null)
       }
     } catch {
-      // ignore
     } finally {
       setCargando(false)
     }
@@ -168,7 +167,6 @@ export function SelladoDocumentoSection({
                 : "Descargue el documento, agréguele el sello institucional fuera del sistema y vuelva a subirlo aquí. Hasta entonces no podrá continuar."}
             </p>
 
-            {/* Paso 1: Descargar */}
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant={sellado ? "outline" : "default"}
@@ -187,7 +185,6 @@ export function SelladoDocumentoSection({
               )}
             </div>
 
-            {/* Paso 2: Subir sellado */}
             <div className={`flex flex-col gap-2 rounded-md border ${habilitarSubida ? "border-border" : "border-dashed border-muted-foreground/30 bg-muted/20"} p-3`}>
               <div className="flex items-center gap-2">
                 <Upload className="h-3.5 w-3.5 text-muted-foreground" />

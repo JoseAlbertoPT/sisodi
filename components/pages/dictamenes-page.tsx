@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useMemo, useEffect, useCallback, useRef, memo } from "react"
+import { useRealtime } from "@/hooks/use-realtime"
 import dynamic from "next/dynamic"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -151,17 +152,24 @@ const DictamenViewModal = React.memo(({
     (dictamen.regimen ?? "").toLowerCase().includes("honorario") ||
     (dictamen.regimen ?? "").toLowerCase().includes("asimilado")
 
+  const parseDateLocal = (iso: string) => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const [y, m, dd] = iso.split("-").map(Number)
+      return new Date(y, m - 1, dd)
+    }
+    return new Date(iso)
+  }
   const formatearFecha = (iso: string | null) => {
     if (!iso) return null
     try {
-      return new Date(iso).toLocaleDateString("es-MX", {
+      return parseDateLocal(iso).toLocaleDateString("es-MX", {
         day: "2-digit", month: "long", year: "numeric",
       })
     } catch { return null }
   }
   const formatearFechaCorta = (iso: string | null) => {
     if (!iso) return null
-    try { return new Date(iso).toLocaleDateString("es-MX") } catch { return null }
+    try { return parseDateLocal(iso).toLocaleDateString("es-MX") } catch { return null }
   }
   const fechaEmisionLabel = formatearFecha(dictamen.fechaEmision)
   const vigenciaInicioLabel = formatearFechaCorta(dictamen.vigenciaInicio)
@@ -175,9 +183,6 @@ const DictamenViewModal = React.memo(({
   const [firmaDictEmitioNombre, setFirmaDictEmitioNombre] = useState("")
   const [showFirmas, setShowFirmas] = useState(false)
 
-  // Formato derivado del tipoFirma del dictamen.
-  // electronica → 'en_linea' (con leyenda "DOCUMENTO FIRMADO ELECTRÓNICAMENTE")
-  // null/autografa/cualquier otro → 'fisico'
   const formato: 'fisico' | 'en_linea' = dictamen.tipoFirma === 'electronica' ? 'en_linea' : 'fisico'
   const modalidadLabel = dictamen.tipoFirma === 'electronica' ? 'Firma electrónica' : 'Firma autógrafa'
 
@@ -401,6 +406,7 @@ const DictamenViewModal = React.memo(({
 
 export function DictamenesPage() {
   const { user } = useAuth()
+  const hasDataRef                   = useRef(false)
   const [dictamenes, setDictamenes] = useState<DictamenEmitido[]>([])
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
@@ -447,13 +453,15 @@ export function DictamenesPage() {
   }
 
   const cargar = useCallback(async () => {
-    setLoading(true); setError(null)
+    if (!hasDataRef.current) setLoading(true)
+    setError(null)
     try {
       const userId = (user as any)?.id ?? ""
       const res  = await fetch(`/api/emision?vista=emitidos&userId=${userId}`)
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar dictámenes"); return }
       setDictamenes((json.data ?? []).map(mapearDictamen))
+      hasDataRef.current = true
     } catch {
       setError("Error de conexión al servidor")
     } finally {
@@ -462,6 +470,7 @@ export function DictamenesPage() {
   }, [user])
 
   useEffect(() => { cargar() }, [cargar])
+  useRealtime(["dictamenes"], cargar)
 
   const secretariasUnicas = useMemo(
     () => [...new Set(dictamenes.map((d) => d.secretaria))].filter(Boolean).sort(),
@@ -531,12 +540,6 @@ export function DictamenesPage() {
         />
       )}
 
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={cargar} disabled={loading} className="gap-1.5">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Actualizar
-        </Button>
-      </div>
 
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
@@ -548,26 +551,6 @@ export function DictamenesPage() {
         </Card>
       )}
 
-     {/* <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[
-          { label: "Total emitidos",    value: dictamenes.length,  icon: <FileCheck className="h-5 w-5 text-primary" />,       bg: "bg-primary/10" },
-          { label: "Dictámenes",        value: totalDictamenes,    icon: <Stamp className="h-5 w-5 text-secondary" />,         bg: "bg-secondary/10" },
-          { label: "Opiniones",         value: totalOpiniones,     icon: <Stamp className="h-5 w-5 text-accent-foreground" />, bg: "bg-accent/10" },
-          { label: "Firma electrónica", value: totalElectronica,   icon: <FileCheck className="h-5 w-5 text-secondary" />,     bg: "bg-secondary/10" },
-        ].map((c, i) => (
-          <Card key={i} className="shadow-sm border-border">
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${c.bg}`}>
-                {c.icon}
-              </div>
-              <div>
-                <span className="text-2xl font-bold text-card-foreground">{c.value}</span>
-                <p className="text-xs text-muted-foreground">{c.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div> */}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -643,7 +626,7 @@ export function DictamenesPage() {
                         {formatearFolio(d.folioRecepcion)}
                       </td>
 
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{d.secretaria}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs break-words max-w-[200px]">{d.secretaria}</td>
 
                       <td className="px-4 py-3">
                         <Badge className={`text-[10px] border-0 ${
@@ -655,13 +638,13 @@ export function DictamenesPage() {
                         </Badge>
                       </td>
 
-                      <td className="px-4 py-3 text-muted-foreground text-xs max-w-[200px]">
+                      <td className="px-4 py-3 text-muted-foreground text-xs max-w-[200px] break-words">
                         <span className="line-clamp-2">{d.denominacion ?? "—"}</span>
                       </td>
 
                       <td className="px-4 py-3 text-muted-foreground text-xs">
                         {d.fechaEmision
-                          ? new Date(d.fechaEmision).toLocaleDateString("es-MX")
+                          ? (() => { const [y,m,dd] = d.fechaEmision!.split("-").map(Number); return new Date(y,m-1,dd).toLocaleDateString("es-MX") })()
                           : "—"}
                       </td>
 
@@ -701,7 +684,7 @@ export function DictamenesPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="ghost" size="sm"
+                            size="sm"
                             onClick={() => descargarPdfDictamen(
                               d.id,
                               d.folioDictamen,
@@ -709,7 +692,7 @@ export function DictamenesPage() {
                               d.tipoFirma === 'electronica' ? 'en_linea' : 'fisico',
                             )}
                             disabled={downloadingId === d.id}
-                            className="text-secondary hover:text-primary min-w-[32px]"
+                            className="gap-1.5 bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0 min-w-[32px]"
                             title={`Descargar PDF (${d.tipoFirma === 'electronica' ? 'En línea' : 'Físico'})`}
                           >
                             {downloadingId === d.id ? (

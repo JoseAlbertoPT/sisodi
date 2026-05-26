@@ -12,7 +12,7 @@ import {
 
   Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
-  Loader2, Shield, CheckCircle2, Eye, EyeOff, Unlock, Trash2, Lock, User,
+  Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Unlock, Trash2, Lock, User,
   Landmark, Factory,
 } from "lucide-react"
 import {
@@ -24,7 +24,7 @@ import { useAutorizaciones, type PermisoCaptura } from "@/lib/autorizaciones-sto
 import { useCalendario } from "@/lib/calendario-store"
 import { useAuth } from "@/lib/auth-context"
 import {
-  fetchMenusTree, fetchPermisosUser, updatePermisosUser,
+  fetchMenusTree, fetchMyMenus, fetchPermisosUser, updatePermisosUser,
   type MenuNode, type PermisosUser,
 } from "@/lib/permisos-api"
 import { MenuPermisoTree } from "@/components/menu-permiso-tree"
@@ -36,7 +36,7 @@ import {
   type CategoriaParaestatalItem,
 } from "@/lib/catalogo-api"
 
-const ROLES = ["Director Operativo", "Analista", "Revisor", "Capturista", "Administrador"]
+const ROLES = ["Emisor", "Validador", "Revisor", "Capturista", "UEFA", "Administrador"]
 
 type Usuario = {
   id: string
@@ -47,6 +47,7 @@ type Usuario = {
   secretaria: string
   secretariaId: string | null
   estatus: "Activo" | "Inactivo"
+  tipoAdministracion: "centralizada" | "paraestatal"
 }
 
 const API = "/api"
@@ -258,7 +259,6 @@ function SecretariaTreeSelector({
   const setSearchAtLevel = (level: number, query: string) => {
     setSearchQueries((prev) => ({ ...prev, [level]: query }))
   }
-
   if (treeLoading) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground py-6 justify-center border border-border rounded-lg bg-muted/20">
@@ -310,7 +310,7 @@ function SecretariaTreeSelector({
               </div>
               <span className="text-xs font-medium text-muted-foreground">{level.label}</span>
               {level.selected && (
-                <>
+                  <>
                   <span className="text-xs font-semibold text-foreground">
                     {level.selected.nombre}
                   </span>
@@ -318,7 +318,7 @@ function SecretariaTreeSelector({
                     type="button"
                     className="text-[10px] text-muted-foreground hover:text-destructive ml-auto"
                     onClick={() => handleClearFromLevel(idx)}
-                  >
+                     >
                     Cambiar
                   </button>
                 </>
@@ -327,7 +327,6 @@ function SecretariaTreeSelector({
             {idx < levels.length - 1 && level.selected && (
               <div className="ml-2.5 h-2 border-l-2 border-primary/20" />
             )}
-
             {!level.selected && (
               <div className="ml-7">
                 {(level.options.length > 5 || idx === 0) && (
@@ -362,7 +361,7 @@ function SecretariaTreeSelector({
                             type="button"
                             className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-primary/[0.05] transition-colors group"
                             onClick={() => handlePickAtLevel(idx, node)}
-                          >
+                            >
                             <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 group-hover:bg-primary shrink-0 transition-colors" />
                             <span className="text-xs font-medium text-foreground flex-1 truncate">
                               {query ? <HighlightText text={node.nombre} query={query} /> : node.nombre}
@@ -392,7 +391,7 @@ function SecretariaTreeSelector({
                             setSearchQueries({})
                             onSelect(node.id, node.nombre, pathNames)
                           }}
-                        >
+                          >
                           <span className="text-xs font-medium text-foreground truncate">
                             <HighlightText text={node.nombre} query={query} />
                           </span>
@@ -412,13 +411,12 @@ function SecretariaTreeSelector({
           </div>
         )
       })}
-
       {steps.length > 0 && (
         <button
           type="button"
           className="text-[11px] text-muted-foreground hover:text-destructive self-start ml-7 flex items-center gap-1"
           onClick={handleReset}
-        >
+           >
           <X className="h-3 w-3" />
           Limpiar seleccion
         </button>
@@ -448,14 +446,11 @@ function paraestatalToTree(cats: CategoriaParaestatalItem[]): OrganoCentralizado
     })),
   }))
 }
-
 type NuevoUsuarioFormProps = {
   onClose: () => void
   onSaved: (u: Usuario) => void
 }
-
-const NUEVO_STEPS = ["Datos Personales", "Acceso y Permisos", "Tipo de Administración"]
-
+const NUEVO_STEPS = ["Datos Personales", "Acceso y Permisos", "Tipo de Administración", "Permisos de Menú"]
 function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const { user: currentUser } = useAuth()
   const tipoAdminFijo = currentUser?.tipoAdministracion ?? "centralizada"
@@ -477,13 +472,37 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     estatus: "Activo" as "Activo" | "Inactivo",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [asyncErrors, setAsyncErrors] = useState<Record<string, string>>({})
+  const [checking, setChecking] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(false)
   const [apiError, setApiError] = useState("")
   const [claveAlert, setClaveAlert] = useState("")
+  const [permTree, setPermTree] = useState<MenuNode[] | null>(null)
+  const [permTreeLoading, setPermTreeLoading] = useState(false)
+  const [selectedPermisos, setSelectedPermisos] = useState<PermisosUser>({ menuIds: [], menuActions: {} })
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
   const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
   const [showPassword, setShowPassword] = useState(false)
+
+  const checkUnico = async (campo: "correo" | "rfc", valor: string) => {
+    if (!valor.trim()) return
+    setChecking((c) => ({ ...c, [campo]: true }))
+    try {
+      const param = campo === "correo" ? `checkCorreo=${encodeURIComponent(valor.trim())}` : `checkRfc=${encodeURIComponent(valor.trim().toUpperCase())}`
+      const res  = await fetch(`/api/usuarios?${param}`)
+      const json = await res.json()
+      if (json.existe) {
+        const msg = campo === "correo"
+          ? "Ya existe un usuario con ese correo."
+          : "Ya existe un usuario con ese RFC."
+        setAsyncErrors((e) => ({ ...e, [campo]: msg }))
+      } else {
+        setAsyncErrors((e) => { const n = { ...e }; delete n[campo]; return n })
+      }
+    } catch { /* silencioso */ }
+    finally { setChecking((c) => ({ ...c, [campo]: false })) }
+  }
 
   useEffect(() => {
     setTreeLoading(true)
@@ -496,7 +515,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
       .catch(() => setTree([]))
       .finally(() => setTreeLoading(false))
   }, [tipoAdmin])
-
   const validateStep = (s: number) => {
     const e: Record<string, string> = {}
     if (s === 1) {
@@ -519,14 +537,35 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const handleNext = () => {
     const e = validateStep(step)
     if (Object.keys(e).length) { setErrors(e); return }
+    if (step === 1 && Object.keys(asyncErrors).length) return
     setErrors({})
     if (step < 3) {
       setStep((s) => s + 1)
-    } else {
+    } else if (step === 3) {
       if (tipoAdmin === "centralizada") {
         const claveErr = getClaveError(form.secretariaId, tree)
         if (claveErr) { setClaveAlert(claveErr); return }
       }
+      setPermTreeLoading(true)
+      setStep(4);
+      (async () => {
+        try {
+          const collectIds = (nodes: MenuNode[]): string[] =>
+            nodes.flatMap((n) => [n.id, ...(n.children ? collectIds(n.children) : [])])
+          const [fullTree, roleMenus] = await Promise.allSettled([
+            fetchMenusTree(),
+            fetchMyMenus(form.rol),
+          ])
+          const treeData = fullTree.status === "fulfilled" ? fullTree.value : []
+          setPermTree(treeData)
+          if (roleMenus.status === "fulfilled" && roleMenus.value.length > 0) {
+            setSelectedPermisos({ menuIds: collectIds(roleMenus.value), menuActions: {} })
+          }
+        } finally {
+          setPermTreeLoading(false)
+        }
+      })()
+    } else {
       setShowConfirm(true)
     }
   }
@@ -554,6 +593,9 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
         secretariaId: rawSecretariaId,
         secretariaTexto,
       })
+      if (selectedPermisos.menuIds.length > 0) {
+        await updatePermisosUser(nuevo.id, selectedPermisos)
+      }
       onSaved(nuevo)
       onClose()
     } catch (err: unknown) {
@@ -571,22 +613,34 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     placeholder = "",
     hint?: string,
     autoComplete = "off"
-  ) => (
-    <div className="flex flex-col gap-1.5">
-      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
-      <Input
-        type={type}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        value={form[key] as string}
-        onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-        className={`bg-background h-9 text-xs ${errors[key] ? "border-destructive" : ""}`}
-      />
-      {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
-      {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
-    </div>
-  )
-
+  ) => {
+    const hasError = errors[key] || asyncErrors[key as string]
+    const isChecking = checking[key as string]
+    return (
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+        <Input
+          type={type}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          value={form[key] as string}
+          onChange={(e) => {
+            setForm((f) => ({ ...f, [key]: e.target.value }))
+            if (asyncErrors[key as string]) setAsyncErrors((prev) => { const n = { ...prev }; delete n[key as string]; return n })
+          }}
+          onBlur={() => {
+            if (key === "correo" && form.correo.trim() && /\S+@\S+\.\S+/.test(form.correo))
+              checkUnico("correo", form.correo)
+          }}
+          className={`bg-background h-9 text-xs ${hasError ? "border-destructive" : ""}`}
+        />
+        {isChecking && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
+        {!isChecking && hint && !hasError && <span className="text-[10px] text-muted-foreground">{hint}</span>}
+        {!isChecking && errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
+        {!isChecking && asyncErrors[key as string] && <span className="text-[10px] text-destructive">{asyncErrors[key as string]}</span>}
+      </div>
+    )
+  }
   const secretariaDisplay = form.secretariaPath.length > 0
     ? form.secretariaPath.join(" › ")
     : form.secretaria || "—"
@@ -604,8 +658,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-
-    {/* Modal de confirmación */}
     {showConfirm && (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm">
         <div className="w-full max-w-md mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
@@ -631,7 +683,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               </div>
             )}
 
-            {/* Datos personales */}
             <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
               <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
                 <User className="h-3 w-3 text-primary/70" />
@@ -646,8 +697,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 <span className="font-mono font-medium text-card-foreground">{form.rfc || "—"}</span>
               </div>
             </div>
-
-            {/* Acceso y permisos */}
             <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
               <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
                 <Lock className="h-3 w-3 text-amber-600/70" />
@@ -662,12 +711,10 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 <span className="font-medium text-card-foreground">{form.estatus}</span>
               </div>
             </div>
-
-            {/* Administración */}
             <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
               <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
                 <Building2 className="h-3 w-3 text-blue-600/70" />
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Administración</span>
+                <span className="tzext-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Administración</span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <span className="text-muted-foreground">Tipo:</span>
@@ -677,7 +724,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               </div>
             </div>
           </div>
-
           <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20">
             <Button variant="outline" size="sm" className="text-xs h-9" onClick={() => setShowConfirm(false)} disabled={loading}>
               Regresar
@@ -698,14 +744,11 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
         </div>
       </div>
     )}
-
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="w-full max-w-xl mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden">
-
-        {/* Header */}
+      >
+      <div className={`w-full mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[96vh] flex flex-col overflow-hidden transition-all duration-200 ${step === 4 ? "max-w-3xl" : "max-w-xl"}`}>
         <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
           <div className="flex items-center gap-4">
             <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
@@ -721,7 +764,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
           </Button>
         </div>
 
-        {/* Step indicator */}
         <div className="flex items-center gap-0 px-6 py-3 border-b border-border/50 bg-muted/20 shrink-0">
           {NUEVO_STEPS.map((label, idx) => {
             const n = idx + 1
@@ -747,15 +789,12 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
           })}
         </div>
 
-        {/* Body */}
         <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
           {apiError && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-xs text-destructive flex items-center gap-2">
               <X className="h-3.5 w-3.5 shrink-0" />{apiError}
             </div>
           )}
-
-          {/* Step 1: Datos personales */}
           {step === 1 && (
             <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
               <div className="flex items-center gap-2 pb-2 border-b border-border/50">
@@ -773,18 +812,24 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     placeholder="ABCD850101XYZ"
                     value={form.rfc}
                     autoComplete="off"
-                    onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
-                    className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+                    onChange={(e) => {
+                      setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))
+                      if (asyncErrors.rfc) setAsyncErrors((prev) => { const n = { ...prev }; delete n.rfc; return n })
+                    }}
+                    onBlur={() => {
+                      if (form.rfc.trim()) checkUnico("rfc", form.rfc)
+                    }}
+                    className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
                     maxLength={13}
                   />
-                  {!errors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
-                  {errors.rfc && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
+                  {checking.rfc && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
+                  {!checking.rfc && !errors.rfc && !asyncErrors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
+                  {!checking.rfc && errors.rfc && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
+                  {!checking.rfc && asyncErrors.rfc && <span className="text-[10px] text-destructive">{asyncErrors.rfc}</span>}
                 </div>
               </div>
             </div>
           )}
-
-          {/* Step 2: Acceso y permisos */}
           {step === 2 && (
             <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
               <div className="flex items-center gap-2 pb-2 border-b border-border/50">
@@ -826,7 +871,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                   </Select>
                   {errors.rol && <span className="text-[10px] text-destructive">{errors.rol}</span>}
                 </div>
-
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Estatus inicial</Label>
                   <Select value={form.estatus} onValueChange={(v) => setForm((f) => ({ ...f, estatus: v as "Activo" | "Inactivo" }))}>
@@ -842,8 +886,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               </div>
             </div>
           )}
-
-          {/* Step 3: Tipo de administración + Secretaría */}
           {step === 3 && (
             <>
               <div className="flex flex-col gap-1.5">
@@ -919,9 +961,56 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               </div>
             </>
           )}
-        </div>
 
-        {/* Footer */}
+          {step === 4 && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 pb-1 border-b border-border/50">
+                <ShieldCheck className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Acceso al menú para <span className="text-primary normal-case">{form.nombre || "el usuario"}</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Selecciona las secciones del menú a las que tendrá acceso. Los permisos pre-seleccionados corresponden al rol <strong>{form.rol}</strong>.
+              </p>
+              {permTreeLoading ? (
+                <div className="flex items-center gap-2 py-6 justify-center text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />Cargando menús...
+                </div>
+              ) : permTree && permTree.length > 0 ? (
+                <div className="max-h-[55vh] overflow-y-auto pr-1">
+                  <MenuPermisoTree
+                    nodes={permTree}
+                    menuIds={selectedPermisos.menuIds}
+                    menuActions={selectedPermisos.menuActions}
+                    onMenuToggle={(menuId, checked) =>
+                      setSelectedPermisos((prev) => {
+                        const set = new Set(prev.menuIds)
+                        if (checked) set.add(menuId); else set.delete(menuId)
+                        return { ...prev, menuIds: Array.from(set) }
+                      })
+                    }
+                    onActionToggle={(menuId, code, checked) =>
+                      setSelectedPermisos((prev) => {
+                        const arr = prev.menuActions[menuId] ?? []
+                        return {
+                          ...prev,
+                          menuActions: {
+                            ...prev.menuActions,
+                            [menuId]: checked ? [...arr, code] : arr.filter((c) => c !== code),
+                          },
+                        }
+                      })
+                    }
+                    level={0}
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground py-4 text-center">No hay menús disponibles.</p>
+              )}
+            </div>
+          )}
+        </div>
         <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
           <div>
             {step > 1 && (
@@ -938,11 +1027,12 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               size="sm"
               className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
               onClick={handleNext}
+              disabled={step === 4 && permTreeLoading}
             >
-              {step < 3 ? (
+              {step < 4 ? (
                 <><ChevronRight className="h-3.5 w-3.5" />Siguiente</>
               ) : (
-                <><CheckCircle2 className="h-3.5 w-3.5" />Aceptar</>
+                <><CheckCircle2 className="h-3.5 w-3.5" />Confirmar y Guardar</>
               )}
             </Button>
           </div>
@@ -961,7 +1051,7 @@ type EditarUsuarioModalProps = {
 
 function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalProps) {
   const { user: currentUser } = useAuth()
-  const tipoAdminFijo = currentUser?.tipoAdministracion ?? "centralizada"
+  const tipoAdminFijo = usuario.tipoAdministracion   // tipo del usuario editado, no del logueado
   const esAdministrador = currentUser?.rol === "Administrador"
   const rfcLimpio = usuario.rfc?.trim().toUpperCase() ?? ""
   const [form, setForm] = useState({
@@ -1088,7 +1178,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
       setLoading(false)
     }
   }
-
   const field = (
     key: keyof typeof form,
     label: string,
@@ -1133,7 +1222,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     >
       <div className="w-full max-w-xl mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
           <div className="flex items-center gap-4">
             <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
@@ -1149,7 +1237,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           </Button>
         </div>
 
-        {/* User info strip */}
         <div className="flex items-center gap-3 px-6 py-3 bg-muted/40 border-b border-border/50 shrink-0">
           <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
             <span className="text-sm font-bold text-primary">{initials}</span>
@@ -1158,15 +1245,27 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             <p className="text-xs font-semibold text-foreground truncate">{usuario.nombre}</p>
             <p className="text-[11px] text-muted-foreground truncate">{usuario.correo} · {usuario.rol}</p>
           </div>
-          <Badge
-            className={`shrink-0 text-[11px] ${usuario.estatus === "Activo" ? "bg-secondary/20 text-secondary-foreground border-secondary/30" : ""}`}
-            variant={usuario.estatus === "Activo" ? "outline" : "outline"}
-          >
-            {usuario.estatus}
-          </Badge>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <Badge
+              className={`text-[11px] ${usuario.estatus === "Activo" ? "bg-secondary/20 text-secondary-foreground border-secondary/30" : ""}`}
+              variant="outline"
+            >
+              {usuario.estatus}
+            </Badge>
+            {usuario.tipoAdministracion === "centralizada" ? (
+              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: "#16653418", color: "#166534" }}>
+                <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: "#166534" }} />
+                Centralizada
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
+                <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: "#7b1d3d" }} />
+                Paraestatal
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Body */}
         <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
           {apiError && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-xs text-destructive flex items-center gap-2">
@@ -1175,7 +1274,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           )}
 
-          {/* Datos personales */}
           <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b border-border/50">
               <User className="h-3.5 w-3.5 text-primary/70" />
@@ -1228,7 +1326,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           </div>
 
-          {/* Tipo de administración */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Tipo de Administración</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -1271,7 +1368,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           </div>
 
-          {/* Secretaría */}
           <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b border-border/50">
               <Building2 className="h-3.5 w-3.5 text-blue-600/70" />
@@ -1293,7 +1389,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             />
           </div>
 
-          {/* Cambiar contraseña */}
           <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2 pb-2 border-b border-border/50">
               <Lock className="h-3.5 w-3.5 text-amber-600/70" />
@@ -1348,7 +1443,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
           <span className="text-[11px] text-muted-foreground hidden sm:block">Los campos requeridos están marcados en rojo</span>
           <div className="flex gap-2 ml-auto">
@@ -1360,7 +1454,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
               onClick={handleSubmit}
               disabled={loading}
-            >
+              >
               {loading ? (
                 <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
               ) : (
@@ -1741,11 +1835,18 @@ export function UsuariosPage() {
   const [loading,       setLoading]       = useState(true)
   const [loadError,     setLoadError]     = useState("")
   const [searchTerm,    setSearchTerm]    = useState("")
+  const [filtroAdmin,   setFiltroAdmin]   = useState<"todos" | "centralizada" | "paraestatal">("todos")
   const [permisoUserId,         setPermisoUserId]         = useState<string | null>(null)
   const [editingUserId,         setEditingUserId]         = useState<string | null>(null)
   const [showNewForm,           setShowNewForm]           = useState(false)
   const [newFormKey,            setNewFormKey]            = useState(0)
   const { permisos } = useAutorizaciones()
+
+  const recargarUsuarios = useCallback(() => {
+    fetchUsuarios()
+      .then(setUsuarios)
+      .catch((err) => setLoadError(err.message))
+  }, [])
 
   useEffect(() => {
     fetchUsuarios()
@@ -1754,22 +1855,24 @@ export function UsuariosPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = usuarios.filter(
-    (row) =>
-      row.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      row.correo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (row.rfc ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      row.rol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      row.secretaria.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filtered = usuarios.filter((row) => {
+    if (filtroAdmin !== "todos" && row.tipoAdministracion !== filtroAdmin) return false
+    const q = searchTerm.toLowerCase()
+    return !q ||
+      row.nombre.toLowerCase().includes(q) ||
+      row.correo.toLowerCase().includes(q) ||
+      (row.rfc ?? "").toLowerCase().includes(q) ||
+      row.rol.toLowerCase().includes(q) ||
+      row.secretaria.toLowerCase().includes(q)
+  })
 
   const hasActivePermiso = (id: string) =>
     permisos.some((p) => p.userId === id && p.active && !p.used)
 
   const toggleEstatus = async (u: Usuario) => {
     try {
-      const actualizado = await actualizarUsuario(u.id, { activo: u.estatus !== "Activo" })
-      setUsuarios((prev) => prev.map((x) => x.id === actualizado.id ? actualizado : x))
+      await actualizarUsuario(u.id, { activo: u.estatus !== "Activo" })
+      recargarUsuarios()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Error")
     }
@@ -1783,7 +1886,7 @@ export function UsuariosPage() {
     >
       {}
       <div className="flex items-center justify-end">
-        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2" onClick={() => setShowNewForm(true)}>
+        <Button className="bg-[#832B56] hover:bg-[#832B56]/90 text-white gap-2" onClick={() => setShowNewForm(true)}>
           <UserPlus className="h-4 w-4" />
           Nuevo Usuario
         </Button>
@@ -1794,14 +1897,14 @@ export function UsuariosPage() {
         <NuevoUsuarioModal
           key={newFormKey}
           onClose={() => { setShowNewForm(false); setNewFormKey((k) => k + 1) }}
-          onSaved={(u) => { setUsuarios((prev) => [...prev, u]); setShowNewForm(false); setNewFormKey((k) => k + 1) }}
+          onSaved={() => { recargarUsuarios(); setShowNewForm(false); setNewFormKey((k) => k + 1) }}
         />
       )}
       {usuarioEditando && (
         <EditarUsuarioModal
           usuario={usuarioEditando}
           onClose={() => setEditingUserId(null)}
-          onSaved={(u) => setUsuarios((prev) => prev.map((x) => x.id === u.id ? u : x))}
+          onSaved={() => { recargarUsuarios(); setEditingUserId(null) }}
         />
       )}
       {usuarioPermiso && (
@@ -1812,18 +1915,35 @@ export function UsuariosPage() {
         />
       )}
 
-      {}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre, correo, RFC..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-card"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, correo, RFC..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-card"
+          />
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+          {(["todos", "centralizada", "paraestatal"] as const).map((op) => (
+            <button
+              key={op}
+              onClick={() => setFiltroAdmin(op)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                filtroAdmin === op
+                  ? op === "paraestatal"
+                    ? "bg-[#7b1d3d] text-white"
+                    : "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-card-foreground"
+              }`}
+            >
+              {op === "todos" ? "Todos" : op === "centralizada" ? "Centralizada" : "Paraestatal"}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground">
@@ -1844,6 +1964,7 @@ export function UsuariosPage() {
                   <th className="px-4 py-3 text-left font-semibold">Correo</th>
                   <th className="px-4 py-3 text-left font-semibold">RFC</th>
                   <th className="px-4 py-3 text-left font-semibold">Rol</th>
+                  <th className="px-4 py-3 text-left font-semibold">Administracion</th>
                   <th className="px-4 py-3 text-left font-semibold">Secretaría</th>
                   <th className="px-4 py-3 text-left font-semibold">Estatus</th>
                   <th className="px-4 py-3 text-left font-semibold">Acciones</th>
@@ -1865,14 +1986,39 @@ export function UsuariosPage() {
                       {row.rfc ?? <span className="text-muted-foreground/50 italic">—</span>}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
+                    <td className="px-4 py-3">
+                      {row.tipoAdministracion === "centralizada" ? (
+                        <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "#16653418", color: "#166534" }}>
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#166534" }} />
+                          Centralizada
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#7b1d3d" }} />
+                          Paraestatal
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px]">
                       {row.secretaria?.split(" > ")[0] ?? "—"}
                     </td>
                     <td className="px-4 py-3">
                       {row.estatus === "Activo" ? (
-                        <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary/90">Activo</Badge>
+                        <span
+                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+                          style={{ backgroundColor: "#16653418", color: "#166534" }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#166534" }} />
+                          Activo
+                        </span>
                       ) : (
-                        <Badge variant="outline" className="text-muted-foreground">Inactivo</Badge>
+                        <span
+                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+                          style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#7b1d3d" }} />
+                          Inactivo
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -1885,7 +2031,7 @@ export function UsuariosPage() {
                         </Button>
                         <Button
                           variant="ghost" size="sm"
-                          className={`gap-1.5 text-xs ${row.estatus === "Activo" ? "text-destructive hover:text-destructive/80" : "text-secondary hover:text-secondary/80"}`}
+                          className={`gap-1.5 text-xs ${row.estatus === "Activo" ? "text-[#7b1d3d] hover:text-[#7b1d3d]/80" : "text-[#166534] hover:text-[#166534]/80"}`}
                           onClick={() => toggleEstatus(row)}
                         >
                           {row.estatus === "Activo"

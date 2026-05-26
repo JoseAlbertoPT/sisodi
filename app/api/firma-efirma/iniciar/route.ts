@@ -36,8 +36,6 @@ export async function POST(req: NextRequest) {
     const plantilla = plantillaFirmantes(solicitud.tipo_solicitud)
     const totalFirmantes = plantilla.length
 
-    // Iniciar proceso en el portal SIN firmar (firmarAhora=false).
-    // Sólo creamos el proceso; las firmas se registrarán después (externos por link, internos desde el app).
     let procesoId: string
     let storageKey: string
     if (BYPASS) {
@@ -68,10 +66,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Resolver internos desde historial
     const internos = await resolverUsuariosInternos(idNum)
 
-    // Crear firma_proceso + firmantes en transacción
     const result = await prisma.$transaction(async tx => {
       const proceso = await tx.firma_proceso.create({
         data: {

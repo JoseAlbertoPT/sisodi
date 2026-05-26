@@ -63,7 +63,6 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
     return () => clearInterval(id)
   }, [fase, expiraEn])
 
-  // Al montar: consulta el estado del link y decide qué pantalla mostrar
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -303,7 +302,6 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
     )
   }
 
-  // fase === "firmando" — layout 2 columnas
   const pdfSrc = `/api/firma-efirma/pdf?uuid=${encodeURIComponent(uuid)}&t=${encodeURIComponent(token)}`
   const timerColor =
     segundosRestantes > 10 * 60 ? "text-secondary" :
