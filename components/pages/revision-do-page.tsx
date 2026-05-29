@@ -188,7 +188,7 @@ function rawToEditPayload(sol: SolicitudDetalle): EditSolicitudPayload {
     valores:                 raw?.valores ?? "",
     areasExp:                raw?.areas_exp ?? "",
   }
-  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, estado: sol.estado, estadoSiguienteTrasSave: getEstadoSiguienteTrasSave(sol.estado), formData }
+  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, estado: sol.estado, estadoSiguienteTrasSave: getEstadoSiguienteTrasSave(sol.estado), formData, adjuntos: (raw?.adjunto ?? []).map((a: any) => ({ id: a.id, nombre_archivo: a.nombre_archivo, ruta: a.ruta })) }
 }
 interface ChecklistItem { key: string; num: number; label: string }
 const CHECKLIST_16: ChecklistItem[] = [

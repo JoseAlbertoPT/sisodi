@@ -770,6 +770,7 @@ function rawToEditPayload(solicitud: FiltroSolicitud): EditSolicitudPayload {
     periodo: solicitud.periodo ?? "",
     estado: solicitud.estado,
     estadoSiguienteTrasSave: getEstadoSig(solicitud.estado),
+    adjuntos: (raw.adjunto ?? []).map((a: any) => ({ id: a.id, nombre_archivo: a.nombre_archivo, ruta: a.ruta })),
     formData: {
       secretaria:              raw.secretaria ?? "",
       unidadAdministrativa:    raw.clave_unidad_administrativa ?? raw.unidad_administrativa ?? "",
