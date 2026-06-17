@@ -12,11 +12,14 @@ export async function POST() {
   const log: string[] = []
 
   // Fix parent_id for all known menu items
-  await pool.query(`UPDATE menu SET parent_id = NULL WHERE id IN (1, 2, 6, 10)`)
-  log.push("✅ parent_id = NULL para ids 1, 2, 6, 10")
+  await pool.query(`UPDATE menu SET parent_id = NULL WHERE id IN (1, 2, 6)`)
+  log.push("✅ parent_id = NULL para ids 1, 2, 6")
 
   await pool.query(`UPDATE menu SET parent_id = 2 WHERE id IN (3, 4, 5)`)
   log.push("✅ parent_id = 2 (JUSTIFICACIONES) para ids 3, 4, 5")
+
+  await pool.query(`UPDATE menu SET parent_id = 6, orden = 5 WHERE id = 10`)
+  log.push("✅ id=10 Dictámenes → parent_id = 6 (GESTIÓN DGDO)")
 
   await pool.query(`UPDATE menu SET parent_id = 6 WHERE id IN (7, 8, 9, 14)`)
   log.push("✅ parent_id = 6 (GESTIÓN DGDO) para ids 7, 8, 9, 14")

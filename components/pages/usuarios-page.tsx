@@ -13,7 +13,7 @@ import {
   Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
   Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Unlock, Trash2, Lock, User,
-  Landmark, Factory, Wrench,
+  Landmark, Factory,
 } from "lucide-react"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
@@ -1800,8 +1800,6 @@ export function UsuariosPage() {
   const [searchTerm,    setSearchTerm]    = useState("")
   const [filtroAdmin,   setFiltroAdmin]   = useState<"todos" | "centralizada" | "paraestatal">("todos")
   const [tabEstatus,    setTabEstatus]    = useState<"activos" | "deshabilitados">("activos")
-  const [rebuildLoading, setRebuildLoading] = useState(false)
-  const [rebuildMsg,     setRebuildMsg]     = useState<string | null>(null)
   const [permisoUserId,         setPermisoUserId]         = useState<string | null>(null)
   const [editingUserId,         setEditingUserId]         = useState<string | null>(null)
   const [showNewForm,           setShowNewForm]           = useState(false)
@@ -1855,37 +1853,8 @@ export function UsuariosPage() {
       description="Administración de usuarios del sistema"
     >
       {}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs h-9 gap-1.5 text-muted-foreground"
-          disabled={rebuildLoading}
-          onClick={async () => {
-            setRebuildLoading(true)
-            setRebuildMsg(null)
-            try {
-              const res = await fetch("/api/menus/rebuild", { method: "POST" })
-              const data = await res.json()
-              if (data.ok) {
-                setRebuildMsg("✅ Listo. Recarga la página (F5) y abre Permisos de nuevo.")
-              } else {
-                setRebuildMsg("❌ Error: " + JSON.stringify(data))
-              }
-            } catch (e) {
-              setRebuildMsg("❌ Error: " + String(e))
-            } finally {
-              setRebuildLoading(false)
-            }
-          }}
-        >
-          {rebuildLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />}
-          Reparar estructura de menús
-        </Button>
-        {rebuildMsg && (
-          <span className="text-xs text-muted-foreground">{rebuildMsg}</span>
-        )}
-        <Button className="bg-[#832B56] hover:bg-[#832B56]/90 text-white gap-2 ml-auto" onClick={() => setShowNewForm(true)}>
+      <div className="flex items-center justify-end">
+        <Button className="bg-[#832B56] hover:bg-[#832B56]/90 text-white gap-2" onClick={() => setShowNewForm(true)}>
           <UserPlus className="h-4 w-4" />
           Nuevo Usuario
         </Button>
