@@ -377,7 +377,14 @@ function esFolioValido(folio: string): boolean {
   return true
 }
 
-function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string; onFileChange?: (file: File | null) => void }) {
+function OficioUpload({
+  vigenciaInicio, onFileChange,
+  existingFiles,
+}: {
+  vigenciaInicio: string
+  onFileChange?: (file: File | null) => void
+  existingFiles?: { id: number; nombre_archivo: string; ruta: string }[]
+}) {
   const [archivo, setArchivo] = useState<File | null>(null)
   const [error,   setError]   = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -394,19 +401,36 @@ function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string
     onFileChange?.(file)
   }
 
-        return (
-        <div className="flex flex-col gap-1.5">
-        <input ref={inputRef} type="file" accept="*" className="hidden"
+  return (
+    <div className="flex flex-col gap-1.5">
+      {existingFiles && existingFiles.length > 0 && (
+        <div className="flex flex-col gap-1 mb-1">
+          {existingFiles.map((adj) => (
+            <div key={adj.id} className="flex items-center gap-2 rounded-md border border-secondary/30 bg-secondary/5 px-3 py-2">
+              <FileText className="h-4 w-4 text-secondary shrink-0" />
+              <span className="text-xs font-medium text-secondary truncate flex-1">{adj.nombre_archivo}</span>
+              {adj.ruta && (
+                <button type="button" onClick={() => window.open(adj.ruta, "_blank")}
+                  className="text-xs text-muted-foreground hover:text-secondary underline shrink-0">
+                  Ver
+                </button>
+              )}
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground pl-1">Para reemplazar el archivo cargue uno nuevo:</p>
+        </div>
+      )}
+      <input ref={inputRef} type="file" accept="*" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-        <div
+      <div
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f) }}
         className={`flex items-center justify-center rounded-lg border-2 border-dashed px-4 py-4 cursor-pointer transition-colors
-            ${archivo ? "border-secondary bg-secondary/5" : error ? "border-destructive/50 bg-destructive/5" : "border-border bg-background hover:border-secondary"}`}
-        >
+          ${archivo ? "border-secondary bg-secondary/5" : error ? "border-destructive/50 bg-destructive/5" : "border-border bg-background hover:border-secondary"}`}
+      >
         {archivo ? (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
             <span className="text-xs font-medium text-secondary truncate max-w-xs">{archivo.name}</span>
             <button type="button" onClick={(e) => { e.stopPropagation(); setArchivo(null); setError(null); onFileChange?.(null) }}
@@ -970,8 +994,6 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
   initialCategoria?: string
 }) {
   const normalizedImporte = parseImporteBruto(importeBruto || "")
-  // When editing (initialNivel provided), track the first non-empty importe that arrives
-  // so we can distinguish "initial data loaded" from "user changed the importe".
   const loadedImporteRef = useRef<string | null>(null)
   const [busqueda, setBusqueda]         = useState(() => parseImporteBruto(importeBruto || "") || "")
   const [seleccionado, setSeleccionado] = useState<TabuladorEntry | null>(
@@ -989,15 +1011,12 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
     const q = normalized || ""
     setBusqueda(q)
     if (initialNivel) {
-      // Edit mode: skip auto-recalculation until the user actually changes the importe.
       if (!q) return
       if (loadedImporteRef.current === null) {
-        // First non-empty importe is the initially-loaded data — don't override saved nivel.
         loadedImporteRef.current = importeBruto ?? ""
         return
       }
-      if (importeBruto === loadedImporteRef.current) return  // unchanged, skip
-      // User changed the importe from its loaded value — recalculate from here on.
+      if (importeBruto === loadedImporteRef.current) return
       loadedImporteRef.current = importeBruto ?? ""
     }
     if (!q) { setSeleccionado(null); return }
@@ -1272,7 +1291,7 @@ function getNumeroUA(secretaria: string, unidad: string): string {
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
   datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
-  initialData,
+  initialData, existingAdjuntos,
 }: {
   prefilled: boolean
   lockVigenciaOnly?: boolean
@@ -1287,6 +1306,7 @@ function FormularioPrestacion({
   claveReportePlazas?: string | null
   catalogoUAs?: { clave: string; nombre: string }[]
   initialData?: Partial<FormularioData>
+  existingAdjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState(false)
@@ -1855,7 +1875,7 @@ function FormularioPrestacion({
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
-              <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} />
+              <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} existingFiles={existingAdjuntos} />
             </div>
           </div>
         </CardContent>
@@ -2013,7 +2033,7 @@ function FormularioPrestacion({
 }
 function FormularioNombramiento({
   prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
-  tipoAdministracionUsuario = "centralizada", initialData,
+  tipoAdministracionUsuario = "centralizada", initialData, existingAdjuntos,
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
@@ -2025,6 +2045,7 @@ function FormularioNombramiento({
   catalogoUAs?: { clave: string; nombre: string }[]
   tipoAdministracionUsuario?: "centralizada" | "paraestatal"
   initialData?: Partial<FormularioData>
+  existingAdjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState(false)
@@ -2490,7 +2511,7 @@ function FormularioNombramiento({
               )}
             </div>
 
-            {}
+
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Importe Neto
@@ -2549,7 +2570,7 @@ function FormularioNombramiento({
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
-              <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} />
+              <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} existingFiles={existingAdjuntos} />
             </div>
           </div>
         </CardContent>
@@ -3179,6 +3200,7 @@ export type EditSolicitudPayload = {
   reingresoCount?: number
   isCapturadorCorrection?: boolean
   estadoSiguienteTrasSave?: string
+  adjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
 }
 export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { editSolicitud?: EditSolicitudPayload; onAfterSave?: () => void; onCancel?: () => void }) {
   const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
@@ -3709,7 +3731,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                     Para continuar con el  registro  es Necesario Contar  con las fechas de
                     los <strong> 3 Regímenes</strong> (Honorarios, Asimilados y Nombramiento)
                     <strong> Todos los  Meses/Quincenas   </strong> Deben tener fecha Configurada.
-                  </span>z
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -4004,6 +4026,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               claveReportePlazas={userClaveReporte}
               catalogoUAs={catalogoUAsDelUsuario}
               initialData={editSolicitud?.formData}
+              existingAdjuntos={editSolicitud?.adjuntos}
             />
           ) : (
             <FormularioNombramiento
@@ -4019,6 +4042,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               catalogoUAs={catalogoUAsDelUsuario}
               tipoAdministracionUsuario={editSolicitud?.formData?.tipoAdministracionNom ?? user?.tipoAdministracion ?? "centralizada"}
               initialData={editSolicitud?.formData}
+              existingAdjuntos={editSolicitud?.adjuntos}
             />
           )}
 

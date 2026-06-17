@@ -161,6 +161,7 @@ interface UrgSolicitud {
   periodoAplicacion: string
   fechaRecepcion?: string
   slaRestante?: number | null
+  adjuntos: { id: number; nombre_archivo: string; ruta: string }[]
 }
 function FoliosCell({ sol }: { sol: UrgSolicitud }) {
   const efectivaTab = getTab(sol.estado)
@@ -472,6 +473,11 @@ function mapApiItem(item: any): UrgSolicitud {
       comentario:     h.comentario ?? null,
     })),
     bitacora,
+    adjuntos: (item.adjuntos ?? []).map((a: any) => ({
+      id:             a.id,
+      nombre_archivo: a.nombre_archivo,
+      ruta:           a.ruta,
+    })),
   }
 }
 function SectionCard({
@@ -941,6 +947,7 @@ function solToEditPayload(sol: UrgSolicitud): EditSolicitudPayload {
     observacionMotivo:       sol.observacionMotivo ?? undefined,
     reingresoCount:          sol.reingresoCount > 0 ? sol.reingresoCount : undefined,
     isCapturadorCorrection:  true,
+    adjuntos:                sol.adjuntos,
   }
 }
 function formatRegimen(raw: string): string {
