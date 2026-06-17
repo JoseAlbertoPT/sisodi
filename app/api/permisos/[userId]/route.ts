@@ -20,33 +20,32 @@ export async function GET(
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
   }
 
-  // Menus from role (defaults)
-  const rolMenus = await prisma.rol_menu.findMany({
-    where: { rol_id: user.rol_id },
-    include: {
-      rol_menu_accion: { where: { activo: true }, include: { accion: true } },
-    },
-  })
-
-  // Extra menus assigned individually to this user
+  // If the user has custom permissions saved → use those
   const userMenus = await prisma.usuario_menu.findMany({
     where: { usuario_id: userId },
   })
 
-  const rolMenuIdSet = new Set(rolMenus.map((rm) => String(rm.menu_id)))
-  const extraMenuIds = userMenus
-    .map((um) => String(um.menu_id))
-    .filter((id) => !rolMenuIdSet.has(id))
-
-  const menuIds = [...rolMenuIdSet, ...extraMenuIds]
-
-  const menuActions: Record<string, string[]> = {}
-  for (const rm of rolMenus) {
-    const actions = rm.rol_menu_accion.map((rma) => rma.accion.nombre)
-    if (actions.length > 0) menuActions[String(rm.menu_id)] = actions
+  if (userMenus.length > 0) {
+    // User has explicit permissions — return them
+    return NextResponse.json({
+      menuIds: userMenus.map((um) => String(um.menu_id)),
+      menuActions: {},
+    } satisfies PermisosUser)
   }
 
-  return NextResponse.json({ menuIds, menuActions } satisfies PermisosUser)
+  // First time: no custom permissions yet — pre-load from role defaults,
+  // but exclude Tablero (dashboard) so it must be explicitly enabled per user
+  const rolMenus = await prisma.rol_menu.findMany({
+    where: { rol_id: user.rol_id },
+    include: { menu: { select: { key: true } } },
+  })
+
+  return NextResponse.json({
+    menuIds: rolMenus
+      .filter((rm) => rm.menu?.key !== "dashboard")
+      .map((rm) => String(rm.menu_id)),
+    menuActions: {},
+  } satisfies PermisosUser)
 }
 
 export async function PUT(
@@ -64,42 +63,20 @@ export async function PUT(
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
   }
 
-  // Role defaults — never modified
-  const rolMenus = await prisma.rol_menu.findMany({
-    where: { rol_id: user.rol_id },
-  })
-  const rolMenuIdSet = new Set(rolMenus.map((rm) => String(rm.menu_id)))
-
-  // Only save extras (menus beyond the role defaults) to usuario_menu
-  const extraMenuIds = body.menuIds
-    .filter((id) => !rolMenuIdSet.has(id))
+  const menuIds = body.menuIds
     .map((id) => parseInt(id, 10))
     .filter((id) => !isNaN(id))
 
-  // Replace this user's extras
+  // Replace the user's complete permission list
   await prisma.usuario_menu.deleteMany({ where: { usuario_id: userId } })
-  for (const menuId of extraMenuIds) {
-    await prisma.usuario_menu.create({ data: { usuario_id: userId, menu_id: menuId } })
+  if (menuIds.length > 0) {
+    await prisma.usuario_menu.createMany({
+      data: menuIds.map((menuId) => ({ usuario_id: userId, menu_id: menuId })),
+    })
   }
 
-  // Return combined result
-  const userMenus = await prisma.usuario_menu.findMany({ where: { usuario_id: userId } })
-  const allMenuIds = [
-    ...rolMenus.map((rm) => String(rm.menu_id)),
-    ...userMenus.map((um) => String(um.menu_id)),
-  ]
-
-  const rolMenusFull = await prisma.rol_menu.findMany({
-    where: { rol_id: user.rol_id },
-    include: {
-      rol_menu_accion: { where: { activo: true }, include: { accion: true } },
-    },
-  })
-  const menuActions: Record<string, string[]> = {}
-  for (const rm of rolMenusFull) {
-    const actions = rm.rol_menu_accion.map((rma) => rma.accion.nombre)
-    if (actions.length > 0) menuActions[String(rm.menu_id)] = actions
-  }
-
-  return NextResponse.json({ menuIds: allMenuIds, menuActions } satisfies PermisosUser)
+  return NextResponse.json({
+    menuIds: menuIds.map(String),
+    menuActions: {},
+  } satisfies PermisosUser)
 }

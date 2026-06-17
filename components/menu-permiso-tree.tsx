@@ -33,17 +33,11 @@ export function toggleAllInSection(
   node: MenuNode,
   checked: boolean,
   onMenuToggle: (menuId: string, checked: boolean) => void,
-  onActionToggle: (menuId: string, code: string, checked: boolean) => void,
 ) {
   onMenuToggle(node.id, checked)
-  if (node.acciones) {
-    for (const a of node.acciones) {
-      onActionToggle(node.id, a.code, checked)
-    }
-  }
   if (node.children) {
     for (const child of node.children) {
-      toggleAllInSection(child, checked, onMenuToggle, onActionToggle)
+      toggleAllInSection(child, checked, onMenuToggle)
     }
   }
 }
@@ -51,16 +45,12 @@ export function toggleAllInSection(
 export function MenuPermisoTree({
   nodes,
   menuIds,
-  menuActions,
   onMenuToggle,
-  onActionToggle,
   level,
 }: {
   nodes: MenuNode[]
   menuIds: string[]
-  menuActions: Record<string, string[]>
   onMenuToggle: (menuId: string, checked: boolean) => void
-  onActionToggle: (menuId: string, code: string, checked: boolean) => void
   level: number
 }) {
   const menuIdSet = new Set(menuIds)
@@ -70,9 +60,7 @@ export function MenuPermisoTree({
     <div className="space-y-3">
       {nodes.map((node) => {
         const hasChildren = node.children && node.children.length > 0
-        const hasAcciones = node.acciones && node.acciones.length > 0
-        const isChecked = menuIdSet.has(node.id)
-        const showAsSection = isTopLevel && (hasChildren || hasAcciones)
+        const showAsSection = isTopLevel && hasChildren
 
         if (showAsSection) {
           const counts = countActiveChildren([node], menuIdSet)
@@ -93,8 +81,16 @@ export function MenuPermisoTree({
                   <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=closed]:rotate-[-90deg]" />
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Switch
-                      checked={isChecked}
-                      onCheckedChange={(c) => onMenuToggle(node.id, c)}
+                      checked={menuIdSet.has(node.id)}
+                      onCheckedChange={(c) => {
+                        if (!c) {
+                          // Apagar: deshabilita la sección y todos sus hijos
+                          toggleAllInSection(node, false, onMenuToggle)
+                        } else {
+                          // Encender: solo habilita la sección, los hijos se activan manualmente
+                          onMenuToggle(node.id, true)
+                        }
+                      }}
                       onClick={(e) => e.stopPropagation()}
                     />
                     <span className="text-sm font-semibold text-card-foreground uppercase tracking-wide truncate">
@@ -120,7 +116,7 @@ export function MenuPermisoTree({
                       variant="ghost"
                       size="sm"
                       className="h-6 px-2 text-[11px] text-primary hover:text-primary"
-                      onClick={() => toggleAllInSection(node, true, onMenuToggle, onActionToggle)}
+                      onClick={() => toggleAllInSection(node, true, onMenuToggle)}
                     >
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       Activar todo
@@ -130,7 +126,7 @@ export function MenuPermisoTree({
                       variant="ghost"
                       size="sm"
                       className="h-6 px-2 text-[11px] text-muted-foreground hover:text-destructive"
-                      onClick={() => toggleAllInSection(node, false, onMenuToggle, onActionToggle)}
+                      onClick={() => toggleAllInSection(node, false, onMenuToggle)}
                     >
                       <XCircle className="h-3 w-3 mr-1" />
                       Desactivar todo
@@ -138,35 +134,6 @@ export function MenuPermisoTree({
                   </div>
 
                   <div className="px-4 py-3">
-                    {hasAcciones && isChecked && (
-                      <div className="mb-3">
-                        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block mb-2">
-                          Acciones de sección
-                        </span>
-                        <div className="flex flex-wrap gap-2">
-                          {node.acciones!.map((a) => {
-                            const active = (menuActions[node.id] ?? []).includes(a.code)
-                            return (
-                              <button
-                                key={a.code}
-                                type="button"
-                                onClick={() => onActionToggle(node.id, a.code, !active)}
-                                className={`
-                                  inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all cursor-pointer
-                                  ${active
-                                    ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/15"
-                                    : "bg-muted/30 border-border text-muted-foreground hover:bg-muted/50 hover:border-muted-foreground/30"
-                                  }
-                                `}
-                              >
-                                <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-primary" : "bg-muted-foreground/40"}`} />
-                                {a.label}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
                     {hasChildren && (
                       <div className="space-y-1">
                         {node.children!.map((child) => (
@@ -174,9 +141,7 @@ export function MenuPermisoTree({
                             key={child.id}
                             node={child}
                             menuIds={menuIds}
-                            menuActions={menuActions}
                             onMenuToggle={onMenuToggle}
-                            onActionToggle={onActionToggle}
                             depth={0}
                           />
                         ))}
@@ -194,9 +159,7 @@ export function MenuPermisoTree({
             <MenuPermisoRow
               node={node}
               menuIds={menuIds}
-              menuActions={menuActions}
               onMenuToggle={onMenuToggle}
-              onActionToggle={onActionToggle}
               depth={level}
             />
           </div>
@@ -209,23 +172,17 @@ export function MenuPermisoTree({
 function MenuPermisoRow({
   node,
   menuIds,
-  menuActions,
   onMenuToggle,
-  onActionToggle,
   depth,
 }: {
   node: MenuNode
   menuIds: string[]
-  menuActions: Record<string, string[]>
   onMenuToggle: (menuId: string, checked: boolean) => void
-  onActionToggle: (menuId: string, code: string, checked: boolean) => void
   depth: number
 }) {
   const menuIdSet = new Set(menuIds)
   const isChecked = menuIdSet.has(node.id)
-  const hasAcciones = node.acciones && node.acciones.length > 0
   const hasChildren = node.children && node.children.length > 0
-  const activeActions = menuActions[node.id] ?? []
 
   return (
     <div
@@ -251,37 +208,7 @@ function MenuPermisoRow({
         >
           {node.label}
         </label>
-        {hasAcciones && isChecked && (
-          <Badge variant="outline" className="text-[10px] font-mono shrink-0">
-            {activeActions.length}/{node.acciones!.length}
-          </Badge>
-        )}
       </div>
-
-      {hasAcciones && isChecked && (
-        <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 pt-0 ml-11">
-          {node.acciones!.map((a) => {
-            const active = activeActions.includes(a.code)
-            return (
-              <button
-                key={a.code}
-                type="button"
-                onClick={() => onActionToggle(node.id, a.code, !active)}
-                className={`
-                  inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-all cursor-pointer
-                  ${active
-                    ? "bg-primary/10 border-primary/30 text-primary hover:bg-primary/15"
-                    : "bg-muted/30 border-border text-muted-foreground hover:bg-muted/50"
-                  }
-                `}
-              >
-                <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-primary" : "bg-muted-foreground/40"}`} />
-                {a.label}
-              </button>
-            )
-          })}
-        </div>
-      )}
 
       {hasChildren && (
         <div className="space-y-1 pb-2">
@@ -290,9 +217,7 @@ function MenuPermisoRow({
               key={child.id}
               node={child}
               menuIds={menuIds}
-              menuActions={menuActions}
               onMenuToggle={onMenuToggle}
-              onActionToggle={onActionToggle}
               depth={depth + 1}
             />
           ))}

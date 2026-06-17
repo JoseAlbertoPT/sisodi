@@ -165,7 +165,6 @@ function SidebarSection({
   showDivider,
 }: {
   label: string
-  label: string
   items: MenuNode[]
   currentPage: PageKey
   onNavigate: (page: PageKey) => void
@@ -265,21 +264,18 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
     setExpandedSections((prev) => ({ ...prev, [id]: !prev[id] }))
   }, [])
 
-  const visibleSections = useMemo(() => {
-    if (!menuTree) return []
-    const leafMap = new Map(
-      collectLeafNodes(menuTree)
-        .filter((n) => n.key)
-        .map((n) => [n.key!, n])
-    )
-    return SECTION_DEFS.map((def) => ({
+  const { visibleSections, allLeaves } = useMemo(() => {
+    if (!menuTree) return { visibleSections: [], allLeaves: [] }
+
+    const leaves = collectLeafNodes(menuTree).filter((n) => n.key && n.key !== "revision-do")
+    const leafMap = new Map(leaves.map((n) => [n.key!, n]))
+
+    const sections = SECTION_DEFS.map((def) => ({
       def,
       items: def.keys.filter((k) => leafMap.has(k)).map((k) => leafMap.get(k)!),
     })).filter(({ items }) => items.length > 0)
-  }, [menuTree])
-  const allLeaves = useMemo(() => {
-    if (!menuTree) return []
-    return collectLeafNodes(menuTree).filter((n) => n.key)
+
+    return { visibleSections: sections, allLeaves: leaves }
   }, [menuTree])
   const userInitial = user?.nombre?.charAt(0)?.toUpperCase() ?? "?"
   return (

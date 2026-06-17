@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       [rolId]
     )
 
-    // Query 2: extra menus for this specific user (optional — ignore if table missing)
+    // Query 2: check if this user has explicit custom permissions saved
     let userMenuRows: any[] = []
     if (userId) {
       try {
@@ -54,10 +54,16 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Combine, deduplicating by id
+    // If the user has explicit permissions saved, use ONLY those (override role).
+    // Otherwise fall back to role defaults — excluding Tablero (dashboard) so it
+    // never shows until the admin explicitly enables it per user.
+    const baseRows = userMenuRows.length > 0
+      ? userMenuRows
+      : rolMenuRes.rows.filter((r: any) => r.key !== "dashboard")
+
     const seenIds = new Set<number>()
     const combined: any[] = []
-    for (const row of [...rolMenuRes.rows, ...userMenuRows]) {
+    for (const row of baseRows) {
       if (!seenIds.has(row.id)) { seenIds.add(row.id); combined.push(row) }
     }
 

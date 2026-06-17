@@ -13,7 +13,7 @@ import {
   Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
   Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Unlock, Trash2, Lock, User,
-  Landmark, Factory,
+  Landmark, Factory, Wrench,
 } from "lucide-react"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
@@ -982,24 +982,11 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                   <MenuPermisoTree
                     nodes={permTree}
                     menuIds={selectedPermisos.menuIds}
-                    menuActions={selectedPermisos.menuActions}
                     onMenuToggle={(menuId, checked) =>
                       setSelectedPermisos((prev) => {
                         const set = new Set(prev.menuIds)
                         if (checked) set.add(menuId); else set.delete(menuId)
                         return { ...prev, menuIds: Array.from(set) }
-                      })
-                    }
-                    onActionToggle={(menuId, code, checked) =>
-                      setSelectedPermisos((prev) => {
-                        const arr = prev.menuActions[menuId] ?? []
-                        return {
-                          ...prev,
-                          menuActions: {
-                            ...prev.menuActions,
-                            [menuId]: checked ? [...arr, code] : arr.filter((c) => c !== code),
-                          },
-                        }
                       })
                     }
                     level={0}
@@ -1473,17 +1460,6 @@ function samePermisos(a: PermisosUser, b: PermisosUser): boolean {
   if (a.menuIds.length !== b.menuIds.length) return false
   const setA = new Set(a.menuIds)
   for (const id of b.menuIds) if (!setA.has(id)) return false
-  const keysA = Object.keys(a.menuActions).sort()
-  const keysB = Object.keys(b.menuActions).sort()
-  if (keysA.length !== keysB.length) return false
-  for (let i = 0; i < keysA.length; i++) if (keysA[i] !== keysB[i]) return false
-  for (const k of keysA) {
-    const arrA = a.menuActions[k] ?? []
-    const arrB = b.menuActions[k] ?? []
-    if (arrA.length !== arrB.length) return false
-    const setAc = new Set(arrA)
-    for (const c of arrB) if (!setAc.has(c)) return false
-  }
   return true
 }
 
@@ -1568,16 +1544,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     })
   }, [])
 
-  const handleActionToggle = useCallback((menuId: string, code: string, checked: boolean) => {
-    setPermisos((prev) => {
-      if (!prev) return prev
-      const next = { ...prev, menuActions: { ...prev.menuActions } }
-      const arr = next.menuActions[menuId] ?? []
-      if (checked) next.menuActions[menuId] = [...arr, code]
-      else next.menuActions[menuId] = arr.filter((c) => c !== code)
-      return next
-    })
-  }, [])
   const handleSavePermisos = useCallback(async () => {
     if (permisos == null) return
     setPermisosSaveError(null)
@@ -1666,7 +1632,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
           {permisosLoading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
               <Loader2 className="h-5 w-5 animate-spin" />
-              Cargando permisos del usuario... lo que quiero es que 
+              Cargando permisos del usuario...
             </div>
           )}
           {!permisosLoading && permisos != null && tree != null && tree.length > 0 && (
@@ -1684,8 +1650,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
               <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50/50 border border-blue-200/50 rounded-md px-3 py-2.5">
                 <Eye className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-500" />
                 <span>
-                  Active o desactive secciones completas con el switch principal.
-                  Las acciones (Crear, Editar, Ver, etc.)  aparecen como etiquetas que puede activar o desactivar con un clic.
+                  Active o desactive el acceso a cada sección con el switch. Switch activado = el usuario puede ver y usar esa sección completa.
                 </span>
               </div>
               {treeLoading ? (
@@ -1695,9 +1660,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
                   <MenuPermisoTree
                     nodes={tree}
                     menuIds={permisos.menuIds}
-                    menuActions={permisos.menuActions}
                     onMenuToggle={handleMenuToggle}
-                    onActionToggle={handleActionToggle}
                     level={0}
                   />
                 </div>
@@ -1836,6 +1799,9 @@ export function UsuariosPage() {
   const [loadError,     setLoadError]     = useState("")
   const [searchTerm,    setSearchTerm]    = useState("")
   const [filtroAdmin,   setFiltroAdmin]   = useState<"todos" | "centralizada" | "paraestatal">("todos")
+  const [tabEstatus,    setTabEstatus]    = useState<"activos" | "deshabilitados">("activos")
+  const [rebuildLoading, setRebuildLoading] = useState(false)
+  const [rebuildMsg,     setRebuildMsg]     = useState<string | null>(null)
   const [permisoUserId,         setPermisoUserId]         = useState<string | null>(null)
   const [editingUserId,         setEditingUserId]         = useState<string | null>(null)
   const [showNewForm,           setShowNewForm]           = useState(false)
@@ -1855,7 +1821,11 @@ export function UsuariosPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = usuarios.filter((row) => {
+  const activos       = usuarios.filter((u) => u.estatus === "Activo")
+  const deshabilitados = usuarios.filter((u) => u.estatus === "Inactivo")
+  const pool = tabEstatus === "activos" ? activos : deshabilitados
+
+  const filtered = pool.filter((row) => {
     if (filtroAdmin !== "todos" && row.tipoAdministracion !== filtroAdmin) return false
     const q = searchTerm.toLowerCase()
     return !q ||
@@ -1885,8 +1855,37 @@ export function UsuariosPage() {
       description="Administración de usuarios del sistema"
     >
       {}
-      <div className="flex items-center justify-end">
-        <Button className="bg-[#832B56] hover:bg-[#832B56]/90 text-white gap-2" onClick={() => setShowNewForm(true)}>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs h-9 gap-1.5 text-muted-foreground"
+          disabled={rebuildLoading}
+          onClick={async () => {
+            setRebuildLoading(true)
+            setRebuildMsg(null)
+            try {
+              const res = await fetch("/api/menus/rebuild", { method: "POST" })
+              const data = await res.json()
+              if (data.ok) {
+                setRebuildMsg("✅ Listo. Recarga la página (F5) y abre Permisos de nuevo.")
+              } else {
+                setRebuildMsg("❌ Error: " + JSON.stringify(data))
+              }
+            } catch (e) {
+              setRebuildMsg("❌ Error: " + String(e))
+            } finally {
+              setRebuildLoading(false)
+            }
+          }}
+        >
+          {rebuildLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />}
+          Reparar estructura de menús
+        </Button>
+        {rebuildMsg && (
+          <span className="text-xs text-muted-foreground">{rebuildMsg}</span>
+        )}
+        <Button className="bg-[#832B56] hover:bg-[#832B56]/90 text-white gap-2 ml-auto" onClick={() => setShowNewForm(true)}>
           <UserPlus className="h-4 w-4" />
           Nuevo Usuario
         </Button>
@@ -1914,6 +1913,35 @@ export function UsuariosPage() {
           onClose={() => setPermisoUserId(null)}
         />
       )}
+
+      <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">
+        <button
+          onClick={() => setTabEstatus("activos")}
+          className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            tabEstatus === "activos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-card-foreground"
+          }`}
+        >
+          <Power className="h-3 w-3" />
+          Activos
+          <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "activos" ? "bg-white/20" : "bg-muted"}`}>
+            {activos.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setTabEstatus("deshabilitados")}
+          className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            tabEstatus === "deshabilitados" ? "bg-[#7b1d3d] text-white" : "text-muted-foreground hover:text-card-foreground"
+          }`}
+        >
+          <PowerOff className="h-3 w-3" />
+          Deshabilitados
+          {deshabilitados.length > 0 && (
+            <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "deshabilitados" ? "bg-white/20" : "bg-muted"}`}>
+              {deshabilitados.length}
+            </span>
+          )}
+        </button>
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative max-w-sm flex-1 min-w-[200px]">
@@ -1947,7 +1975,7 @@ export function UsuariosPage() {
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground">
-            {loading ? "Cargando..." : `${filtered.length} usuarios registrados`}
+            {loading ? "Cargando..." : `${filtered.length} ${tabEstatus === "activos" ? "usuarios activos" : "usuarios deshabilitados"}`}
           </CardTitle>
         </CardHeader>
         <CardContent>
