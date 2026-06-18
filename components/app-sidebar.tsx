@@ -51,6 +51,7 @@ interface SidebarProps {
   onNavigate: (page: PageKey) => void
   collapsed: boolean
   onToggleSidebar?: () => void
+  onMenuReady?: (ready: boolean) => void
 }
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -154,7 +155,6 @@ function SidebarItem({
     </button>
   )
 }
-
 function SidebarSection({
   label,
   items,
@@ -225,7 +225,7 @@ function SidebarSection({
   )
 }
 
-export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar }: SidebarProps) {
+export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar, onMenuReady }: SidebarProps) {
   const { user, logout } = useAuth()
   const [menuTree, setMenuTree] = useState<MenuNode[] | null>(null)
   const [menusLoading, setMenusLoading] = useState(true)
@@ -244,15 +244,20 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
     return () => { cancelled = true }
   }, [user?.rol, user?.id, retryCount])
 
-  // Redirige a dashboard si la página actual no está disponible para este rol
   const INTERNAL_PAGES = useMemo(() => new Set(["revision-do", "progreso-firmado", "perfil", "nueva-solicitud"]), [])
   useEffect(() => {
     if (menusLoading || !menuTree) return
     const availableKeys = new Set(collectLeafNodes(menuTree).filter((n) => n.key).map((n) => n.key!))
-    if (currentPage !== "dashboard" && !INTERNAL_PAGES.has(currentPage) && !availableKeys.has(currentPage)) {
-      onNavigate("dashboard")
+    if (!INTERNAL_PAGES.has(currentPage) && !availableKeys.has(currentPage)) {
+      const firstKey = SECTION_DEFS.flatMap((s) => s.keys).find((k) => availableKeys.has(k))
+      if (firstKey) {
+        onNavigate(firstKey)
+        // onMenuReady se llamará en el siguiente ciclo, cuando currentPage ya sea firstKey
+        return
+      }
     }
-  }, [menuTree, menusLoading, currentPage, onNavigate, INTERNAL_PAGES])
+    onMenuReady?.(true)
+  }, [menuTree, menusLoading, currentPage, onNavigate, INTERNAL_PAGES, onMenuReady])
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     justificaciones: true,

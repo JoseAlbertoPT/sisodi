@@ -199,7 +199,6 @@ function getEvento(
       desc:  "pendiente de firma de validación",
       tipo:  "normal",
     }
-
   // ── Emisión final ─────────────────────────────────────────────────────────
   if (n === "emitido")
     return {

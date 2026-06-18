@@ -67,7 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       if (!res.ok) return null
       const data: User = await res.json()
-      if (!data.mustChangePassword) setUser(data)
+      if (!data.mustChangePassword) {
+        setUser(data)
+        sessionStorage.setItem("sdtf_just_logged_in", "1")
+      }
       return { mustChangePassword: data.mustChangePassword }
     } catch {
       return null
@@ -109,8 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, logout])
 
-  // Cierre de sesión forzado: si el servidor emite forceLogout con el ID de este usuario
-  // (p. ej. porque un admin cambió su secretaría), la sesión se cierra de inmediato.
   useEffect(() => {
     if (!user) return
     const userId = user.id

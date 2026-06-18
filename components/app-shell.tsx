@@ -17,8 +17,9 @@ import { PerfilPage } from "@/components/pages/perfil-page"
 import { ValidacionUefaPage } from "@/components/pages/validacion-uefa-page"
 import { ConfiguracionPage } from "@/components/pages/configuracion-page"
 import { ProgresoFirmadoPage } from "@/components/pages/progreso-firmado-page"
+import { WelcomePage } from "@/components/welcome-splash"
 
-const PAGE_KEY = "sdtf_current_page"
+const PAGE_KEY    = "sdtf_current_page"
 const SIDEBAR_KEY = "sdtf_sidebar_collapsed"
 
 export function AppShell() {
@@ -29,6 +30,8 @@ export function AppShell() {
   const [reviewFiltro, setReviewFiltro] = useState<1 | 2 | 3>(1)
   const [editSolicitud, setEditSolicitud] = useState<EditSolicitudPayload | undefined>(undefined)
   const [hydrated, setHydrated] = useState(false)
+  const [menuReady, setMenuReady] = useState(false)
+  const [showSplash, setShowSplash] = useState(false)
   const [prevPage, setPrevPage] = useState<PageKey>("dashboard")
   const [misSolicitudesRefreshKey, setMisSolicitudesRefreshKey] = useState(0)
   const [misSolicitudesInitialTab, setMisSolicitudesInitialTab] = useState<string | undefined>(undefined)
@@ -38,6 +41,10 @@ export function AppShell() {
     if (storedPage && storedPage !== "revision-do") setCurrentPage(storedPage)
     const storedSidebar = localStorage.getItem(SIDEBAR_KEY)
     if (storedSidebar === "true") setSidebarCollapsed(true)
+    if (sessionStorage.getItem("sdtf_just_logged_in")) {
+      sessionStorage.removeItem("sdtf_just_logged_in")
+      setShowSplash(true)
+    }
     setHydrated(true)
   }, [])
 
@@ -52,6 +59,7 @@ export function AppShell() {
   }, [sidebarCollapsed, hydrated])
 
   const handleNavigate = (page: PageKey) => {
+    setShowSplash(false)
     if (page !== "nueva-solicitud") setEditSolicitud(undefined)
     setCurrentPage(page)
   }
@@ -151,9 +159,13 @@ export function AppShell() {
         onNavigate={handleNavigate}
         collapsed={sidebarCollapsed}
         onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onMenuReady={setMenuReady}
       />
-      <main className="flex flex-1 flex-col overflow-y-auto p-6">
-        {renderPage()}
+      <main className={`flex flex-1 flex-col overflow-y-auto ${showSplash ? "" : "p-6"}`}>
+        {showSplash && user
+          ? <WelcomePage userName={user.nombre} userRole={user.rol} />
+          : menuReady ? renderPage() : null
+        }
       </main>
     </div>
   )
