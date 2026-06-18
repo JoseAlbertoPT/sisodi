@@ -1,5 +1,6 @@
 "use client"
 
+import { normalizeText } from "@/lib/utils"
 import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -852,6 +853,12 @@ function DynamicList({
                   e.preventDefault()
                   onChange([...items, ""])
                 }
+                if ((e.key === "Backspace" || e.key === "Delete") && item === "" && items.length > 1) {
+                  e.preventDefault()
+                  onChange(items.filter((_, i) => i !== idx))
+                  const focusIdx = idx > 0 ? idx - 1 : 0
+                  setTimeout(() => { itemRefs.current[focusIdx]?.focus() }, 0)
+                }
               }}
               placeholder={`${label || "Item"} ${idx + 1}`}
               className="border-0 shadow-none p-0 text-sm bg-transparent outline-none focus:outline-none"
@@ -1387,7 +1394,7 @@ function FormularioPrestacion({
   const sugerencias = useMemo(() => {
     if (esRenovacion) {
       if (!secretariaInput) return SECRETARIAS_CATALOGO
-      return SECRETARIAS_CATALOGO.filter((s) => s.toLowerCase().includes(secretariaInput.toLowerCase()))
+      return SECRETARIAS_CATALOGO.filter((s) => normalizeText(s).includes(normalizeText(secretariaInput)))
     }
     return filtrarSecretarias(secretariaInput)
   }, [secretariaInput, esRenovacion])
@@ -2180,7 +2187,7 @@ function FormularioNombramiento({
   const sugerencias = useMemo(() => {
     if (esRenovacion) {
       if (!secretariaInput) return SECRETARIAS_CATALOGO
-      return SECRETARIAS_CATALOGO.filter((s) => s.toLowerCase().includes(secretariaInput.toLowerCase()))
+      return SECRETARIAS_CATALOGO.filter((s) => normalizeText(s).includes(normalizeText(secretariaInput)))
     }
     return filtrarSecretarias(secretariaInput)
   }, [secretariaInput, esRenovacion])

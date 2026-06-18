@@ -1,5 +1,6 @@
 "use client"
 
+import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -165,7 +166,7 @@ function getClaveError(secretariaId: string | null, tree: OrganoCentralizadoNode
 
 function HighlightText({ text, query }: { text: string; query: string }) {
   if (!query) return <>{text}</>
-  const idx = text.toLowerCase().indexOf(query.toLowerCase())
+  const idx = normalizeText(text).indexOf(normalizeText(query))
   if (idx === -1) return <>{text}</>
   return (
     <>
@@ -200,7 +201,7 @@ function SecretariaTreeSelector({
     const q = autocompleteQuery.trim()
     if (!q) return []
     return allNodes
-      .filter(({ node }) => node.nombre.toLowerCase().includes(q.toLowerCase()))
+      .filter(({ node }) => normalizeText(node.nombre).includes(normalizeText(q)))
       .slice(0, 12)
   }, [allNodes, autocompleteQuery])
 
@@ -290,7 +291,7 @@ function SecretariaTreeSelector({
       {levels.map((level, idx) => {
         const query = searchQueries[idx] ?? ""
         const filtered = query
-          ? level.options.filter((n) => n.nombre.toLowerCase().includes(query.toLowerCase()))
+          ? level.options.filter((n) => normalizeText(n.nombre).includes(normalizeText(query)))
           : level.options
         const treeMatches = query && filtered.length === 0 ? filteredNodes : []
         return (
@@ -1823,13 +1824,13 @@ export function UsuariosPage() {
 
   const filtered = pool.filter((row) => {
     if (filtroAdmin !== "todos" && row.tipoAdministracion !== filtroAdmin) return false
-    const q = searchTerm.toLowerCase()
+    const q = normalizeText(searchTerm)
     return !q ||
-      row.nombre.toLowerCase().includes(q) ||
-      row.correo.toLowerCase().includes(q) ||
-      (row.rfc ?? "").toLowerCase().includes(q) ||
-      row.rol.toLowerCase().includes(q) ||
-      row.secretaria.toLowerCase().includes(q)
+      normalizeText(row.nombre).includes(q) ||
+      normalizeText(row.correo).includes(q) ||
+      normalizeText(row.rfc ?? "").includes(q) ||
+      normalizeText(row.rol).includes(q) ||
+      normalizeText(row.secretaria).includes(q)
   })
 
   const hasActivePermiso = (id: string) =>

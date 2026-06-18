@@ -1,5 +1,6 @@
 "use client"
 
+import { normalizeText } from "@/lib/utils"
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
@@ -1422,15 +1423,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       })
       .filter(s => {
         if (!searchTerm) return true
-        const t = searchTerm.toLowerCase()
+        const t = normalizeText(searchTerm)
         return (
-          (s.folioRecepcion?.toLowerCase().includes(t) ?? false) ||
-          formatearFolio(s.folioRecepcion).toLowerCase().includes(t) ||
-          (s.folioDictamen?.toLowerCase().includes(t) ?? false) ||
-          formatearFolio(s.folioDictamen).toLowerCase().includes(t) ||
-          s.secretaria.toLowerCase().includes(t) ||
-          s.tipo.toLowerCase().includes(t) ||
-          (s.denominacion ?? "").toLowerCase().includes(t)
+          normalizeText(s.folioRecepcion ?? "").includes(t) ||
+          normalizeText(formatearFolio(s.folioRecepcion)).includes(t) ||
+          normalizeText(s.folioDictamen ?? "").includes(t) ||
+          normalizeText(formatearFolio(s.folioDictamen)).includes(t) ||
+          normalizeText(s.secretaria).includes(t) ||
+          normalizeText(s.tipo).includes(t) ||
+          normalizeText(s.denominacion ?? "").includes(t)
         )
       })
       .filter(s => {

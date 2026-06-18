@@ -489,6 +489,7 @@ function mapApiItem(item: any): UrgSolicitud {
     })),
   }
 }
+
 function SectionCard({
   num, title, icon, children, defaultOpen = true,
 }: {
@@ -967,7 +968,6 @@ function formatRegimen(raw: string): string {
   if (r.includes("nombramiento") || r.includes("tiempo determinado")) return "Nombramiento por Tiempo Determinado"
   return raw || "—"
 }
-
 function DetalleView({
   sol, onBack, onUpdatePeriodo, onUpdatePeriodoYEnviar, onEditSolicitud, onReenviar, calData,
 }: {
@@ -1007,6 +1007,7 @@ function DetalleView({
         (p) => p.regimen === (sol.regimen as string) && p.active && !p.used
       ) ?? null)
     : null
+
   const permisoActivoBorrador = isBorradorFueraDeTiempo ? permisoDisponible : null
   const [editingPeriodo,     setEditingPeriodo]     = useState(false)
   const [editingModoSolo,    setEditingModoSolo]    = useState(false)

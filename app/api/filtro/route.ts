@@ -15,6 +15,7 @@ function estadoEnRevision(filtro: number) {
   if (filtro === 2) return "En Validacion Final"
   return "En Revision Emisor"
 }
+
 function estadoObservado(filtro: number) {
   if (filtro === 1) return "Observado por Revisor"
   if (filtro === 2) return "Observado por Validacion Final"

@@ -91,7 +91,6 @@ export async function POST(req: NextRequest) {
       where:  { id: usuarioId },
       select: { secretaria_id: true, secretaria_texto: true, area_id: true },
     })
-
     const tipoFolioJUST = usuarioCreador?.secretaria_id
       ? `JUST-${usuarioCreador.secretaria_id}`
       : usuarioCreador?.area_id
@@ -288,6 +287,7 @@ export async function PATCH(req: NextRequest) {
       condicion_viajar:      "condicion_viajar",
       resguardo_activos:     "resguardo_activos",
     }
+
     for (const [k, v] of Object.entries(map)) {
       if (campos[k] !== undefined) {
         if (v === "resguardo_activos") {

@@ -1,5 +1,6 @@
 "use client"
 
+import { normalizeText } from "@/lib/utils"
 import React, { useState, useMemo, useEffect, useCallback, useRef, memo } from "react"
 import { useRealtime } from "@/hooks/use-realtime"
 import dynamic from "next/dynamic"
@@ -482,14 +483,14 @@ export function DictamenesPage() {
       let result = dictamenes;
 
       if (searchTerm) {
-        const t = searchTerm.toLowerCase();
-        result = result.filter((d) => 
-          formatearFolio(d.folioDictamen).toLowerCase().includes(t) ||
-          (d.folioDictamen?.toLowerCase().includes(t) ?? false) ||
-          formatearFolio(d.folioRecepcion).toLowerCase().includes(t) ||
-          (d.folioRecepcion?.toLowerCase().includes(t) ?? false) ||
-          d.secretaria.toLowerCase().includes(t) ||
-          (d.denominacion?.toLowerCase().includes(t) ?? false)
+        const t = normalizeText(searchTerm);
+        result = result.filter((d) =>
+          normalizeText(formatearFolio(d.folioDictamen)).includes(t) ||
+          normalizeText(d.folioDictamen ?? "").includes(t) ||
+          normalizeText(formatearFolio(d.folioRecepcion)).includes(t) ||
+          normalizeText(d.folioRecepcion ?? "").includes(t) ||
+          normalizeText(d.secretaria).includes(t) ||
+          normalizeText(d.denominacion ?? "").includes(t)
         );
       }
 
