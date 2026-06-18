@@ -1247,7 +1247,6 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
     </div>
   )
 }
-
 function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
   const filas: { elemento: string; ejemplo: string }[] = [
     { elemento: "Verbo Infonitivo",                    ejemplo: "Revisar" },
@@ -3200,6 +3199,7 @@ function ordinalRegreso(n: number): string {
   if (n === 3) return "3er Regreso"
   return `${n}° Regreso`
 }
+
 
 export type EditSolicitudPayload = {
   id: string
