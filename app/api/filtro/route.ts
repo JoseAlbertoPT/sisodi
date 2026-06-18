@@ -322,7 +322,7 @@ export async function GET(req: NextRequest) {
       const esReingresoCiclo = lastAccionFiltroIdx >= 0 && lastAsignacionIdx > lastAccionFiltroIdx
       const openedInFiltro = esReingresoCiclo
         ? false
-        : sol.checklist_detalle.some((cd) => cd.checklist?.etapa === etapaFiltro) || tieneFolioDictamen
+        : sol.checklist_detalle.some((cd) => cd.checklist?.etapa === etapaFiltro) || (filtro !== 3 && tieneFolioDictamen)
 
       const fueObservadaEnEsteFiltro = historial.some((h) => {
         const nombre =

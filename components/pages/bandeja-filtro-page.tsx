@@ -162,7 +162,7 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   if (filtro === 3) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma emisor") return "pendientes_firma"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
-      return (s.openedInFiltro[filtro] || !!s.folioDictamen) ? "revision" : "nuevas"
+      return (s.openedInFiltro[filtro] || (filtro !== 3 && !!s.folioDictamen)) ? "revision" : "nuevas"
     }
     const preEmisor = new Set([
       "pendiente do",

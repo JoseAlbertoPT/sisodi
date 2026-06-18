@@ -70,12 +70,12 @@ export async function seedMenus(prisma: PrismaClient) {
   //           12=calendario, 13=usuarios, 14=configuracion
   const ROL_MENUS: Record<string, number[]> = {
     "Administrador": MENUS.map((m) => m.id),
-    "Capturista":    [2, 3, 4],
-    "UEFA":          [2, 5],
-    "Enlace DGRH":   [2, 5],
-    "Revisor":       [2, 7],
-    "Validador":     [2, 8],
-    "Emisor":        [2, 9, 10],
+    "Capturista":    [1, 3, 4, 6, 10],      // Nueva solicitud, Mis solicitudes, Dictámenes
+    "Emisor":        [1, 2, 6, 9, 10],      // Tablero, Emisión, Dictámenes
+    "Revisor":       [6, 7, 10],            // Revisión, Dictámenes
+    "Validador":     [1, 2, 6, 8, 10],      // Tablero, Validación, Dictámenes
+    "UEFA":          [1, 5, 6, 10],         // Validación UEFA, Dictámenes
+    "Enlace DGRH":   [1, 5, 6, 10],         // Validación UEFA, Dictámenes
     "Consulta":      [2],
   }
 

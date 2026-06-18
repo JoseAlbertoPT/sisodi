@@ -55,11 +55,10 @@ export async function GET(req: NextRequest) {
     }
 
     // If the user has explicit permissions saved, use ONLY those (override role).
-    // Otherwise fall back to role defaults — excluding Tablero (dashboard) so it
-    // never shows until the admin explicitly enables it per user.
+    // Otherwise fall back to role defaults from rol_menu.
     const baseRows = userMenuRows.length > 0
       ? userMenuRows
-      : rolMenuRes.rows.filter((r: any) => r.key !== "dashboard")
+      : rolMenuRes.rows
 
     const seenIds = new Set<number>()
     const combined: any[] = []

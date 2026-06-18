@@ -616,7 +616,6 @@ const FALLBACK_TIPOS_ACTIVIDAD: Record<string, { value: string; label: string }[
     { value: "tecnico_esp", label: "Técnico Especializado" },
   ],
 }
-
 ;(Object.values(FALLBACK_TIPOS_ACTIVIDAD).flat() as { value: string; label: string }[]).forEach(({ value, label }) => {
   TIPO_ACTIVIDAD_LABELS[value] = label
   const labelSlug = label.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, "")
@@ -796,6 +795,14 @@ function DynamicList({
   }, [nivelTabulador, max])
   const filledCount = items.filter((i) => i.trim() !== "").length
   const belowMin = !readonly && filledCount < minEfectivo
+  const itemRefs = useRef<(HTMLTextAreaElement | null)[]>([])
+  const prevLengthRef = useRef(items.length)
+  useEffect(() => {
+    if (items.length > prevLengthRef.current) {
+      itemRefs.current[items.length - 1]?.focus()
+    }
+    prevLengthRef.current = items.length
+  }, [items.length])
   return (
     <div className="flex flex-col gap-2">
       {label && (
@@ -830,6 +837,7 @@ function DynamicList({
            ) : (
             <textarea
               ref={(el) => {
+                itemRefs.current[idx] = el
                 if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px" }
               }}
               value={item}
@@ -838,6 +846,12 @@ function DynamicList({
                 const copy = [...items]; copy[idx] = e.target.value; onChange(copy)
                 const el = e.currentTarget
                 el.style.height = "auto"; el.style.height = el.scrollHeight + "px"
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && items.length < maxEfectivo) {
+                  e.preventDefault()
+                  onChange([...items, ""])
+                }
               }}
               placeholder={`${label || "Item"} ${idx + 1}`}
               className="border-0 shadow-none p-0 text-sm bg-transparent outline-none focus:outline-none"
@@ -903,7 +917,6 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
     </div>
   )
 }
-
 function formatMXN(n: number) {
   return n === 0 ? "$0" : `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
