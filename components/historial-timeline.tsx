@@ -140,7 +140,7 @@ function getEvento(
       tipo:  "normal",
     }
 
-  // ── Firma de Justificación ────────────────────────────────────────────────
+  // ── ────────────────────────────────────────────────
   if (n === "pendiente firma justificacion")
     return {
       label: "En espera de firma — Justificación",
