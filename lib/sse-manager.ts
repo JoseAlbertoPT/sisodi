@@ -34,3 +34,17 @@ export function broadcastUpdate(apartados: string[]) {
     }
   }
 }
+
+export function broadcastForceLogout(userIds: string[]) {
+  if (connections.size === 0 || userIds.length === 0) return
+  const encoder = new TextEncoder()
+  const message = `data: ${JSON.stringify({ forceLogout: userIds })}\n\n`
+  const bytes = encoder.encode(message)
+  for (const controller of connections) {
+    try {
+      controller.enqueue(bytes)
+    } catch {
+      connections.delete(controller)
+    }
+  }
+}

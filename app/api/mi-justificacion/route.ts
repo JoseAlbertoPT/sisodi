@@ -10,9 +10,33 @@ export async function GET(req: NextRequest) {
 
     const viewer = await prisma.usuario.findUnique({
       where:  { id: usuarioId },
-      select: { rol: { select: { nombre: true } } },
+      select: {
+        rol:                 { select: { nombre: true } },
+        secretaria_id:       true,
+        secretaria_texto:    true,
+        organo_centralizado: { select: { id: true } },
+      },
     })
     const esAdmin = viewer?.rol?.nombre?.toLowerCase() === "administrador"
+
+    // Filtro por secretaría: el usuario solo ve solicitudes de SU secretaría actual.
+    // secretaria_id_snapshot ancla la solicitud a la secretaría vigente al momento de
+    // crearla; si el usuario cambió de área, sus registros anteriores permanecen en la
+    // secretaría anterior y ya no aparecen aquí.
+    // El null fallback se elimina a propósito: registros sin snapshot no tienen secretaría
+    // definida y mostrarlos causaría que se vean solicitudes de la secretaría anterior.
+    // El segundo backfill en PATCH /api/usuarios/:id asigna snapshot a cualquier null restante.
+    let secretariaSnapshotFilter: Record<string, unknown> = {}
+    if (viewer) {
+      if (viewer.secretaria_id) {
+        secretariaSnapshotFilter = { secretaria_id_snapshot: viewer.secretaria_id }
+      } else if (viewer.secretaria_texto) {
+        secretariaSnapshotFilter = { secretaria_txt_snapshot: viewer.secretaria_texto }
+      } else if (!esAdmin) {
+        // Non-admin sin secretaría configurada: no mostrar nada
+        return NextResponse.json({ items: [], total: 0, page: 1, pageSize: 50, totalPages: 0, tabCounts: { Borradores: 0, "En aprobación": 0, "Observadas / Devueltas": 0, "En proceso DGDO": 0, Emitidas: 0, Todas: 0 } })
+      }
+    }
 
     const { searchParams } = new URL(req.url)
     const tab        = searchParams.get("tab")        ?? "Todas"
@@ -68,6 +92,22 @@ export async function GET(req: NextRequest) {
     }
 
     const estadoNames = tabToEstados[tab] ?? []
+
+    const andConditions: Record<string, unknown>[] = []
+    if (Object.keys(secretariaSnapshotFilter).length > 0) {
+      andConditions.push(secretariaSnapshotFilter)
+    }
+    if (search) {
+      andConditions.push({
+        OR: [
+          { folio_justificacion: { contains: search, mode: "insensitive" } },
+          { folio_recepcion:     { contains: search, mode: "insensitive" } },
+          { denominacion:        { contains: search, mode: "insensitive" } },
+          { secretaria:          { contains: search, mode: "insensitive" } },
+        ],
+      })
+    }
+
     const where: Parameters<typeof prisma.solicitud.findMany>[0]["where"] = {
       ...(!esAdmin && { usuario_id: usuarioId }),
       ...(estadoNames.length > 0 && {
@@ -76,14 +116,7 @@ export async function GET(req: NextRequest) {
       ...(secretaria && {
         secretaria: { contains: secretaria.split(" > ")[0], mode: "insensitive" },
       }),
-      ...(search && {
-        OR: [
-          { folio_justificacion: { contains: search, mode: "insensitive" } },
-          { folio_recepcion:     { contains: search, mode: "insensitive" } },
-          { denominacion:        { contains: search, mode: "insensitive" } },
-          { secretaria:          { contains: search, mode: "insensitive" } },
-        ],
-      }),
+      ...(andConditions.length > 0 && { AND: andConditions }),
     }
 
     const [total, solicitudesRaw] = await Promise.all([
@@ -222,7 +255,10 @@ export async function GET(req: NextRequest) {
     })})
     const counts = await prisma.solicitud.groupBy({
       by: ["estado_id"],
-      where: esAdmin ? {} : { usuario_id: usuarioId },
+      where: {
+        ...(!esAdmin && { usuario_id: usuarioId }),
+        ...(Object.keys(secretariaSnapshotFilter).length > 0 && { AND: [secretariaSnapshotFilter] }),
+      },
       _count: { id: true },
     })
     const allEstados = await prisma.estado.findMany({ select: { id: true, nombre: true } })

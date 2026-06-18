@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
 
 function toClient(p: {
   id: number; usuario_id: string; regimen: string; periodo: string
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
     const created = await prisma.permiso_captura.create({
       data: { usuario_id: usuarioId, regimen, periodo, granted_by: grantedBy },
     })
+    broadcastUpdate(["permisos-captura"])
     return NextResponse.json(toClient(created), { status: 201 })
   } catch (e) {
     console.error("[POST /api/permisos-captura]", e)

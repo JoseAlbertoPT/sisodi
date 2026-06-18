@@ -755,7 +755,7 @@ function rawToEditPayload(solicitud: FiltroSolicitud): EditSolicitudPayload {
     : regimenRaw.includes("nombramiento") || regimenRaw.includes("tiempo determinado") ? "nombramiento"
     : "honorarios"
   const tipo: EditSolicitudPayload["tipo"] = regimen === "nombramiento" ? "nombramiento" : "prestacion"
-  const fmt = (d: any) => d ? new Date(d).toISOString().slice(0, 10) : ""
+  const fmt = (d: any) => { if (!d) return ""; const dt = new Date(d); return isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10) }
   function getEstadoSig(estado: string): string | undefined {
     const n = estado.toLowerCase()
     if (n.includes("observado por validacion final")) return "En Validacion Final"

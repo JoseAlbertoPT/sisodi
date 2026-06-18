@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ChevronUp, UserCircle, CornerDownRight, Pencil, MoveRight, X } from "lucide-react"
+import { ChevronDown, ChevronUp, UserCircle, Pencil, MoveRight, X } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -41,75 +41,198 @@ function parseDiff(comentario: string | null | undefined): { campo: string; de: 
   try {
     const parsed = JSON.parse(comentario)
     if (parsed?.tipo === "edicion" && Array.isArray(parsed.cambios)) return parsed.cambios
-  } catch { /* not JSON */ }
+  } catch { }
   return null
 }
 
 function getEvento(
   anterior: string | null,
   nuevo:    string,
-  fecha:    string,
   comentario?: string | null,
-): { label: string; accion: string; tipo: Tipo } {
+): { label: string; desc: string; tipo: Tipo } {
   const n = (nuevo    ?? "").toLowerCase().trim()
   const a = (anterior ?? "").toLowerCase().trim()
-  const f = fmtFecha(fecha)
+
 
   if (n === "modificada" || parseDiff(comentario) !== null)
-    return { label: "Solicitud modificada", accion: f, tipo: "edicion" }
+    return { label: "Solicitud modificada", desc: "", tipo: "edicion" }
 
   if (n === "en captura" || n === "borrador")
-    return { label: "Solicitud creada", accion: f, tipo: "captura" }
+    return { label: "Solicitud creada", desc: "registrada en el sistema", tipo: "captura" }
 
-  if (n === "en validacion justificaciones") {
+  if (n === "en validacion justificaciones" || n === "enviada a validacion") {
     if (!a || a === "en captura" || a === "borrador")
-      return { label: "Recibida por Validación de Justificaciones", accion: `Recibida por Validación UEFA · ${f}`, tipo: "normal" }
-    return { label: "Regresada a Validación de Justificaciones", accion: `Regresada a Validación UEFA · ${f}`, tipo: "normal" }
+      return {
+        label: "Enviada a Validación UEFA",
+        desc:  "enviada al área de Validación UEFA",
+        tipo:  "normal",
+      }
+    return {
+      label: "Reenviada a Validación UEFA",
+      desc:  "reenviada tras atender las observaciones",
+      tipo:  "normal",
+    }
   }
 
-  if (n === "pendiente do")
-    return { label: "Pendiente DO", accion: `Recibida Validación DO · ${f}`, tipo: "normal" }
+  if (n === "observado por validacion" || n === "observada por validacion")
+    return {
+      label: "Devuelta con observaciones — Validación de Justificaciones",
+      desc:  "devuelta con observaciones para corrección",
+      tipo:  "observacion",
+    }
 
-  if (n === "observado por validacion")
-    return { label: "Observada — Validación de Justificaciones", accion: `Observada por Validación UEFA · ${f}`, tipo: "observacion" }
+  // ── Validación UEFA (alias) ───────────────────────────────────────────────
+  if (n === "enviada a validacion (uefa)" || n === "enviada a validacion uefa")
+    return {
+      label: "Enviada a Validación UEFA",
+      desc:  "Enviada al área de Validación UEFA",
+      tipo:  "normal",
+    }
 
+  if (n === "observada por uefa" || n === "observado por uefa")
+    return {
+      label: "Devuelta con observaciones — Validación UEFA",
+      desc:  "devuelta con observaciones para corrección",
+      tipo:  "observacion",
+    }
+
+  // ── Pendiente DO / DGDO ───────────────────────────────────────────────────
+  if (n === "pendiente do" || n === "enviado a do (recepcion)")
+    return {
+      label: "Recibida en DGDO",
+      desc:  "Ingresó al DGDO ",
+      tipo:  "normal",
+    }
+
+  // ── Revisión por Revisor ──────────────────────────────────────────────────
   if (n === "en revision revisor") {
     if (a.includes("en revision revisor"))
-      return { label: "Reasignada a Revisor", accion: `Reasignada al revisor · ${f}`, tipo: "normal" }
-    return { label: "Asignada a Revisor", accion: `Se asignó al revisor · ${f}`, tipo: "normal" }
+      return {
+        label: "Reasignada a otro Revisor",
+        desc:  "reasignada a un revisor diferente",
+        tipo:  "normal",
+      }
+    return {
+      label: "Asignada al Revisor",
+      desc:  "asignada al Revisor para su revision",
+      tipo:  "normal",
+    }
   }
 
-  if (n === "observado por revisor")
-    return { label: "Observada por Revisor", accion: `Observada por Revisor · ${f}`, tipo: "observacion" }
+  if (n === "observado por revisor" || n === "observado do filtro 1")
+    return {
+      label: "Devuelta por Revisor",
+      desc:  "devuelta con observaciones para corrección",
+      tipo:  "observacion",
+    }
 
   if (n === "aceptado por revisor")
-    return { label: "Aceptado por Revisor", accion: `Revisado · ${f}`, tipo: "normal" }
+    return {
+      label: "Aceptada por Revisor",
+      desc:  "aceptada  por el revisor  para continuar el proceso",
+      tipo:  "normal",
+    }
 
+  if (n === "aprobado por revisor")
+    return {
+      label: "Aprobada por Revisor",
+      desc:  "aprobada por el Revisor",
+      tipo:  "normal",
+    }
+
+  // ── Firma de Justificación ────────────────────────────────────────────────
   if (n === "pendiente firma justificacion")
-    return { label: "Pendiente de Firma — Justificación", accion: f, tipo: "normal" }
+    return {
+      label: "En espera de firma — Justificación",
+      desc:  "pendiente de firma de justificación",
+      tipo:  "normal",
+    }
 
+  // ── Validación DGDO ──────────────────────────────────────────────────────
   if (n === "en validacion final")
-    return { label: "En Validación DO", accion: `Recibida Validación DO · ${f}`, tipo: "normal" }
+    return {
+      label: "Recibida en Validación DGDO",
+      desc:  "recibida por el DGDO para validación",
+      tipo:  "normal",
+    }
 
-  if (n === "observado por validacion final")
-    return { label: "Observada — Validación DGDO", accion: `Observada Validación DGDO · ${f}`, tipo: "observacion" }
+  if (n === "observado por validacion final" || n === "observado do filtro 2")
+    return {
+      label: "Devuelta por Validación DGDO",
+      desc:  "devuelta con observaciones para corrección",
+      tipo:  "observacion",
+    }
 
-  if (n === "en revision emisor")
-    return { label: "Enviada a Emisor", accion: `Recibida por Emisor · ${f}`, tipo: "normal" }
+  // ── Revisión por Emisor ───────────────────────────────────────────────────
+  if (n === "en revision emisor" || n === "en revision do filtro 3")
+    return {
+      label: "Recibida en Área de Emisión",
+      desc:  "recibida en el área de Emisión para dictaminar",
+      tipo:  "normal",
+    }
 
-  if (n === "observado por emisor")
-    return { label: "Observada por Emisor", accion: `Observada por Emisor · ${f}`, tipo: "observacion" }
+  if (n === "observado por emisor" || n === "devuelta por do" || n === "observado do filtro 3")
+    return {
+      label: "Devuelta por Emisor",
+      desc:  "devuelta con observaciones para corrección",
+      tipo:  "observacion",
+    }
 
+  // ── Firmas ────────────────────────────────────────────────────────────────
   if (n === "pendiente firma dictamen")
-    return { label: "Pendiente de Firma — Emitida", accion: f, tipo: "normal" }
+    return {
+      label: "En espera de firma — Dictamen",
+      desc:  "pendiente de firma de dictamen",
+      tipo:  "normal",
+    }
 
+  if (n === "pendiente firma revision")
+    return {
+      label: "En espera de firma — Revisión",
+      desc:  "pendiente de firma de revisión",
+      tipo:  "normal",
+    }
+
+  if (n === "pendiente firma validacion")
+    return {
+      label: "En espera de firma — Validación",
+      desc:  "pendiente de firma de validación",
+      tipo:  "normal",
+    }
+
+  // ── Emisión final ─────────────────────────────────────────────────────────
   if (n === "emitido")
-    return { label: "Emitida", accion: `Emitida · ${f}`, tipo: "emision" }
+    return {
+      label: "Dictamen Emitido",
+      desc:  "proceso de justificación completado exitosamente",
+      tipo:  "emision",
+    }
 
+  // ── Rechazado ─────────────────────────────────────────────────────────────
   if (n === "rechazado")
-    return { label: "Rechazada", accion: f, tipo: "observacion" }
+    return {
+      label: "Solicitud Rechazada",
+      desc:  "la solicitud fue rechazada",
+      tipo:  "observacion",
+    }
 
-  return { label: nuevo, accion: f, tipo: "normal" }
+  // ── En proceso DO ─────────────────────────────────────────────────────────
+  if (n === "en proceso do" || n === "aprobado")
+    return {
+      label: "En proceso DGDO",
+      desc:  "en proceso de revisión por el DGDO",
+      tipo:  "normal",
+    }
+
+  return { label: nuevo, desc: "", tipo: "normal" }
+}
+
+function renombrarEstado(s: string | null | undefined): string {
+  if (!s) return ""
+  const lower = s.toLowerCase().trim()
+  if (lower === "en validacion final")         return "Validación DGDO"
+  if (lower === "observado por validacion final") return "Observado por Validación DGDO"
+  return s
 }
 
 const VINO  = "#7D1128"
@@ -124,7 +247,6 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
           {cambios.length} campo{cambios.length !== 1 ? "s" : ""} modificado{cambios.length !== 1 ? "s" : ""}
         </button>
       </DialogTrigger>
-
       <DialogContent showCloseButton={false} className="max-w-2xl p-0 gap-0 overflow-hidden rounded-2xl border border-border/50 shadow-2xl">
 
         {/* Header */}
@@ -240,16 +362,15 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
   return (
     <div className="flex flex-col gap-0">
       {visible.map((entry, i) => {
-        const { label, accion, tipo } = getEvento(
+        const { label, desc, tipo } = getEvento(
           entry.estadoAnterior,
           entry.estadoNuevo,
-          entry.fecha,
           entry.comentario,
         )
         const diff = parseDiff(entry.comentario)
         const isObs  = tipo === "observacion"
         const isEdit = tipo === "edicion"
-        const isLast    = i === visible.length - 1 && !showToggle
+        const isLast = i === visible.length - 1 && !showToggle
 
         const dotBorder  = isObs ? "border-[#832B56]" : isEdit ? "border-[#C4A882]"  : "border-[#6e795a]"
         const labelColor = isObs ? "text-[#832B56]"   : isEdit ? "text-[#A0845C]"   : "text-[#6e795a]"
@@ -259,8 +380,8 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
           entry.estadoAnterior.trim() !== "" &&
           entry.estadoAnterior.toLowerCase().trim() !== entry.estadoNuevo.toLowerCase().trim()
 
-        const nextInTime = i > 0 ? visible[i - 1] : null
-        const showNextActor = nextInTime && nextInTime.usuario !== entry.usuario
+        const receiver     = !isEdit && i > 0 ? visible[i - 1] : null
+        const showReceiver = !!receiver && receiver.usuario !== entry.usuario
 
         return (
           <div key={i} className="flex gap-3">
@@ -275,27 +396,35 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
             </div>
             <div className="flex flex-col gap-0.5 pb-4 flex-1 min-w-0">
               <span className={`text-xs font-semibold ${labelColor}`}>{label}</span>
+
+              {/* Línea de usuarios: remitente → receptor · fecha */}
               <div className="flex items-center gap-1 flex-wrap">
                 <UserCircle className={`h-3 w-3 shrink-0 ${userColor}`} />
                 <span className={`text-[11px] font-semibold ${userColor}`}>{entry.usuario}</span>
-                {accion && <span className="text-[10px] text-muted-foreground">· {accion}</span>}
+                {showReceiver && (
+                  <>
+                    <MoveRight className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+                    <span className={`text-[11px] font-semibold ${userColor}`}>{receiver!.usuario}</span>
+                  </>
+                )}
+                <span className="text-[10px] text-muted-foreground">· {fmtFecha(entry.fecha)}</span>
               </div>
+
+              {/* Descripción de la acción */}
+              {desc && (
+                <span className="text-[10px] text-muted-foreground/70 ml-4">{desc}</span>
+              )}
+
+              {/* Transición de estados */}
               {showTransicion && (
                 <span className="text-[10px] text-muted-foreground/70 mt-0.5">
-                  {entry.estadoAnterior}
+                  {renombrarEstado(entry.estadoAnterior)}
                   <span className="mx-1">→</span>
-                  <span className="font-medium">{entry.estadoNuevo}</span>
+                  <span className="font-medium">{renombrarEstado(entry.estadoNuevo)}</span>
                 </span>
               )}
-              {diff && <DiffDialog cambios={diff} usuario={entry.usuario} fecha={accion} />}
-              {showNextActor && (
-                <div className="flex items-center gap-1 mt-1">
-                  <CornerDownRight className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0" />
-                  <UserCircle className="h-2.5 w-2.5 text-muted-foreground/60 shrink-0" />
-                  <span className="text-[10px] text-muted-foreground/80 font-medium">{nextInTime.usuario}</span>
-                  <span className="text-[10px] text-muted-foreground/50">· {fmtFecha(nextInTime.fecha)}</span>
-                </div>
-              )}
+
+              {diff && <DiffDialog cambios={diff} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} />}
             </div>
           </div>
         )

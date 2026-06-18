@@ -109,6 +109,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, logout])
 
+  // Cierre de sesión forzado: si el servidor emite forceLogout con el ID de este usuario
+  // (p. ej. porque un admin cambió su secretaría), la sesión se cierra de inmediato.
+  useEffect(() => {
+    if (!user) return
+    const userId = user.id
+    const es = new EventSource("/api/events")
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as { forceLogout?: string[] }
+        if (Array.isArray(data.forceLogout) && data.forceLogout.includes(userId)) {
+          logout()
+        }
+      } catch {}
+    }
+    return () => es.close()
+  }, [user?.id, logout])
+
   return (
     <AuthContext.Provider
       value={{ user, isAuthenticated: !!user, isLoading, login, logout, changePassword }}

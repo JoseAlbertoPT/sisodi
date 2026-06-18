@@ -54,24 +54,21 @@ export async function GET(req: NextRequest) {
       const viewer = await prisma.usuario.findUnique({
         where:  { id: userId },
         select: {
-          secretaria_id:       true,
-          organo_centralizado: { select: { id: true } },
-          rol:                 { select: { nombre: true } },
+          secretaria_id:    true,
+          secretaria_texto: true,
+          rol:              { select: { nombre: true } },
         },
       })
       if (viewer) {
         const rolNombre = viewer.rol?.nombre?.toLowerCase() ?? ""
         const esCapturista = rolNombre === "capturista"
         if (esCapturista) {
-          if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
-            organoFilter = {
-              usuario: {
-                organo_centralizado: { isNot: null },
-                secretaria_id: viewer.secretaria_id,
-              },
-            }
+          if (viewer.secretaria_id) {
+            organoFilter = { secretaria_id_snapshot: viewer.secretaria_id }
+          } else if (viewer.secretaria_texto) {
+            organoFilter = { secretaria_txt_snapshot: viewer.secretaria_texto }
           } else {
-            organoFilter = { usuario: { organo_centralizado: { is: null } } }
+            return NextResponse.json({ ok: true, data: [] })
           }
         }
       }

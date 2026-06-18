@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,6 +23,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     } else {
       return NextResponse.json({ error: "Acción inválida" }, { status: 400 })
     }
+
+    broadcastUpdate(["permisos-captura"])
 
     return NextResponse.json({
       id: updated.id, userId: updated.usuario_id, regimen: updated.regimen,

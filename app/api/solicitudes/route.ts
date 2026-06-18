@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
+function parseDate(v: unknown): Date | null {
+  if (!v) return null
+  const d = new Date(v as string)
+  return isNaN(d.getTime()) ? null : d
+}
+
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 async function resolverPeriodoId(periodoId?: number, mes?: number, anio?: number): Promise<number | undefined> {
   if (mes && anio) {
@@ -133,8 +139,8 @@ export async function POST(req: NextRequest) {
         tipo_actividades:      trunc(tipo_actividades, 200),
         numero_prestadores:    numero_prestadores != null && numero_prestadores !== "" ? Math.min(Math.max(1, Math.round(Number(numero_prestadores))), 2147483647) || null : null,
         denominacion:          trunc(denominacion, 200),
-        vigencia_inicio:       vigencia_inicio ? new Date(vigencia_inicio) : null,
-        vigencia_fin:          vigencia_fin    ? new Date(vigencia_fin)    : null,
+        vigencia_inicio:       parseDate(vigencia_inicio),
+        vigencia_fin:          parseDate(vigencia_fin),
         importe_bruto:         importe_bruto ?? null,
         es_renovacion:         es_renovacion ?? false,
         folio_anterior:        trunc(folio_anterior, 50),
@@ -296,9 +302,9 @@ export async function PATCH(req: NextRequest) {
       }
     }
     if (campos.vigencia_inicio !== undefined)
-      data.vigencia_inicio = campos.vigencia_inicio ? new Date(campos.vigencia_inicio) : null
+      data.vigencia_inicio = parseDate(campos.vigencia_inicio)
     if (campos.vigencia_fin !== undefined)
-      data.vigencia_fin = campos.vigencia_fin ? new Date(campos.vigencia_fin) : null
+      data.vigencia_fin = parseDate(campos.vigencia_fin)
     if (campos.periodoMes !== undefined && campos.periodoAnio !== undefined) {
       const pid = await resolverPeriodoId(undefined, Number(campos.periodoMes), Number(campos.periodoAnio))
       if (pid) data.periodo_id = pid

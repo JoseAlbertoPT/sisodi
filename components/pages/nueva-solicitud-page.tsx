@@ -3291,7 +3291,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
           )
           .map((s) => {
             const folio = s.folio_justificacion ?? s.folio_recepcion ?? String(s.id)
-            const fmt = (d: any) => d ? new Date(d).toISOString().slice(0, 10) : ""
+            const fmt = (d: any) => { if (!d) return ""; const dt = new Date(d); return isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10) }
             return {
               id:                     folio,
               folioJustificacion:     s.folio_justificacion ?? folio,

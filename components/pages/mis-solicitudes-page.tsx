@@ -120,6 +120,8 @@ interface UrgSolicitud {
   numeroPrestadores: string
   vigenciaInicio: string
   vigenciaFin: string
+  vigenciaInicioISO: string
+  vigenciaFinISO: string
   importeBruto: string
   esRenovacion: boolean
   folioAnterior?: string
@@ -363,6 +365,11 @@ function mapApiItem(item: any): UrgSolicitud {
       : new Date(d)
     return isNaN(parsed.getTime()) ? "" : parsed.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" })
   }
+  const fmtISO = (d: string | null | undefined): string => {
+    if (!d) return ""
+    const dt = new Date(d)
+    return isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10)
+  }
   const regimen = (item.regimen ?? "honorarios") as RegimenPeriodo
   const _MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
   const periodoAplicacion = item.periodo
@@ -412,6 +419,8 @@ function mapApiItem(item: any): UrgSolicitud {
       : "",
     vigenciaInicio:       fmt(item.vigencia_inicio),
     vigenciaFin:          fmt(item.vigencia_fin),
+    vigenciaInicioISO:    fmtISO(item.vigencia_inicio),
+    vigenciaFinISO:       fmtISO(item.vigencia_fin),
     importeBruto,
     esRenovacion:         item.es_renovacion        ?? false,
     folioAnterior:        item.folio_anterior        ?? undefined,
@@ -796,6 +805,7 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
     </div>
   )
 }
+
 function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
   return (
     <div className="flex flex-col gap-4">
@@ -917,8 +927,8 @@ function solToEditPayload(sol: UrgSolicitud): EditSolicitudPayload {
       denominacion:            sol.denominacion,
       puestoJefeInmediato:     sol.puestoJefeInmediato,
       tipoAdministracionNom:   sol.tipoAdministracionNom,
-      vigenciaInicio:          sol.vigenciaInicio,
-      vigenciaFin:             sol.vigenciaFin,
+      vigenciaInicio:          sol.vigenciaInicioISO,
+      vigenciaFin:             sol.vigenciaFinISO,
       importeBruto:            importeNum,
       tipoImporte:             sol.tipoImporte,
       nivelTabulador:          sol.nivelTabulador,

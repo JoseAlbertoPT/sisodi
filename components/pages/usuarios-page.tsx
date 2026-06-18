@@ -12,7 +12,7 @@ import {
 
   Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
-  Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Unlock, Trash2, Lock, User,
+  Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
   Landmark, Factory,
 } from "lucide-react"
 import {
@@ -248,7 +248,6 @@ function SecretariaTreeSelector({
       onSelect(null, "", [])
     }
   }
-
   const handleReset = () => {
     setSteps([])
     setSearchQueries({})
@@ -858,7 +857,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                   </div>
                   {errors.password && <span className="text-[10px] text-destructive">{errors.password}</span>}
                 </div>
-
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
                   <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
@@ -1482,7 +1480,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   const [capturaHabilitada, setCapturaHabilitada] = useState(false)
   const [regimenCap, setRegimenCap] = useState<"honorarios" | "asimilados" | "nombramiento" | "">("")
   const [periodoCap, setPeriodoCap]  = useState("")
-  const [captSaved,  setCaptSaved]   = useState(false)
   const permisosCaptura = getPermisosUsuario(usuario.id)
   const activosCaptura  = permisosCaptura.filter((p) => p.active && !p.used)
   const periodoOpcionesCap = regimenCap === "honorarios"
@@ -1492,17 +1489,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     : regimenCap === "nombramiento"
     ? calNom.map((r) => r.quincena)
     : []
-
-  const handleHabilitarCaptura = async () => {
-    if (!regimenCap || !periodoCap) return
-    try {
-      await habilitarPermiso({ userId: usuario.id, regimen: regimenCap, periodo: periodoCap, grantedBy: currentUser?.nombre ?? "Administrador" })
-      setCaptSaved(true)
-      setRegimenCap("")
-      setPeriodoCap("")
-      setTimeout(() => setCaptSaved(false), 2500)
-    } catch {  }
-  }
 
   const isDirty = useMemo(() => {
     if (permisos == null || initialPermisos == null) return false
@@ -1549,6 +1535,12 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     setPermisosSaveError(null)
     setPermisosSaveLoading(true)
     try {
+      if (capturaHabilitada && regimenCap && periodoCap) {
+        await habilitarPermiso({ userId: usuario.id, regimen: regimenCap, periodo: periodoCap, grantedBy: currentUser?.nombre ?? "Administrador" })
+        setCapturaHabilitada(false)
+        setRegimenCap("")
+        setPeriodoCap("")
+      }
       const updated = await updatePermisosUser(usuario.id, permisos)
       setPermisos(updated)
       setInitialPermisos(updated)
@@ -1558,7 +1550,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     } finally {
       setPermisosSaveLoading(false)
     }
-  }, [usuario.id, permisos, onClose])
+  }, [usuario.id, permisos, capturaHabilitada, regimenCap, periodoCap, habilitarPermiso, currentUser, onClose])
   const requestClose = useCallback(() => {
     if (isDirty) setShowCloseConfirm(true)
     else onClose()
@@ -1572,6 +1564,12 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     setPermisosSaveError(null)
     setPermisosSaveLoading(true)
     try {
+      if (capturaHabilitada && regimenCap && periodoCap) {
+        await habilitarPermiso({ userId: usuario.id, regimen: regimenCap, periodo: periodoCap, grantedBy: currentUser?.nombre ?? "Administrador" })
+        setCapturaHabilitada(false)
+        setRegimenCap("")
+        setPeriodoCap("")
+      }
       const updated = await updatePermisosUser(usuario.id, permisos)
       setPermisos(updated)
       setInitialPermisos(updated)
@@ -1582,7 +1580,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     } finally {
       setPermisosSaveLoading(false)
     }
-  }, [usuario.id, permisos, onClose])
+  }, [usuario.id, permisos, capturaHabilitada, regimenCap, periodoCap, habilitarPermiso, currentUser, onClose])
 
   return (
     <>
@@ -1750,16 +1748,16 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
                         </Select>
                       </div>
                     )}
-                    {captSaved && (
-                      <div className="flex items-center gap-2 rounded-md bg-secondary/10 border border-secondary/30 px-3 py-2 text-sm text-secondary">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Permiso Otorgado Correctamente
-                      </div>
+                    {capturaHabilitada && regimenCap && !periodoCap && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Selecciona {regimenCap === "honorarios" ? "el mes" : "la quincena"} y luego da clic en "Guardar permisos".
+                      </p>
                     )}
-                    <Button size="sm" className="self-start" onClick={handleHabilitarCaptura} disabled={!regimenCap || !periodoCap}>
-                      <Unlock className="h-3.5 w-3.5 mr-1.5" />
-                      Habilitar
-                    </Button>
+                    {capturaHabilitada && !regimenCap && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Selecciona el régimen y luego da clic en "Guardar permisos".
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

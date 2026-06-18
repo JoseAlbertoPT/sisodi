@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import { broadcastForceLogout } from "@/lib/sse-manager"
 
 function err(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status })
@@ -69,11 +70,72 @@ export async function PATCH(
       data.must_change_password = true
     }
 
+    // Detectar si la secretaría realmente cambia (para forzar cierre de sesión después)
+    const secretariaIdCambia =
+      secretariaId !== undefined && secretariaId !== usuarioActual.secretaria_id
+    const secretariaTextoCambia =
+      secretariaTexto !== undefined && secretariaTexto !== usuarioActual.secretaria_texto
+
+    // Antes de actualizar la secretaría, fijar el snapshot en las solicitudes del usuario
+    // que aún lo tienen en null. Usamos la secretaría ANTERIOR para que esos registros
+    // queden anclados a donde pertenecían, evitando que "sigan" al usuario a la nueva
+    // secretaría y se mezclen con los registros de otra dependencia.
+    if (secretariaId !== undefined && usuarioActual.secretaria_id) {
+      await prisma.solicitud.updateMany({
+        where: {
+          usuario_id:             id,
+          secretaria_id_snapshot: null,
+          tipo_administracion:    { not: "paraestatal" },
+        },
+        data: { secretaria_id_snapshot: usuarioActual.secretaria_id },
+      })
+    }
+    if (secretariaTexto !== undefined && usuarioActual.secretaria_texto) {
+      await prisma.solicitud.updateMany({
+        where: {
+          usuario_id:              id,
+          secretaria_txt_snapshot: null,
+          tipo_administracion:     "paraestatal",
+        },
+        data: { secretaria_txt_snapshot: usuarioActual.secretaria_texto },
+      })
+    }
+
     const actualizado = await prisma.usuario.update({
       where: { id },
       data,
       include: { rol: true, area: true, organo_centralizado: true },
     })
+
+    // Segundo backfill: solo cuando el usuario NO tenía secretaría antes (registros
+    // sin snapshot son genuinamente sin dueño y se asignan a la nueva secretaría).
+    // Si ya tenía secretaría, el primer backfill ya ancló los nulls a la secretaría
+    // anterior; correr esto de nuevo los reasignaría incorrectamente a la nueva.
+    if (actualizado.secretaria_id && !usuarioActual.secretaria_id) {
+      await prisma.solicitud.updateMany({
+        where: {
+          usuario_id:             id,
+          secretaria_id_snapshot: null,
+          tipo_administracion:    { not: "paraestatal" },
+        },
+        data: { secretaria_id_snapshot: actualizado.secretaria_id },
+      })
+    }
+    if (actualizado.secretaria_texto && !usuarioActual.secretaria_texto) {
+      await prisma.solicitud.updateMany({
+        where: {
+          usuario_id:              id,
+          secretaria_txt_snapshot: null,
+          tipo_administracion:     "paraestatal",
+        },
+        data: { secretaria_txt_snapshot: actualizado.secretaria_texto },
+      })
+    }
+
+    // Si la secretaría cambió, forzar cierre de sesión al usuario afectado
+    if (secretariaIdCambia || secretariaTextoCambia) {
+      broadcastForceLogout([id])
+    }
 
     return NextResponse.json({
       id:                 actualizado.id,

@@ -43,6 +43,21 @@ export function AutorizacionesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { void recargar() }, [recargar])
 
+  // Sincronización en tiempo real: cuando cualquier sesión otorga, revoca o consume
+  // un permiso, el servidor emite "permisos-captura" por SSE y todos los clientes recargan.
+  useEffect(() => {
+    const es = new EventSource("/api/events")
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as { apartados?: string[] }
+        if (data.apartados?.includes("permisos-captura")) {
+          void recargar()
+        }
+      } catch {}
+    }
+    return () => es.close()
+  }, [recargar])
+
   const habilitarPermiso = useCallback(async (data: {
     userId: string
     regimen: "honorarios" | "asimilados" | "nombramiento"

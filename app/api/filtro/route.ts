@@ -141,23 +141,22 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({ ok: true, data: [] })
         }
 
-        if (!esRolRevisor && filtro === 1) {
-          if (viewer.organo_centralizado !== null && viewer.secretaria_id) {
+        // Aplicar filtro de secretaría para TODOS los filtros (1, 2 y 3), no solo filtro=1.
+        // Solo se omite para el rol "revisor" que ya filtra por revisor_asignado_id.
+        if (!esRolRevisor) {
+          if (viewer.secretaria_id) {
+            // Centralizada: solo solicitudes con snapshot de esta secretaría.
+            // Sin fallback null para evitar mostrar registros de secretarías anteriores.
             organoFilter = {
-              tipo_administracion: { not: "paraestatal" },
-              OR: [
-                { secretaria_id_snapshot: viewer.secretaria_id },
-                { secretaria_id_snapshot: null, usuario: { secretaria_id: viewer.secretaria_id } },
-              ],
+              secretaria_id_snapshot: viewer.secretaria_id,
+            }
+          } else if (viewer.secretaria_texto) {
+            organoFilter = {
+              secretaria_txt_snapshot: viewer.secretaria_texto,
             }
           } else {
-            organoFilter = {
-              tipo_administracion: "paraestatal",
-              OR: [
-                { secretaria_txt_snapshot: viewer.secretaria_texto },
-                { secretaria_txt_snapshot: null, usuario: { organo_centralizado: { is: null }, secretaria_texto: viewer.secretaria_texto } },
-              ],
-            }
+            // Usuario sin secretaría configurada: no mostrar nada
+            return NextResponse.json({ ok: true, data: [] })
           }
         }
       }
