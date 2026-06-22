@@ -2,12 +2,13 @@
 
 import { useRef, useState, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Building2, Landmark, FileSpreadsheet, Upload, Loader2, Trash2, FileText, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Settings, Building2, Landmark, FileSpreadsheet, Upload, Loader2, Trash2, FileText, AlertCircle, CheckCircle2, X } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
 import { CatalogoCentralizadaTab } from "@/components/catalogo-centralizada-tab"
 import { CatalogoParaestatalTab } from "@/components/catalogo-paraestatal-tab"
 import { useHistoricoStore } from "@/lib/historico-store"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 function HistoricoTab() {
   const { historicos, loading, error, uploadHistorico, removeHistorico } = useHistoricoStore()
@@ -22,6 +23,16 @@ function HistoricoTab() {
   const [uploadOk, setUploadOk]   = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
 
+  const clearFile1 = useCallback(() => {
+    setFile1(null)
+    if (inputRef.current) inputRef.current.value = ""
+  }, [])
+
+  const clearFile2 = useCallback(() => {
+    setFile2(null)
+    if (input2Ref.current) input2Ref.current.value = ""
+  }, [])
+
   const handleUpload = useCallback(async () => {
     if (!file1) return
     setUploading(true)
@@ -29,8 +40,8 @@ function HistoricoTab() {
     setUploadOk(false)
     try {
       await uploadHistorico(file1, file2)
-      setFile1(null)
-      setFile2(null)
+      clearFile1()
+      clearFile2()
       setUploadOk(true)
       setTimeout(() => setUploadOk(false), 3000)
     } catch (e) {
@@ -38,7 +49,7 @@ function HistoricoTab() {
     } finally {
       setUploading(false)
     }
-  }, [file1, file2, uploadHistorico])
+  }, [file1, file2, uploadHistorico, clearFile1, clearFile2])
 
   const handleRemove = useCallback(async (id: string) => {
     setRemovingId(id)
@@ -54,122 +65,172 @@ function HistoricoTab() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-lg border border-border bg-card p-5 flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
+      {/* Upload card */}
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="border-b border-border bg-muted/40 px-5 py-3.5 flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary/15">
+            <Upload className="h-3.5 w-3.5 text-secondary" />
+          </div>
           <h3 className="text-sm font-semibold text-card-foreground">Cargar Excel histórico</h3>
-          <p className="text-xs text-muted-foreground">
-            Sube uno o dos archivos <span className="font-medium">.xlsx</span> con el histórico de dictámenes. Los datos se usarán para autocompletar renovaciones.
+        </div>
+        <div className="p-5 flex flex-col gap-5">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Sube uno o dos archivos <span className="font-semibold text-card-foreground">.xlsx</span> con el histórico de dictámenes.
+            Los datos se usarán para autocompletar renovaciones.
           </p>
-        </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-muted-foreground font-medium">Archivo principal *</span>
-            <input ref={inputRef} type="file" accept=".xlsx" className="hidden"
-              onChange={(e) => { setFile1(e.target.files?.[0] ?? null); setUploadError(null); setUploadOk(false) }} />
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/50 px-3 py-3 hover:bg-muted transition-colors cursor-pointer text-left w-full"
-            >
-              <FileSpreadsheet className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground truncate">
-                {file1 ? file1.name : "Seleccionar archivo .xlsx"}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {/* Archivo 1 */}
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subir Archivo </span>
+              <input ref={inputRef} type="file" accept=".xlsx" className="hidden"
+                onChange={(e) => { setFile1(e.target.files?.[0] ?? null); setUploadError(null); setUploadOk(false) }} />
+              {file1 ? (
+                <div className="flex items-center gap-2.5 rounded-lg border-2 border-secondary/30 bg-secondary/5 px-3.5 py-3">
+                  <FileSpreadsheet className="h-4 w-4 shrink-0 text-secondary" />
+                  <span className="text-sm text-card-foreground font-medium truncate flex-1">{file1.name}</span>
+                  <button type="button" onClick={clearFile1}
+                    className="rounded p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => inputRef.current?.click()}
+                  className="flex items-center gap-2.5 rounded-lg border-2 border-dashed border-border bg-muted/20 px-3.5 py-3 hover:bg-muted/50 hover:border-secondary/30 transition-colors cursor-pointer text-left w-full group">
+                  <FileSpreadsheet className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-secondary transition-colors" />
+                  <span className="text-sm text-muted-foreground">Seleccionar archivo .xlsx</span>
+                </button>
+              )}
+            </div>
+
+            {/* Archivo 2 */}
+            {file1 && <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+               Subir  Archivo  <span className="font-normal normal-case opacity-60">(opcional)</span>
               </span>
-            </button>
+              <input ref={input2Ref} type="file" accept=".xlsx" className="hidden"
+                onChange={(e) => { setFile2(e.target.files?.[0] ?? null); setUploadError(null); setUploadOk(false) }} />
+              {file2 ? (
+                <div className="flex items-center gap-2.5 rounded-lg border-2 border-secondary/30 bg-secondary/5 px-3.5 py-3">
+                  <FileSpreadsheet className="h-4 w-4 shrink-0 text-secondary" />
+                  <span className="text-sm text-card-foreground font-medium truncate flex-1">{file2.name}</span>
+                  <button type="button" onClick={clearFile2}
+                    className="rounded p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => input2Ref.current?.click()}
+                  className="flex items-center gap-2.5 rounded-lg border-2 border-dashed border-border bg-muted/20 px-3.5 py-3 hover:bg-muted/50 hover:border-secondary/30 transition-colors cursor-pointer text-left w-full group">
+                  <FileSpreadsheet className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-secondary transition-colors" />
+                  <span className="text-sm text-muted-foreground">Seleccionar archivo .xlsx</span>
+                </button>
+              )}
+            </div>}
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-muted-foreground font-medium">Archivo secundario (opcional)</span>
-            <input ref={input2Ref} type="file" accept=".xlsx" className="hidden"
-              onChange={(e) => { setFile2(e.target.files?.[0] ?? null); setUploadError(null); setUploadOk(false) }} />
-            <button
+          <div className="flex items-center gap-3 border-t border-border pt-4">
+            <Button
               type="button"
-              onClick={() => input2Ref.current?.click()}
-              className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/50 px-3 py-3 hover:bg-muted transition-colors cursor-pointer text-left w-full"
+              onClick={handleUpload}
+              disabled={!file1 || uploading}
+              size="sm"
+              className="gap-2"
             >
-              <FileSpreadsheet className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground truncate">
-                {file2 ? file2.name : "Seleccionar archivo .xlsx"}
+              {uploading
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <Upload className="h-3.5 w-3.5" />}
+              {uploading ? "Subiendo..." : "Subir archivos"}
+            </Button>
+            {uploadOk && (
+              <span className="flex items-center gap-1.5 text-sm font-medium text-green-600">
+                <CheckCircle2 className="h-4 w-4" />Subido correctamente
               </span>
-            </button>
+            )}
+            {uploadError && (
+              <span className="flex items-center gap-1.5 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />{uploadError}
+              </span>
+            )}
           </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            onClick={handleUpload}
-            disabled={!file1 || uploading}
-            size="sm"
-            className="gap-1.5"
-          >
-            {uploading
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <Upload className="h-4 w-4" />}
-            {uploading ? "Subiendo..." : "Subir"}
-          </Button>
-          {uploadOk && (
-            <span className="flex items-center gap-1.5 text-sm text-green-600">
-              <CheckCircle2 className="h-4 w-4" />Subido correctamente
-            </span>
-          )}
-          {uploadError && (
-            <span className="flex items-center gap-1.5 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4" />{uploadError}
-            </span>
-          )}
         </div>
       </div>
 
+      {/* Files list */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-card-foreground">
-            Archivos cargados
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-card-foreground">Archivos cargados</h3>
             {historicos.length > 0 && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                ({historicos.length} {historicos.length === 1 ? "archivo" : "archivos"} · {totalRows} registros)
+              <span className="inline-flex items-center justify-center rounded-full bg-secondary/10 text-secondary w-5 h-5 text-xs font-semibold">
+                {historicos.length}
               </span>
             )}
-          </h3>
+          </div>
+          {historicos.length > 0 && (
+            <span className="text-xs text-muted-foreground">{totalRows.toLocaleString()} registros en total</span>
+          )}
         </div>
 
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-            <Loader2 className="h-4 w-4 animate-spin" />Cargando...
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-12">
+            <Loader2 className="h-4 w-4 animate-spin" />Cargando archivos...
           </div>
         ) : error ? (
-          <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-3 text-sm text-destructive">
+          <div className="flex items-center gap-2.5 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3.5 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />{error}
           </div>
         ) : historicos.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border bg-muted/30 px-4 py-8 text-center">
-            <FileSpreadsheet className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">No hay archivos cargados</p>
+          <div className="rounded-xl border border-dashed border-border bg-muted/10 px-4 py-14 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted/80">
+              <FileSpreadsheet className="h-5 w-5 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">Sin archivos cargados</p>
+            <p className="mt-1 text-xs text-muted-foreground/60">Sube un archivo .xlsx para comenzar</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden divide-y divide-border">
             {historicos.map((h) => {
               const rows1 = Object.values(h.sheets).reduce((a, r) => a + r.length, 0)
               const rows2 = h.sheets2 ? Object.values(h.sheets2).reduce((a, r) => a + r.length, 0) : 0
+              const sheets1Count = h.sheetNames.length
+              const sheets2Count = h.sheetNames2?.length ?? 0
               return (
-                <div key={h.id} className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
-                  <FileText className="h-5 w-5 shrink-0 text-secondary" />
-                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                    <span className="text-sm font-medium text-card-foreground truncate">{h.nombreArchivo}</span>
+                <div key={h.id} className="flex items-center gap-4 px-4 py-4 hover:bg-muted/20 transition-colors group">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary/10 border border-secondary/15">
+                    <FileText className="h-4 w-4 text-secondary" />
+                  </div>
+                  <div className="flex flex-col gap-1 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-semibold text-card-foreground truncate">{h.nombreArchivo}</span>
+                      <span className="shrink-0 text-[10px] font-medium rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground">
+                        {sheets1Count} {sheets1Count === 1 ? "hoja" : "hojas"}
+                      </span>
+                    </div>
                     {h.nombreArchivo2 && (
-                      <span className="text-xs text-muted-foreground truncate">{h.nombreArchivo2}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs text-muted-foreground truncate">+ {h.nombreArchivo2}</span>
+                        {sheets2Count > 0 && (
+                          <span className="shrink-0 text-[10px] font-medium rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground">
+                            {sheets2Count} {sheets2Count === 1 ? "hoja" : "hojas"}
+                          </span>
+                        )}
+                      </div>
                     )}
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(h.subidoEn).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      {" · "}{rows1 + rows2} registros
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(h.subidoEn).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      <span className="text-xs text-muted-foreground/30">·</span>
+                      <span className="text-xs font-semibold text-secondary">{(rows1 + rows2).toLocaleString()} registros</span>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemove(h.id)}
                     disabled={removingId === h.id}
-                    className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 shrink-0"
+                    className="rounded-lg p-2 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50 shrink-0"
                   >
                     {removingId === h.id
                       ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -194,10 +255,10 @@ export function ConfiguracionPage() {
       <Tabs defaultValue="centralizada" className="w-full">
         <TabsList className="bg-muted">
 
-          {/* <TabsTrigger value="historico" className="gap-1.5">
+          <TabsTrigger value="historico" className="gap-1.5">
             <FileSpreadsheet className="h-4 w-4" />
             Histórico
-          </TabsTrigger> */}
+          </TabsTrigger>
 
           <TabsTrigger value="centralizada" className="gap-1.5">
             <Building2 className="h-4 w-4" />
