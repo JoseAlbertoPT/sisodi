@@ -1341,7 +1341,6 @@ function FormularioPrestacion({
   const regimenBloqueado = bloqueadoPorRenovacion || regimenPeriodo === "honorarios" || regimenPeriodo === "asimilados"
   const [regimen, setRegimen] = useState(regimenInicial)
   const regimenEfectivo = regimenPeriodo || regimen
-
   const secInicial = datosRenovacion?.secretaria ?? initialData?.secretaria ?? secretariaFija ?? (prefilled ? "Secretaria de Administracion" : "")
   const [secretariaInput,      setSecretariaInput]      = useState(secInicial)
   const [secretariaConfirmada, setSecretariaConfirmada] = useState(secInicial)
@@ -3242,6 +3241,9 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
   const [folioBorradorGuardado, setFolioBorradorGuardado] = useState<string>("")
   const [formData, setFormData] = useState<Partial<FormularioData>>(editSolicitud?.formData ?? {})
   const [archivoAdjunto, setArchivoAdjunto] = useState<File | null>(null)
+  const [excelUploading, setExcelUploading] = useState(false)
+  const [excelError,     setExcelError]     = useState<string | null>(null)
+  const excelInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if ((borradorGuardado || enviado) && editSolicitud?.id && onAfterSave) {
@@ -3263,8 +3265,15 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
     if (regimenPeriodo === "nombramiento") setTipo("nombramiento")
     else if (regimenPeriodo === "honorarios" || regimenPeriodo === "asimilados") setTipo("prestacion")
   }, [regimenPeriodo])
-  const { historicos } = useHistoricoStore()
+  const { historicos, uploadHistorico, removeHistorico } = useHistoricoStore()
   const excelRows = useExcelRows(historicos)
+  const handleExcelUpload = useCallback(async (file: File) => {
+    setExcelUploading(true)
+    setExcelError(null)
+    try { await uploadHistorico(file) }
+    catch (e) { setExcelError(e instanceof Error ? e.message : "Error al cargar el archivo") }
+    finally { setExcelUploading(false) }
+  }, [uploadHistorico])
   const [foliosDB, setFoliosDB] = useState<FolioExcel[]>([])
   const [calHonorarios,    setCalHonorarios]    = useState<PeriodoCap3000[]>([])
   const [calAsimilados,    setCalAsimilados]    = useState<PeriodoCap1000[]>([])
@@ -3889,10 +3898,39 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                       </span>
                     )}
                   </Label>
+                  <input
+                    ref={excelInputRef} type="file" accept=".xlsx" className="hidden"
+                    onChange={async (e) => { const f = e.target.files?.[0]; if (f) { await handleExcelUpload(f); e.target.value = "" } }}
+                  />
+                  {historicos.length > 0 && (
+                    <div className="flex items-center gap-2 rounded-md border border-secondary/30 bg-secondary/5 px-3 py-2">
+                      <FileText className="h-4 w-4 shrink-0 text-secondary" />
+                      <span className="text-xs text-secondary flex-1 truncate">{historicos[historicos.length - 1].nombreArchivo}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeHistorico(historicos[historicos.length - 1].id)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                   {excelRows.length === 0 ? (
-                    <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-3">
-                      <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Sin Dictamen/Opinion Anterior</span>
+                    <div className="flex flex-col gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => excelInputRef.current?.click()}
+                        disabled={excelUploading}
+                        className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/50 px-3 py-3 hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer w-full text-left"
+                      >
+                        {excelUploading
+                          ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                          : <Upload className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                        <span className="text-sm text-muted-foreground">
+                          {excelUploading ? "Cargando..." : "Cargar Excel histórico (.xlsx)"}
+                        </span>
+                      </button>
+                      {excelError && <p className="text-xs text-destructive">{excelError}</p>}
                     </div>
                   ) : !hayFoliosReales ? (
                     <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-3">

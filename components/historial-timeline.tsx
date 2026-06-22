@@ -361,7 +361,7 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
   return (
     <div className="flex flex-col gap-0">
       {visible.map((entry, i) => {
-        const { label, desc, tipo } = getEvento(
+        const { label, tipo } = getEvento(
           entry.estadoAnterior,
           entry.estadoNuevo,
           entry.comentario,
@@ -369,60 +369,19 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
         const diff = parseDiff(entry.comentario)
         const isObs  = tipo === "observacion"
         const isEdit = tipo === "edicion"
-        const isLast = i === visible.length - 1 && !showToggle
 
-        const dotBorder  = isObs ? "border-[#832B56]" : isEdit ? "border-[#C4A882]"  : "border-[#6e795a]"
-        const labelColor = isObs ? "text-[#832B56]"   : isEdit ? "text-[#A0845C]"   : "text-[#6e795a]"
-        const userColor  = isObs ? "text-[#832B56]/80": isEdit ? "text-[#A0845C]/80": "text-[#6e795a]/80"
-
-        const showTransicion = !isEdit && entry.estadoAnterior &&
-          entry.estadoAnterior.trim() !== "" &&
-          entry.estadoAnterior.toLowerCase().trim() !== entry.estadoNuevo.toLowerCase().trim()
-
-        const receiver     = !isEdit && i > 0 ? visible[i - 1] : null
-        const showReceiver = !!receiver && receiver.usuario !== entry.usuario
+        const labelColor = isObs ? "text-[#832B56]" : isEdit ? "text-[#A0845C]" : "text-[#6e795a]"
 
         return (
-          <div key={i} className="flex gap-3">
-            <div className="flex flex-col items-center">
-              <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${dotBorder} bg-card`}>
-                {isEdit
-                  ? <Pencil className="h-2.5 w-2.5 text-[#A0845C]" />
-                  : <div className={`h-2 w-2 rounded-full ${isObs ? "bg-[#832B56]" : "bg-[#6e795a]"}`} />
-                }
-              </div>
-              {!isLast && <div className="w-px flex-1 bg-border" />}
-            </div>
-            <div className="flex flex-col gap-0.5 pb-4 flex-1 min-w-0">
+          <div key={i} className="flex gap-2.5 py-2 border-b border-border/50 last:border-0">
+            <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isObs ? "bg-[#832B56]" : isEdit ? "bg-[#A0845C]" : "bg-[#6e795a]"}`} />
+            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
               <span className={`text-xs font-semibold ${labelColor}`}>{label}</span>
-
-              {/* Línea de usuarios: remitente → receptor · fecha */}
-              <div className="flex items-center gap-1 flex-wrap">
-                <UserCircle className={`h-3 w-3 shrink-0 ${userColor}`} />
-                <span className={`text-[11px] font-semibold ${userColor}`}>{entry.usuario}</span>
-                {showReceiver && (
-                  <>
-                    <MoveRight className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-                    <span className={`text-[11px] font-semibold ${userColor}`}>{receiver!.usuario}</span>
-                  </>
-                )}
-                <span className="text-[10px] text-muted-foreground">· {fmtFecha(entry.fecha)}</span>
+              <div className="flex items-center gap-1 flex-wrap text-[11px] text-muted-foreground">
+                <span>{entry.usuario}</span>
+                <span>·</span>
+                <span>{fmtFecha(entry.fecha)}</span>
               </div>
-
-              {/* Descripción de la acción */}
-              {desc && (
-                <span className="text-[10px] text-muted-foreground/70 ml-4">{desc}</span>
-              )}
-
-              {/* Transición de estados */}
-              {showTransicion && (
-                <span className="text-[10px] text-muted-foreground/70 mt-0.5">
-                  {renombrarEstado(entry.estadoAnterior)}
-                  <span className="mx-1">→</span>
-                  <span className="font-medium">{renombrarEstado(entry.estadoNuevo)}</span>
-                </span>
-              )}
-
               {diff && <DiffDialog cambios={diff} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} />}
             </div>
           </div>
@@ -431,7 +390,7 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
       {showToggle && (
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-1.5 text-[11px] text-secondary hover:text-secondary/80 font-medium mt-1 ml-9 transition-colors"
+          className="flex items-center gap-1.5 text-[11px] text-secondary hover:text-secondary/80 font-medium mt-1 ml-4 transition-colors"
         >
           {expanded ? (
             <><ChevronUp className="h-3 w-3" />Mostrar menos</>

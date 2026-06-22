@@ -203,15 +203,18 @@ function FoliosCell({ sol }: { sol: UrgSolicitud }) {
     </div>
   )
 }
+
 function ordinalRegreso(n: number): string {
   if (n === 1) return "1er Regreso"
   if (n === 2) return "2do Regreso"
   if (n === 3) return "3er Regreso"
   return `${n}° Regreso`
 }
+
 function getFolioHeader(_tab: UrgTab): string {
   return "Folios"
 }
+
 function getTab(estado: UrgEstado): UrgTab {
   const n = (estado ?? "").toLowerCase()
   if (n === "borrador" || n === "en captura") return "Borradores"
@@ -231,6 +234,7 @@ function getTab(estado: UrgEstado): UrgTab {
     return "En aprobación"
   return "Todas"
 }
+
 function getObservador(estado: UrgEstado): string | null {
   const n = (estado ?? "").toLowerCase()
   if (n.includes("observada por uefa") || n.includes("observado por uefa")) return "Validacion UEFA"
@@ -968,6 +972,7 @@ function formatRegimen(raw: string): string {
   if (r.includes("nombramiento") || r.includes("tiempo determinado")) return "Nombramiento por Tiempo Determinado"
   return raw || "—"
 }
+
 function DetalleView({
   sol, onBack, onUpdatePeriodo, onUpdatePeriodoYEnviar, onEditSolicitud, onReenviar, calData,
 }: {
@@ -993,7 +998,6 @@ function DetalleView({
   const isEmitido  = n === "emitido"
   const canContinuarCaptura = !isEmitido
   const isReadOnly = false
-
   const periodoCheck   = checkVigenteFromCal(cal, sol.regimen, sol.periodoAplicacion)
   const tipoCompatible = isRegimenTipoCompatible(sol.regimen, sol.tipo)
   const canSend        = periodoCheck.vigente && tipoCompatible
@@ -1403,26 +1407,8 @@ function DetalleView({
               </button>
             </div>
             {rightTab === "historial" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <History className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">Historial de Estatus</span>
-                    <span className="text-[10px] text-white/60">
-                      {sol.historial.length} entrada{sol.historial.length !== 1 ? "s" : ""} registrada{sol.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                    <span className="text-[11px] font-semibold text-white/90">
-                      {sol.historial.length} entrada{sol.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-card px-5 pt-4 pb-2">
-                  <HistorialTimeline entries={sol.historial} />
-                </div>
+              <div className="rounded-lg border border-border bg-card px-4 py-3">
+                <HistorialTimeline entries={sol.historial} />
               </div>
             )}
 
