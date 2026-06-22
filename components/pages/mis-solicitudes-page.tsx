@@ -609,6 +609,8 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
   )
 }
 
+
+
 function DevolucionObs({ comentario }: { comentario: string }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
