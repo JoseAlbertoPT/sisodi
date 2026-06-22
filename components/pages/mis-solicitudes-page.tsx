@@ -568,6 +568,7 @@ function ReadOnlyTextarea({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
+
 function ObservacionTimeline({ comentario }: { comentario: string }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
@@ -909,6 +910,7 @@ function AdjuntosSection({ bitacora }: { bitacora: BitacoraEntry[] }) {
     </ul>
   )
 }
+
 
 function solToEditPayload(sol: UrgSolicitud): EditSolicitudPayload {
   const tipo: EditSolicitudPayload["tipo"] =

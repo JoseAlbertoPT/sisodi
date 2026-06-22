@@ -100,17 +100,14 @@ export function dateToDmy(d: Date): string {
 }
 
 interface DatePickerHabilProps {
-  
   value?: Date
   onChange: (date: Date | undefined) => void
-  
   fromDate?: Date
-  
+  startMonth?: Date
   defaultMonth?: Date
   placeholder?: string
   disabled?: boolean
   className?: string
-  
   compact?: boolean
 }
 
@@ -118,6 +115,7 @@ export function DatePickerHabil({
   value,
   onChange,
   fromDate,
+  startMonth,
   defaultMonth,
   placeholder = "Seleccionar fecha",
   disabled = false,
@@ -165,7 +163,7 @@ export function DatePickerHabil({
           selected={value}
           month={month}
           onMonthChange={setMonth}
-          startMonth={new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
+          startMonth={startMonth}
           fromDate={fromDate}
           weekStartsOn={1}
           disabled={INHABILES}
@@ -205,7 +203,7 @@ export function DatePickerHabil({
           components={{
             Chevron: ({ orientation }) =>
               orientation === "left"
-                ? null
+                ? <ChevronLeftIcon className="h-4 w-4" />
                 : <ChevronRightIcon className="h-4 w-4" />,
           }}
         />

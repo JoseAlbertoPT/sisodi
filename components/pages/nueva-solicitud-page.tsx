@@ -1547,7 +1547,6 @@ function FormularioPrestacion({
     }
   }
   const handleTipoActividadChange = (val: string) => {
-    if (bloqueadoPorRenovacion) return
     setTipoActividadSeleccionado(val)
     const fila = excelRows.find((row) => {
       const p = !programaSeleccionado || getCell(row, COL.programaProyecto) === programaSeleccionado
@@ -1762,33 +1761,24 @@ function FormularioPrestacion({
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Actividad
-                {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
-              {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground">
-                    {datosRenovacion?.tipoActividad || tipoActividadLabel || "—"}
+              <Select
+                value={tipoActividadSeleccionado}
+                onValueChange={handleTipoActividadChange}
+                disabled={!regimenEfectivo}
+              >
+                <SelectTrigger className={`bg-background w-full ${!regimenEfectivo ? "opacity-60 cursor-not-allowed" : ""}`}>
+                  <span className="block truncate text-sm pr-1">
+                    {tipoActividadLabel ?? <span className="text-muted-foreground">{!regimenEfectivo ? "Seleccione primero un régimen" : "Según unidad administrativa"}</span>}
                   </span>
-                </div>
-              ) : (
-                <Select
-                  value={tipoActividadSeleccionado}
-                  onValueChange={handleTipoActividadChange}
-                  disabled={!regimenEfectivo}
-                >
-                  <SelectTrigger className={`bg-background w-full ${!regimenEfectivo ? "opacity-60 cursor-not-allowed" : ""}`}>
-                    <span className="block truncate text-sm pr-1">
-                      {tipoActividadLabel ?? <span className="text-muted-foreground">{!regimenEfectivo ? "Seleccione primero un régimen" : "Según unidad administrativa"}</span>}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiposActividad.length === 0
-                      ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones para este régimen</div>
-                      : tiposActividad.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
-                    }
-                  </SelectContent>
-                </Select>
-              )}
+                </SelectTrigger>
+                <SelectContent>
+                  {tiposActividad.length === 0
+                    ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones para este régimen</div>
+                    : tiposActividad.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
+                  }
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
@@ -1862,6 +1852,7 @@ function FormularioPrestacion({
                   <DatePickerHabil
                     value={isoToDate(vigenciaInicio)}
                     fromDate={isoToDate(getVigenciaMin())}
+                    startMonth={isoToDate(getVigenciaMin())}
                     onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                     placeholder="Seleccionar inicio"
                     className={`w-full bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`}
@@ -1877,6 +1868,7 @@ function FormularioPrestacion({
                   <DatePickerHabil
                     value={isoToDate(vigenciaFin)}
                     fromDate={isoToDate(vigenciaInicio || getVigenciaMin())}
+                    startMonth={isoToDate(vigenciaInicio || getVigenciaMin())}
                     onChange={(d) => d && setVigenciaFin(dateToIso(d))}
                     placeholder="Seleccionar término"
                     className={`w-full bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`}
@@ -2463,32 +2455,23 @@ function FormularioNombramiento({
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Tipo de Actividad
-                  {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
                 </Label>
-                {bloqueadoPorRenovacion ? (
-                  <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                    <span className="text-sm text-muted-foreground">
-                      {datosRenovacion?.tipoActividad || tipoActividadNomLabel || "—"}
+                <Select
+                  value={tipoActividadSeleccionado}
+                  onValueChange={setTipoActividadSeleccionado}
+                >
+                  <SelectTrigger className="bg-background w-full">
+                    <span className="block truncate text-sm pr-1">
+                      {tipoActividadNomLabel ?? <span className="text-muted-foreground">Seleccione tipo de actividad</span>}
                     </span>
-                  </div>
-                  ) : (
-                  <Select
-                    value={tipoActividadSeleccionado}
-                    onValueChange={setTipoActividadSeleccionado}
-                  >
-                    <SelectTrigger className="bg-background w-full">
-                      <span className="block truncate text-sm pr-1">
-                        {tipoActividadNomLabel ?? <span className="text-muted-foreground">Seleccione tipo de actividad</span>}
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tiposActividadNom.length === 0
-                        ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones disponibles</div>
-                        : tiposActividadNom.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
-                      }
-                    </SelectContent>
-                  </Select>
-                )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposActividadNom.length === 0
+                      ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones disponibles</div>
+                      : tiposActividadNom.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
+                    }
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
@@ -2562,6 +2545,7 @@ function FormularioNombramiento({
                   <DatePickerHabil
                     value={isoToDate(vigenciaInicio)}
                     fromDate={isoToDate(getVigenciaMin())}
+                    startMonth={isoToDate(getVigenciaMin())}
                     onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                     placeholder="Seleccionar inicio"
                     className={`w-full bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`}
@@ -2575,6 +2559,7 @@ function FormularioNombramiento({
                   <DatePickerHabil
                     value={isoToDate(vigenciaFin)}
                     fromDate={isoToDate(vigenciaInicio || getVigenciaMin())}
+                    startMonth={isoToDate(vigenciaInicio || getVigenciaMin())}
                     onChange={(d) => d && setVigenciaFin(dateToIso(d))}
                     placeholder="Seleccionar término"
                     className={`w-full bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`}
