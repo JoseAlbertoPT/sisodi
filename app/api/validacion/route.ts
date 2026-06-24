@@ -186,7 +186,7 @@ export async function PATCH(req: NextRequest) {
           update: { consecutivo: { increment: 1 } },
           create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: 1 },
         })
-        folioRecepcionNuevo = `${mesCode}-${String(registro.consecutivo ?? 1).padStart(3, "0")}`
+        folioRecepcionNuevo = `${mesCode}-${String(registro.consecutivo ?? 1).padStart(3, "0")}-${anioNum}`
       }
     }
 

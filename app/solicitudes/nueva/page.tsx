@@ -355,6 +355,11 @@ function esFechaPasada(dateStr: string): boolean {
   if (!dateStr) return false
   return dateStr < getVigenciaMin()
 }
+function dmyToIso(dmy?: string): string {
+  if (!dmy || !dmy.includes("/")) return ""
+  const [d, m, y] = dmy.split("/")
+  return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
+}
 
 function esFinDeSemana(dateStr: string): boolean {
   if (!dateStr) return false
@@ -1223,7 +1228,7 @@ function getNumeroUA(secretaria: string, unidad: string): string {
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
   datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
-  initialData, esEdicionRevision = false,
+  initialData, esEdicionRevision = false, periodoFechaInicio, periodoFechaFin,
 }: {
   prefilled: boolean
   lockVigenciaOnly?: boolean
@@ -1239,6 +1244,8 @@ function FormularioPrestacion({
   catalogoUAs?: { clave: string; nombre: string }[]
   initialData?: Partial<FormularioData>
   esEdicionRevision?: boolean
+  periodoFechaInicio?: string
+  periodoFechaFin?: string
 }) {
   const bloqueadoPorRenovacion = esRenovacion
 
@@ -1736,38 +1743,48 @@ function FormularioPrestacion({
                   </Badge>
                 )}
               </Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Inicio</span>
-                  <DatePickerHabil
-                    value={isoToDate(vigenciaInicio)}
-                    fromDate={isoToDate(getVigenciaMin())}
-                    onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
-                    placeholder="Seleccionar inicio"
-                    className={`w-full bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`}
-                  />
-                  {esFechaPasada(vigenciaInicio) && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Término</span>
-                  <DatePickerHabil
-                    value={isoToDate(vigenciaFin)}
-                    fromDate={isoToDate(vigenciaInicio || getVigenciaMin())}
-                    onChange={(d) => d && setVigenciaFin(dateToIso(d))}
-                    placeholder="Seleccionar término"
-                    className={`w-full bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`}
-                  />
-                  {esFechaPasada(vigenciaFin) && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.
-                    </p>
-                  )}
-                </div>
-              </div>
+              {(() => {
+                const vigMin = dmyToIso(periodoFechaInicio) || (initialData?.vigenciaInicio && initialData.vigenciaInicio < getVigenciaMin() ? initialData.vigenciaInicio : getVigenciaMin())
+                const isEditing = !!(initialData?.vigenciaInicio)
+                const inicioError = !isEditing && esFechaPasada(vigenciaInicio)
+                const finError = !isEditing && esFechaPasada(vigenciaFin)
+                return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Inicio</span>
+                      <DatePickerHabil
+                        value={isoToDate(vigenciaInicio)}
+                        fromDate={isoToDate(vigMin)}
+                        startMonth={isoToDate(vigenciaInicio || vigMin)}
+                        onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
+                        placeholder="Seleccionar inicio"
+                        className={`w-full bg-background ${inicioError ? "border-destructive" : ""}`}
+                      />
+                      {inicioError && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Término</span>
+                      <DatePickerHabil
+                        value={isoToDate(vigenciaFin)}
+                        fromDate={isoToDate(vigenciaInicio || vigMin)}
+                        startMonth={isoToDate(vigenciaFin || vigenciaInicio || vigMin)}
+                        onChange={(d) => d && setVigenciaFin(dateToIso(d))}
+                        placeholder="Seleccionar término"
+                        className={`w-full bg-background ${finError ? "border-destructive" : ""}`}
+                      />
+                      {finError && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
@@ -1903,7 +1920,7 @@ function FormularioPrestacion({
 function FormularioNombramiento({
   prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
   tipoAdministracionUsuario = "centralizada",
-  initialData,
+  initialData, periodoFechaInicio, periodoFechaFin,
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
@@ -1915,6 +1932,8 @@ function FormularioNombramiento({
   catalogoUAs?: { clave: string; nombre: string }[]
   tipoAdministracionUsuario?: "centralizada" | "paraestatal"
   initialData?: Partial<FormularioData>
+  periodoFechaInicio?: string
+  periodoFechaFin?: string
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [importeNeto,    setImporteNeto]    = useState(
@@ -2330,34 +2349,44 @@ function FormularioNombramiento({
                 Vigencia
                 {bloqueadoPorRenovacion && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-secondary text-secondary ml-1">Editable</Badge>}
               </Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Inicio</span>
-                  <DatePickerHabil
-                    value={isoToDate(vigenciaInicio)}
-                    fromDate={isoToDate(getVigenciaMin())}
-                    onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
-                    placeholder="Seleccionar inicio"
-                    className={`w-full bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`}
-                  />
-                  {esFechaPasada(vigenciaInicio) && (
-                    <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.</p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Término</span>
-                  <DatePickerHabil
-                    value={isoToDate(vigenciaFin)}
-                    fromDate={isoToDate(vigenciaInicio || getVigenciaMin())}
-                    onChange={(d) => d && setVigenciaFin(dateToIso(d))}
-                    placeholder="Seleccionar término"
-                    className={`w-full bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`}
-                  />
-                  {esFechaPasada(vigenciaFin) && (
-                    <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.</p>
-                  )}
-                </div>
-              </div>
+              {(() => {
+                const vigMin = dmyToIso(periodoFechaInicio) || (initialData?.vigenciaInicio && initialData.vigenciaInicio < getVigenciaMin() ? initialData.vigenciaInicio : getVigenciaMin())
+                const isEditing = !!(initialData?.vigenciaInicio)
+                const inicioError = !isEditing && esFechaPasada(vigenciaInicio)
+                const finError = !isEditing && esFechaPasada(vigenciaFin)
+                return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Inicio</span>
+                      <DatePickerHabil
+                        value={isoToDate(vigenciaInicio)}
+                        fromDate={isoToDate(vigMin)}
+                        startMonth={isoToDate(vigenciaInicio || vigMin)}
+                        onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
+                        placeholder="Seleccionar inicio"
+                        className={`w-full bg-background ${inicioError ? "border-destructive" : ""}`}
+                      />
+                      {inicioError && (
+                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Término</span>
+                      <DatePickerHabil
+                        value={isoToDate(vigenciaFin)}
+                        fromDate={isoToDate(vigenciaInicio || vigMin)}
+                        startMonth={isoToDate(vigenciaFin || vigenciaInicio || vigMin)}
+                        onChange={(d) => d && setVigenciaFin(dateToIso(d))}
+                        placeholder="Seleccionar término"
+                        className={`w-full bg-background ${finError ? "border-destructive" : ""}`}
+                      />
+                      {finError && (
+                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2">
@@ -3822,6 +3851,8 @@ export function NuevaSolicitudPage({
               catalogoUAs={catalogoUAsDelUsuario}
               initialData={editSolicitud?.formData}
               esEdicionRevision={editSolicitud?.fromRevision}
+              periodoFechaInicio={periodoInfo?.row?.fechaInicio}
+              periodoFechaFin={periodoInfo?.row?.fechaFin}
             />
           ) : (
             <FormularioNombramiento
@@ -3837,6 +3868,8 @@ export function NuevaSolicitudPage({
               catalogoUAs={catalogoUAsDelUsuario}
               tipoAdministracionUsuario={user?.tipoAdministracion ?? "centralizada"}
               initialData={editSolicitud?.formData}
+              periodoFechaInicio={periodoInfo?.row?.fechaInicio}
+              periodoFechaFin={periodoInfo?.row?.fechaFin}
             />
           )}
 

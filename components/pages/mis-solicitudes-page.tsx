@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import { applyTextRules } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
@@ -523,6 +524,7 @@ function SectionCard({
     </Card>
   )
 }
+
 function toList(val: string | string[]): string[] {
   if (Array.isArray(val)) return val.filter(Boolean)
   if (!val) return []
@@ -550,7 +552,7 @@ function ReadOnlyList({ label, value, sub, noScroll }: { label: string; value: s
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
                 {idx + 1}
               </span>
-              <span className="text-sm text-card-foreground" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{item}</span>
+              <span className="text-sm text-card-foreground" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{applyTextRules(item)}</span>
             </div>
           ))}
         </div>
@@ -563,7 +565,7 @@ function ReadOnlyTextarea({ label, value }: { label: string; value: string }) {
     <div className="flex flex-col gap-1 col-span-2">
       <span className="text-xs text-muted-foreground">{label}</span>
       {value
-        ? <p className="scroll-thin text-sm text-card-foreground whitespace-pre-line leading-relaxed border border-border rounded-md px-3 py-2 bg-muted/30" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden" }}>{value}</p>
+        ? <p className="scroll-thin text-sm text-card-foreground whitespace-pre-line leading-relaxed border border-border rounded-md px-3 py-2 bg-muted/30" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden" }}>{applyTextRules(value)}</p>
         : <span className="text-sm text-muted-foreground italic">—</span>}
     </div>
   )
@@ -668,6 +670,7 @@ function DevolucionObs({ comentario }: { comentario: string }) {
     </div>
   )
 }
+
 function ParsedObservacion({ comentario, borderColor = "orange" }: { comentario: string; borderColor?: "orange" | "red" }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const esChecklist = lineas.some(l => /^\d+\.\s.+::/.test(l))
@@ -708,8 +711,8 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Unidad Administrativa de Adscripción"   value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
           <ReadOnlyField label="Unidad Responsable del Gasto"           value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
           <ReadOnlyField label="Número de Prestadores de Servicios"     value={solicitud.numeroPrestadores} />
-          <ReadOnlyField label="Programa o Proyecto"                    value={solicitud.programaProyecto} />
-          <ReadOnlyField label="Tipo de Actividad"                      value={solicitud.tipoActividades} />
+          <ReadOnlyField label="Programa o Proyecto"                    value={applyTextRules(solicitud.programaProyecto)} />
+          <ReadOnlyField label="Tipo de Actividad"                      value={applyTextRules(solicitud.tipoActividades)} />
           <ReadOnlyField label="Régimen de Contratación"                value={formatRegimen(solicitud.regimen)} />
           <ReadOnlyField label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                       value={solicitud.vigenciaFin} />
@@ -822,11 +825,11 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Secretaría / Dependencia / Organismo"  value={solicitud.secretaria} />
           <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
           <ReadOnlyField label="Unidad Responsable del Gasto"          value={solicitud.unidadResponsable} />
-          <ReadOnlyField label="Programa o Proyecto"                   value={solicitud.programaProyecto} />
+          <ReadOnlyField label="Programa o Proyecto"                   value={applyTextRules(solicitud.programaProyecto)} />
           <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(solicitud.regimen)} />
-          <ReadOnlyField label="Denominación del Nombramiento"         value={solicitud.denominacion} />
-          <ReadOnlyField label="Puesto del Jefe Inmediato"             value={solicitud.puestoJefeInmediato} />
-          <ReadOnlyField label="Tipo de Actividad"                   value={solicitud.tipoActividades} />
+          <ReadOnlyField label="Denominación del Nombramiento"         value={applyTextRules(solicitud.denominacion)} />
+          <ReadOnlyField label="Puesto del Jefe Inmediato"             value={applyTextRules(solicitud.puestoJefeInmediato)} />
+          <ReadOnlyField label="Tipo de Actividad"                   value={applyTextRules(solicitud.tipoActividades)} />
           <ReadOnlyField label="Número de Personas a Contratar"        value={solicitud.numeroPrestadores} />
           <ReadOnlyField label="Tipo de Pago"    value={solicitud.tipoImporte || "Mensual"} />
           <ReadOnlyField label="Importe Neto"  value={solicitud.importeBruto} />

@@ -15,7 +15,7 @@ function generarFolioTemporal(id: number, fecha: Date | null | undefined): strin
   const mes = f.getMonth() + 1
   const ini = INICIALES_MES[mes] ?? "XX"
   const num = String(id).padStart(3, "0")
-  return `${ini}-${num}`
+  return `${ini}-${num}-${f.getFullYear()}`
 }
 
 function resolverFolioDictamen(sol: any): string | null {

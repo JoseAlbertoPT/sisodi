@@ -1,6 +1,6 @@
 "use client"
 
-import { normalizeText } from "@/lib/utils"
+import { normalizeText, applyTextRules } from "@/lib/utils"
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
@@ -119,7 +119,8 @@ function formatEscolaridad(raw: string | null | undefined): string {
   if (e === "licenciatura") return "Licenciatura"
   if (e === "maestria")     return "Maestría"
   if (e === "doctorado")    return "Doctorado"
-  return raw || "—"
+  if (!raw) return "—"
+  return applyTextRules(raw)
 }
 function getEstadoEnRevision(filtro: number) {
   if (filtro === 1) return "En Revision Revisor"
@@ -271,7 +272,7 @@ function PerfilListField({ label, value }: { label: string; value: string | null
           {items.map((item, i) => (
             <li key={i} className="flex gap-2 text-sm text-card-foreground">
               <span className="shrink-0 text-muted-foreground">•</span>
-              <span>{item}</span>
+              <span>{applyTextRules(item)}</span>
             </li>
           ))}
         </ul>
@@ -293,7 +294,7 @@ function ListaItems({ items }: { items: string[] }) {
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary mt-0.5">
             {i + 1}
           </span>
-          <span style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{item}</span>
+          <span style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{applyTextRules(item)}</span>
         </li>
       ))}
     </ul>
@@ -313,8 +314,8 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
           <ReadOnlyField label="Unidad Responsable del Gasto"          value={getNombreForClave(raw?.unidad_responsable ?? "") || raw?.nombre_unidad_responsable || raw?.unidad_responsable_nombre || raw?.unidad_responsable || "—"} />
           <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(raw?.regimen)} />
           <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
-          <ReadOnlyField label="Programa o Proyecto"                   value={raw?.programa_proyecto ?? "—"} />
-          <ReadOnlyField label="Tipo de Actividades"                   value={raw?.tipo_actividades ?? "—"} />
+          <ReadOnlyField label="Programa o Proyecto"                   value={applyTextRules(raw?.programa_proyecto ?? "—")} />
+          <ReadOnlyField label="Tipo de Actividades"                   value={applyTextRules(raw?.tipo_actividades ?? "—")} />
           <ReadOnlyField label="Vigencia Inicio"                       value={formatFecha(raw?.vigencia_inicio)} />
           <ReadOnlyField label="Vigencia Término"                      value={formatFecha(raw?.vigencia_fin)} />
           <ReadOnlyField label="Importe Bruto"                         value={raw?.importe_bruto != null ? `$${Number(raw.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"} />
@@ -325,7 +326,7 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
           className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap"
           style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
         >
-          {raw?.objeto || <span className="text-muted-foreground">—</span>}
+          {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
       <SectionCard title="I.2 Actividades a Realizar">

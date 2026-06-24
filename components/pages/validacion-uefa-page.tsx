@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
+import { applyTextRules } from "@/lib/utils"
 import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
@@ -174,7 +175,8 @@ function formatEscolaridad(raw: string): string {
   if (e === "licenciatura") return "Licenciatura"
   if (e === "maestria")     return "Maestría"
   if (e === "doctorado")    return "Doctorado"
-  return raw || "—"
+  if (!raw) return "—"
+  return applyTextRules(raw)
 }
 
 function resolverFolioDictamen(item: any): string | null {
@@ -688,7 +690,7 @@ function PerfilListField({ label, value }: { label: string; value: string | null
           {items.map((item, i) => (
             <li key={i} className="flex gap-2 text-sm text-card-foreground">
               <span className="shrink-0 text-muted-foreground">•</span>
-              <span>{item}</span>
+              <span>{applyTextRules(item)}</span>
             </li>
           ))}
         </ul>
@@ -711,7 +713,7 @@ function ListaItems({ items }: { items: string[] }) {
             {i + 1}
           </span>
           <span style={{ wordBreak: "break-word", overflowWrap: "break-word", whiteSpace: "normal" }}>
-            {item}
+            {applyTextRules(item)}
           </span>
         </li>
       ))}
@@ -794,16 +796,16 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
           <ReadOnlyField label="Secretaría / Dependencia / Organismo" value={solicitud.secretaria} />
           <ReadOnlyField label="Unidad Administrativa de Adscripción" value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
           <ReadOnlyField label="Unidad Responsable del Gasto"         value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
-          <ReadOnlyField label="Programa o Proyecto"                  value={solicitud.programaProyecto} />
+          <ReadOnlyField label="Programa o Proyecto"                  value={applyTextRules(solicitud.programaProyecto)} />
           <ReadOnlyField label="Régimen de Contratación"              value={formatRegimen(solicitud.regimen)} />
           {esNombramiento && (
-            <ReadOnlyField label="Denominación del Nombramiento"      value={solicitud.denominacion} />
+            <ReadOnlyField label="Denominación del Nombramiento"      value={applyTextRules(solicitud.denominacion)} />
           )}
           {esNombramiento && (
-            <ReadOnlyField label="Puesto del Jefe Inmediato"          value={raw?.puesto_jefe_inmediato ?? "—"} />
+            <ReadOnlyField label="Puesto del Jefe Inmediato"          value={applyTextRules(raw?.puesto_jefe_inmediato ?? "—")} />
           )}
           <ReadOnlyField label="Número de Prestadores de Servicio"    value={solicitud.numeroPrestadores} />
-          <ReadOnlyField label="Tipo de Actividad"                value={solicitud.tipoActividades} />
+          <ReadOnlyField label="Tipo de Actividad"                value={applyTextRules(solicitud.tipoActividades)} />
           <ReadOnlyField label="Tipo de Pago"    value={raw?.tipo_importe || "Mensual"} />
           <ReadOnlyField label="Vigencia Inicio"                      value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                     value={solicitud.vigenciaFin} />
@@ -824,7 +826,7 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
           style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
         >
           {solicitud.objeto && solicitud.objeto !== "—"
-            ? solicitud.objeto
+            ? applyTextRules(solicitud.objeto)
             : <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>

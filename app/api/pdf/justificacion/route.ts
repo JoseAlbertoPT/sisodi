@@ -12,10 +12,9 @@ import {
 } from "@/components/plantillas/PlantillaNombramientoDeterminado";
 import { efirmaClient } from "@/lib/efirma-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
+import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
 import React from "react";
 
-/* ── Helper: drena un Node Readable a Buffer (necesario para post-procesar
- *  el PDF con pdf-lib cuando se estampa la constancia eFirma). ── */
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream as AsyncIterable<Buffer | string>) {
@@ -24,7 +23,6 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-/* ── Helper: Convierte un string separado por saltos de línea en array ── */
 function splitToArray(str: string | null | undefined): string[] {
   if (!str || str.trim() === "") return [];
   return str
@@ -39,7 +37,6 @@ function formatString(str: string | null | undefined): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-/* ── Helper: arma un sello digital ficticio para modo bypass ── */
 function selloFalso(prefix: string, length = 344): string {
   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   let out = prefix;
@@ -73,7 +70,6 @@ function buildFirmaFicticia(firmante: any, uuid?: string | null): FirmaPortal {
   };
 }
 
-/* ── POST /api/pdf/justificacion ── */
 
 interface FirmaNames {
   firmaElaboroNombre?: string;
@@ -219,10 +215,10 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         secretaria: sol.secretaria ?? "",
         unidadAdministrativa: sol.unidad_administrativa ?? "",
         unidadResponsable: sol.unidad_responsable ?? "",
-        programaProyecto: sol.programa_proyecto ?? "",
-        denominacionNombramiento: formatString(sol.denominacion),
-        tipoActividad: formatString(sol.tipo_actividades),
-        puestoJefeInmediato: formatString(sol.puesto_jefe_inmediato),
+        programaProyecto: applyTextRules(sol.programa_proyecto ?? ""),
+        denominacionNombramiento: applyTextRules(formatString(sol.denominacion)),
+        tipoActividad: applyTextRules(formatString(sol.tipo_actividades)),
+        puestoJefeInmediato: applyTextRules(formatString(sol.puesto_jefe_inmediato)),
         numeroPersonas: sol.numero_prestadores ?? 1,
         importeNetoMensual: sol.importe_bruto
           ? `$${Number(sol.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
@@ -239,10 +235,10 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         renovacion: sol.es_renovacion ?? false,
         folioAnterior: sol.folio_anterior ?? "",
 
-        objetoNombramiento: sol.objeto ?? "",
-        funcionesPrincipales: sol.actividades ?? [],
-        responsabilidades: sol.responsabilidades ?? [],
-        marcoNormativo: sol.marco_normativo ?? [],
+        objetoNombramiento: applyTextRules(sol.objeto ?? ""),
+        funcionesPrincipales: applyTextRulesArray(sol.actividades ?? []),
+        responsabilidades: applyTextRulesArray(sol.responsabilidades ?? []),
+        marcoNormativo: applyTextRulesArray(sol.marco_normativo ?? []),
 
         condiciones: {
           cambioDomicilio: sol.condicion_cambio_domicilio ?? false,
@@ -258,12 +254,12 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         resguardoActivos: sol.resguardo_activos === "si",
 
         perfil: {
-          escolaridadMinima: splitToArray(sol.escolaridad),
-          competenciasAdministrativas: splitToArray(sol.comp_adm),
-          competenciasTecnicas: splitToArray(sol.comp_tec),
-          competenciasSociales: splitToArray(sol.comp_soc),
-          valores: splitToArray(sol.valores),
-          areasExperiencia: splitToArray(sol.areas_exp),
+          escolaridadMinima: applyTextRulesArray(splitToArray(sol.escolaridad)),
+          competenciasAdministrativas: applyTextRulesArray(splitToArray(sol.comp_adm)),
+          competenciasTecnicas: applyTextRulesArray(splitToArray(sol.comp_tec)),
+          competenciasSociales: applyTextRulesArray(splitToArray(sol.comp_soc)),
+          valores: applyTextRulesArray(splitToArray(sol.valores)),
+          areasExperiencia: applyTextRulesArray(splitToArray(sol.areas_exp)),
           aniosExperiencia: "",
         },
         firmaElaboroNombre: firmas.firmaElaboroNombre,
@@ -288,8 +284,8 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         unidadResponsable:  sol.unidad_responsable ?? "",
         regimenContratacion: sol.regimen ?? "",
         numeroPrestadores:  sol.numero_prestadores ?? 1,
-        programaProyecto:   formatString(sol.programa_proyecto),
-        tipoActividades:    formatString(sol.tipo_actividades),
+        programaProyecto:   applyTextRules(formatString(sol.programa_proyecto)),
+        tipoActividades:    applyTextRules(formatString(sol.tipo_actividades)),
         vigenciaInicio:     sol.vigencia_inicio
           ? sol.vigencia_inicio.toISOString().split("T")[0]
           : "",
@@ -305,19 +301,19 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         esRenovacion:       sol.es_renovacion ?? false,
         folioAnterior:      sol.folio_anterior ?? "",
 
-        objetoContratacion: sol.objeto ?? "",
+        objetoContratacion: applyTextRules(sol.objeto ?? ""),
 
-        actividades:        sol.actividades ?? [],
+        actividades:        applyTextRulesArray(sol.actividades ?? []),
 
-        responsabilidades:  sol.responsabilidades ?? [],
+        responsabilidades:  applyTextRulesArray(sol.responsabilidades ?? []),
 
         perfil: {
-          escolaridadMinima:          splitToArray(sol.escolaridad),
-          competenciasAdministrativas: splitToArray(sol.comp_adm),
-          competenciasTecnicas:        splitToArray(sol.comp_tec),
-          competenciasSociales:        splitToArray(sol.comp_soc),
-          valores:                     splitToArray(sol.valores),
-          areasExperiencia:            splitToArray(sol.areas_exp),
+          escolaridadMinima:          applyTextRulesArray(splitToArray(sol.escolaridad)),
+          competenciasAdministrativas: applyTextRulesArray(splitToArray(sol.comp_adm)),
+          competenciasTecnicas:        applyTextRulesArray(splitToArray(sol.comp_tec)),
+          competenciasSociales:        applyTextRulesArray(splitToArray(sol.comp_soc)),
+          valores:                     applyTextRulesArray(splitToArray(sol.valores)),
+          areasExperiencia:            applyTextRulesArray(splitToArray(sol.areas_exp)),
         },
         firmaElaboroNombre: firmas.firmaElaboroNombre,
         firmaRevisoNombre: firmas.firmaRevisoNombre,

@@ -103,6 +103,7 @@ interface DatePickerHabilProps {
   value?: Date
   onChange: (date: Date | undefined) => void
   fromDate?: Date
+  toDate?: Date
   startMonth?: Date
   defaultMonth?: Date
   placeholder?: string
@@ -115,6 +116,7 @@ export function DatePickerHabil({
   value,
   onChange,
   fromDate,
+  toDate,
   startMonth,
   defaultMonth,
   placeholder = "Seleccionar fecha",
@@ -126,14 +128,15 @@ export function DatePickerHabil({
 
   
   const [month, setMonth] = React.useState<Date>(
-    () => value ?? defaultMonth ?? new Date()
+    () => value ?? defaultMonth ?? startMonth ?? fromDate ?? new Date()
   )
 
-  
   React.useEffect(() => {
     if (value) setMonth(value)
     else if (defaultMonth) setMonth(defaultMonth)
-  }, [value, defaultMonth])
+    else if (startMonth) setMonth(startMonth)
+    else if (fromDate) setMonth(fromDate)
+  }, [value, defaultMonth, startMonth, fromDate])
 
   const label = value
     ? value.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
@@ -163,10 +166,15 @@ export function DatePickerHabil({
           selected={value}
           month={month}
           onMonthChange={setMonth}
-          startMonth={startMonth}
+          startMonth={startMonth ?? fromDate}
           fromDate={fromDate}
+          toDate={toDate}
           weekStartsOn={1}
-          disabled={INHABILES}
+          disabled={[
+            ...INHABILES,
+            ...(fromDate ? [{ before: fromDate }] : []),
+            ...(toDate   ? [{ after:  toDate   }] : []),
+          ]}
           onSelect={(date) => {
             onChange(date)
             if (date) setOpen(false)

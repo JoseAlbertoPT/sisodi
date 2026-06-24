@@ -8,15 +8,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PageLayout } from "@/components/page-layout"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   FileText, Briefcase, FileQuestion, UserCheck,
   FileOutput, Users, Clock, RefreshCw, Loader2,
-  BarChart2, TrendingUp,
+  BarChart2, TrendingUp, Download, FileSpreadsheet, ChevronRight,
 } from "lucide-react"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList, Label,
 } from "recharts"
+import * as XLSX from "xlsx"
 
 interface DashboardData {
   totalRecibidas:            number
@@ -184,6 +186,7 @@ function GraficaEmisiones({ data, title, barKey, barColor }: {
           </span>
         </div>
       </CardHeader>
+
       <CardContent className="pt-2">
         <ResponsiveContainer width="100%" height={320}>
           <BarChart
@@ -201,18 +204,18 @@ function GraficaEmisiones({ data, title, barKey, barColor }: {
               textAnchor="end"
               tickLine={false}
               axisLine={{ stroke: "#d6d5cf" }}
-            />
-            <YAxis
-              tick={{ fontSize: 10, fill: "#9a9890" }}
-              allowDecimals={false}
-              width={30}
-              tickLine={false}
-              axisLine={false}
-              domain={[0, Math.ceil(maxVal * 1.18)]}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-            <Bar dataKey={barKey} name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"} fill={barColor} radius={[5, 5, 0, 0]} barSize={24}>
-              <LabelList
+               />
+               <YAxis
+               tick={{ fontSize: 10, fill: "#9a9890" }}
+               allowDecimals={false}
+               width={30}
+               tickLine={false}
+               axisLine={false}
+                domain={[0, Math.ceil(maxVal * 1.18)]}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
+                <Bar dataKey={barKey} name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"} fill={barColor} radius={[5, 5, 0, 0]} barSize={24}>
+                <LabelList
                 dataKey={barKey}
                 position="top"
                 style={{ fontSize: 10, fontWeight: 600, fill: barColor }}
@@ -250,7 +253,6 @@ const COLORES_TIPO: Record<string, string> = {
 
   Paraestatal:  C_DORADO,
 }
-
 function DonutSimple({ items, subLabel }: {
   items: { name: string; value: number; color: string }[]
   subLabel: string
@@ -381,14 +383,14 @@ function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prest
                 paddingAngle={3}
                 dataKey="value"
                 strokeWidth={0}
-              >
+                >
                 {items.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
                 <Label content={<CenterLabel total={total} label="prestadores" />} position="center" />
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend
                 verticalAlign="bottom"
                 iconSize={9}
                 iconType="circle"
@@ -532,10 +534,208 @@ function KpiCard({
   )
 }
 
+function styleSheet(ws: XLSX.WorkSheet) {
+  if (!ws["!ref"]) return ws
+  const range = XLSX.utils.decode_range(ws["!ref"])
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const hAddr = XLSX.utils.encode_cell({ r: 0, c: C })
+    if (ws[hAddr]) {
+      ws[hAddr].s = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "283C2A" } },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        border: { bottom: { style: "thin", color: { rgb: "CCCCCC" } } },
+      }
+    }
+    for (let R = 1; R <= range.e.r; R++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C })
+      if (ws[addr]) {
+        ws[addr].s = {
+          alignment: { vertical: "center", wrapText: true },
+          fill: { fgColor: { rgb: R % 2 === 0 ? "F4F4F0" : "FFFFFF" } },
+          border: { bottom: { style: "hair", color: { rgb: "E0E0D8" } } },
+        }
+      }
+    }
+  }
+  return ws
+}
+
+function autoColWidths(ws: XLSX.WorkSheet, data: any[][]): XLSX.WorkSheet {
+  if (!data.length) return ws
+  ws["!cols"] = data[0].map((_, c) =>
+    ({ wch: Math.min(50, Math.max(12, ...data.map(r => String(r[c] ?? "").length))) })
+  )
+  return ws
+}
+
+function makeSheet(rows: any[][]): XLSX.WorkSheet {
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+  autoColWidths(ws, rows)
+  styleSheet(ws)
+  return ws
+}
+
+function descargarExcel(wb: XLSX.WorkBook, nombre: string) {
+  XLSX.writeFile(wb, nombre, { bookType: "xlsx", type: "binary", cellStyles: true })
+}
+
+function generarIndicadores(data: DashboardData, periodo: string): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new()
+  const rows = [
+    ["Indicador", "Valor"],
+    ["Total de solicitudes recibidas",                          data.totalRecibidas],
+    ["Justificaciones por Honorarios",                          data.honorarios],
+    ["Justificaciones por Honorarios asimilados a salarios",    data.asimilados],
+    ["Justificaciones por Nombramiento por tiempo determinado", data.nombramiento],
+    ["Justificaciones emitidas",                                data.emitidas],
+    ["Número total de prestadores de servicio",                 data.prestadores],
+    ["Justificaciones en proceso",                              data.enProceso],
+  ]
+  const ws = makeSheet(rows)
+  ws["A1"] = { v: `Indicadores Generales — ${periodo}`, t: "s", s: { font: { bold: true, sz: 13 } } }
+  XLSX.utils.book_append_sheet(wb, ws, "Indicadores")
+  return wb
+}
+
+function generarSolicitudesPorSecretaria(data: DashboardData, periodo: string): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new()
+  const rowsC = [
+    ["Secretaría", "Solicitudes"],
+    ...data.porSecretariaCentralizada.map(r => [r.secretaria, r.count]),
+    ["TOTAL", data.porSecretariaCentralizada.reduce((s, r) => s + r.count, 0)],
+  ]
+  const rowsP = [
+    ["Secretaría", "Solicitudes"],
+    ...data.porSecretariaParaestatal.map(r => [r.secretaria, r.count]),
+    ["TOTAL", data.porSecretariaParaestatal.reduce((s, r) => s + r.count, 0)],
+  ]
+  XLSX.utils.book_append_sheet(wb, makeSheet(rowsC), "Centralizada")
+  XLSX.utils.book_append_sheet(wb, makeSheet(rowsP), "Paraestatal")
+  return wb
+}
+
+function generarEmisiones(data: DashboardData, periodo: string): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new()
+  const rowsC = [
+    ["Secretaría", "Dictámenes"],
+    ...data.emisionesPorSecretaria.filter(e => e.dictamenes > 0).map(r => [r.secretaria, r.dictamenes]),
+  ]
+  const rowsP = [
+    ["Secretaría", "Opiniones"],
+    ...data.emisionesPorSecretaria.filter(e => e.opiniones > 0).map(r => [r.secretaria, r.opiniones]),
+  ]
+  XLSX.utils.book_append_sheet(wb, makeSheet(rowsC), "Centralizada")
+  XLSX.utils.book_append_sheet(wb, makeSheet(rowsP), "Paraestatal")
+  return wb
+}
+
+function generarPrestadores(data: DashboardData, periodo: string): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new()
+  const rowsR = [
+    ["Régimen", "Prestadores"],
+    ...data.prestadoresPorRegimen.map(r => [r.regimen, r.prestadores]),
+  ]
+  const rowsS = [
+    ["Secretaría", "Tipo de Administración", "Prestadores"],
+    ...data.prestadoresPorSecretaria.map(r => [r.secretaria, r.tipo, r.prestadores]),
+  ]
+  XLSX.utils.book_append_sheet(wb, makeSheet(rowsR), "Por Régimen")
+  XLSX.utils.book_append_sheet(wb, makeSheet(rowsS), "Por Secretaría")
+  return wb
+}
+
+function generarReporteCompleto(data: DashboardData, periodo: string): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new()
+
+  XLSX.utils.book_append_sheet(wb, makeSheet([
+    ["Indicador", "Valor"],
+    ["Total de solicitudes recibidas",                          data.totalRecibidas],
+    ["Justificaciones por Honorarios",                          data.honorarios],
+    ["Justificaciones por Honorarios asimilados a salarios",    data.asimilados],
+    ["Justificaciones por Nombramiento por tiempo determinado", data.nombramiento],
+    ["Justificaciones emitidas",                                data.emitidas],
+    ["Número total de prestadores de servicio",                 data.prestadores],
+    ["Justificaciones en proceso",                              data.enProceso],
+  ]), "Indicadores")
+
+  XLSX.utils.book_append_sheet(wb, makeSheet([
+    ["Secretaría", "Solicitudes"],
+    ...data.porSecretariaCentralizada.map(r => [r.secretaria, r.count]),
+  ]), "Solicitudes Centralizada")
+
+  XLSX.utils.book_append_sheet(wb, makeSheet([
+    ["Secretaría", "Solicitudes"],
+    ...data.porSecretariaParaestatal.map(r => [r.secretaria, r.count]),
+  ]), "Solicitudes Paraestatal")
+
+  XLSX.utils.book_append_sheet(wb, makeSheet([
+    ["Secretaría", "Dictámenes"],
+    ...data.emisionesPorSecretaria.filter(e => e.dictamenes > 0).map(r => [r.secretaria, r.dictamenes]),
+  ]), "Dictámenes")
+
+  XLSX.utils.book_append_sheet(wb, makeSheet([
+    ["Secretaría", "Opiniones"],
+    ...data.emisionesPorSecretaria.filter(e => e.opiniones > 0).map(r => [r.secretaria, r.opiniones]),
+  ]), "Opiniones")
+
+  XLSX.utils.book_append_sheet(wb, makeSheet([
+    ["Régimen", "Prestadores"],
+    ...data.prestadoresPorRegimen.map(r => [r.regimen, r.prestadores]),
+  ]), "Prestadores por Régimen")
+
+  XLSX.utils.book_append_sheet(wb, makeSheet([
+    ["Secretaría", "Tipo de Administración", "Prestadores"],
+    ...data.prestadoresPorSecretaria.map(r => [r.secretaria, r.tipo, r.prestadores]),
+  ]), "Prestadores por Secretaría")
+
+  return wb
+}
+
+const REPORTES = [
+  {
+    id:          "completo",
+    titulo:      "Reporte completo",
+    descripcion: "Todos los indicadores y gráficas en un solo archivo (7 hojas)",
+    generar:     generarReporteCompleto,
+    archivo:     (p: string) => `reporte-completo-${p}.xlsx`,
+  },
+  {
+    id:          "indicadores",
+    titulo:      "Indicadores generales",
+    descripcion: "Resumen de los 7 KPIs del tablero",
+    generar:     generarIndicadores,
+    archivo:     (p: string) => `indicadores-${p}.xlsx`,
+  },
+  {
+    id:          "solicitudes",
+    titulo:      "Solicitudes por Secretaría",
+    descripcion: "Desglose de solicitudes recibidas: Centralizada y Paraestatal",
+    generar:     generarSolicitudesPorSecretaria,
+    archivo:     (p: string) => `solicitudes-por-secretaria-${p}.xlsx`,
+  },
+  {
+    id:          "emisiones",
+    titulo:      "Emisiones por Administración",
+    descripcion: "Dictámenes (Centralizada) y Opiniones (Paraestatal) por secretaría",
+    generar:     generarEmisiones,
+    archivo:     (p: string) => `emisiones-${p}.xlsx`,
+  },
+  {
+    id:          "prestadores",
+    titulo:      "Prestadores de Servicio",
+    descripcion: "Prestadores por régimen y por secretaría",
+    generar:     generarPrestadores,
+    archivo:     (p: string) => `prestadores-${p}.xlsx`,
+  },
+]
+
 export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpenReview?: (...args: any[]) => void }) {
-  const [anio,    setAnio]    = useState(String(new Date().getFullYear()))
-  const [mes,     setMes]     = useState("todos")
-  const hasDataRef               = useRef(false)
+  const [anio,          setAnio]          = useState(String(new Date().getFullYear()))
+  const [mes,           setMes]           = useState("todos")
+  const [modalAbierto,  setModalAbierto]  = useState(false)
+  const [descargando,   setDescargando]   = useState<string | null>(null)
+  const hasDataRef                        = useRef(false)
   const [data,    setData]    = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
@@ -576,6 +776,20 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
   const mesFiltroLabel = mes === "todos"
     ? "todos los meses"
     : MESES.find(m => m.value === mes)?.label ?? mes
+  const periodoLabel = mes === "todos" ? anio : `${mesFiltroLabel}-${anio}`
+  const periodoSlug  = mes === "todos" ? anio : `${anio}-${mes}`
+
+  const handleDescargar = (reporte: typeof REPORTES[number]) => {
+    if (!data) return
+    setDescargando(reporte.id)
+    try {
+      const wb = reporte.generar(data, periodoLabel)
+      descargarExcel(wb, reporte.archivo(periodoSlug))
+    } finally {
+      setDescargando(null)
+    }
+  }
+
   return (
     <PageLayout
       title="Tablero Informativo"
@@ -605,6 +819,16 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
           </SelectContent>
         </Select>
 
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 ml-auto"
+          disabled={!data || loading}
+          onClick={() => setModalAbierto(true)}
+        >
+          <Download className="h-4 w-4" />
+          Descargar reportes
+        </Button>
 
         {error && (
           <Badge variant="destructive" className="text-xs gap-1">
@@ -612,6 +836,45 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
           </Badge>
         )}
       </div>
+
+      <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <FileSpreadsheet className="h-5 w-5 text-secondary" />
+              Reportes disponibles
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground pt-0.5">
+              Periodo: <strong>{periodoLabel}</strong>
+            </p>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 pt-1">
+            {REPORTES.map(r => (
+              <button
+                key={r.id}
+                onClick={() => handleDescargar(r)}
+                disabled={descargando === r.id}
+                className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left hover:bg-accent/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary/10">
+                  {descargando === r.id
+                    ? <Loader2 className="h-4 w-4 text-secondary animate-spin" />
+                    : <FileSpreadsheet className="h-4 w-4 text-secondary" />
+                  }
+                </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-sm font-medium text-card-foreground">{r.titulo}</span>
+                  <span className="text-xs text-muted-foreground leading-snug">{r.descripcion}</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground pt-1">
+            Los archivos se generan con los datos del periodo seleccionado en el tablero.
+          </p>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {kpis.map(kpi => (

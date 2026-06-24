@@ -1,5 +1,6 @@
 "use client"
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { applyTextRules, applyTextRulesArray } from "@/lib/utils"
 import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
@@ -31,6 +32,8 @@ import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 import { FirmaModal } from "@/components/firma-modal"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
+import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
 const COLOR_SI        = "#6E795A"
 const COLOR_SI_TEXT   = "#283c2a"
 const COLOR_NO        = "#832B56"
@@ -69,7 +72,7 @@ function generarFolioTemporal(id: number, fecha: Date | null | undefined): strin
   const mesStr = String(mes).padStart(2, "0")
   const ini    = INICIALES_MES_MAP[mesStr] ?? "XX"
   const num    = String(id).padStart(3, "0")
-  return `${ini}-${num}`
+  return `${ini}-${num}-${f.getFullYear()}`
 }
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio) return "---"
@@ -273,7 +276,8 @@ function formatEscolaridad(e: string | null | undefined): string {
   if (v === "licenciatura") return "Licenciatura"
   if (v === "maestria")     return "Maestría"
   if (v === "doctorado")    return "Doctorado"
-  return e || "—"
+  if (!e) return "—"
+  return applyTextRules(e)
 }
 
 function getSlaColor(dias: number | null): string {
@@ -519,7 +523,7 @@ function ReadOnlyList({ items }: { items: string[] }) {
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-[10px] font-medium text-secondary mt-0.5">
             {i + 1}
           </span>
-          <span style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{item}</span>
+          <span style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{applyTextRules(item)}</span>
         </li>
       ))}
     </ul>
@@ -557,7 +561,7 @@ function PerfilList({ value }: { value: string }) {
       {items.map((item, i) => (
         <li key={i} className="flex gap-2 text-sm text-card-foreground">
           <span className="shrink-0 text-muted-foreground">•</span>
-          <span>{item}</span>
+          <span>{applyTextRules(item)}</span>
         </li>
       ))}
     </ul>
@@ -585,10 +589,10 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
         <ReadOnlyField label="Unidad Responsable del Gasto"         value={getNombreForClave(raw?.unidad_responsable ?? "") || raw?.nombre_unidad_responsable || raw?.unidad_responsable_nombre || raw?.unidad_responsable || "—"} />
         {esNombramiento ? (
           <>
-            <ReadOnlyField label="Programa o Proyecto"              value={raw?.programa_proyecto ?? "—"} />
-            <ReadOnlyField label="Denominación del Nombramiento"    value={sol.denominacion} />
-            <ReadOnlyField label="Puesto del Jefe Inmediato"        value={raw?.puesto_jefe_inmediato ?? "—"} />
-            <ReadOnlyField label="Tipo de Actividad"              value={raw?.tipo_actividades ?? "—"} />
+            <ReadOnlyField label="Programa o Proyecto"              value={applyTextRules(raw?.programa_proyecto ?? "—")} />
+            <ReadOnlyField label="Denominación del Nombramiento"    value={applyTextRules(sol.denominacion)} />
+            <ReadOnlyField label="Puesto del Jefe Inmediato"        value={applyTextRules(raw?.puesto_jefe_inmediato ?? "—")} />
+            <ReadOnlyField label="Tipo de Actividad"              value={applyTextRules(raw?.tipo_actividades ?? "—")} />
             <ReadOnlyField label="Régimen de Contratación"          value={formatRegimen(sol.regimen)} />
             <ReadOnlyField label="Número de Personas a Contratar"   value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
             <ReadOnlyField label="Tipo de Pago"                     value={raw?.tipo_importe || "Mensual"} />
@@ -599,8 +603,8 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
         ) : (
           <>
             <ReadOnlyField label="Número de Prestadores de Servicios" value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
-            <ReadOnlyField label="Programa o Proyecto"                value={raw?.programa_proyecto ?? "—"} />
-            <ReadOnlyField label="Tipo de Actividad"                value={sol.tipoActividades} />
+            <ReadOnlyField label="Programa o Proyecto"                value={applyTextRules(raw?.programa_proyecto ?? "—")} />
+            <ReadOnlyField label="Tipo de Actividad"                value={applyTextRules(sol.tipoActividades)} />
             <ReadOnlyField label="Régimen de Contratación"            value={formatRegimen(sol.regimen)} />
             <ReadOnlyField label="Vigencia Inicio"                    value={sol.vigenciaInicio} />
             <ReadOnlyField label="Vigencia Término"                   value={sol.vigenciaFin} />
@@ -696,7 +700,7 @@ function ExpedienteFiltro1({ sol, hidePerfil }: { sol: SolicitudDetalle; hidePer
       )}
       <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
         <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
-          {raw?.objeto || <span className="text-muted-foreground">—</span>}
+          {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
       <SectionCard title={esNombramiento ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}>
@@ -746,7 +750,7 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
       )}
       <SectionCard title={esNombramientoTD ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
         <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
-          {raw?.objeto || <span className="text-muted-foreground">—</span>}
+          {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
       <SectionCard title={esNombramientoTD ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}>
@@ -794,7 +798,7 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
       )}
       <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
         <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
-          {raw?.objeto || <span className="text-muted-foreground">—</span>}
+          {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
         </p>
       </SectionCard>
       <SectionCard title={esNombramiento ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}>
@@ -981,7 +985,7 @@ function FolioRecepcionCard({
         setUltimoFrec(json.ultimo)
         if (!esExtemporanea && !folioRecepcion && !autoCalledRef.current) {
           autoCalledRef.current = true
-          const folio = `${mesCodeHoy}-${String(json.siguiente).padStart(3, "0")}`
+          const folio = `${mesCodeHoy}-${String(json.siguiente).padStart(3, "0")}-${anioNum}`
           await onAsignar(folio)
         }
       })
@@ -1009,7 +1013,7 @@ function FolioRecepcionCard({
 
   const mesCodeDefinitivo = INICIALES_MES_MAP[String(mesDefinitivo).padStart(2, "0")] ?? "XX"
   const folioDefinitivo   = siguienteDefinitivo !== null
-    ? `${mesCodeDefinitivo}-${String(siguienteDefinitivo).padStart(3, "0")}`
+    ? `${mesCodeDefinitivo}-${String(siguienteDefinitivo).padStart(3, "0")}-${parseInt(anioDefinitivo, 10)}`
     : null
 
   const folioTemporalPreview = `${mesCodeHoy}-${String(ultimoFrec ?? 0).padStart(3, "0")}-${siguienteExt ?? 1}`
@@ -1020,7 +1024,12 @@ function FolioRecepcionCard({
     setGuardando(false)
   }
 
-  const esFolioTemporal = (f: string) => f.split("-").length >= 3
+  // Temporal = 3 partes donde la última NO es un año de 4 dígitos (ej. MY-001-1)
+  // Normal con año = 3 partes donde la última SÍ es año (ej. MY-001-2026)
+  const esFolioTemporal = (f: string) => {
+    const p = f.split("-")
+    return p.length >= 3 && !/^\d{4}$/.test(p[p.length - 1])
+  }
 
   if (folioRecepcion && (!esExtemporanea || !esFolioTemporal(folioRecepcion))) {
     return (
@@ -1238,6 +1247,43 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
   const today = new Date().toISOString().slice(0, 10)
   const [fechaDictaminacion,    setFechaDictaminacion]    = useState(today)
+
+  const [calData, setCalData] = useState<{ honorarios: any[]; asimilados: any[]; nombramiento: any[] }>({ honorarios: [], asimilados: [], nombramiento: [] })
+  useEffect(() => {
+    const year = new Date().getFullYear()
+    fetch(`/api/calendario?ejercicio=${year}`)
+      .then(r => r.json())
+      .then(data => setCalData({ honorarios: data.honorarios ?? [], asimilados: data.asimilados ?? [], nombramiento: data.nombramiento ?? [] }))
+      .catch(() => {})
+  }, [])
+
+  const dictaminacionRange = useMemo(() => {
+    if (!solicitud) return { from: undefined, to: undefined }
+    const [mesStr] = solicitud.periodo.split("/")
+    const mesNum = parseInt(mesStr, 10)
+    const mesNombre = MESES_RECEPCION.find(m => m.num === mesNum)?.label ?? ""
+    const regimenNorm = (solicitud._raw?.regimen ?? solicitud.regimen ?? "").toLowerCase()
+
+    let row: { limiteDO: string; limiteDGRH: string } | undefined
+
+    if (regimenNorm.includes("honorario")) {
+      row = calData.honorarios.find((r: any) => r.mes === mesNombre)
+    } else {
+      const vigFin: string = solicitud._raw?.vigencia_fin ?? ""
+      const finDay = vigFin ? new Date(vigFin).getUTCDate() : 0
+      const quincena = finDay > 0 && finDay <= 15 ? "1ra" : "2da"
+      const quincenaLabel = `${quincena} ${mesNombre}`
+      const table = regimenNorm.includes("asimilado") ? calData.asimilados : calData.nombramiento
+      row = table.find((r: any) => r.quincena === quincenaLabel)
+    }
+
+    if (!row?.limiteDO || !row?.limiteDGRH) return { from: undefined, to: undefined }
+    const dateA = parseDateDMY(row.limiteDO)
+    const dateB = parseDateDMY(row.limiteDGRH)
+    const from = dateA <= dateB ? dateA : dateB
+    const to   = dateA <= dateB ? dateB : dateA
+    return { from, to }
+  }, [solicitud, calData])
   const [modalidadFirma,        setModalidadFirma]        = useState<"electronica" | "autografa">("electronica")
   const [selectedDestinatarios, setSelectedDestinatarios] = useState<string[]>([])
   const [archivoSubido,         setArchivoSubido]         = useState(false)
@@ -2038,7 +2084,13 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                   <Card className="shadow-sm border-border">
                     <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-card-foreground">Fecha de Dictaminación</CardTitle></CardHeader>
                     <CardContent>
-                      <Input type="date" value={fechaDictaminacion} onChange={e => setFechaDictaminacion(e.target.value)} className="bg-background w-48" />
+                      <DatePickerHabil
+                        value={isoToDate(fechaDictaminacion)}
+                        fromDate={dictaminacionRange.from}
+                        toDate={dictaminacionRange.to}
+                        startMonth={dictaminacionRange.from ?? isoToDate(fechaDictaminacion)}
+                        onChange={date => setFechaDictaminacion(date ? dateToIso(date) : "")}
+                      />
                     </CardContent>
                   </Card>
                   <Card className="shadow-sm border-border">

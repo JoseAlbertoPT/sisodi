@@ -1,6 +1,6 @@
 "use client"
 
-import { normalizeText } from "@/lib/utils"
+import { normalizeText, applyTextRules } from "@/lib/utils"
 import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -361,6 +361,11 @@ function getVigenciaMin(): string {
 function esFechaPasada(dateStr: string): boolean {
   if (!dateStr) return false
   return dateStr < getVigenciaMin()
+}
+function dmyToIso(dmy?: string): string {
+  if (!dmy || !dmy.includes("/")) return ""
+  const [d, m, y] = dmy.split("/")
+  return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
 }
 
 function esFinDeSemana(dateStr: string): boolean {
@@ -771,9 +776,15 @@ function ReadonlyField({ label, value, hint }: { label: string; value: string; h
   )
 }
 
+function syncLength(arr: string[], count: number): string[] {
+  if (arr.length === count) return arr
+  if (arr.length < count) return [...arr, ...Array(count - arr.length).fill("")]
+  return arr.slice(0, count)
+}
+
 function DynamicList({
   label, items, onChange, max = 100, readonly = false,
-  minRequired, nivelTabulador,
+  minRequired, nivelTabulador, forbiddenTexts, onBlurItem,
   }: {
   label: string
   items: string[]
@@ -782,6 +793,8 @@ function DynamicList({
   readonly?: boolean
   minRequired?: number
   nivelTabulador?: string
+  forbiddenTexts?: Set<string>
+  onBlurItem?: (value: string) => string
   }) {
   const minEfectivo = useMemo(() => {
     if (minRequired !== undefined) return minRequired
@@ -796,12 +809,23 @@ function DynamicList({
   }, [nivelTabulador, max])
   const filledCount = items.filter((i) => i.trim() !== "").length
   const belowMin = !readonly && filledCount < minEfectivo
+  const dupFlags = useMemo(() => {
+    const normalized = items.map(i => normalizeText(i.trim()))
+    return normalized.map((n, i) => {
+      if (!n) return false
+      if (forbiddenTexts?.has(n)) return true
+      return normalized.indexOf(n) !== i
+    })
+  }, [items, forbiddenTexts])
+  const hasDups = dupFlags.some(Boolean)
   const itemRefs = useRef<(HTMLTextAreaElement | null)[]>([])
   const prevLengthRef = useRef(items.length)
+  const internalAddRef = useRef(false)
   useEffect(() => {
-    if (items.length > prevLengthRef.current) {
+    if (items.length > prevLengthRef.current && internalAddRef.current) {
       itemRefs.current[items.length - 1]?.focus()
     }
+    internalAddRef.current = false
     prevLengthRef.current = items.length
   }, [items.length])
   return (
@@ -818,78 +842,96 @@ function DynamicList({
         </Label>
       )}
       {items.map((item, idx) => (
-        <div
-          key={idx}
-          className="flex items-start gap-2 rounded-lg border-2 border-transparent px-3 py-2"
-          style={{ width: "100%" }}
+        <div key={idx} className="flex flex-col gap-0.5">
+          <div
+            className={`flex items-start gap-2 rounded-lg border-2 px-3 py-2 ${dupFlags[idx] ? "border-destructive/60 bg-destructive/5" : "border-transparent"}`}
+            style={{ width: "100%" }}
           >
-          <span className="flex h-6 w-6 mt-0.5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
-            {idx + 1}
-          </span>
-          {readonly && !item ? (
-              <span className="text-sm text-muted-foreground">—</span>
-           ) : readonly ? (
-              <span
-                className="text-sm text-muted-foreground"
-                style={{ whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word", flex: 1, minWidth: 0 }}
+            <span className="flex h-6 w-6 mt-0.5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
+              {idx + 1}
+            </span>
+            {readonly && !item ? (
+                <span className="text-sm text-muted-foreground">—</span>
+             ) : readonly ? (
+                <span
+                  className="text-sm text-muted-foreground"
+                  style={{ whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word", flex: 1, minWidth: 0 }}
+                >
+                  {item}
+                </span>
+             ) : (
+              <textarea
+                ref={(el) => {
+                  itemRefs.current[idx] = el
+                  if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px" }
+                }}
+                value={item}
+                rows={1}
+                onChange={(e) => {
+                  const copy = [...items]; copy[idx] = e.target.value; onChange(copy)
+                  const el = e.currentTarget
+                  el.style.height = "auto"; el.style.height = el.scrollHeight + "px"
+                }}
+                onBlur={() => {
+                  if (onBlurItem && item.trim()) {
+                    const transformed = onBlurItem(item)
+                    if (transformed !== item) {
+                      const copy = [...items]; copy[idx] = transformed; onChange(copy)
+                    }
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && items.length < maxEfectivo) {
+                    e.preventDefault()
+                    internalAddRef.current = true
+                    onChange([...items, ""])
+                  }
+                  if ((e.key === "Backspace" || e.key === "Delete") && item === "" && items.length > 1) {
+                    e.preventDefault()
+                    onChange(items.filter((_, i) => i !== idx))
+                    const focusIdx = idx > 0 ? idx - 1 : 0
+                    setTimeout(() => { itemRefs.current[focusIdx]?.focus() }, 0)
+                  }
+                }}
+                placeholder={`${label || "Item"} ${idx + 1}`}
+                className="border-0 shadow-none p-0 text-sm bg-transparent outline-none focus:outline-none"
+                style={{
+                  resize: "none", overflow: "hidden",
+                  whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word",
+                  flex: 1, minWidth: 0, lineHeight: "1.5rem",
+                }}
+              />
+             )}
+            {dupFlags[idx] && !readonly && (
+              <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
+            )}
+            {!readonly && items.length > 1 && (
+              <button
+                type="button"
+                onClick={() => { const copy = items.filter((_, i) => i !== idx); onChange(copy) }}
+                className="ml-auto shrink-0 text-muted-foreground hover:text-destructive transition-colors mt-0.5"
               >
-                {item}
-              </span>
-           ) : (
-            <textarea
-              ref={(el) => {
-                itemRefs.current[idx] = el
-                if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px" }
-              }}
-              value={item}
-              rows={1}
-              onChange={(e) => {
-                const copy = [...items]; copy[idx] = e.target.value; onChange(copy)
-                const el = e.currentTarget
-                el.style.height = "auto"; el.style.height = el.scrollHeight + "px"
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && items.length < maxEfectivo) {
-                  e.preventDefault()
-                  onChange([...items, ""])
-                }
-                if ((e.key === "Backspace" || e.key === "Delete") && item === "" && items.length > 1) {
-                  e.preventDefault()
-                  onChange(items.filter((_, i) => i !== idx))
-                  const focusIdx = idx > 0 ? idx - 1 : 0
-                  setTimeout(() => { itemRefs.current[focusIdx]?.focus() }, 0)
-                }
-              }}
-              placeholder={`${label || "Item"} ${idx + 1}`}
-              className="border-0 shadow-none p-0 text-sm bg-transparent outline-none focus:outline-none"
-              style={{
-                resize: "none", overflow: "hidden",
-                whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word",
-                flex: 1, minWidth: 0, lineHeight: "1.5rem",
-              }}
-            />
-           )}
-          {!readonly && items.length > 1 && (
-            <button
-              type="button"
-              onClick={() => { const copy = items.filter((_, i) => i !== idx); onChange(copy) }}
-              className="ml-auto shrink-0 text-muted-foreground hover:text-destructive transition-colors mt-0.5"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {dupFlags[idx] && !readonly && (
+            <p className="text-xs text-destructive flex items-center gap-1 px-3">
+              <AlertCircle className="h-3 w-3 shrink-0" />Este texto ya existe en otra sección o se repite.
+            </p>
           )}
         </div>
       ))}
       {!readonly && items.length < maxEfectivo && (
         <Button type="button" variant="outline" size="sm" className="w-fit mt-1"
-          onClick={() => onChange([...items, ""])}>
+          onClick={() => { internalAddRef.current = true; onChange([...items, ""]) }}>
           <Plus className="mr-1 h-4 w-4" />Agregar
         </Button>
       )}
       {!readonly && (
-        <p className={`text-xs flex items-center gap-1 mt-0.5 ${belowMin ? "text-destructive" : "text-muted-foreground"}`}>
+        <p className={`text-xs flex items-center gap-1 mt-0.5 ${belowMin || hasDups ? "text-destructive" : "text-muted-foreground"}`}>
           <AlertCircle className="h-3 w-3 shrink-0" />
-          Se requieren al menos {minEfectivo} elementos. Llevas {filledCount}.
+          {hasDups ? "Elimine los textos duplicados antes de continuar." : `Se requieren al menos ${minEfectivo} elementos. Llevas ${filledCount}.`}
         </p>
       )}
     </div>
@@ -1310,7 +1352,7 @@ function getNumeroUA(secretaria: string, unidad: string): string {
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
   datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
-  initialData, existingAdjuntos,
+  initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin,
 }: {
   prefilled: boolean
   lockVigenciaOnly?: boolean
@@ -1326,6 +1368,8 @@ function FormularioPrestacion({
   catalogoUAs?: { clave: string; nombre: string }[]
   initialData?: Partial<FormularioData>
   existingAdjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
+  periodoFechaInicio?: string
+  periodoFechaFin?: string
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState(false)
@@ -1461,6 +1505,23 @@ function FormularioPrestacion({
   const [areasExp, setAreasExp] = useState<string[]>(splitTags(datosRenovacion?.areasExp ?? initialData?.areasExp))
   const [nivelTabulador,    setNivelTabulador]    = useState(initialData?.nivelTabulador ?? "")
   const [categoriaTabulador, setCategoriaTabulador] = useState(initialData?.categoriaTabulador ?? "")
+
+  const forbiddenTextsPS = useMemo(() => {
+    const norm = (arr: string[]) => arr.map(t => normalizeText(t.trim())).filter(Boolean)
+    const a = norm(actividades), r = norm(responsabilidades), ca = norm(compAdm),
+      ct = norm(compTec), cs = norm(compSoc), v = norm(valores), ae = norm(areasExp)
+    const union = (...arrs: string[][]): Set<string> => { const s = new Set<string>(); arrs.forEach(ar => ar.forEach(t => s.add(t))); return s }
+    return {
+      actividades:       union(r, ca, ct, cs, v, ae),
+      responsabilidades: union(a, ca, ct, cs, v, ae),
+      compAdm:           union(a, r, ct, cs, v, ae),
+      compTec:           union(a, r, ca, cs, v, ae),
+      compSoc:           union(a, r, ca, ct, v, ae),
+      valores:           union(a, r, ca, ct, cs, ae),
+      areasExp:          union(a, r, ca, ct, cs, v),
+    }
+  }, [actividades, responsabilidades, compAdm, compTec, compSoc, valores, areasExp])
+
   const fuenteDatos = excelRows.length > 0 && secretariaConfirmada ? "excel" : "catalogo"
   const notifyParent = useCallback((overrides: Partial<FormularioData> = {}) => {
       const tipoActividadLabel = tiposActividad.find(t => t.value === tipoActividadSeleccionado)?.label ?? tipoActividadSeleccionado
@@ -1846,40 +1907,53 @@ function FormularioPrestacion({
                   </Badge>
                 )}
               </Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Inicio</span>
-                  <DatePickerHabil
-                    value={isoToDate(vigenciaInicio)}
-                    fromDate={isoToDate(getVigenciaMin())}
-                    startMonth={isoToDate(getVigenciaMin())}
-                    onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
-                    placeholder="Seleccionar inicio"
-                    className={`w-full bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`}
-                  />
-                  {esFechaPasada(vigenciaInicio) && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Término</span>
-                  <DatePickerHabil
-                    value={isoToDate(vigenciaFin)}
-                    fromDate={isoToDate(vigenciaInicio || getVigenciaMin())}
-                    startMonth={isoToDate(vigenciaInicio || getVigenciaMin())}
-                    onChange={(d) => d && setVigenciaFin(dateToIso(d))}
-                    placeholder="Seleccionar término"
-                    className={`w-full bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`}
-                  />
-                  {esFechaPasada(vigenciaFin) && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.
-                    </p>
-                  )}
-                </div>
-              </div>
+              {(() => {
+                const periodoVigMin = dmyToIso(periodoFechaInicio)
+                const periodoVigMax = dmyToIso(periodoFechaFin)
+                const vigMin = periodoVigMin || undefined
+                const vigMax = periodoVigMax || undefined
+                const efectivoMin = vigMin || vigenciaInicio || ""
+                const inicioError = !!vigenciaInicio && !!vigMin && vigenciaInicio < vigMin
+                const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
+                return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Inicio</span>
+                      <DatePickerHabil
+                        value={isoToDate(vigenciaInicio)}
+                        fromDate={vigMin ? isoToDate(vigMin) : undefined}
+                        toDate={vigMax ? isoToDate(vigMax) : undefined}
+                        startMonth={isoToDate(vigenciaInicio || efectivoMin)}
+                        onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
+                        placeholder="Seleccionar inicio"
+                        className={`w-full bg-background ${inicioError ? "border-destructive" : ""}`}
+                      />
+                      {inicioError && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 shrink-0" />Fecha anterior al inicio del periodo.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Término</span>
+                      <DatePickerHabil
+                        value={isoToDate(vigenciaFin)}
+                        fromDate={isoToDate(vigenciaInicio || efectivoMin)}
+                        toDate={vigMax ? isoToDate(vigMax) : undefined}
+                        startMonth={isoToDate(vigenciaFin || vigenciaInicio || efectivoMin)}
+                        onChange={(d) => d && setVigenciaFin(dateToIso(d))}
+                        placeholder="Seleccionar término"
+                        className={`w-full bg-background ${finError ? "border-destructive" : ""}`}
+                      />
+                      {finError && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 shrink-0" />Fecha posterior al fin del periodo.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
 
 
@@ -1958,6 +2032,8 @@ function FormularioPrestacion({
             }}
             readonly={bloqueadoPorRenovacion}
             nivelTabulador={nivelTabulador}
+            max={10}
+            forbiddenTexts={forbiddenTextsPS.actividades}
           />
         </CardContent>
       </Card>
@@ -1972,10 +2048,23 @@ function FormularioPrestacion({
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-2">
           <DynamicList
-            label="" items={responsabilidades} onChange={setResponsabilidades}
+            label="" items={responsabilidades}
+            onChange={(newItems) => {
+              setResponsabilidades(newItems)
+            }}
             readonly={bloqueadoPorRenovacion}
             nivelTabulador={nivelTabulador}
+            max={10}
+            forbiddenTexts={forbiddenTextsPS.responsabilidades}
           />
+          {!bloqueadoPorRenovacion && actividades.length !== responsabilidades.length && (
+            <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
+              <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <span className="text-xs text-amber-700 dark:text-amber-400">
+                <strong>Actividades a Realizar</strong> tiene <strong>{actividades.length}</strong> {actividades.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
+              </span>
+            </div>
+          )}
           <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
             <Info className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
             <div className="flex flex-col gap-0.5">
@@ -2004,19 +2093,20 @@ function FormularioPrestacion({
             <DynamicList
               label="" items={escolaridad.length > 0 ? escolaridad : [""]}
               onChange={setEscolaridad}
+              onBlurItem={applyTextRules}
               readonly={bloqueadoPorRenovacion}
               minRequired={1}
               max={1}
             />
           </div>
 
-          {[
-            { sub: "II.1", label: "Competencias Administrativas", items: compAdm,  onChange: setCompAdm },
-            { sub: "II.2", label: "Competencias Técnicas",        items: compTec,  onChange: setCompTec },
-            { sub: "II.3", label: "Competencias Sociales",        items: compSoc,  onChange: setCompSoc },
-            { sub: null,   label: "Áreas de Experiencia",         items: areasExp, onChange: setAreasExp },
-            { sub: null,   label: "Valores",                      items: valores,  onChange: setValores },
-          ].map(({ sub, label, items, onChange }) => (
+          {([
+            { sub: "II.1", label: "Competencias Administrativas", items: compAdm,  setter: setCompAdm,  fKey: "compAdm"  as const },
+            { sub: "II.2", label: "Competencias Técnicas",        items: compTec,  setter: setCompTec,  fKey: "compTec"  as const },
+            { sub: "II.3", label: "Competencias Sociales",        items: compSoc,  setter: setCompSoc,  fKey: "compSoc"  as const },
+            { sub: null,   label: "Áreas de Experiencia",         items: areasExp, setter: setAreasExp, fKey: "areasExp" as const },
+            { sub: null,   label: "Valores",                      items: valores,  setter: setValores,  fKey: "valores"  as const },
+          ] as const).map(({ sub, label, items, setter, fKey }) => (
             <div key={label} className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 {sub && (
@@ -2029,11 +2119,22 @@ function FormularioPrestacion({
               </div>
               <DynamicList
                 label="" items={items.length > 0 ? items : [""]}
-                onChange={onChange}
+                onChange={(newItems) => {
+                  setter(newItems)
+                }}
                 readonly={bloqueadoPorRenovacion}
-                minRequired={3}
-                max={5}
+                minRequired={5}
+                max={10}
+                forbiddenTexts={forbiddenTextsPS[fKey]}
               />
+              {!bloqueadoPorRenovacion && actividades.length !== items.length && (
+                <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                    <strong>Actividades a Realizar</strong> tiene <strong>{actividades.length}</strong> {actividades.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </CardContent>
@@ -2043,7 +2144,7 @@ function FormularioPrestacion({
 }
 function FormularioNombramiento({
   prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
-  tipoAdministracionUsuario = "centralizada", initialData, existingAdjuntos,
+  tipoAdministracionUsuario = "centralizada", initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin,
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
@@ -2056,6 +2157,8 @@ function FormularioNombramiento({
   tipoAdministracionUsuario?: "centralizada" | "paraestatal"
   initialData?: Partial<FormularioData>
   existingAdjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
+  periodoFechaInicio?: string
+  periodoFechaFin?: string
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState(false)
@@ -2155,6 +2258,23 @@ function FormularioNombramiento({
   const [compSoc,     setCompSoc]     = useState<string[]>(splitTags(datosRenovacion?.compSoc ?? initialData?.compSoc))
   const [valores,     setValores]     = useState<string[]>(splitTags(datosRenovacion?.valores ?? initialData?.valores))
   const [areasExp,    setAreasExp]    = useState<string[]>(splitTags(datosRenovacion?.areasExp ?? initialData?.areasExp))
+
+  const forbiddenTextsNom = useMemo(() => {
+    const norm = (arr: string[]) => arr.map(t => normalizeText(t.trim())).filter(Boolean)
+    const a = norm(funciones), r = norm(responsabilidades), ca = norm(compAdm),
+      ct = norm(compTec), cs = norm(compSoc), v = norm(valores), ae = norm(areasExp)
+    const union = (...arrs: string[][]): Set<string> => { const s = new Set<string>(); arrs.forEach(ar => ar.forEach(t => s.add(t))); return s }
+    return {
+      funciones:         union(r, ca, ct, cs, v, ae),
+      responsabilidades: union(a, ca, ct, cs, v, ae),
+      compAdm:           union(a, r, ct, cs, v, ae),
+      compTec:           union(a, r, ca, cs, v, ae),
+      compSoc:           union(a, r, ca, ct, v, ae),
+      valores:           union(a, r, ca, ct, cs, ae),
+      areasExp:          union(a, r, ca, ct, cs, v),
+    }
+  }, [funciones, responsabilidades, compAdm, compTec, compSoc, valores, areasExp])
+
   const [tipoActividadSeleccionado, setTipoActividadSeleccionado] = useState(
     resolverTipoActividadInit(datosRenovacion?.tipoActividad ?? initialData?.tipoActividades)
   )
@@ -2203,7 +2323,6 @@ function FormularioNombramiento({
     setSecretariaInput(valor); setSecretariaConfirmada(valor); setShowSugerencias(false)
     setUnidadAdscripcion(""); setClaveUA(""); setUrgSeleccionada("")
   }
-
   useEffect(() => {
     const formatKey = (k: string) => k.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase())
     onFormChange({
@@ -2451,7 +2570,6 @@ function FormularioNombramiento({
                 />
               </div>
 
-              {}
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Tipo de Actividad
@@ -2512,7 +2630,6 @@ function FormularioNombramiento({
               )}
             </div>
 
-
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Importe Neto
@@ -2533,42 +2650,54 @@ function FormularioNombramiento({
               </div>
             </div>
 
-            {}
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
                 {bloqueadoPorRenovacion && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-secondary text-secondary ml-1">Editable</Badge>}
               </Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Inicio</span>
-                  <DatePickerHabil
-                    value={isoToDate(vigenciaInicio)}
-                    fromDate={isoToDate(getVigenciaMin())}
-                    startMonth={isoToDate(getVigenciaMin())}
-                    onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
-                    placeholder="Seleccionar inicio"
-                    className={`w-full bg-background ${esFechaPasada(vigenciaInicio) ? "border-destructive" : ""}`}
-                  />
-                  {esFechaPasada(vigenciaInicio) && (
-                    <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.</p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Término</span>
-                  <DatePickerHabil
-                    value={isoToDate(vigenciaFin)}
-                    fromDate={isoToDate(vigenciaInicio || getVigenciaMin())}
-                    startMonth={isoToDate(vigenciaInicio || getVigenciaMin())}
-                    onChange={(d) => d && setVigenciaFin(dateToIso(d))}
-                    placeholder="Seleccionar término"
-                    className={`w-full bg-background ${esFechaPasada(vigenciaFin) ? "border-destructive" : ""}`}
-                  />
-                  {esFechaPasada(vigenciaFin) && (
-                    <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />No se aceptan meses anteriores.</p>
-                  )}
-                </div>
-              </div>
+              {(() => {
+                const periodoVigMin = dmyToIso(periodoFechaInicio)
+                const periodoVigMax = dmyToIso(periodoFechaFin)
+                const vigMin = periodoVigMin || undefined
+                const vigMax = periodoVigMax || undefined
+                const efectivoMin = vigMin || vigenciaInicio || ""
+                const inicioError = !!vigenciaInicio && !!vigMin && vigenciaInicio < vigMin
+                const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
+                return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Inicio</span>
+                      <DatePickerHabil
+                        value={isoToDate(vigenciaInicio)}
+                        fromDate={vigMin ? isoToDate(vigMin) : undefined}
+                        toDate={vigMax ? isoToDate(vigMax) : undefined}
+                        startMonth={isoToDate(vigenciaInicio || efectivoMin)}
+                        onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
+                        placeholder="Seleccionar inicio"
+                        className={`w-full bg-background ${inicioError ? "border-destructive" : ""}`}
+                      />
+                      {inicioError && (
+                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />Fecha anterior al inicio del periodo.</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Término</span>
+                      <DatePickerHabil
+                        value={isoToDate(vigenciaFin)}
+                        fromDate={isoToDate(vigenciaInicio || efectivoMin)}
+                        toDate={vigMax ? isoToDate(vigMax) : undefined}
+                        startMonth={isoToDate(vigenciaFin || vigenciaInicio || efectivoMin)}
+                        onChange={(d) => d && setVigenciaFin(dateToIso(d))}
+                        placeholder="Seleccionar término"
+                        className={`w-full bg-background ${finError ? "border-destructive" : ""}`}
+                      />
+                      {finError && (
+                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />Fecha posterior al fin del periodo.</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2">
@@ -2578,7 +2707,6 @@ function FormularioNombramiento({
           </div>
         </CardContent>
       </Card>
-
       <TabuladorNiveles
         nivelCategoria={datosRenovacion?.nivelCategoria}
         importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeNeto}
@@ -2588,7 +2716,6 @@ function FormularioNombramiento({
         initialNivel={nivelTabulador || undefined}
         initialCategoria={categoriaTabulador || undefined}
       />
-
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
@@ -2618,7 +2745,6 @@ function FormularioNombramiento({
           />
         </CardContent>
       </Card>
-
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
@@ -2646,10 +2772,11 @@ function FormularioNombramiento({
             }}
             readonly={bloqueadoPorRenovacion}
             nivelTabulador={nivelTabulador}
+            max={10}
+            forbiddenTexts={forbiddenTextsNom.funciones}
           />
         </CardContent>
       </Card>
-
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
@@ -2660,10 +2787,23 @@ function FormularioNombramiento({
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-2">
           <DynamicList
-            label="" items={responsabilidades} onChange={setResponsabilidades}
+            label="" items={responsabilidades}
+            onChange={(newItems) => {
+              setResponsabilidades(newItems)
+            }}
             readonly={bloqueadoPorRenovacion}
             nivelTabulador={nivelTabulador}
+            max={10}
+            forbiddenTexts={forbiddenTextsNom.responsabilidades}
           />
+          {!bloqueadoPorRenovacion && funciones.length !== responsabilidades.length && (
+            <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
+              <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <span className="text-xs text-amber-700 dark:text-amber-400">
+                <strong>Actividades / Funciones</strong> tiene <strong>{funciones.length}</strong> {funciones.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
+              </span>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground italic">
             Las responsabilidades deberán ser congruentes con las actividades registradas.
           </p>
@@ -2684,7 +2824,6 @@ function FormularioNombramiento({
           />
         </CardContent>
       </Card>
-
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
@@ -2729,6 +2868,7 @@ function FormularioNombramiento({
               </table>
             </div>
           </div>
+
           <div>
             <Label className="text-sm font-medium mb-3 block">Tabla de Riesgos</Label>
             <div className="overflow-hidden rounded-md border border-border">
@@ -2797,6 +2937,7 @@ function FormularioNombramiento({
             onValueChange={setResguardoActivos}
             className="flex gap-6"
           >
+
             <div className="flex items-center gap-2">
               <RadioGroupItem value="si" id="resg-si" />
               <Label htmlFor="resg-si" className="text-sm font-normal cursor-pointer">Sí</Label>
@@ -2829,18 +2970,19 @@ function FormularioNombramiento({
             <DynamicList
               label="" items={escolaridad.length > 0 ? escolaridad : [""]}
               onChange={setEscolaridad}
+              onBlurItem={applyTextRules}
               readonly={bloqueadoPorRenovacion}
               minRequired={1}
               max={1}
             />
           </div>
-          {[
-            { sub: "VIII.1", label: "Competencias Administrativas", items: compAdm,  onChange: setCompAdm },
-            { sub: "VIII.2", label: "Competencias Técnicas",        items: compTec,  onChange: setCompTec },
-            { sub: "VIII.3", label: "Competencias Sociales",        items: compSoc,  onChange: setCompSoc },
-            { sub: null,     label: "Áreas de Experiencia",         items: areasExp, onChange: setAreasExp },
-            { sub: null,     label: "Valores",                      items: valores,  onChange: setValores },
-          ].map(({ sub, label, items, onChange }) => (
+          {([
+            { sub: "VIII.1", label: "Competencias Administrativas", items: compAdm,  setter: setCompAdm,  fKey: "compAdm"  as const },
+            { sub: "VIII.2", label: "Competencias Técnicas",        items: compTec,  setter: setCompTec,  fKey: "compTec"  as const },
+            { sub: "VIII.3", label: "Competencias Sociales",        items: compSoc,  setter: setCompSoc,  fKey: "compSoc"  as const },
+            { sub: null,     label: "Áreas de Experiencia",         items: areasExp, setter: setAreasExp, fKey: "areasExp" as const },
+            { sub: null,     label: "Valores",                      items: valores,  setter: setValores,  fKey: "valores"  as const },
+          ] as const).map(({ sub, label, items, setter, fKey }) => (
             <div key={label} className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 {sub && (
@@ -2853,11 +2995,22 @@ function FormularioNombramiento({
               </div>
               <DynamicList
                 label="" items={items.length > 0 ? items : [""]}
-                onChange={onChange}
+                onChange={(newItems) => {
+                  setter(newItems)
+                }}
                 readonly={bloqueadoPorRenovacion}
-                minRequired={3}
-                max={5}
+                minRequired={5}
+                max={10}
+                forbiddenTexts={forbiddenTextsNom[fKey]}
               />
+              {!bloqueadoPorRenovacion && funciones.length !== items.length && (
+                <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                    <strong>Actividades / Funciones</strong> tiene <strong>{funciones.length}</strong> {funciones.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </CardContent>
@@ -3037,6 +3190,19 @@ function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSol
   return faltantes
 }
 const MESES_LOWER_BUILD = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+const MESES_CALENDAR    = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+
+function resolverPeriodoLabel(periodo: string, regimen: string, vigenciaFin?: string): string {
+  if (!periodo) return ""
+  if (!/^\d{1,2}\/\d{4}$/.test(periodo)) return periodo
+  const mesNum = parseInt(periodo.split("/")[0], 10)
+  const mesNombre = MESES_CALENDAR[mesNum - 1] ?? ""
+  if (regimen === "honorarios") return mesNombre
+  const dayStr = (vigenciaFin ?? "").split("-")[2] ?? ""
+  const day = parseInt(dayStr, 10)
+  const quincena = day > 0 && day <= 15 ? "1ra" : "2da"
+  return `${quincena} ${mesNombre}`
+}
 
 function periodoNombreAMes(nombre: string): number | null {
   const lower = (nombre ?? "").toLowerCase()
@@ -3245,7 +3411,9 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
   const { getPermisoActivo, consumirPermiso } = useAutorizaciones()
   const { user } = useAuth()
   const [regimenPeriodo,      setRegimenPeriodo]      = useState<"" | "honorarios" | "asimilados" | "nombramiento">(editSolicitud?.regimen ?? "")
-  const [periodoSeleccionado, setPeriodoSeleccionado] = useState(editSolicitud?.periodo ?? "")
+  const [periodoSeleccionado, setPeriodoSeleccionado] = useState(
+    resolverPeriodoLabel(editSolicitud?.periodo ?? "", editSolicitud?.regimen ?? "", editSolicitud?.formData?.vigenciaFin)
+  )
   useEffect(() => {
     if (regimenPeriodo === "nombramiento") setTipo("nombramiento")
     else if (regimenPeriodo === "honorarios" || regimenPeriodo === "asimilados") setTipo("prestacion")
@@ -3350,6 +3518,30 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
     const enTiempo = today <= limiteDODate
     return { row, limiteDODate, enTiempo }
   }, [regimenPeriodo, periodoSeleccionado, calHonorarios, calAsimilados, calNombramiento])
+
+  const periodoFechaInicioEffective = useMemo(() => {
+    if (!periodoInfo?.row) return undefined
+    if (periodoInfo.row.fechaInicio) return periodoInfo.row.fechaInicio
+    const fechaFin = periodoInfo.row.fechaFin
+    if (!fechaFin) return undefined
+    const [, m, y] = fechaFin.split("/").map(Number)
+    const label = regimenPeriodo === "honorarios"
+      ? (periodoInfo.row as PeriodoCap3000).mes
+      : (periodoInfo.row as PeriodoCap1000).quincena
+    const startDay = label?.startsWith("2da") ? 16 : 1
+    return `${String(startDay).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`
+  }, [periodoInfo, regimenPeriodo])
+
+  const periodoVigenciaRange = useMemo(() => {
+    const do_ = periodoInfo?.row?.limiteDO
+    const dgrh = periodoInfo?.row?.limiteDGRH
+    if (!do_ || !dgrh) return { min: undefined, max: undefined }
+    const dateA = parseDateDMY(do_)
+    const dateB = parseDateDMY(dgrh)
+    const earlier = dateA <= dateB ? do_ : dgrh
+    const later   = dateA <= dateB ? dgrh : do_
+    return { min: earlier, max: later }
+  }, [periodoInfo])
 
   const periodoVencido = periodoSeleccionado ? (periodoInfo ? !periodoInfo.enTiempo : false) : false
   const permisoActivo = regimenPeriodo && periodoSeleccionado && user?.id
@@ -4070,6 +4262,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               catalogoUAs={catalogoUAsDelUsuario}
               initialData={editSolicitud?.formData}
               existingAdjuntos={editSolicitud?.adjuntos}
+              periodoFechaInicio={periodoVigenciaRange.min}
+              periodoFechaFin={periodoVigenciaRange.max}
             />
           ) : (
             <FormularioNombramiento
@@ -4086,6 +4280,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               tipoAdministracionUsuario={editSolicitud?.formData?.tipoAdministracionNom ?? user?.tipoAdministracion ?? "centralizada"}
               initialData={editSolicitud?.formData}
               existingAdjuntos={editSolicitud?.adjuntos}
+              periodoFechaInicio={periodoVigenciaRange.min}
+              periodoFechaFin={periodoVigenciaRange.max}
             />
           )}
 
@@ -4093,11 +4289,17 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             const periodoStillValid = periodoInfo?.enTiempo ?? false
             const hasPermiso = !!permisoActivo
             const isEditingBorrador = !!editSolicitud?.id
+            const _periodoMin = dmyToIso(periodoVigenciaRange.min)
+            const _periodoMax = dmyToIso(periodoVigenciaRange.max)
+            const _inicioOk = !!formData.vigenciaInicio &&
+              (!_periodoMin || formData.vigenciaInicio >= _periodoMin) &&
+              (!_periodoMax || formData.vigenciaInicio <= _periodoMax)
+            const _finOk = !!formData.vigenciaFin &&
+              (!_periodoMax || formData.vigenciaFin <= _periodoMax) &&
+              (!formData.vigenciaInicio || formData.vigenciaFin >= formData.vigenciaInicio)
             const vigenciaOk = hasPermiso || isEditingBorrador
               ? !!(formData.vigenciaInicio) && !!(formData.vigenciaFin)
-              : !esFechaPasada(formData.vigenciaInicio ?? "") &&
-                !esFechaPasada(formData.vigenciaFin    ?? "") &&
-                !!(formData.vigenciaInicio) && !!(formData.vigenciaFin)
+              : _inicioOk && _finOk
             const effectiveFormDataForValidation = editSolicitud?.formData
               ? { ...editSolicitud.formData, ...formData }
               : formData

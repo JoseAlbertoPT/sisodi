@@ -23,11 +23,12 @@ function estadoObservado(filtro: number) {
 }
 
 function generarFolioTemporal(id: number, fecha: Date | null | undefined, sufijo?: number): string {
-  const f   = fecha ?? new Date()
-  const mes = f.getMonth() + 1
-  const ini = INICIALES_MES[mes] ?? "XX"
-  const num = String(id).padStart(3, "0")
-  return sufijo ? `${ini}-${num}-${sufijo}` : `${ini}-${num}`
+  const f    = fecha ?? new Date()
+  const mes  = f.getMonth() + 1
+  const anio = f.getFullYear()
+  const ini  = INICIALES_MES[mes] ?? "XX"
+  const num  = String(id).padStart(3, "0")
+  return sufijo ? `${ini}-${num}-${sufijo}` : `${ini}-${num}-${anio}`
 }
 
 async function generarFolioDictamen(tipo: "dictamen" | "opinion"): Promise<string> {
@@ -528,13 +529,26 @@ export async function PATCH(req: NextRequest) {
 
       try {
         const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
-        const anioNum = new Date().getFullYear()
+        const partes = folioRecepcion.split("-")
 
-        const matchFrecExt = folioRecepcion.match(/^([A-Z]{2})-(\d+)-(\d+)$/)
-        if (matchFrecExt) {
-          const mesNum         = MONTH_CODES.indexOf(matchFrecExt[1]) + 1
-          const consecutivoNum = parseInt(matchFrecExt[2], 10)
-          const extNum         = parseInt(matchFrecExt[3], 10)
+        if (partes.length === 3 && /^\d{4}$/.test(partes[2])) {
+          // Nuevo formato con año: MY-001-2026
+          const mesNum         = MONTH_CODES.indexOf(partes[0]) + 1
+          const consecutivoNum = parseInt(partes[1], 10)
+          const anioNum        = parseInt(partes[2], 10)
+          if (mesNum > 0 && !isNaN(consecutivoNum) && !isNaN(anioNum)) {
+            await prisma.consecutivo_folio.upsert({
+              where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
+              update: { consecutivo: consecutivoNum },
+              create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: consecutivoNum },
+            })
+          }
+        } else if (partes.length === 3) {
+          // Extemporánea temporal: MY-001-1 (último folio + nº de extemporánea)
+          const anioNum        = new Date().getFullYear()
+          const mesNum         = MONTH_CODES.indexOf(partes[0]) + 1
+          const consecutivoNum = parseInt(partes[1], 10)
+          const extNum         = parseInt(partes[2], 10)
           if (mesNum > 0 && !isNaN(consecutivoNum)) {
             await prisma.consecutivo_folio.upsert({
               where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
@@ -549,18 +563,17 @@ export async function PATCH(req: NextRequest) {
               create: { tipo: "FREC_EXT", mes: mesNum, anio: anioNum, consecutivo: extNum },
             })
           }
-        } else {
-          const matchFrec = folioRecepcion.match(/^([A-Z]{2})-(\d+)$/)
-          if (matchFrec) {
-            const mesNum         = MONTH_CODES.indexOf(matchFrec[1]) + 1
-            const consecutivoNum = parseInt(matchFrec[2], 10)
-            if (mesNum > 0 && !isNaN(consecutivoNum)) {
-              await prisma.consecutivo_folio.upsert({
-                where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
-                update: { consecutivo: consecutivoNum },
-                create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: consecutivoNum },
-              })
-            }
+        } else if (partes.length === 2) {
+          // Formato anterior sin año: MY-001 (compatibilidad con registros existentes)
+          const anioNum        = new Date().getFullYear()
+          const mesNum         = MONTH_CODES.indexOf(partes[0]) + 1
+          const consecutivoNum = parseInt(partes[1], 10)
+          if (mesNum > 0 && !isNaN(consecutivoNum)) {
+            await prisma.consecutivo_folio.upsert({
+              where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
+              update: { consecutivo: consecutivoNum },
+              create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: consecutivoNum },
+            })
           }
         }
       } catch {  }

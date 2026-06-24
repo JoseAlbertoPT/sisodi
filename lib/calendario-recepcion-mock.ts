@@ -2,16 +2,18 @@
 
 export interface PeriodoCap3000 {
   mes: string
-  fechaFin: string   
+  fechaFin: string
   limiteDO: string
   limiteDGRH: string
+  fechaInicio?: string
 }
 
 export interface PeriodoCap1000 {
   quincena: string
-  fechaFin: string   
+  fechaFin: string
   limiteDO: string
   limiteDGRH: string
+  fechaInicio?: string
 }
 
 export type RegimenPeriodo = "honorarios" | "asimilados" | "nombramiento"
