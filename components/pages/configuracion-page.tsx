@@ -1,8 +1,9 @@
 "use client"
 
-import { useRef, useState, useCallback } from "react"
+import { useState, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Building2, Landmark, FileSpreadsheet, Upload, Loader2, Trash2, FileText, AlertCircle, CheckCircle2, X } from "lucide-react"
+import { Settings, Building2, Landmark, FileSpreadsheet, Upload, Loader2, Trash2, FileText, AlertCircle, CheckCircle2 } from "lucide-react"
+import { FileDropZone } from "@/components/ui/file-drop-zone"
 import { PageLayout } from "@/components/page-layout"
 import { CatalogoCentralizadaTab } from "@/components/catalogo-centralizada-tab"
 import { CatalogoParaestatalTab } from "@/components/catalogo-paraestatal-tab"
@@ -13,35 +14,20 @@ import { cn } from "@/lib/utils"
 function HistoricoTab() {
   const { historicos, loading, error, uploadHistorico, removeHistorico } = useHistoricoStore()
 
-  const inputRef  = useRef<HTMLInputElement>(null)
-  const input2Ref = useRef<HTMLInputElement>(null)
-
-  const [file1, setFile1]       = useState<File | null>(null)
-  const [file2, setFile2]       = useState<File | null>(null)
+  const [files, setFiles]         = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadOk, setUploadOk]   = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
 
-  const clearFile1 = useCallback(() => {
-    setFile1(null)
-    if (inputRef.current) inputRef.current.value = ""
-  }, [])
-
-  const clearFile2 = useCallback(() => {
-    setFile2(null)
-    if (input2Ref.current) input2Ref.current.value = ""
-  }, [])
-
   const handleUpload = useCallback(async () => {
-    if (!file1) return
+    if (!files[0]) return
     setUploading(true)
     setUploadError(null)
     setUploadOk(false)
     try {
-      await uploadHistorico(file1, file2)
-      clearFile1()
-      clearFile2()
+      await uploadHistorico(files[0], files[1] ?? null)
+      setFiles([])
       setUploadOk(true)
       setTimeout(() => setUploadOk(false), 3000)
     } catch (e) {
@@ -49,7 +35,7 @@ function HistoricoTab() {
     } finally {
       setUploading(false)
     }
-  }, [file1, file2, uploadHistorico, clearFile1, clearFile2])
+  }, [files, uploadHistorico])
 
   const handleRemove = useCallback(async (id: string) => {
     setRemovingId(id)
@@ -79,73 +65,18 @@ function HistoricoTab() {
             Los datos se usarán para autocompletar renovaciones.
           </p>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {/* Archivo 1 */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subir Archivo</span>
-              <input ref={inputRef} type="file" accept=".xlsx" className="hidden"
-                onChange={(e) => { setFile1(e.target.files?.[0] ?? null); setUploadError(null); setUploadOk(false) }} />
-              {file1 ? (
-                <div className="flex items-center gap-2 rounded-[8px] border-[1.5px] border-[#ccc] bg-white px-3 py-2.5">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                  <FileSpreadsheet className="h-4 w-4 text-green-600 shrink-0" />
-                  <span className="text-sm font-medium truncate flex-1">{file1.name}</span>
-                  <button type="button" onClick={clearFile1}
-                    className="rounded p-0.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => inputRef.current?.click()}
-                  className="flex flex-col items-center gap-2 rounded-[12px] border-2 border-dashed border-[#ccc] bg-[#fafafa] px-4 py-5 hover:border-[#7B2D5E] hover:bg-[#f5f5f5] transition-colors cursor-pointer w-full">
-                  <Upload className="h-6 w-6 text-muted-foreground" />
-                  <div className="flex flex-col gap-0.5 text-center">
-                    <p className="text-sm text-muted-foreground">Arrastra tu archivo aquí, o</p>
-                    <span className="text-sm font-medium text-[#7B2D5E] underline underline-offset-2">Seleccionar archivo</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">.xlsx · máx. 10 MB</p>
-                </button>
-              )}
-            </div>
-
-            {/* Archivo 2 (opcional) */}
-            {file1 && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Subir Archivo <span className="font-normal normal-case opacity-60">(opcional)</span>
-                </span>
-                <input ref={input2Ref} type="file" accept=".xlsx" className="hidden"
-                  onChange={(e) => { setFile2(e.target.files?.[0] ?? null); setUploadError(null); setUploadOk(false) }} />
-                {file2 ? (
-                  <div className="flex items-center gap-2 rounded-[8px] border-[1.5px] border-[#ccc] bg-white px-3 py-2.5">
-                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                    <FileSpreadsheet className="h-4 w-4 text-green-600 shrink-0" />
-                    <span className="text-sm font-medium truncate flex-1">{file2.name}</span>
-                    <button type="button" onClick={clearFile2}
-                      className="rounded p-0.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => input2Ref.current?.click()}
-                    className="flex flex-col items-center gap-2 rounded-[12px] border-2 border-dashed border-[#ccc] bg-[#fafafa] px-4 py-5 hover:border-[#7B2D5E] hover:bg-[#f5f5f5] transition-colors cursor-pointer w-full">
-                    <Upload className="h-6 w-6 text-muted-foreground" />
-                    <div className="flex flex-col gap-0.5 text-center">
-                      <p className="text-sm text-muted-foreground">Arrastra tu archivo aquí, o</p>
-                      <span className="text-sm font-medium text-[#7B2D5E] underline underline-offset-2">Seleccionar archivo</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">.xlsx · máx. 10 MB</p>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          <FileDropZone
+            accept=".xlsx"
+            hint=".xlsx · máx. 10 MB c/u — puedes subir hasta 2 archivos"
+            files={files}
+            onFilesChange={(fs) => { setFiles(fs.slice(0, 2)); setUploadError(null); setUploadOk(false) }}
+          />
 
           <div className="flex items-center gap-3 border-t border-border pt-4">
             <Button
               type="button"
               onClick={handleUpload}
-              disabled={!file1 || uploading}
+              disabled={files.length === 0 || uploading}
               size="sm"
               className="gap-2"
             >

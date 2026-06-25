@@ -31,6 +31,7 @@ import { type EditSolicitudPayload, type FormularioData } from "@/components/pag
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 import { FirmaModal } from "@/components/firma-modal"
+import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
 import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
@@ -530,25 +531,23 @@ function ReadOnlyList({ items }: { items: string[] }) {
   )
 }
 
-function RadioOption({ value, selected, onChange, label, colorClass, style }: {
-  value: string; selected: boolean; onChange: () => void; label: string; colorClass: string; style?: React.CSSProperties
+function RadioOption({ value, selected, onChange, label, style }: {
+  value: string; selected: boolean; onChange: () => void; label: string; colorClass?: string; style?: React.CSSProperties
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="sm"
       onClick={onChange}
       style={selected ? style : undefined}
-      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-all ${
-        selected
-          ? `${colorClass} border-current`
-          : "border-border text-muted-foreground hover:border-foreground/30 hover:text-card-foreground"
-      }`}
+      className={`gap-1.5 ${selected ? 'border-current' : ''}`}
     >
       {value === "si"       && <CheckCircle2 className="h-3.5 w-3.5" />}
       {value === "no"       && <XCircle className="h-3.5 w-3.5" />}
       {value === "noAplica" && <MinusCircle className="h-3.5 w-3.5" />}
       {label}
-    </button>
+    </Button>
   )
 }
 
@@ -1169,7 +1168,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
+      <DialogContent style={{ width: 580, maxWidth: '90vw', minHeight: 280, padding: 32 }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <UserCheck className="h-5 w-5 text-primary" />
@@ -1188,7 +1187,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
             <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
           ) : (
             <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full mt-4" style={{ height: 48, fontSize: 16, paddingLeft: 16, paddingRight: 16 }}>
                 <SelectValue placeholder="Seleccionar revisor..." />
               </SelectTrigger>
               <SelectContent>
@@ -1230,7 +1229,9 @@ const AVAILABLE_DESTINATARIOS = [
 
 export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }: RevisionDOPageProps) {
   const { user } = useAuth()
-  const hasDataRef                   = useRef(false)
+  const hasDataRef       = useRef(false)
+  const accionExitosaRef = useRef<'aprobar' | 'observar' | null>(null)
+  const avanzadaRef      = useRef(false)
   const [solicitud,  setSolicitud]  = useState<SolicitudDetalle | null>(null)
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
@@ -1244,6 +1245,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
   const [showConfirmacion,        setShowConfirmacion]        = useState<string | null>(null)
   const [checklistErrors,    setChecklistErrors]    = useState<Record<string, boolean>>({})
+  const [errorToast, setErrorToast] = useState<{ key: number; title: string; description?: string } | null>(null)
+  const showToast = (variant: "success" | "error", title: string, description?: string) => {
+    if (variant === "error") setErrorToast(prev => ({ key: (prev?.key ?? 0) + 1, title, description }))
+  }
 
   const today = new Date().toISOString().slice(0, 10)
   const [fechaDictaminacion,    setFechaDictaminacion]    = useState(today)
@@ -1292,6 +1297,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [firmaEmisionAbierta,   setFirmaEmisionAbierta]   = useState(false)
 
   const cargar = useCallback(async () => {
+    if (avanzadaRef.current) return
     if (!hasDataRef.current) setLoading(true)
     setError(null)
     try {
@@ -1306,9 +1312,16 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         const json2 = await res2.json()
         const item2 = json2.ok ? (json2.data ?? []).find((d: any) => String(d.id) === String(solicitudId)) : null
         if (item2) { setSolicitud(mapBDtoDetalle(item2._raw ?? item2)); hasDataRef.current = true; return }
-        setError("Solicitud no encontrada en este filtro")
+        if (accionExitosaRef.current) {
+          avanzadaRef.current = true
+          setError(`__avanzada__${accionExitosaRef.current}`)
+        } else {
+          setError("Solicitud no encontrada en este filtro")
+        }
         return
       }
+      accionExitosaRef.current = null
+      avanzadaRef.current = false
       const rawBase = item._raw ?? item
       const folioDictamenResuelto =
         resolverFolioDictamen(item) ??
@@ -1412,14 +1425,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? `Error al ${accion}`); return }
+      if (!res.ok || !json.ok) { showToast("error", accion === "aprobar" ? "Error al aprobar" : "Error al observar", json.error ?? `No se pudo ${accion} la solicitud.`); return }
+      accionExitosaRef.current = accion
       setSolicitud(prev => prev ? {
         ...prev,
         estado:        json.estadoNuevo ?? prev.estado,
         folioDictamen: json.folioDictamen ?? prev.folioDictamen,
       } : prev)
       return json.estadoNuevo as string
-    } catch { alert("Error de conexión") }
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false) }
   }, [solicitud, filtro, user])
 
@@ -1432,8 +1446,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     if (filtro === 3) {
       const modalidadExistente = (solicitud as any)?.modalidadFirma as "electronica" | "autografa" | null | undefined
       if (modalidadExistente === "electronica" || modalidadExistente === "autografa") {
-        const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadExistente)
-        if (nuevoEstado) setShowConfirmacion("Solicitud aprobada.")
+        await patchEstado("aprobar", undefined, undefined, modalidadExistente)
         return
       }
       setShowEmitConfirm(true); return
@@ -1442,25 +1455,19 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       setShowAprobarAsignarModal(true)
       return
     }
-    const nuevoEstado = await patchEstado("aprobar", undefined, revisorId)
-    if (nuevoEstado) {
-      setShowConfirmacion("Solicitud aprobada.")
-    }
+    await patchEstado("aprobar", undefined, revisorId)
   }
   const handleConfirmEmit = async () => {
     setShowEmitConfirm(false)
     const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
-    if (nuevoEstado) {
-      setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
-      setShowConfirmacion("Solicitud aprobada.")
-    }
+    if (nuevoEstado) setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
   }
   const handleObservar = async () => {
     if (filtro === 2 || filtro === 3 || (filtro === 1 && checklistYaRealizado)) {
       if (!observacionGeneral.trim()) { setObservacionError("Escribe una observación para devolver el expediente."); return }
       setObservacionError("")
       const nuevoEstado = await patchEstado("observar", observacionGeneral.trim())
-      if (nuevoEstado) { setObservacionGeneral(""); setShowConfirmacion("Solicitud observada y regresada.") }
+      if (nuevoEstado) setObservacionGeneral("")
       return
     }
     const errors: Record<string, boolean> = {}
@@ -1476,19 +1483,13 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       .join("\n")
     const obs = [observacionGeneral.trim(), resumen].filter(Boolean).join("\n")
     const nuevoEstado = await patchEstado("observar", obs)
-    if (nuevoEstado) { setObservacionGeneral(""); setChecklistErrors({}); setShowConfirmacion("Solicitud observada y regresada a URG.") }
+    if (nuevoEstado) { setObservacionGeneral(""); setChecklistErrors({}) }
   }
 
   const handleEmitir = async () => {
     if (!solicitud) return
     const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
-    if (!nuevoEstado) return
-    setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
-    setShowConfirmacion(
-      modalidadFirma === "electronica"
-        ? "Dictamen emitido y firmado electrónicamente. Expediente bloqueado."
-        : "Dictamen emitido con firma autógrafa. Expediente bloqueado."
-    )
+    if (nuevoEstado) setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
   }
 
   const handleAsignarFolioDictamen = useCallback(async (folio: string) => {
@@ -1560,45 +1561,48 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     </div>
   )
 
-  if (error || !solicitud) return (
-    <div className="flex flex-col items-center justify-center gap-4 py-20">
-      <AlertCircle className="h-12 w-12 text-muted-foreground" />
-      <p className="text-muted-foreground">{error ?? "Solicitud no encontrada"}</p>
-      <Button variant="outline" onClick={() => onBack(filtro)}>
-        <ArrowLeft className="mr-1.5 h-4 w-4" />Regresar a bandeja
-      </Button>
-    </div>
-  )
+  if (error || !solicitud) {
+    const esAvanzada = error?.startsWith('__avanzada__')
+    const esObservada = error === '__avanzada__observar'
+    return (
+      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4">
+        {esAvanzada ? (
+          <div className="flex items-center justify-center" style={{ width: 64, height: 64, borderRadius: 12, background: '#DCFCE7' }}>
+            <CheckCircle2 style={{ width: 32, height: 32, color: '#16A34A' }} />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center rounded-full bg-[#F3F4F6]" style={{ width: 80, height: 80 }}>
+            <AlertCircle style={{ width: 40, height: 40, color: '#9CA3AF' }} />
+          </div>
+        )}
+        <p style={{ fontSize: 18, fontWeight: 600, color: '#111827' }}>
+          {esAvanzada
+            ? (esObservada ? 'Solicitud devuelta con observaciones' : 'Solicitud enviada al siguiente filtro')
+            : (error ?? 'Solicitud no encontrada')}
+        </p>
+        {esAvanzada && (
+          <p style={{ fontSize: 14, color: '#6B7280' }}>
+            {esObservada
+              ? 'La solicitud fue devuelta al capturista con las observaciones registradas.'
+              : 'La solicitud fue procesada exitosamente y avanzó a la siguiente bandeja.'}
+          </p>
+        )}
+        <Button
+          onClick={() => onBack(filtro)}
+          style={{ border: '1.5px solid #2D3B2D', color: '#2D3B2D', borderRadius: 9999, background: 'white', padding: '10px 20px' }}
+          className="shadow-none hover:bg-[#F9FAFB]"
+        >
+          <ArrowLeft className="mr-1.5 h-4 w-4" />Regresar a bandeja
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <PageLayout noContainer>
     <div className="flex flex-col gap-4 h-full">
-      {showConfirmacion && !isEmitido && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-          <Card className="w-full max-w-md shadow-lg border-secondary/30 border-2">
-            <CardContent className="flex flex-col items-center gap-4 p-8">
-              <CheckCircle2 className="h-12 w-12 text-secondary" />
-              <p className="text-base font-semibold text-card-foreground text-center">{showConfirmacion}</p>
-              <Button onClick={() => onBack(filtro)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                Regresar a bandeja
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-      {showConfirmacion && isEmitido && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-          <Card className="w-full max-w-md shadow-lg border-primary/30 border-2">
-            <CardContent className="flex flex-col items-center gap-4 p-8">
-              <Shield className="h-12 w-12 text-primary" />
-              <p className="text-base font-semibold text-card-foreground text-center">{showConfirmacion}</p>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setShowConfirmacion(null)}>Ver Expediente</Button>
-                <Button onClick={() => onBack(filtro)}>Regresar a bandeja</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {errorToast && (
+        <ConfirmToast key={errorToast.key} variant="error" title={errorToast.title} description={errorToast.description} />
       )}
       {showEmitConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">

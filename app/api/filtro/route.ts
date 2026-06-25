@@ -143,23 +143,17 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({ ok: true, data: [] })
         }
 
-        // Aplicar filtro de secretaría para TODOS los filtros (1, 2 y 3), no solo filtro=1.
-        // Solo se omite para el rol "revisor" que ya filtra por revisor_asignado_id.
         if (!esRolRevisor) {
           if (viewer.secretaria_id) {
-            // Centralizada: solo solicitudes con snapshot de esta secretaría.
-            // Sin fallback null para evitar mostrar registros de secretarías anteriores.
-            organoFilter = {
-              secretaria_id_snapshot: viewer.secretaria_id,
-            }
+            organoFilter = { secretaria_id_snapshot: viewer.secretaria_id }
           } else if (viewer.secretaria_texto) {
-            organoFilter = {
-              secretaria_txt_snapshot: viewer.secretaria_texto,
-            }
-          } else {
-            // Usuario sin secretaría configurada: no mostrar nada
+            organoFilter = { secretaria_txt_snapshot: viewer.secretaria_texto }
+          } else if (filtro !== 3) {
+            // Filtro 1/2: sin secretaría configurada → no mostrar nada
+            console.warn(`[filtro GET] Usuario ${viewerUserId} sin secretaría, filtro=${filtro} → vacío`)
             return NextResponse.json({ ok: true, data: [] })
           }
+          // Filtro 3 (Emisión/DO): sin secretaría → ve todas las solicitudes
         }
       }
     }
@@ -171,6 +165,8 @@ export async function GET(req: NextRequest) {
     } else if (filtro === 1 && revisorId) {
       whereClause.revisor_asignado_id = revisorId
     }
+
+    console.log(`[filtro GET] filtro=${filtro} estados=[${estadosNombres.join(", ")}] organoFilter=${JSON.stringify(organoFilter)} viewer=${viewerUserId ?? "none"}`)
 
     const _hoyBase = new Date()
     const hoyUTC = Date.UTC(_hoyBase.getUTCFullYear(), _hoyBase.getUTCMonth(), _hoyBase.getUTCDate())

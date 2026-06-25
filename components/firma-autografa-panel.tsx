@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Download, Upload, CheckCircle2, Loader2, FileText, AlertCircle } from "lucide-react"
+import { FileDropZone } from "@/components/ui/file-drop-zone"
 
 interface FirmaProceso {
   id: number
@@ -109,43 +110,24 @@ export function FirmaAutografaPanel({
           ) : (
             <>
               {archivoSubido && (
-                <div className="flex items-center gap-2 rounded-md border border-secondary/30 bg-secondary/5 p-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-secondary" />
-                  <span className="flex-1 truncate">{firma?.archivo_firmado?.split("/").pop()}</span>
-                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs text-secondary hover:underline">Ver</a>
+                <div className="flex items-center gap-2 rounded-[8px] border border-[#E5E7EB] bg-white px-2 py-2">
+                  <FileText className="h-4 w-4 shrink-0 text-red-500" />
+                  <span className="flex-1 truncate text-sm text-[#374151]">{firma?.archivo_firmado?.split("/").pop()}</span>
+                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs text-[#7B2D5E] hover:underline shrink-0">Ver</a>
                 </div>
               )}
-              <label className={`flex flex-col items-center gap-2 rounded-[12px] border-2 border-dashed cursor-pointer transition-colors px-4 py-5 text-center
-                ${uploading ? "border-[#ddd] bg-[#f0f0f0] cursor-not-allowed" : error ? "border-[#D32F2F] bg-[#FFF5F5]" : "border-[#ccc] bg-[#fafafa] hover:border-[#7B2D5E] hover:bg-[#f5f5f5]"}`}>
-                <input
-                  type="file" accept="application/pdf" className="hidden"
-                  onChange={e => {
-                    const f = e.target.files?.[0]
-                    if (f) handleUpload(f)
-                    e.target.value = ""
-                  }}
-                  disabled={uploading}
-                />
-                {uploading
-                  ? <Loader2 className="h-7 w-7 text-muted-foreground animate-spin" />
-                  : <Upload className={`h-7 w-7 ${error ? "text-[#D32F2F]" : "text-muted-foreground"}`} />}
-                <div className="flex flex-col gap-0.5">
-                  <p className="text-sm text-muted-foreground">
-                    {uploading ? "Subiendo archivo..." : "Arrastra tu PDF aquí, o"}
-                  </p>
-                  {!uploading && (
-                    <span className="text-sm font-medium text-[#7B2D5E] underline underline-offset-2">
-                      {archivoSubido ? "Reemplazar archivo" : "Seleccionar PDF"}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">Solo PDF · máx. 10 MB</p>
-              </label>
-              {error && (
-                <p className="text-xs flex items-center gap-1.5" style={{ color: "#D32F2F" }}>
-                  <span className="shrink-0 text-base leading-none">⊘</span>{error}
-                </p>
-              )}
+              <FileDropZone
+                accept="application/pdf"
+                hint="Solo PDF · máx. 10 MB"
+                selectLabel={archivoSubido ? "Reemplazar archivo" : "Seleccionar PDF"}
+                multiple={false}
+                files={[]}
+                onFilesChange={(fs) => { if (fs[0]) handleUpload(fs[0]) }}
+                disabled={uploading}
+                loading={uploading}
+                loadingText="Subiendo archivo..."
+                error={error}
+              />
             </>
           )}
         </CardContent>

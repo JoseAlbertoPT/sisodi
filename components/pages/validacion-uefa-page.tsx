@@ -13,7 +13,7 @@ import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
@@ -29,6 +29,7 @@ import { FirmaModal } from "@/components/firma-modal"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { ConfirmToast } from "@/components/ui/confirm-toast"
 
 type UefaEstado = string
 
@@ -909,15 +910,17 @@ function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLab
             {icon ?? <HelpCircle className="h-5 w-5 text-primary" />}{title}
           </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">{description}</p>
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="px-6 py-6">
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        <DialogFooter className="sm:justify-between">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={onConfirm} className={confirmVariant === "destructive"
             ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
             : ""}>
             {confirmLabel}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -938,19 +941,21 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
             <HelpCircle className="h-5 w-5 text-destructive" />¿Estás seguro de observar?
           </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Vas a marcar <strong>{folio}</strong> con observaciones. Se enviará de regreso a la URG.
-        </p>
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="px-6 py-6">
+          <p className="text-sm text-muted-foreground">
+            Vas a marcar <strong>{folio}</strong> con observaciones. Se enviará de regreso a la URG.
+          </p>
+        </div>
+        <DialogFooter className="sm:justify-between">
           <Button variant="outline" onClick={handleClose}>Cancelar</Button>
           <Button onClick={() => setStep("write")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5">
             <AlertTriangle className="h-4 w-4" />Sí, continuar
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
-  
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg">
@@ -959,7 +964,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
             <AlertTriangle className="h-5 w-5 text-destructive" />Observar — {folio}
           </DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4">
+        <div className="px-6 py-6 flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">Escriba las observaciones que se enviarán a la URG.</p>
           <Textarea
             placeholder="Describa las observaciones..."
@@ -967,17 +972,17 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
             onChange={e => setObs(e.target.value)}
             className="min-h-[120px] bg-card"
           />
-          <div className="flex items-center justify-end gap-3">
-            <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-            <Button
-              onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
-              disabled={!obs.trim()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
-            >
-              <RotateCcw className="h-4 w-4" />Confirmar observación
-            </Button>
-          </div>
         </div>
+        <DialogFooter className="sm:justify-between">
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button
+            onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
+            disabled={!obs.trim()}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
+          >
+            <RotateCcw className="h-4 w-4" />Confirmar observación
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -1014,40 +1019,42 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
             <CheckCircle2 className="h-5 w-5 text-primary" />Aprobar y Asignar Revisor
           </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Seleccione el Revisor que revisará la solicitud <strong>{folio}</strong>.
-        </p>
-        {cargando ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
-          </div>
-        ) : revisores.length === 0 ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-destructive">
-            <AlertTriangle className="h-4 w-4" />No hay usuarios con rol Revisor en su secretaría.
-          </div>
-        ) : (
-          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto py-1">
-            {revisores.map(r => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setSeleccionado(r.id)}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors ${
-                  seleccionado === r.id
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted text-card-foreground"
-                }`}
-              >
-                {seleccionado === r.id
-                  ? <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  : <span className="h-4 w-4 shrink-0 rounded-full border border-muted-foreground/40 inline-block" />
-                }
-                {r.nombre}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="px-6 py-6 flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Seleccione el Revisor que revisará la solicitud <strong>{folio}</strong>.
+          </p>
+          {cargando ? (
+            <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+            </div>
+          ) : revisores.length === 0 ? (
+            <div className="flex items-center gap-2 py-2 text-sm text-destructive">
+              <AlertTriangle className="h-4 w-4" />No hay usuarios con rol Revisor en su secretaría.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+              {revisores.map(r => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setSeleccionado(r.id)}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors ${
+                    seleccionado === r.id
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted text-card-foreground"
+                  }`}
+                >
+                  {seleccionado === r.id
+                    ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    : <span className="h-4 w-4 shrink-0 rounded-full border border-muted-foreground/40 inline-block" />
+                  }
+                  {r.nombre}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <DialogFooter className="sm:justify-between">
           <Button variant="outline" onClick={handleClose}>Cancelar</Button>
           <Button
             onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
@@ -1056,7 +1063,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
           >
             <CheckCircle2 className="h-4 w-4" />Confirmar
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -1372,6 +1379,11 @@ export function ValidacionUefaPage() {
   const [aprobarTargetId,  setAprobarTargetId]  = useState<number | null>(null)
   const [dictamenViewId,   setDictamenViewId]   = useState<number | null>(null)
   const [firmaTargetId,    setFirmaTargetId]    = useState<number | null>(null)
+  const [actionToast, setActionToast] = useState<{ key: number; variant: "success" | "error"; title: string; description?: string } | null>(null)
+
+  const showToast = (variant: "success" | "error", title: string, description?: string) => {
+    setActionToast(prev => ({ key: (prev?.key ?? 0) + 1, variant, title, description }))
+  }
 
   const cargarSolicitudes = useCallback(async () => {
     if (!hasDataRef.current) setLoading(true)
@@ -1407,7 +1419,8 @@ export function ValidacionUefaPage() {
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al aprobar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al aprobar", json.error ?? "No se pudo aprobar la solicitud."); return }
+      showToast("success", "Solicitud aprobada", "La solicitud fue enviada a Pendiente DO.")
       setSolicitudes(prev => prev.map(s => s.id === id ? {
         ...s,
         estado: "Pendiente DO",
@@ -1420,7 +1433,7 @@ export function ValidacionUefaPage() {
       } : s))
       setSelectedId(null)
     } catch {
-      alert("Error de conexión al aprobar")
+      showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
       setGuardando(false)
       setAprobarTargetId(null)
@@ -1442,7 +1455,8 @@ export function ValidacionUefaPage() {
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al observar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al observar", json.error ?? "No se pudo registrar la observación."); return }
+      showToast("success", "Observaciones enviadas", "La solicitud fue devuelta con observaciones.")
       setSolicitudes(prev => prev.map(s => s.id === observarTargetId ? {
         ...s,
         estado: "Observado por Validacion",
@@ -1459,7 +1473,7 @@ export function ValidacionUefaPage() {
       setObservarTargetId(null)
       setSelectedId(null)
     } catch {
-      alert("Error de conexión al observar")
+      showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
       setGuardando(false)
     }
@@ -1479,7 +1493,8 @@ export function ValidacionUefaPage() {
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al firmar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al firmar", json.error ?? "No se pudo firmar la justificación."); return }
+      showToast("success", "Justificación firmada", "La justificación fue firmada y enviada a Emisión.")
       setSolicitudes(prev => prev.map(s => s.id === id ? {
         ...s,
         estado: "Pendiente Firma Dictamen",
@@ -1492,7 +1507,7 @@ export function ValidacionUefaPage() {
       } : s))
       setSelectedId(null)
     } catch {
-      alert("Error de conexión al firmar")
+      showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
       setGuardando(false)
     }
@@ -1548,6 +1563,10 @@ export function ValidacionUefaPage() {
   const firmaTargetSol = solicitudes.find(s => s.id === firmaTargetId) ?? null
 
   return (
+    <>
+    {actionToast && (
+      <ConfirmToast key={actionToast.key} variant={actionToast.variant} title={actionToast.title} description={actionToast.description} />
+    )}
     <PageLayout
       title="Bandeja de validación de justificaciones"
       description="Gestiona y da seguimiento a las justificaciones durante su proceso de validación y emisión."
@@ -1736,5 +1755,6 @@ export function ValidacionUefaPage() {
         folio={solicitudes.find(s => s.id === observarTargetId)?.folioJustificacion ?? ""}
       />
     </PageLayout>
+    </>
   )
 }

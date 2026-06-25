@@ -7,12 +7,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 import { Separator } from "@/components/ui/separator"
 import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import {
-  Search, Eye, Edit3, Download, FileCheck,
+  Eye, Edit3, Download, FileCheck,
   ChevronDown, ChevronRight, Info, History, FileText,
   ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw,
   MoreVertical, Pencil,
@@ -1714,15 +1714,12 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
         items={TABS.map((tab) => ({ value: tab, label: tab, count: tabCounts[tab] }))}
       />
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por folio, tipo, secretaría..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-card"
-        />
-      </div>
+      <SearchInput
+        placeholder="Buscar por folio, tipo, secretaría..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        containerClassName="max-w-sm"
+      />
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">

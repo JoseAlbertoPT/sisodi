@@ -147,12 +147,11 @@ function SidebarItem({
 }
 
 export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: SidebarProps) {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const [menuTree, setMenuTree] = useState<MenuNode[] | null>(null)
   const [menusLoading, setMenusLoading] = useState(true)
   const [menusError, setMenusError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
-  const { user } = useAuth()
 
   useEffect(() => {
     if (!user?.rol) return
@@ -192,16 +191,15 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "flex h-screen flex-col border-r border-[#E0DED8] transition-all duration-300",
-          collapsed ? "w-[60px]" : "w-[220px]"
+          "flex h-screen flex-col border-r border-[#E0DED8] transition-all duration-300 overflow-hidden",
+          collapsed ? "w-[64px]" : "w-[220px]"
         )}
         style={{ backgroundColor: "#F5F5F0" }}
         aria-label="Navegación principal"
       >
-        {/* ── Header — solo logos ── */}
         <div
           className={cn(
-            "flex items-center border-b border-[#E0DED8]",
+            "flex shrink-0 items-center border-b border-[#E0DED8]",
             collapsed ? "h-[64px] justify-center px-2" : "h-[64px] gap-2 px-3"
           )}
         >
@@ -227,7 +225,34 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
           )}
         </div>
 
-        {/* ── Nav ── */}
+
+        <div
+          className={cn(
+            "shrink-0 border-b border-[#E0DED8]",
+            collapsed ? "flex justify-center px-2 py-2.5" : "px-4 py-2.5"
+          )}
+        >
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="block h-6 w-6 rounded-full bg-[#2D3B2D]/10 text-center text-[9px] font-bold leading-6 text-[#2D3B2D] cursor-default select-none">
+                  {(user?.rfc ?? "?").slice(0, 2).toUpperCase()}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right">{user?.rfc ?? ""}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <div className="flex flex-col gap-0">
+              <span className="text-[10px] font-medium text-[#9CA3AF] uppercase tracking-wide leading-none mb-0.5">
+                RFC
+              </span>
+              <span className="text-[12px] font-semibold text-[#2D3B2D] leading-tight truncate">
+                {user?.rfc ?? "—"}
+              </span>
+            </div>
+          )}
+        </div>
+
         <nav className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-0.5" aria-label="Menú">
           {menusLoading && (
             <p className="text-xs text-[#9CA3AF] px-3 py-2">Cargando…</p>
@@ -261,8 +286,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
           )}
         </nav>
 
-        {/* ── Footer — solo cerrar sesión ── */}
-        <div className="border-t border-[#E0DED8] px-2 py-3">
+        <div className="shrink-0 border-t border-[#E0DED8] px-2 py-3">
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>

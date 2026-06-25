@@ -14,8 +14,9 @@ import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { SearchInput } from "@/components/ui/search-input"
 import {
-  Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
+  FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
   FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil,
@@ -27,6 +28,7 @@ import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
 import { ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { useRealtime } from "@/hooks/use-realtime"
 
 interface FiltroSolicitud {
@@ -164,7 +166,8 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   if (filtro === 3) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma emisor") return "pendientes_firma"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
-      return (s.openedInFiltro[filtro] || (filtro !== 3 && !!s.folioDictamen)) ? "revision" : "nuevas"
+      if (filtro === 3) return "revision"
+      return (s.openedInFiltro[filtro] || !!s.folioDictamen) ? "revision" : "nuevas"
     }
     const preEmisor = new Set([
       "pendiente do",
@@ -280,6 +283,7 @@ function PerfilListField({ label, value }: { label: string; value: string | null
     </div>
   )
 }
+
 
 function ListaItems({ items }: { items: string[] }) {
   const validItems = (items ?? []).filter(Boolean)
@@ -407,7 +411,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLab
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">{description}</p>
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex items-center justify-between pt-2">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={onConfirm}>
             {confirmLabel}
@@ -434,7 +438,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
         <p className="text-sm text-muted-foreground">
          Vas a marcar <strong>{folio}</strong> con observaciones. Se devolverá a la URG.
         </p>
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex items-center justify-between pt-2">
           <Button variant="outline" onClick={handleClose}>Cancelar</Button>
           <Button onClick={() => setStep("write")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5">
             <AlertTriangle className="h-4 w-4" />Sí, continuar
@@ -459,7 +463,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
             onChange={e => setObs(e.target.value)}
             className="min-h-[120px] bg-card"
           />
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex items-center justify-between">
             <Button variant="outline" onClick={handleClose}>Cancelar</Button>
             <Button
               onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
@@ -534,7 +538,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               </SelectContent>
             </Select>
           )}
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-between pt-2">
             <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
               Cancelar
             </Button>
@@ -582,7 +586,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
+      <DialogContent style={{ width: 580, maxWidth: '90vw', minHeight: 280, padding: 32 }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <UserCheck className="h-5 w-5 text-primary" />
@@ -601,7 +605,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
             <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
           ) : (
             <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full mt-4" style={{ height: 48, fontSize: 16, paddingLeft: 16, paddingRight: 16 }}>
                 <SelectValue placeholder="Seleccionar revisor..." />
               </SelectTrigger>
               <SelectContent>
@@ -614,7 +618,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               </SelectContent>
             </Select>
           )}
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-between pt-2">
             <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
               Cancelar
             </Button>
@@ -1229,6 +1233,11 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const [aprobarTarget,        setAprobarTarget]        = useState<string | null>(null)
   const [aprobarAsignarTarget,  setAprobarAsignarTarget]  = useState<string | null>(null)
   const [asignarRevisorTarget,  setAsignarRevisorTarget]  = useState<string | null>(null)
+  const [actionToast, setActionToast] = useState<{ key: number; variant: "success" | "error"; title: string; description?: string } | null>(null)
+
+  const showToast = (variant: "success" | "error", title: string, description?: string) => {
+    setActionToast(prev => ({ key: (prev?.key ?? 0) + 1, variant, title, description }))
+  }
 
   const [searchTerm,    setSearchTerm]    = useState("")
   const [filterRegimen, setFilterRegimen] = useState("todos")
@@ -1322,10 +1331,11 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al aprobar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al aprobar", json.error ?? "No se pudo aprobar la solicitud."); return }
+      showToast("success", "Solicitud aprobada", "La solicitud fue enviada al siguiente filtro.")
       setSelectedId(null)
       void cargar()
-    } catch { alert("Error de conexión al aprobar") }
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false); setAprobarTarget(null) }
   }, [filtro, user])
 
@@ -1344,11 +1354,12 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al observar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al observar", json.error ?? "No se pudo registrar la observación."); return }
+      showToast("success", "Observaciones enviadas", "La solicitud fue devuelta a la URG con observaciones.")
       setSelectedId(null); setObservarTarget(null)
       setActiveTab("observadas")
       void cargar()
-    } catch { alert("Error de conexión al observar") }
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false) }
   }, [filtro, user])
 
@@ -1365,12 +1376,13 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al aceptar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al aceptar", json.error ?? "No se pudo aceptar la solicitud."); return }
+      showToast("success", "Solicitud aceptada", "La solicitud ha sido aceptada para revisión.")
       // Update state so the row moves from "Asignadas" tab to "En revisión" tab
       setSolicitudes(prev =>
         prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? "Aceptado por Revisor" } : s)
       )
-    } catch { alert("Error de conexión al aceptar") }
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false) }
   }, [user])
   const handleAsignarRevisor = useCallback(async (id: string, revisorId: string) => {
@@ -1387,13 +1399,14 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al asignar revisor"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al asignar revisor", json.error ?? "No se pudo asignar el revisor."); return }
+      showToast("success", "Revisor asignado", "El revisor fue asignado correctamente.")
       setSolicitudes(prev =>
         prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
       )
       setAsignarRevisorTarget(null)
       setSelectedId(null)
-    } catch { alert("Error de conexión al asignar revisor") }
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false) }
   }, [user])
 
@@ -1461,6 +1474,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   )
 
   return (
+    <>
+    {actionToast && (
+      <ConfirmToast key={actionToast.key} variant={actionToast.variant} title={actionToast.title} description={actionToast.description} />
+    )}
     <PageLayout
       title={filtro === 1 ? "Bandeja en revisión" : filtro === 2 ? "Bandeja en validación" : "Bandeja en emisión"}
       description={filtro === 1
@@ -1496,15 +1513,12 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       />
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por folio, denominación, secretaría..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="pl-10 bg-card"
-          />
-        </div>
+        <SearchInput
+          placeholder="Buscar por folio, denominación, secretaría..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          containerClassName="flex-1 max-w-sm"
+        />
         <Select value={filterRegimen} onValueChange={setFilterRegimen}>
           <SelectTrigger className="w-60 bg-card"><SelectValue placeholder="Régimen" /></SelectTrigger>
           <SelectContent>
@@ -1753,5 +1767,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         guardando={guardando}
       />
     </PageLayout>
+    </>
   )
 }

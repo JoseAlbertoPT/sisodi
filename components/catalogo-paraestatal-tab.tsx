@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
-  ChevronRight, ChevronDown, Plus, Pencil, Trash2, Search,
+  Plus, Pencil, Trash2,
   Landmark, Loader2, GripVertical, AlertCircle,
 } from "lucide-react"
 import {
@@ -145,7 +146,7 @@ function OrganoRow({
           <GripVertical className="h-4 w-4 text-muted-foreground/30 cursor-grab shrink-0" />
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-              {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              <Plus className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-45" : ""}`} />
             </Button>
           </CollapsibleTrigger>
           <div className="flex-1 min-w-0">
@@ -351,9 +352,8 @@ export function CatalogoParaestatalTab() {
               <Plus className="h-4 w-4 mr-1" /> Agregar organismo
             </Button>
           </div>
-          <div className="relative mt-3">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar organismo o area..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <div className="mt-3">
+            <SearchInput placeholder="Buscar organismo o área..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </CardHeader>
         <CardContent>

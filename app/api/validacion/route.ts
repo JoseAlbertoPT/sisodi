@@ -234,6 +234,7 @@ export async function PATCH(req: NextRequest) {
       },
     })
 
+    console.log(`[validacion PATCH] solicitud=${idNum} estado_anterior="${solicitud.estado.nombre}" → estado_nuevo="${estadoNuevo.nombre}"`)
     broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({
       ok:    true,
