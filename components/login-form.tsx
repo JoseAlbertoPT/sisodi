@@ -442,288 +442,177 @@ export function LoginForm() {
     finally { setLoading(false) }
   }
   return (
-    <>
-      <div className="flex min-h-screen h-screen overflow-hidden relative">
+    <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+    <div>
+      <label className="block font-sans text-[13px] font-normal leading-[120%] text-[#2e3b2b] mb-1">
+        Usuario
+      </label>
 
-        {/* Panel izquierdo */}
-        <div
-          className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative overflow-hidden"
-          style={{
-            gap: 'clamp(16px, 4vh, 48px)',
-            paddingTop: 'clamp(20px, 3vh, 60px)',
-            paddingBottom: 'clamp(200px, 30vh, 360px)',
-            paddingLeft: 'clamp(24px, 4vw, 64px)',
-            paddingRight: 'clamp(24px, 4vw, 64px)',
+      <div className="relative">
+        <User
+          size={18}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#aeada6] pointer-events-none"
+        />
+
+        <input
+          type="text"
+          placeholder="Usuario"
+          value={rfc}
+          onChange={(e) => {
+            if (!mustChangePassword) {
+              setRfc(e.target.value.toUpperCase())
+              setError("")
+            }
           }}
-        >
-          <Image
-            src="/fondo-login-verde.webp"
-            alt=""
-            fill
-            priority
-            sizes="50vw"
-            style={{ objectFit: 'cover', objectPosition: '65% 35%', zIndex: 0 }}
-          />
-          <Image
-            src="/FINANZAS COLOR VERTICAL 2.png"
-            alt="Secretaría de Administración y Finanzas"
-            width={0}
-            height={0}
-            sizes="(max-width: 1024px) 0px, 33vw"
-            priority
-            style={{
-              height: 'clamp(120px, 22vh, 280px)',
-              width: 'auto',
-              objectFit: 'contain',
-              position: 'relative',
-              zIndex: 1,
-            }}
-          />
-          <Image
-            src="/log-name-sisodij (1).png"
-            alt="SISODIJ"
-            width={0}
-            height={0}
-            sizes="(max-width: 1024px) 0px, 33vw"
-            priority
-            style={{
-              height: 'clamp(100px, 20vh, 240px)',
-              width: 'auto',
-              objectFit: 'contain',
-              position: 'relative',
-              zIndex: 1,
-              marginTop: '16px',
-            }}
-          />
-        </div>
+          readOnly={mustChangePassword}
+          maxLength={13}
+          autoComplete="username"
+          className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pl-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors uppercase"
+        />
+      </div>
+    </div>
 
-        {/* Panel derecho */}
-        <div
-          className="relative flex w-full lg:w-1/2 items-center justify-center overflow-hidden"
-          style={{
-            paddingTop: 'clamp(40px, 8vh, 120px)',
-            paddingBottom: 'clamp(80px, 12vh, 180px)',
-            paddingLeft: 'clamp(16px, 3vw, 48px)',
-            paddingRight: 'clamp(16px, 3vw, 48px)',
+    <div>
+      <label className="block font-sans text-[13px] font-normal leading-[120%] text-[#2e3b2b] mb-1">
+        Contraseña
+      </label>
+
+      <div className="relative">
+        <input
+          type={showPassword ? "text" : "password"}
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => {
+            if (!mustChangePassword) {
+              setPassword(e.target.value)
+              setError("")
+            }
           }}
+          readOnly={mustChangePassword}
+          autoComplete="current-password"
+          className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pr-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors"
+        />
+
+        <button
+          type="button"
+          onClick={() => {
+            if (!mustChangePassword) setShowPassword(!showPassword)
+          }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeada6] hover:text-[#2e3b2b] transition-colors"
         >
-          <Image
-            src="/fondo-login-blanco.png"
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            style={{ objectFit: 'cover', objectPosition: 'center', zIndex: 0 }}
-          />
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      </div>
+    </div>
 
-          {/* Tarjeta de login */}
-          <div
-            className="relative z-10 w-full rounded-3xl flex flex-col items-center overflow-hidden"
-            style={{
-              backgroundColor: 'rgba(42, 59, 41, 0.72)',
-              maxWidth: 'clamp(320px, 28vw, 480px)',
-              gap: 'clamp(16px, 3vh, 32px)',
-              paddingTop: 'clamp(24px, 5vh, 56px)',
-              paddingBottom: 'clamp(24px, 5vh, 56px)',
-              paddingLeft: 'clamp(24px, 3vw, 56px)',
-              paddingRight: 'clamp(24px, 3vw, 56px)',
-            }}
-          >
-            {/* Logo + título */}
-            <div className="flex flex-col items-center" style={{ gap: 'clamp(8px, 1.5vh, 16px)' }}>
-              <div className="flex items-center justify-center gap-3">
-                <Image
-                  src="/LOGO_MORELOS_V1.png"
-                  alt="Gobierno del Estado de Morelos"
-                  width={0}
-                  height={0}
-                  sizes="15vw"
-                  priority
-                  style={{
-                    height: mustChangePassword ? '48px' : '64px',
-                    width: 'auto',
-                    objectFit: 'contain',
-                    transition: 'height 0.3s',
-                  }}
-                />
-                <Image
-                  src="/logo-20finanzas.png"
-                  alt="Secretaría de Finanzas"
-                  width={0}
-                  height={0}
-                  sizes="15vw"
-                  priority
-                  style={{
-                    height: mustChangePassword ? '48px' : '64px',
-                    width: 'auto',
-                    objectFit: 'contain',
-                    transition: 'height 0.3s',
-                  }}
-                />
-              </div>
-              <p className="text-white font-light tracking-wide" style={{ fontSize: 'clamp(14px, 1.6vh, 20px)' }}>
-                {mustChangePassword ? "Cambio de contraseña" : "Inicia sesión"}
-              </p>
-              {mustChangePassword && (
-                <p className="text-white/55 text-xs text-center leading-relaxed px-2">
-                  Debes establecer una nueva contraseña para continuar
-                </p>
-              )}
-            </div>
+    {mustChangePassword && (
+      <>
+        <div>
+          <label className="block font-sans text-[13px] font-normal leading-[120%] text-[#2e3b2b] mb-1">
+            Nueva contraseña
+          </label>
 
-            {error && (
-              <div className="w-full rounded-full bg-red-500/20 px-5 py-3 text-sm text-white text-center border border-red-400/30">
-                {error}
-              </div>
-            )}
+          <div className="relative">
+            <input
+              type={showNueva ? "text" : "password"}
+              placeholder="Nueva contraseña"
+              value={nuevaPassword}
+              onChange={(e) => {
+                setNuevaPassword(e.target.value)
+                setError("")
+              }}
+              autoComplete="new-password"
+              className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pr-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors"
+            />
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
-                {/* RFC — bloqueado al cambiar contraseña */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Usuario"
-                    value={rfc}
-                    onChange={(e) => { if (!mustChangePassword) { setRfc(e.target.value.toUpperCase()); setError("") } }}
-                    readOnly={mustChangePassword}
-                    maxLength={13}
-                    autoComplete="username"
-                    className={`w-full rounded-full px-5 py-3 pr-11 text-sm outline-none uppercase tracking-widest transition-opacity ${
-                      mustChangePassword
-                        ? "bg-white/20 text-white/50 placeholder:text-white/30 cursor-not-allowed"
-                        : "bg-white text-gray-800 placeholder:text-gray-400"
-                    }`}
-                  />
-                  {mustChangePassword
-                    ? <Lock size={15} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/40" />
-                    : <User size={16} className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#2A3B29' }} />
-                  }
-                </div>
-
-                {/* Contraseña actual — bloqueada al cambiar */}
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Contraseña"
-                    value={password}
-                    onChange={(e) => { if (!mustChangePassword) setPassword(e.target.value) }}
-                    readOnly={mustChangePassword}
-                    autoComplete="current-password"
-                    className={`w-full rounded-full px-5 py-3 pr-12 text-sm outline-none transition-opacity ${
-                      mustChangePassword
-                        ? "border border-white/20 bg-transparent text-white/40 placeholder:text-white/25 cursor-not-allowed"
-                        : "border border-white/50 bg-transparent text-white placeholder:text-white/60"
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => { if (!mustChangePassword) setShowPassword(!showPassword) }}
-                    tabIndex={mustChangePassword ? -1 : 0}
-                    className={`absolute right-4 top-1/2 -translate-y-1/2 transition-opacity ${mustChangePassword ? "opacity-30 pointer-events-none" : ""}`}
-                    style={{ color: '#2A3B29' }}
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-
-                {/* Campos nueva contraseña — solo cuando mustChangePassword */}
-                {mustChangePassword && (
-                  <>
-                    <div className="flex items-center gap-3 my-1">
-                      <div className="flex-1 h-px bg-white/20" />
-                      <span className="text-[11px] text-white/45 uppercase tracking-wider">Nueva contraseña</span>
-                      <div className="flex-1 h-px bg-white/20" />
-                    </div>
-
-                    <div className="relative">
-                      <input
-                        type={showNueva ? "text" : "password"}
-                        placeholder="Nueva contraseña"
-                        value={nuevaPassword}
-                        onChange={(e) => { setNuevaPassword(e.target.value); setError("") }}
-                        autoFocus
-                        autoComplete="new-password"
-                        className="w-full rounded-full border border-white/50 bg-transparent px-5 py-3 pr-12 text-sm text-white placeholder:text-white/60 outline-none"
-                      />
-                      <button type="button" onClick={() => setShowNueva(!showNueva)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
-                        {showNueva ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-
-                    <div className="relative">
-                      <input
-                        type={showConfirmar ? "text" : "password"}
-                        placeholder="Confirmar contraseña"
-                        value={confirmarPassword}
-                        onChange={(e) => { setConfirmarPassword(e.target.value); setError("") }}
-                        autoComplete="new-password"
-                        className="w-full rounded-full border border-white/50 bg-transparent px-5 py-3 pr-12 text-sm text-white placeholder:text-white/60 outline-none"
-                      />
-                      <button type="button" onClick={() => setShowConfirmar(!showConfirmar)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
-                        {showConfirmar ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-
-                    {/* Reglas de contraseña */}
-                    {(nuevaPassword.length > 0 || confirmarPassword.length > 0) && (
-                      <div className="flex flex-col gap-1.5 px-1">
-                        {reglas.map((r) => (
-                          <div key={r.label} className="flex items-center gap-2">
-                            <div className={`h-1.5 w-1.5 rounded-full shrink-0 transition-colors ${r.ok ? "bg-green-400" : "bg-white/30"}`} />
-                            <span className={`text-[11px] transition-colors ${r.ok ? "text-green-300" : "text-white/45"}`}>{r.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading || changeLoading || (mustChangePassword && !todasOk)}
-                  className="w-full rounded-full py-3 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:opacity-50 mt-1"
-                  style={{ backgroundColor: '#2A3B29' }}
-                >
-                  {changeLoading ? "ACTUALIZANDO..." : loading ? "INGRESANDO..." : mustChangePassword ? "ACTUALIZAR CONTRASEÑA" : "INICIAR SESIÓN"}
-                </button>
-
-                {mustChangePassword && (
-                  <button
-                    type="button"
-                    onClick={() => { logout(); setMustChangePassword(false); setRfc(""); setPassword(""); setNuevaPassword(""); setConfirmarPassword(""); setError("") }}
-                    className="text-white/40 hover:text-white/70 text-xs text-center transition-colors"
-                  >
-                    Cerrar sesión
-                  </button>
-                )}
-              </form>
+            <button
+              type="button"
+              onClick={() => setShowNueva(!showNueva)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeada6] hover:text-[#2e3b2b] transition-colors"
+            >
+              {showNueva ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
         </div>
 
-        {/* Pleca inferior */}
-        <div
-          className="hidden lg:block absolute z-20 pointer-events-none select-none overflow-hidden"
-          style={{ bottom: '-24px', left: 0, right: 0 }}
-        >
-          <Image
-            src="/down_login_pleca_Manuales.png"
-            alt="Gobierno del Estado de Morelos"
-            width={0}
-            height={0}
-            sizes="100vw"
-            priority
-            style={{
-              width: '100%',
-              height: 'auto',
-              display: 'block',
-              margin: 0,
-              padding: 0,
-              verticalAlign: 'bottom',
-            }}
-          />
-        </div>
-      </div>
+        <div>
+          <label className="block font-sans text-[13px] font-normal leading-[120%] text-[#2e3b2b] mb-1">
+            Confirmar contraseña
+          </label>
 
-    </>
+          <div className="relative">
+            <input
+              type={showConfirmar ? "text" : "password"}
+              placeholder="Confirmar contraseña"
+              value={confirmarPassword}
+              onChange={(e) => {
+                setConfirmarPassword(e.target.value)
+                setError("")
+              }}
+              autoComplete="new-password"
+              className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pr-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors"
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowConfirmar(!showConfirmar)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeada6] hover:text-[#2e3b2b] transition-colors"
+            >
+              {showConfirmar ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </div>
+      </>
+    )}
+
+    {error && (
+      <p className="mt-1 px-1 text-xs text-red-500 text-center">
+        {error}
+      </p>
+    )}
+
+    <button
+      type="submit"
+      disabled={loading || changeLoading || (mustChangePassword && !todasOk)}
+      className="mt-2 mx-auto block rounded-full px-10 py-2 font-sans text-[16px] font-normal leading-[120%] text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+      style={{ backgroundColor: "#2e3b2b" }}
+    >
+      {changeLoading
+        ? "Actualizando…"
+        : loading
+          ? "Entrando…"
+          : mustChangePassword
+            ? "Actualizar contraseña"
+            : "Iniciar"}
+    </button>
+
+    {!mustChangePassword && (
+      <button
+        type="button"
+        onClick={() => setMostrarModalRecuperar(true)}
+        className="text-xs text-[#5d5e5f] hover:text-[#2e3b2b] text-center transition-colors"
+      >
+        ¿Olvidaste tu contraseña?
+      </button>
+    )}
+
+    {mustChangePassword && (
+      <button
+        type="button"
+        onClick={() => {
+          logout()
+          setMustChangePassword(false)
+          setRfc("")
+          setPassword("")
+          setNuevaPassword("")
+          setConfirmarPassword("")
+          setError("")
+        }}
+        className="text-xs text-[#5d5e5f] hover:text-[#2e3b2b] text-center transition-colors"
+      >
+        Cerrar sesión
+      </button>
+    )}
+  </form>
   )
 }

@@ -46,7 +46,8 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-geist);
+  --font-display: var(--font-karol-sans), sans-serif;
+  --font-sans: var(--font-twogether-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
