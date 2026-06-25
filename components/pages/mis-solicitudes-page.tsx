@@ -15,7 +15,20 @@ import {
   Search, Eye, Edit3, Download, FileCheck,
   ChevronDown, ChevronRight, Info, History, FileText,
   ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw,
+  MoreVertical, Pencil,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
@@ -777,7 +790,7 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
     v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -795,7 +808,7 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -1123,7 +1136,6 @@ function DetalleView({
           {canEdit && !periodoConfirmado && (
             <>
               <Button size="sm"
-                className="gap-1.5 bg-primary hover:bg-primary/90 text-white border-0"
                 onClick={() => onEditSolicitud
                   ? onEditSolicitud(solToEditPayload(sol))
                   : handleDemoAction("Continuar captura")
@@ -1132,7 +1144,6 @@ function DetalleView({
               </Button>
               {(n === "borrador" || n === "en captura") && (
                 <Button size="sm"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
                   disabled={!canSend}
                   onClick={() => handleDemoAction("Enviar a Validacion")}
                   title={!canSend ? "Periodo fuera de tiempo o régimen incompatible" : ""}>
@@ -1247,17 +1258,15 @@ function DetalleView({
       )}
 
       {canEdit && !tipoCompatible && (
-        <Card className="border-2 border-amber-400/40 shadow-sm">
-          <CardContent className="flex items-start gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-            <div>
-              <span className="text-sm font-medium text-amber-700">Régimen incompatible</span>
-              <p className="text-sm text-card-foreground mt-1">
-                El régimen <strong>{regimenLabel}</strong> no corresponde al tipo <strong>{sol.tipo}</strong>.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+          <div>
+            <span className="text-sm font-semibold text-[#374151]">Régimen incompatible</span>
+            <p className="text-sm text-[#374151] mt-0.5">
+              El régimen <strong>{regimenLabel}</strong> no corresponde al tipo <strong>{sol.tipo}</strong>.
+            </p>
+          </div>
+        </div>
       )}
       <AlertDialog open={showConfirmPeriodo} onOpenChange={setShowConfirmPeriodo}>
         <AlertDialogContent>
@@ -1723,12 +1732,12 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-4">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {error}
+            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3 mb-4">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+              <span className="text-sm text-[#DC2626]">{error}</span>
             </div>
           )}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-secondary text-secondary-foreground">
@@ -1838,13 +1847,37 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                         })()}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm"
-                            onClick={() => setSelectedId(sol.id)}
-                            className="text-secondary hover:text-primary gap-1.5">
-                            <Eye className="h-4 w-4" />Ver
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" aria-label="Acciones">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>Acciones</TooltipContent>
+                          </Tooltip>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedId(sol.id)}>
+                              <Eye className="h-4 w-4" />
+                              Ver solicitud
+                            </DropdownMenuItem>
+                            {(isBorrador || solTab === "Observadas / Devueltas") && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => onEditSolicitud
+                                    ? onEditSolicitud(solToEditPayload(sol))
+                                    : setSelectedId(sol.id)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  Editar
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   )

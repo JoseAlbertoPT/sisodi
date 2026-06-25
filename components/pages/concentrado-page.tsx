@@ -110,7 +110,7 @@ export function ConcentradoPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-secondary text-secondary-foreground">

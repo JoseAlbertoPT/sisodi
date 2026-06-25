@@ -81,53 +81,64 @@ function HistoricoTab() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             {/* Archivo 1 */}
-
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subir Archivo </span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subir Archivo</span>
               <input ref={inputRef} type="file" accept=".xlsx" className="hidden"
                 onChange={(e) => { setFile1(e.target.files?.[0] ?? null); setUploadError(null); setUploadOk(false) }} />
               {file1 ? (
-                <div className="flex items-center gap-2.5 rounded-lg border-2 border-secondary/30 bg-secondary/5 px-3.5 py-3">
-                  <FileSpreadsheet className="h-4 w-4 shrink-0 text-secondary" />
-                  <span className="text-sm text-card-foreground font-medium truncate flex-1">{file1.name}</span>
+                <div className="flex items-center gap-2 rounded-[8px] border-[1.5px] border-[#ccc] bg-white px-3 py-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                  <FileSpreadsheet className="h-4 w-4 text-green-600 shrink-0" />
+                  <span className="text-sm font-medium truncate flex-1">{file1.name}</span>
                   <button type="button" onClick={clearFile1}
-                    className="rounded p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
+                    className="rounded p-0.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ) : (
                 <button type="button" onClick={() => inputRef.current?.click()}
-                  className="flex items-center gap-2.5 rounded-lg border-2 border-dashed border-border bg-muted/20 px-3.5 py-3 hover:bg-muted/50 hover:border-secondary/30 transition-colors cursor-pointer text-left w-full group">
-                  <FileSpreadsheet className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-secondary transition-colors" />
-                  <span className="text-sm text-muted-foreground">Seleccionar archivo .xlsx</span>
+                  className="flex flex-col items-center gap-2 rounded-[12px] border-2 border-dashed border-[#ccc] bg-[#fafafa] px-4 py-5 hover:border-[#7B2D5E] hover:bg-[#f5f5f5] transition-colors cursor-pointer w-full">
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <div className="flex flex-col gap-0.5 text-center">
+                    <p className="text-sm text-muted-foreground">Arrastra tu archivo aquí, o</p>
+                    <span className="text-sm font-medium text-[#7B2D5E] underline underline-offset-2">Seleccionar archivo</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">.xlsx · máx. 10 MB</p>
                 </button>
               )}
             </div>
 
-            {/* Archivo 2 */}
-            {file1 && <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-               Subir  Archivo  <span className="font-normal normal-case opacity-60">(opcional)</span>
-              </span>
-              <input ref={input2Ref} type="file" accept=".xlsx" className="hidden"
-                onChange={(e) => { setFile2(e.target.files?.[0] ?? null); setUploadError(null); setUploadOk(false) }} />
-              {file2 ? (
-                <div className="flex items-center gap-2.5 rounded-lg border-2 border-secondary/30 bg-secondary/5 px-3.5 py-3">
-                  <FileSpreadsheet className="h-4 w-4 shrink-0 text-secondary" />
-                  <span className="text-sm text-card-foreground font-medium truncate flex-1">{file2.name}</span>
-                  <button type="button" onClick={clearFile2}
-                    className="rounded p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0">
-                    <X className="h-3.5 w-3.5" />
+            {/* Archivo 2 (opcional) */}
+            {file1 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Subir Archivo <span className="font-normal normal-case opacity-60">(opcional)</span>
+                </span>
+                <input ref={input2Ref} type="file" accept=".xlsx" className="hidden"
+                  onChange={(e) => { setFile2(e.target.files?.[0] ?? null); setUploadError(null); setUploadOk(false) }} />
+                {file2 ? (
+                  <div className="flex items-center gap-2 rounded-[8px] border-[1.5px] border-[#ccc] bg-white px-3 py-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                    <FileSpreadsheet className="h-4 w-4 text-green-600 shrink-0" />
+                    <span className="text-sm font-medium truncate flex-1">{file2.name}</span>
+                    <button type="button" onClick={clearFile2}
+                      className="rounded p-0.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => input2Ref.current?.click()}
+                    className="flex flex-col items-center gap-2 rounded-[12px] border-2 border-dashed border-[#ccc] bg-[#fafafa] px-4 py-5 hover:border-[#7B2D5E] hover:bg-[#f5f5f5] transition-colors cursor-pointer w-full">
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <div className="flex flex-col gap-0.5 text-center">
+                      <p className="text-sm text-muted-foreground">Arrastra tu archivo aquí, o</p>
+                      <span className="text-sm font-medium text-[#7B2D5E] underline underline-offset-2">Seleccionar archivo</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">.xlsx · máx. 10 MB</p>
                   </button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => input2Ref.current?.click()}
-                  className="flex items-center gap-2.5 rounded-lg border-2 border-dashed border-border bg-muted/20 px-3.5 py-3 hover:bg-muted/50 hover:border-secondary/30 transition-colors cursor-pointer text-left w-full group">
-                  <FileSpreadsheet className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-secondary transition-colors" />
-                  <span className="text-sm text-muted-foreground">Seleccionar archivo .xlsx</span>
-                </button>
-              )}
-            </div>}
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3 border-t border-border pt-4">
@@ -178,8 +189,9 @@ function HistoricoTab() {
             <Loader2 className="h-4 w-4 animate-spin" />Cargando archivos...
           </div>
         ) : error ? (
-          <div className="flex items-center gap-2.5 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3.5 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />{error}
+          <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+            <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+            <span className="text-sm text-[#DC2626]">{error}</span>
           </div>
         ) : historicos.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-muted/10 px-4 py-14 text-center">

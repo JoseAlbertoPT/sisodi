@@ -473,7 +473,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -491,7 +491,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -945,7 +945,7 @@ function FolioDictamenCard({
           <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview}</span>
           <p className="text-[10px] text-muted-foreground mt-0.5">Formato NN/MM/AAAA: número secuencial / mes / año.</p>
         </div>
-        <Button onClick={handleAsignar} disabled={guardando || !consecutivo || !mes || !anio} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+        <Button onClick={handleAsignar} disabled={guardando || !consecutivo || !mes || !anio} className="w-full gap-2">
           {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
           Asignar Folio de Dictamen
         </Button>
@@ -1209,7 +1209,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+              className="gap-1.5"
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
               Aprobar y asignar
@@ -1594,7 +1594,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               <p className="text-base font-semibold text-card-foreground text-center">{showConfirmacion}</p>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={() => setShowConfirmacion(null)}>Ver Expediente</Button>
-                <Button onClick={() => onBack(filtro)} className="bg-primary text-primary-foreground hover:bg-primary/90">Regresar a bandeja</Button>
+                <Button onClick={() => onBack(filtro)}>Regresar a bandeja</Button>
               </div>
             </CardContent>
           </Card>
@@ -1632,7 +1632,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               </RadioGroup>
               <div className="flex items-center gap-3 w-full">
                 <Button variant="outline" className="flex-1" onClick={() => setShowEmitConfirm(false)}>Cancelar</Button>
-                <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleConfirmEmit} disabled={guardando}>
+                <Button className="flex-1" onClick={handleConfirmEmit} disabled={guardando}>
                   {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y aprobar"}
                 </Button>
               </div>
@@ -1693,7 +1693,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           {onEditSolicitud && !isEnTabObservadas && (
-            <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-white border-0"
+            <Button size="sm" className="gap-1.5"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
             >
               <Pencil className="h-4 w-4" />Editar
@@ -2148,7 +2148,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                           }
                         }}
                         disabled={!canEmit}
-                        className={`gap-1.5 ${canEmit ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                        className={`gap-1.5 ${canEmit ? "" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
                       >
                         <Send className="h-4 w-4" />
                         {modalidadFirma === "electronica" ? "Firmar y Emitir Dictamen" : "Emitir Dictamen"}

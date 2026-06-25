@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { AppSidebar, type PageKey } from "@/components/app-sidebar"
-import { AppHeader } from "@/components/app-header"
+import { SidebarProvider } from "@/lib/sidebar-context"
 import { DashboardPage } from "@/components/pages/dashboard-page"
 import { BandejaFiltroPage } from "@/components/pages/bandeja-filtro-page"
 import { RevisionDOPage } from "@/components/pages/revision-do-page"
@@ -153,20 +153,21 @@ export function AppShell() {
       : currentPage
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <AppSidebar
-        currentPage={sidebarCurrentPage}
-        onNavigate={handleNavigate}
-        collapsed={sidebarCollapsed}
-        onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onMenuReady={setMenuReady}
-      />
-      <main className={`flex flex-1 flex-col overflow-y-auto ${showSplash ? "" : "p-6"}`}>
-        {showSplash && user
-          ? <WelcomePage userName={user.nombre} userRole={user.rol} />
-          : menuReady ? renderPage() : null
-        }
-      </main>
-    </div>
+    <SidebarProvider value={{ collapsed: sidebarCollapsed, onToggle: () => setSidebarCollapsed((c) => !c) }}>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <AppSidebar
+          currentPage={sidebarCurrentPage}
+          onNavigate={handleNavigate}
+          collapsed={sidebarCollapsed}
+          onMenuReady={setMenuReady}
+        />
+        <main className={`flex flex-1 flex-col overflow-y-auto ${showSplash ? "" : "p-6"}`}>
+          {showSplash && user
+            ? <WelcomePage userName={user.nombre} userRole={user.rol} />
+            : menuReady ? renderPage() : null
+          }
+        </main>
+      </div>
+    </SidebarProvider>
   )
 }

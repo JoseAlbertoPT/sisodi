@@ -409,7 +409,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLab
         <p className="text-sm text-muted-foreground">{description}</p>
         <div className="flex items-center justify-end gap-3 pt-2">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={onConfirm} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </div>
@@ -542,7 +542,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+              className="gap-1.5"
               >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
               Aprobar y asignar
@@ -622,7 +622,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+              className="gap-1.5"
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
               Asignar
@@ -740,7 +740,7 @@ function FolioDictamenCard({
         <Button
           onClick={handleAsignar}
           disabled={guardando || cargando || !consecutivo || !mes || !anio}
-          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+          className="w-full gap-2"
            >
           {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
           Asignar Folio de Dictamen
@@ -958,7 +958,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             <Button
               size="sm"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
-              className="gap-1.5 bg-primary hover:bg-primary/90 text-white border-0"
+              className="gap-1.5"
             >
               <Pencil className="h-4 w-4" />Editar
             </Button>
@@ -969,7 +969,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               else setShowAprobarModal(true)
             }}
             disabled={guardando}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+            className="gap-1.5"
             size="sm"
             >
             {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -1461,22 +1461,14 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   )
 
   return (
-    <PageLayout>
-      {}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">
-            {filtro === 1 ? "Bandeja en revisión" : filtro === 2 ? "Bandeja en validación" : "Bandeja en emisión"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {filtro === 1
-              ? "Revisa y analiza las solicitudes asignadas, realizando el primer filtro de revisión y observaciones."
-              : filtro === 2
-              ? "Valida y asigna las solicitudes, realizando el segundo filtro de revisión y observaciones."
-              : "Gestiona la emisión de las solicitudes, realizando la dictaminación final y la generación de dictámenes u opiniones técnicas."}
-          </p>
-        </div>
-      </div>
+    <PageLayout
+      title={filtro === 1 ? "Bandeja en revisión" : filtro === 2 ? "Bandeja en validación" : "Bandeja en emisión"}
+      description={filtro === 1
+        ? "Revisa y analiza las solicitudes asignadas, realizando el primer filtro de revisión y observaciones."
+        : filtro === 2
+        ? "Valida y asigna las solicitudes, realizando el segundo filtro de revisión y observaciones."
+        : "Gestiona la emisión de las solicitudes, realizando la dictaminación final y la generación de dictámenes u opiniones técnicas."}
+    >
 
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
@@ -1548,7 +1540,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
               <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">

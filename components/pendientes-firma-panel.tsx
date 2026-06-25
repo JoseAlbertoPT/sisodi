@@ -177,7 +177,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                     <td className="px-4 py-2 text-right">
                       <Button size="sm" onClick={() => p.mi_firmante_pendiente && setFirmanteDialogId(p.mi_firmante_pendiente.id)}
                         disabled={!esMiTurno}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
+                        className="gap-1.5">
                         <Shield className="h-3.5 w-3.5" /> Firmar
                       </Button>
                     </td>

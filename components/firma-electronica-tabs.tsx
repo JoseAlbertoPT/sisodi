@@ -269,7 +269,7 @@ export function FirmaElectronicaTabs({
             </p>
             {error && <p className="text-xs text-destructive">{error}</p>}
             <Button onClick={handleIniciar} disabled={iniciando}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 self-end">
+              className="gap-1.5 self-end">
               {iniciando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
               Iniciar proceso
             </Button>
@@ -405,7 +405,7 @@ export function FirmaElectronicaTabs({
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={resetFirmandoInline} disabled={firmandoTrabajo}>Cancelar</Button>
                     <Button onClick={() => handleFirmarInline(f.id)} disabled={firmandoTrabajo}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
+                      className="gap-1.5">
                       {firmandoTrabajo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
                       Firmar
                     </Button>
@@ -440,7 +440,7 @@ export function FirmaElectronicaTabs({
         <Button
           onClick={() => onFinalizar()}
           disabled={!puedeContinuar || guardandoFinal || (!!selladoEtapa && !selladoSubido)}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+          className="gap-1.5"
         >
           {guardandoFinal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Enviar
@@ -534,7 +534,7 @@ function FirmanteRow({
       )}
 
       {modo === "interno" && !firmante.firmado && esCurrent && esSuTurno && (
-        <Button size="sm" onClick={onFirmar} className="self-start bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
+        <Button size="sm" onClick={onFirmar} className="self-start gap-1.5">
           <Shield className="h-4 w-4" /> Firmar mi parte
         </Button>
       )}

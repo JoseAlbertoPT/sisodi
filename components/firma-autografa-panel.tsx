@@ -115,7 +115,8 @@ export function FirmaAutografaPanel({
                   <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs text-secondary hover:underline">Ver</a>
                 </div>
               )}
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className={`flex flex-col items-center gap-2 rounded-[12px] border-2 border-dashed cursor-pointer transition-colors px-4 py-5 text-center
+                ${uploading ? "border-[#ddd] bg-[#f0f0f0] cursor-not-allowed" : error ? "border-[#D32F2F] bg-[#FFF5F5]" : "border-[#ccc] bg-[#fafafa] hover:border-[#7B2D5E] hover:bg-[#f5f5f5]"}`}>
                 <input
                   type="file" accept="application/pdf" className="hidden"
                   onChange={e => {
@@ -125,12 +126,26 @@ export function FirmaAutografaPanel({
                   }}
                   disabled={uploading}
                 />
-                <span className={`inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm ${uploading ? "opacity-60" : "hover:bg-muted"}`}>
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  {archivoSubido ? "Reemplazar archivo" : "Seleccionar PDF"}
-                </span>
+                {uploading
+                  ? <Loader2 className="h-7 w-7 text-muted-foreground animate-spin" />
+                  : <Upload className={`h-7 w-7 ${error ? "text-[#D32F2F]" : "text-muted-foreground"}`} />}
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-sm text-muted-foreground">
+                    {uploading ? "Subiendo archivo..." : "Arrastra tu PDF aquí, o"}
+                  </p>
+                  {!uploading && (
+                    <span className="text-sm font-medium text-[#7B2D5E] underline underline-offset-2">
+                      {archivoSubido ? "Reemplazar archivo" : "Seleccionar PDF"}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Solo PDF · máx. 10 MB</p>
               </label>
-              {error && <p className="text-xs text-destructive">{error}</p>}
+              {error && (
+                <p className="text-xs flex items-center gap-1.5" style={{ color: "#D32F2F" }}>
+                  <span className="shrink-0 text-base leading-none">⊘</span>{error}
+                </p>
+              )}
             </>
           )}
         </CardContent>
@@ -140,7 +155,7 @@ export function FirmaAutografaPanel({
         <Button
           onClick={() => onFinalizar()}
           disabled={!archivoSubido || guardandoFinal}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+          className="gap-1.5"
         >
           {guardandoFinal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Enviar a Emisor

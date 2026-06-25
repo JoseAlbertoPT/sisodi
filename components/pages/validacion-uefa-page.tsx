@@ -739,7 +739,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
     v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -757,7 +757,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -914,7 +914,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLab
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={onConfirm} className={confirmVariant === "destructive"
             ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            : "bg-primary text-primary-foreground hover:bg-primary/90"}>
+            : ""}>
             {confirmLabel}
           </Button>
         </div>
@@ -1052,7 +1052,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
           <Button
             onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
             disabled={!seleccionado || cargando}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+            className="gap-1.5"
           >
             <CheckCircle2 className="h-4 w-4" />Confirmar
           </Button>
@@ -1130,7 +1130,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
               <Button
                 onClick={() => setShowAprobarConfirm(true)}
                 disabled={guardando}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+                className="gap-1.5"
                 size="sm"
               >
                 {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -1548,7 +1548,10 @@ export function ValidacionUefaPage() {
   const firmaTargetSol = solicitudes.find(s => s.id === firmaTargetId) ?? null
 
   return (
-    <PageLayout>
+    <PageLayout
+      title="Bandeja de validación de justificaciones"
+      description="Gestiona y da seguimiento a las justificaciones durante su proceso de validación y emisión."
+    >
       {dictamenViewSol && (
         <DictamenModal solicitud={dictamenViewSol} onClose={() => setDictamenViewId(null)} />
       )}
@@ -1572,12 +1575,6 @@ export function ValidacionUefaPage() {
         />
       )}
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">Bandeja de validación de justificaciones</h2>
-          <p className="text-sm text-muted-foreground">Gestiona y da seguimiento a las justificaciones durante su proceso de validación y emisión.</p>
-        </div>
-      </div>
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="flex items-center gap-3 py-3">
@@ -1609,7 +1606,7 @@ export function ValidacionUefaPage() {
               <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">

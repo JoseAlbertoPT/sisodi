@@ -256,7 +256,7 @@ export function CalendarioPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={String(ejercicio)} onValueChange={(v) => setEjercicio(Number(v))} disabled={editing}>
-              <SelectTrigger className="w-[90px] h-9 text-xs font-mono"><SelectValue placeholder="Año" /></SelectTrigger>
+              <SelectTrigger className="w-[90px] h-9 py-2 text-xs font-mono"><SelectValue placeholder="Año" /></SelectTrigger>
               <SelectContent>
                 {availableYears.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
@@ -281,7 +281,7 @@ export function CalendarioPage() {
             {!editing && !showNewYearInput && <div className="h-5 w-px bg-border" />}
             {!editing ? (
               isEmpty ? (
-                <Button size="sm" className="gap-1.5 text-xs h-9 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleCreateYear} disabled={loading}>
+                <Button size="sm" className="gap-1.5 text-xs h-9" onClick={handleCreateYear} disabled={loading}>
                   <CalendarPlus className="h-3.5 w-3.5" />Crear año {ejercicio}
                 </Button>
               ) : (
@@ -355,7 +355,7 @@ export function CalendarioPage() {
             )}
 
             {tabRecepcion === "honorarios" && (
-              <div className="overflow-hidden rounded-lg border border-border">
+              <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
@@ -404,7 +404,7 @@ export function CalendarioPage() {
             )}
 
             {(tabRecepcion === "asimilados" || tabRecepcion === "nombramiento") && (
-              <div className="overflow-hidden rounded-lg border border-border">
+              <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
                 <table className="w-full text-sm">
 
                   <thead>

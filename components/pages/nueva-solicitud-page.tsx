@@ -392,8 +392,10 @@ function OficioUpload({
   existingFiles?: { id: number; nombre_archivo: string; ruta: string }[]
 }) {
   const [archivo, setArchivo] = useState<File | null>(null)
-  const [error,   setError]   = useState<string | null>(null)
+  const [error,    setError]    = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
   const handleFile = (file: File) => {
     setError(null)
     const ext = file.name.split(".").pop()?.toLowerCase()
@@ -407,51 +409,81 @@ function OficioUpload({
     onFileChange?.(file)
   }
 
+  const getFileIcon = (name: string) => {
+    const ext = name.split(".").pop()?.toLowerCase()
+    const color = ext === "pdf" ? "text-red-500" : ext && ["xls","xlsx"].includes(ext) ? "text-green-600" : ext && ["doc","docx"].includes(ext) ? "text-blue-500" : "text-muted-foreground"
+    return <FileText className={`h-4 w-4 shrink-0 ${color}`} />
+  }
+
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
+      {/* Archivos existentes previos */}
       {existingFiles && existingFiles.length > 0 && (
-        <div className="flex flex-col gap-1 mb-1">
+        <div className="flex flex-col gap-1.5 mb-1">
           {existingFiles.map((adj) => (
-            <div key={adj.id} className="flex items-center gap-2 rounded-md border border-secondary/30 bg-secondary/5 px-3 py-2">
-              <FileText className="h-4 w-4 text-secondary shrink-0" />
-              <span className="text-xs font-medium text-secondary truncate flex-1">{adj.nombre_archivo}</span>
+            <div key={adj.id} className="flex items-center gap-2 rounded-[8px] border-[1.5px] border-[#ccc] bg-white px-3 py-2">
+              <FileText className="h-4 w-4 text-red-500 shrink-0" />
+              <span className="text-xs font-medium truncate flex-1">{adj.nombre_archivo}</span>
               {adj.ruta && (
                 <button type="button" onClick={() => window.open(adj.ruta, "_blank")}
-                  className="text-xs text-muted-foreground hover:text-secondary underline shrink-0">
-                  Ver
-                </button>
+                  className="text-xs text-[#7B2D5E] hover:underline shrink-0">Ver</button>
               )}
             </div>
           ))}
-          <p className="text-xs text-muted-foreground pl-1">Para reemplazar el archivo cargue uno nuevo:</p>
+          <p className="text-xs text-muted-foreground">Para reemplazar el archivo, cargue uno nuevo:</p>
         </div>
       )}
+
+      {/* Input oculto */}
       <input ref={inputRef} type="file" accept="*" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-      <div
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f) }}
-        className={`flex items-center justify-center rounded-lg border-2 border-dashed px-4 py-4 cursor-pointer transition-colors
-          ${archivo ? "border-secondary bg-secondary/5" : error ? "border-destructive/50 bg-destructive/5" : "border-border bg-background hover:border-secondary"}`}
-      >
-        {archivo ? (
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
-            <span className="text-xs font-medium text-secondary truncate max-w-xs">{archivo.name}</span>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setArchivo(null); setError(null); onFileChange?.(null) }}
-              className="text-muted-foreground hover:text-destructive ml-1 text-xs leading-none">✕</button>
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = "" }} />
+
+      {/* Zona principal */}
+      {archivo ? (
+        /* Estado Uploaded — fila single file */
+        <div className="flex items-center gap-2 rounded-[8px] border-[1.5px] border-[#ccc] bg-white px-3 py-2.5">
+          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+          {getFileIcon(archivo.name)}
+          <span className="text-sm truncate flex-1">{archivo.name}</span>
+          <button
+            type="button"
+            onClick={() => { setArchivo(null); setError(null); onFileChange?.(null) }}
+            className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : (
+        /* Estado Empty / Drop */
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => inputRef.current?.click()}
+          onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f) }}
+          className={`flex flex-col items-center justify-center gap-2 cursor-pointer rounded-[12px] border-2 border-dashed p-6 text-center transition-colors
+            ${error
+              ? "border-[#D32F2F] bg-[#FFF5F5]"
+              : dragOver
+                ? "border-[#7B2D5E] bg-[#f5f0f5]"
+                : "border-[#ccc] bg-[#fafafa] hover:border-[#7B2D5E] hover:bg-[#f5f5f5]"
+            }`}
+        >
+          <Upload className={`h-7 w-7 ${error ? "text-[#D32F2F]" : "text-muted-foreground"}`} />
+          <div className="flex flex-col gap-0.5">
+            <p className="text-sm text-muted-foreground">Arrastra tu archivo aquí, o</p>
+            <span className="text-sm font-medium text-[#7B2D5E] underline underline-offset-2">Seleccionar archivo</span>
           </div>
-        ) : (
-          <div className="flex flex-col items-center gap-1 text-center">
-            <Upload className="h-5 w-5 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">Cualquier formato (máx. 10 MB) — Clic para buscar o Arrastra</p>
-          </div>
-        )}
-      </div>
+          <p className="text-xs text-muted-foreground">Cualquier formato · máx. 10 MB</p>
+        </div>
+      )}
+
+      {/* Mensaje de error */}
       {error && (
-        <p className="text-xs text-destructive flex items-center gap-1">
-          <AlertCircle className="h-3 w-3 shrink-0" />{error}
+        <p className="text-xs flex items-center gap-1.5" style={{ color: "#D32F2F" }}>
+          <span className="shrink-0 text-base leading-none">⊘</span>{error}
         </p>
       )}
     </div>
@@ -842,24 +874,21 @@ function DynamicList({
         </Label>
       )}
       {items.map((item, idx) => (
-        <div key={idx} className="flex flex-col gap-0.5">
-          <div
-            className={`flex items-start gap-2 rounded-lg border-2 px-3 py-2 ${dupFlags[idx] ? "border-destructive/60 bg-destructive/5" : "border-transparent"}`}
-            style={{ width: "100%" }}
-          >
-            <span className="flex h-6 w-6 mt-0.5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
+        <div key={idx} className="flex flex-col gap-1">
+          <div className="flex items-start gap-2 w-full">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary mt-[10px]">
               {idx + 1}
             </span>
             {readonly && !item ? (
-                <span className="text-sm text-muted-foreground">—</span>
-             ) : readonly ? (
-                <span
-                  className="text-sm text-muted-foreground"
-                  style={{ whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word", flex: 1, minWidth: 0 }}
-                >
-                  {item}
-                </span>
-             ) : (
+              <span className="text-sm text-muted-foreground py-2">—</span>
+            ) : readonly ? (
+              <span
+                className="flex-1 text-sm text-muted-foreground py-2"
+                style={{ whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word", minWidth: 0 }}
+              >
+                {item}
+              </span>
+            ) : (
               <textarea
                 ref={(el) => {
                   itemRefs.current[idx] = el
@@ -894,29 +923,26 @@ function DynamicList({
                   }
                 }}
                 placeholder={`${label || "Item"} ${idx + 1}`}
-                className="border-0 shadow-none p-0 text-sm bg-transparent outline-none focus:outline-none"
+                className={`ds-list-input flex-1${dupFlags[idx] ? " ds-list-input--error" : ""}`}
                 style={{
                   resize: "none", overflow: "hidden",
                   whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word",
-                  flex: 1, minWidth: 0, lineHeight: "1.5rem",
+                  minWidth: 0, lineHeight: "1.5rem",
                 }}
               />
-             )}
-            {dupFlags[idx] && !readonly && (
-              <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
             )}
             {!readonly && items.length > 1 && (
               <button
                 type="button"
                 onClick={() => { const copy = items.filter((_, i) => i !== idx); onChange(copy) }}
-                className="ml-auto shrink-0 text-muted-foreground hover:text-destructive transition-colors mt-0.5"
+                className="shrink-0 text-muted-foreground hover:text-destructive transition-colors mt-[15px]"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
           {dupFlags[idx] && !readonly && (
-            <p className="text-xs text-destructive flex items-center gap-1 px-3">
+            <p className="text-xs flex items-center gap-1 pl-8" style={{ color: "#D32F2F" }}>
               <AlertCircle className="h-3 w-3 shrink-0" />Este texto ya existe en otra sección o se repite.
             </p>
           )}
@@ -1136,31 +1162,31 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
         ) : (
           <>
             {!seleccionado && coincidencias.length > 1 && (
-              <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-                <Info className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+                <Info className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+                <span className="text-sm font-medium text-[#374151]">
                   Hay varias coincidencias — seleccione el nivel que corresponda.
                 </span>
               </div>
             )}
             {seleccionado && (
-              <div className="flex items-center gap-2 rounded-md bg-secondary/10 border border-secondary/30 px-3 py-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                <span className="text-xs text-secondary font-medium">
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#22C55E] bg-[#F0FDF4] px-4 py-3">
+                <CheckCircle2 className="h-4 w-4 text-[#16A34A] shrink-0 mt-0.5" />
+                <span className="text-sm font-medium text-[#374151]">
                   Nivel seleccionado: <strong>{seleccionado.nivel}</strong>
                   {seleccionado.categoria ? ` — categoría ${seleccionado.categoria}` : ""}
                 </span>
               </div>
             )}
             {busqueda.trim() === "" ? (
-              <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
-                <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className="text-xs text-muted-foreground">Ingrese el importe para ver coincidencias</span>
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#9CA3AF] bg-[#F9FAFB] px-4 py-3">
+                <Info className="h-4 w-4 text-[#6B7280] shrink-0 mt-0.5" />
+                <span className="text-sm text-[#374151]">Ingrese el importe para ver coincidencias</span>
               </div>
             ) : coincidencias.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-md bg-destructive/5 border border-destructive/20 px-3 py-2">
-                <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                <span className="text-xs text-destructive">Sin coincidencias en el tabulador.</span>
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+                <AlertCircle className="h-4 w-4 text-[#DC2626] shrink-0 mt-0.5" />
+                <span className="text-sm text-[#DC2626]">Sin coincidencias en el tabulador.</span>
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
@@ -1288,7 +1314,7 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
           </p>
         </div>
         <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/20">
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onAccept}>
+          <Button onClick={onAccept}>
             <CheckCircle2 className="mr-1.5 h-4 w-4" />Entendido, continuar
           </Button>
         </div>
@@ -1306,37 +1332,45 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
   ]
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-2xl rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Info className="h-4 w-4 text-primary" />
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-2xl rounded-[16px] bg-white shadow-[0_8px_32px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-[#e5e5e5]">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f0f0f0]">
+            <Info className="h-4 w-4 text-[#555]" />
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Fórmula de llenado</span>
+            <span className="text-sm font-bold text-foreground">Fórmula de llenado</span>
             <span className="text-xs text-muted-foreground">Guía para redactar correctamente el campo</span>
-
           </div>
-          <button onClick={onClose} className="ml-auto text-muted-foreground hover:text-foreground transition-colors">
+          <button
+            onClick={onClose}
+            className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-[#f5f5f5] hover:text-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
+        {/* Contenido */}
         <div className="px-6 py-5 overflow-auto max-h-[65vh]">
           <table className="w-full text-sm border-collapse">
-            <thead>
-            </thead>
             <tbody>
               {filas.map((fila, i) => (
-                <tr key={i} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
-                  <td className="px-4 py-3 font-medium text-muted-foreground border border-border align-top">{fila.elemento}</td>
-                  <td className="px-4 py-3 text-card-foreground border border-border leading-relaxed">{fila.ejemplo}</td>
+                <tr key={i}>
+                  <td className="px-4 py-3 font-medium text-[#666] bg-[#f8f8f8] border border-[#e5e5e5] align-top w-[40%]">{fila.elemento}</td>
+                  <td className="px-4 py-3 text-foreground bg-white border border-[#e5e5e5] leading-relaxed">{fila.ejemplo}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/20">
-          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+        {/* Footer */}
+        <div className="flex justify-end px-6 py-4 border-t border-[#e5e5e5]">
+          <button
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-full border-[1.5px] border-[#ccc] bg-white px-6 py-2 text-sm font-medium text-foreground transition-colors hover:bg-[#f5f5f5]"
+          >
+            Cerrar
+          </button>
         </div>
       </div>
     </div>
@@ -1683,7 +1717,7 @@ function FormularioPrestacion({
                 Secretaría / Dependencia / Organismo
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+              <div className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#ccc] bg-muted/40 px-4 py-3 min-h-[44px]">
                 <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
               </div>
             </div>
@@ -1852,7 +1886,7 @@ function FormularioPrestacion({
                 onChange={(e) => setNumeroPrestadores(e.target.value.replace(/[^0-9]/g, ""))}
                 onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Tab"].includes(e.key)) e.preventDefault() }}
                 placeholder="Ej. 5"
-                className="bg-background"
+                className="ns-ds-field bg-background"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -1892,7 +1926,7 @@ function FormularioPrestacion({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  className={`ns-ds-field pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
@@ -1982,8 +2016,8 @@ function FormularioPrestacion({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.II ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4 text-[#7B2D3E]" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+              <Info className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2011,8 +2045,8 @@ function FormularioPrestacion({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.III ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4 text-[#7B2D3E]" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+              <Info className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2058,18 +2092,16 @@ function FormularioPrestacion({
             forbiddenTexts={forbiddenTextsPS.responsabilidades}
           />
           {!bloqueadoPorRenovacion && actividades.length !== responsabilidades.length && (
-            <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-              <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span className="text-xs text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+              <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+              <span className="text-sm text-[#374151]">
                 <strong>Actividades a Realizar</strong> tiene <strong>{actividades.length}</strong> {actividades.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
               </span>
             </div>
           )}
-          <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
-            <Info className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-semibold text-card-foreground">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
-            </div>
+          <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#3B82F6] bg-[#EFF6FF] px-4 py-3">
+            <Info className="h-4 w-4 shrink-0 text-[#3B82F6] mt-0.5" />
+            <span className="text-sm font-semibold text-[#374151]">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
           </div>
         </CardContent>
       </Card>
@@ -2128,9 +2160,9 @@ function FormularioPrestacion({
                 forbiddenTexts={forbiddenTextsPS[fKey]}
               />
               {!bloqueadoPorRenovacion && actividades.length !== items.length && (
-                <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+                  <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+                  <span className="text-sm text-[#374151]">
                     <strong>Actividades a Realizar</strong> tiene <strong>{actividades.length}</strong> {actividades.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
                   </span>
                 </div>
@@ -2440,7 +2472,7 @@ function FormularioNombramiento({
                 Secretaría / Dependencia / Organismo
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+              <div className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#ccc] bg-muted/40 px-4 py-3 min-h-[44px]">
                 <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
               </div>
             </div>
@@ -2644,7 +2676,7 @@ function FormularioNombramiento({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  className={`ns-ds-field pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
@@ -2722,8 +2754,8 @@ function FormularioNombramiento({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.II ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto del Nombramiento
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4 text-[#7B2D3E]" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+              <Info className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2751,8 +2783,8 @@ function FormularioNombramiento({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.III ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4 text-[#7B2D3E]" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+              <Info className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2797,16 +2829,17 @@ function FormularioNombramiento({
             forbiddenTexts={forbiddenTextsNom.responsabilidades}
           />
           {!bloqueadoPorRenovacion && funciones.length !== responsabilidades.length && (
-            <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-              <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span className="text-xs text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+              <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+              <span className="text-sm text-[#374151]">
                 <strong>Actividades / Funciones</strong> tiene <strong>{funciones.length}</strong> {funciones.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
               </span>
             </div>
           )}
-          <p className="text-xs text-muted-foreground italic">
-            Las responsabilidades deberán ser congruentes con las actividades registradas.
-          </p>
+          <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#3B82F6] bg-[#EFF6FF] px-4 py-3">
+            <Info className="h-4 w-4 shrink-0 text-[#3B82F6] mt-0.5" />
+            <span className="text-sm font-semibold text-[#374151]">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
+          </div>
         </CardContent>
       </Card>
 
@@ -2834,7 +2867,7 @@ function FormularioNombramiento({
         <CardContent className="flex flex-col gap-4 px-4 pb-4 pt-0">
           <div>
             <Label className="text-sm font-medium mb-3 block">Condiciones de Trabajo</Label>
-            <div className="overflow-hidden rounded-md border border-border">
+            <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">
@@ -2871,7 +2904,7 @@ function FormularioNombramiento({
 
           <div>
             <Label className="text-sm font-medium mb-3 block">Tabla de Riesgos</Label>
-            <div className="overflow-hidden rounded-md border border-border">
+            <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">
@@ -3004,9 +3037,9 @@ function FormularioNombramiento({
                 forbiddenTexts={forbiddenTextsNom[fKey]}
               />
               {!bloqueadoPorRenovacion && funciones.length !== items.length && (
-                <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+                  <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+                  <span className="text-sm text-[#374151]">
                     <strong>Actividades / Funciones</strong> tiene <strong>{funciones.length}</strong> {funciones.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
                   </span>
                 </div>
@@ -3084,7 +3117,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
             <div className="flex gap-3">
               <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Volver</Button>
               <Button onClick={() => { setSubmitted(false); setTipoSolicitud(""); setSecretaria(""); setUnidad(""); setDenominacion(""); setVigenciaInicio(""); setVigenciaFin(""); setImporteBruto(""); setFolioManual(""); setFechaRecepcion(""); setFolioSolicitud(""); setAssignedFolio("") }}
-                className="bg-primary text-primary-foreground hover:bg-primary/90">Registrar Otra</Button>
+               >Registrar Otra</Button>
             </div>
           </CardContent>
         </Card>
@@ -3128,7 +3161,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
       </Card>
       <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
         <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Cancelar</Button>
-        <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
+        <Button onClick={handleSubmit} disabled={!canSubmit} className="gap-1.5">
           {subTipo === "regularizacion" ? <Clock className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
           {subTipo === "regularizacion" ? "Registrar Regularización" : "Registrar Excepción DO"}
         </Button>
@@ -3902,6 +3935,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
   }
   const isEditMode = !!editSolicitud?.id
   return (
+    <div className="ns-select">
     <PageLayout
       title={isEditMode ? "Modificación de Solicitud" : "Nueva solicitud"}
       description={isEditMode
@@ -3928,19 +3962,15 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             </Card>
           )}
           {!calCargando && !calendarioCompleto && (
-            <Card className="shadow-sm border-destructive/40 bg-destructive/5">
-              <CardContent className="flex items-start gap-3 px-4 py-3">
-                <AlertCircle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-destructive">Calendario de Recepción Incompleto!</span>
-                  <span className="text-xs text-muted-foreground">
-                    Para continuar con el  registro  es Necesario Contar  con las fechas de
-                    los <strong> 3 Regímenes</strong> (Honorarios, Asimilados y Nombramiento)
-                    <strong> Todos los  Meses/Quincenas   </strong> Deben tener fecha Configurada.
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+              <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-semibold text-[#DC2626]">Calendario de Recepción Incompleto</span>
+                <span className="text-sm text-[#374151]">
+                  Para continuar con el registro es necesario contar con las fechas de los <strong>3 Regímenes</strong> (Honorarios, Asimilados y Nombramiento). <strong>Todos los Meses/Quincenas</strong> deben tener fecha configurada.
+                </span>
+              </div>
+            </div>
           )}
               <Card className={`shadow-sm border-secondary/30 border-2 ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
               <CardHeader className="px-4 pt-3 pb-1">
@@ -4036,7 +4066,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             </CardContent>
             <CardContent className="flex justify-end px-4 pb-3 pt-2">
               <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+                className="disabled:opacity-50">
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
             </CardContent>
@@ -4197,7 +4227,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                           </div>
                           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/20">
                             <Button variant="outline" onClick={() => setShowModalMismasCondiciones(false)}>Cancelar</Button>
-                            <Button className="bg-primary text-primary-foreground hover:bg-primary/90"
+                            <Button
                               onClick={() => { setCondicionRenovacion("mismas"); setShowModalMismasCondiciones(false) }}>
                               <CheckCircle2 className="mr-1.5 h-4 w-4" />Sí, confirmar
                             </Button>
@@ -4219,7 +4249,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   (esRenovacion === "si" && !folioSeleccionado) ||
                   (esRenovacion === "si" && folioSeleccionado && condicionRenovacion !== "mismas")
                 }
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+               
               >
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
@@ -4310,25 +4340,25 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             return (
               <div className="flex flex-col gap-3">
                 {errorBorrador && (
-                  <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
-                    <span className="text-xs text-destructive">{errorBorrador}</span>
+                  <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+                    <span className="text-sm text-[#DC2626]">{errorBorrador}</span>
                   </div>
                 )}
                 {errorEnvio && (
-                  <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
-                    <span className="text-xs text-destructive">{errorEnvio}</span>
+                  <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+                    <span className="text-sm text-[#DC2626]">{errorEnvio}</span>
                   </div>
                 )}
                 {esRenovacion !== "si" && camposFaltantes.length > 0 && (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                  <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-[#D97706] mt-0.5" />
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                      <span className="text-sm font-semibold text-[#374151]">
                         Campos obligatorios pendientes ({camposFaltantes.length}):
                       </span>
-                      <span className="text-xs text-amber-600 dark:text-amber-500">
+                      <span className="text-xs text-[#6B7280]">
                         {camposFaltantes.join(" · ")}
                       </span>
                     </div>
@@ -4340,7 +4370,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   </Button>
                   <div className="flex items-center gap-3">
                     {isEditingBorrador ? (
-                      <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
+                      <Button className="min-w-[160px]"
                         disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}>
                         {guardandoBorrador
                           ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Guardando...</>
@@ -4355,7 +4385,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                             : <><Save className="mr-1.5 h-4 w-4" />Guardar Borrador</>
                           }
                         </Button>
-                        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
+                        <Button className="min-w-[160px]"
                           disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
                           {enviando
                             ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
@@ -4372,5 +4402,6 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
         </>
       )}
     </PageLayout>
+    </div>
   )
 }

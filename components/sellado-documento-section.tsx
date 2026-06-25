@@ -173,7 +173,7 @@ export function SelladoDocumentoSection({
                 size="sm"
                 onClick={handleDescargar}
                 disabled={descargando}
-                className={`gap-1.5 ${!sellado ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
+                className={`gap-1.5 ${!sellado ? "" : ""}`}
               >
                 {descargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 {labelDescargar}
@@ -185,10 +185,13 @@ export function SelladoDocumentoSection({
               )}
             </div>
 
-            <div className={`flex flex-col gap-2 rounded-md border ${habilitarSubida ? "border-border" : "border-dashed border-muted-foreground/30 bg-muted/20"} p-3`}>
+            <div className={`flex flex-col gap-2 rounded-[12px] border-2 border-dashed p-3 transition-colors
+              ${!habilitarSubida ? "border-[#ddd] bg-[#f0f0f0]" : subiendo ? "border-[#ccc] bg-[#f5f5f5]" : "border-[#ccc] bg-[#fafafa]"}`}>
               <div className="flex items-center gap-2">
-                <Upload className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium">{labelSubir}</span>
+                {subiendo
+                  ? <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+                  : <Upload className={`h-3.5 w-3.5 ${habilitarSubida ? "text-muted-foreground" : "text-[#aaa]"}`} />}
+                <span className={`text-xs font-medium ${!habilitarSubida ? "text-[#aaa]" : ""}`}>{labelSubir}</span>
                 {!habilitarSubida && (
                   <Badge variant="outline" className="text-[10px] ml-auto">Descarga primero</Badge>
                 )}

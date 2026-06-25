@@ -248,7 +248,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => window.close()}>Cancelar</Button>
               <Button onClick={handleAcceder} disabled={accediendo}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
+                className="gap-1.5">
                 {accediendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
                 Acceder y comenzar
               </Button>
@@ -400,7 +400,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                 </div>
                 {error && <p className="text-xs text-destructive">{error}</p>}
                 <Button type="submit" disabled={trabajando}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 self-end mt-2">
+                  className="gap-1.5 self-end mt-2">
                   {trabajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
                   Firmar ahora
                 </Button>

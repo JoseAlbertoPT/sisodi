@@ -253,7 +253,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 type="button"
                 onClick={() => setConfirmEmitirAbierto(true)}
                 disabled={emitiendo || !selladoSubido}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+                className="gap-1.5"
               >
                 {emitiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
                 Emitir Dictamen
@@ -313,7 +313,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => { reset(); onClose() }} disabled={trabajando}>Cancelar</Button>
               <Button type="submit" disabled={trabajando}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
+                className="gap-1.5">
                 {trabajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
                 Firmar
               </Button>

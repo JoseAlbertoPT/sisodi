@@ -531,21 +531,36 @@ export function LoginForm() {
           >
             {/* Logo + título */}
             <div className="flex flex-col items-center" style={{ gap: 'clamp(8px, 1.5vh, 16px)' }}>
-              <Image
-                src="/LogoQuetzal.svg"
-                alt="Logo Quetzal"
-                width={0}
-                height={0}
-                sizes="20vw"
-                priority
-                style={{
-                  height: mustChangePassword ? 'clamp(48px, 8vh, 80px)' : 'clamp(72px, 13vh, 140px)',
-                  width:  mustChangePassword ? 'clamp(48px, 8vh, 80px)' : 'clamp(72px, 13vh, 140px)',
-                  objectFit: 'contain',
-                  filter: 'brightness(0) invert(1)',
-                  transition: 'height 0.3s, width 0.3s',
-                }}
-              />
+              <div className="flex items-center justify-center gap-3">
+                <Image
+                  src="/LOGO_MORELOS_V1.png"
+                  alt="Gobierno del Estado de Morelos"
+                  width={0}
+                  height={0}
+                  sizes="15vw"
+                  priority
+                  style={{
+                    height: mustChangePassword ? '48px' : '64px',
+                    width: 'auto',
+                    objectFit: 'contain',
+                    transition: 'height 0.3s',
+                  }}
+                />
+                <Image
+                  src="/logo-20finanzas.png"
+                  alt="Secretaría de Finanzas"
+                  width={0}
+                  height={0}
+                  sizes="15vw"
+                  priority
+                  style={{
+                    height: mustChangePassword ? '48px' : '64px',
+                    width: 'auto',
+                    objectFit: 'contain',
+                    transition: 'height 0.3s',
+                  }}
+                />
+              </div>
               <p className="text-white font-light tracking-wide" style={{ fontSize: 'clamp(14px, 1.6vh, 20px)' }}>
                 {mustChangePassword ? "Cambio de contraseña" : "Inicia sesión"}
               </p>

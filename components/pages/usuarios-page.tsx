@@ -632,7 +632,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             if (key === "correo" && form.correo.trim() && /\S+@\S+\.\S+/.test(form.correo))
               checkUnico("correo", form.correo)
           }}
-          className={`bg-background h-9 text-xs ${hasError ? "border-destructive" : ""}`}
+          className={`bg-background h-9 py-2 text-xs ${hasError ? "border-destructive" : ""}`}
         />
         {isChecking && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
         {!isChecking && hint && !hasError && <span className="text-[10px] text-muted-foreground">{hint}</span>}
@@ -730,7 +730,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Button>
             <Button
               size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              className="text-xs h-9 gap-1.5"
               onClick={handleSubmit}
               disabled={loading}
             >
@@ -819,7 +819,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     onBlur={() => {
                       if (form.rfc.trim()) checkUnico("rfc", form.rfc)
                     }}
-                    className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
+                    className={`bg-background h-9 py-2 text-xs font-mono tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
                     maxLength={13}
                   />
                   {checking.rfc && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
@@ -846,7 +846,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                       autoComplete="new-password"
                       value={form.password}
                       onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                      className={`bg-background h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                      className={`bg-background h-9 py-2 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
                     />
                     <button
                       type="button"
@@ -861,7 +861,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
                   <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
-                    <SelectTrigger className={`bg-background h-9 text-xs ${errors.rol ? "border-destructive" : ""}`}>
+                    <SelectTrigger className={`bg-background h-9 py-2 text-xs ${errors.rol ? "border-destructive" : ""}`}>
                       <SelectValue placeholder="Seleccione un rol" />
                     </SelectTrigger>
                     <SelectContent>
@@ -873,7 +873,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Estatus inicial</Label>
                   <Select value={form.estatus} onValueChange={(v) => setForm((f) => ({ ...f, estatus: v as "Activo" | "Inactivo" }))}>
-                    <SelectTrigger className="bg-background h-9 text-xs">
+                    <SelectTrigger className="bg-background h-9 py-2 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1011,7 +1011,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Button>
             <Button
               size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              className="text-xs h-9 gap-1.5"
               onClick={handleNext}
               disabled={step === 4 && permTreeLoading}
             >
@@ -1180,7 +1180,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         autoComplete={autoComplete}
         value={form[key] as string}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-        className={`bg-background h-9 text-xs ${errors[key] ? "border-destructive" : ""}`}
+        className={`bg-background h-9 py-2 text-xs ${errors[key] ? "border-destructive" : ""}`}
       />
       {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
@@ -1277,7 +1277,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                   value={form.rfc}
                   autoComplete="off"
                   onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
-                  className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+                  className={`bg-background h-9 py-2 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
                   maxLength={13}
                 />
                 {!errors.rfc && <span className="text-[10px] text-muted-foreground"></span>}
@@ -1287,7 +1287,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
                 <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
-                  <SelectTrigger className={`bg-background h-9 text-xs ${errors.rol ? "border-destructive" : ""}`}>
+                  <SelectTrigger className={`bg-background h-9 py-2 text-xs ${errors.rol ? "border-destructive" : ""}`}>
                     <SelectValue placeholder="Seleccione un rol" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1300,7 +1300,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Estatus</Label>
                 <Select value={form.estatus} onValueChange={(v) => setForm((f) => ({ ...f, estatus: v as "Activo" | "Inactivo" }))}>
-                  <SelectTrigger className="bg-background h-9 text-xs">
+                  <SelectTrigger className="bg-background h-9 py-2 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1391,7 +1391,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className={`bg-background h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                    className={`bg-background h-9 py-2 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
@@ -1413,7 +1413,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.confirmPassword}
                     onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                    className={`bg-background h-9 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                    className={`bg-background h-9 py-2 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
@@ -1437,7 +1437,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </Button>
             <Button
               size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              className="text-xs h-9 gap-1.5"
               onClick={handleSubmit}
               disabled={loading}
               >
@@ -1952,7 +1952,7 @@ export function UsuariosPage() {
               {loadError}
             </div>
           )}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-secondary text-secondary-foreground">
