@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   Plus, Pencil, Trash2,
@@ -240,19 +241,17 @@ function OrganoRow({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={deleteOrgOpen} onOpenChange={setDeleteOrgOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Eliminar Organismo</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground py-1">Se eliminará <strong>{node.nombre}</strong> y sus <strong>{areas.length}</strong> areas. Esta acción no se puede deshacer.</p>
-          {formError && <p className="text-xs text-destructive">{formError}</p>}
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button variant="destructive" onClick={handleDeleteOrg} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteOrgOpen}
+        onClose={() => { setDeleteOrgOpen(false); setFormError("") }}
+        onConfirm={handleDeleteOrg}
+        variant="eliminar"
+        title="Eliminar Organismo"
+        description={<>Se eliminará <strong>{node.nombre}</strong> y sus <strong>{areas.length}</strong> áreas. Esta acción no se puede deshacer.</>}
+        confirmLabel="Sí, Eliminar"
+        loading={saving}
+        error={formError || undefined}
+      />
 
       <Dialog open={editAreaOpen} onOpenChange={setEditAreaOpen}>
         <DialogContent>
@@ -273,19 +272,17 @@ function OrganoRow({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={deleteAreaOpen} onOpenChange={setDeleteAreaOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Eliminar Area</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground py-1">Se eliminará <strong>{targetArea?.nombre}</strong>. Esta acción no se puede deshacer.</p>
-          {formError && <p className="text-xs text-destructive">{formError}</p>}
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button variant="destructive" onClick={handleDeleteArea} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteAreaOpen}
+        onClose={() => { setDeleteAreaOpen(false); setFormError("") }}
+        onConfirm={handleDeleteArea}
+        variant="eliminar"
+        title="Eliminar Área"
+        description={<>Se eliminará <strong>{targetArea?.nombre}</strong>. Esta acción no se puede deshacer.</>}
+        confirmLabel="Sí, Eliminar"
+        loading={saving}
+        error={formError || undefined}
+      />
     </>
   )
 }

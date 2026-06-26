@@ -14,12 +14,13 @@ import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ConfirmDialog, ObservarDialog } from "@/components/ui/confirm-dialog"
 import { SearchInput } from "@/components/ui/search-input"
 import {
   FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
-  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil,
+  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil, X,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
@@ -86,7 +87,6 @@ function ordinalRegreso(n: number): string {
   if (n === 3) return "3er Regreso"
   return `${n}° Regreso`
 }
-
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio) return "---"
   const match = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
@@ -398,85 +398,26 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
     </div>
   )
 }
-function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel, icon }: {
+function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel }: {
   open: boolean; onClose: () => void; onConfirm: () => void
-  title: string; description: string; confirmLabel: string; icon?: React.ReactNode
+  title: string; description: string; confirmLabel: string
 }) {
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            {icon ?? <HelpCircle className="h-5 w-5 text-primary" />}{title}
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">{description}</p>
-        <div className="flex items-center justify-between pt-2">
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title={title}
+      description={description}
+      confirmLabel={confirmLabel}
+      variant="aprobar"
+    />
   )
 }
 function ObservarModal({ open, onClose, onConfirm, folio }: {
   open: boolean; onClose: () => void; onConfirm: (obs: string) => void; folio: string
 }) {
-  const [step, setStep] = useState<"confirm" | "write">("confirm")
-  const [obs, setObs]   = useState("")
-  const handleClose = () => { setStep("confirm"); setObs(""); onClose() }
-  if (step === "confirm") return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <HelpCircle className="h-5 w-5 text-destructive" />¿Estás seguro de observar?
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-         Vas a marcar <strong>{folio}</strong> con observaciones. Se devolverá a la URG.
-        </p>
-        <div className="flex items-center justify-between pt-2">
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={() => setStep("write")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5">
-            <AlertTriangle className="h-4 w-4" />Sí, continuar
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <AlertTriangle className="h-5 w-5 text-destructive" />Observar — {folio}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">Escriba las Observaciones que se Enviarán a la URG.</p>
-          <Textarea
-            placeholder="Describa las Observaciones..."
-            value={obs}
-            onChange={e => setObs(e.target.value)}
-            className="min-h-[120px] bg-card"
-          />
-          <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-            <Button
-              onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
-              disabled={!obs.trim()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
-            >
-              <RotateCcw className="h-4 w-4" />Confirmar observación
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
+  return <ObservarDialog open={open} onClose={onClose} onConfirm={onConfirm} folio={folio} />
 }
 
 interface RevisorInfo { id: string; nombre: string; correo: string }
@@ -506,39 +447,46 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
   }, [open])
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-primary" />
-            Aprobar
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 pt-2">
-          <p className="text-sm text-muted-foreground">
-            Solicitud <span className="font-semibold text-card-foreground">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
-          </p>
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+      <DialogContent showCloseButton={false} className="max-w-md p-0">
+        <div className="p-6 flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#e6ede6] flex items-center justify-center shrink-0">
+                <UserCheck className="h-5 w-5 text-[#1a3a1a]" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Aprobar</h3>
             </div>
-          ) : revisores.length === 0 ? (
-            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
-          ) : (
-            <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccionar revisor..." />
-              </SelectTrigger>
-              <SelectContent>
-                {revisores.map(r => (
-                  <SelectItem key={r.id} value={r.id}>
-                    <span className="font-medium">{r.nombre}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex justify-between pt-2">
+            <button type="button" onClick={onClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-4 pl-[52px]">
+            <p className="text-sm text-gray-500">
+              Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
+            </p>
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+              </div>
+            ) : revisores.length === 0 ? (
+              <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+            ) : (
+              <Select value={selectedId} onValueChange={setSelectedId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleccionar revisor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {revisores.map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="font-medium">{r.nombre}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="flex justify-between pt-1">
             <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
               Cancelar
             </Button>
@@ -546,8 +494,9 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5"
-              >
+              className="gap-1.5 hover:opacity-90"
+              style={{ backgroundColor: "#1a3a1a", color: "#fff", border: "none" }}
+            >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
               Aprobar y asignar
             </Button>
@@ -586,39 +535,46 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent style={{ width: 580, maxWidth: '90vw', minHeight: 280, padding: 32 }}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-primary" />
-            Asignar Revisor
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 pt-2">
-          <p className="text-sm text-muted-foreground">
-            Solicitud <span className="font-semibold text-card-foreground">{folio}</span> — selecciona el revisor que la atenderá.
-          </p>
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+      <DialogContent showCloseButton={false} className="max-w-md p-0">
+        <div className="p-6 flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#e6ede6] flex items-center justify-center shrink-0">
+                <UserCheck className="h-5 w-5 text-[#1a3a1a]" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Asignar Revisor</h3>
             </div>
-          ) : revisores.length === 0 ? (
-            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
-          ) : (
-            <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger className="w-full mt-4" style={{ height: 48, fontSize: 16, paddingLeft: 16, paddingRight: 16 }}>
-                <SelectValue placeholder="Seleccionar revisor..." />
-              </SelectTrigger>
-              <SelectContent>
-                {revisores.map(r => (
-                  <SelectItem key={r.id} value={r.id}>
-                    <span className="font-medium">{r.nombre}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex justify-between pt-2">
+            <button type="button" onClick={onClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-4 pl-[52px]">
+            <p className="text-sm text-gray-500">
+              Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá.
+            </p>
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+              </div>
+            ) : revisores.length === 0 ? (
+              <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+            ) : (
+              <Select value={selectedId} onValueChange={setSelectedId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleccionar revisor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {revisores.map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="font-medium">{r.nombre}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="flex justify-between pt-1">
             <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
               Cancelar
             </Button>
@@ -626,7 +582,8 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5"
+              className="gap-1.5 hover:opacity-90"
+              style={{ backgroundColor: "#1a3a1a", color: "#fff", border: "none" }}
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
               Asignar
@@ -1189,7 +1146,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         title={`¿${labelAprobar}?`}
         description={`La solicitud ${folioFormateado} avanzará al siguiente paso del proceso.`}
         confirmLabel="Sí, aprobar"
-        icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
         />
       <ObservarModal
         open={showObservarModal}
@@ -1421,6 +1377,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       const tab = classifySolicitud(s, filtro)
       if (tab !== "todas") c[tab]++
     })
+    if (filtro === 3) c.nuevas = solicitudes.filter(s => classifySolicitud(s, filtro) !== "todas").length
     c.pendientes_firma = pendientesFirmaCount
     c.solicitudes = solicitudesCount
     return c
@@ -1431,6 +1388,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       .filter(s => {
         const tab = classifySolicitud(s, filtro)
         if (filtro === 3 && tab === "todas") return false
+        if (filtro === 3 && activeTab === "nuevas") return true
         if (activeTab !== "todas") return tab === activeTab
         if (filtro === 2) return tab !== "pendientes_asignacion"
         return true
@@ -1737,7 +1695,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         })()}
         description={`La solicitud ${formatearFolio(solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion)} avanzará al siguiente paso del proceso.`}
         confirmLabel="Sí, confirmar"
-        icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
       <ObservarModal
         open={!!observarTarget}

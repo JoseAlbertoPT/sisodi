@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
+import { ConfirmDialog, ObservarDialog } from "@/components/ui/confirm-dialog"
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion"
@@ -22,7 +23,7 @@ import {
   Eye, CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
   Info, RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
-  Shield, FileSignature,
+  Shield, FileSignature, X,
 } from "lucide-react"
 import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
 import { FirmaModal } from "@/components/firma-modal"
@@ -897,95 +898,27 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
   )
 }
 
-function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel, confirmVariant = "default", icon }: {
+function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel }: {
   open: boolean; onClose: () => void; onConfirm: () => void
   title: string; description: string; confirmLabel: string
-  confirmVariant?: "default" | "destructive"; icon?: React.ReactNode
 }) {
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            {icon ?? <HelpCircle className="h-5 w-5 text-primary" />}{title}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="px-6 py-6">
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-        <DialogFooter className="sm:justify-between">
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={onConfirm} className={confirmVariant === "destructive"
-            ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            : ""}>
-            {confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title={title}
+      description={description}
+      confirmLabel={confirmLabel}
+      variant="aprobar"
+    />
   )
 }
 
 function ObservarModal({ open, onClose, onConfirm, folio }: {
   open: boolean; onClose: () => void; onConfirm: (obs: string) => void; folio: string
 }) {
-  const [step, setStep] = useState<"confirm" | "write">("confirm")
-  const [obs,  setObs]  = useState("")
-  const handleClose = () => { setStep("confirm"); setObs(""); onClose() }
-
-  if (step === "confirm") return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <HelpCircle className="h-5 w-5 text-destructive" />¿Estás seguro de observar?
-          </DialogTitle>
-        </DialogHeader>
-        <div className="px-6 py-6">
-          <p className="text-sm text-muted-foreground">
-            Vas a marcar <strong>{folio}</strong> con observaciones. Se enviará de regreso a la URG.
-          </p>
-        </div>
-        <DialogFooter className="sm:justify-between">
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={() => setStep("write")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5">
-            <AlertTriangle className="h-4 w-4" />Sí, continuar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <AlertTriangle className="h-5 w-5 text-destructive" />Observar — {folio}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="px-6 py-6 flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">Escriba las observaciones que se enviarán a la URG.</p>
-          <Textarea
-            placeholder="Describa las observaciones..."
-            value={obs}
-            onChange={e => setObs(e.target.value)}
-            className="min-h-[120px] bg-card"
-          />
-        </div>
-        <DialogFooter className="sm:justify-between">
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button
-            onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
-            disabled={!obs.trim()}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
-          >
-            <RotateCcw className="h-4 w-4" />Confirmar observación
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
+  return <ObservarDialog open={open} onClose={onClose} onConfirm={onConfirm} folio={folio} />
 }
 
 function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: {
@@ -1013,57 +946,67 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <CheckCircle2 className="h-5 w-5 text-primary" />Aprobar y Asignar Revisor
-          </DialogTitle>
-        </DialogHeader>
-        <div className="px-6 py-6 flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
-            Seleccione el Revisor que revisará la solicitud <strong>{folio}</strong>.
-          </p>
-          {cargando ? (
-            <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+      <DialogContent showCloseButton={false} className="max-w-md p-0">
+        <div className="p-6 flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#e6ede6] flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-5 w-5 text-[#1a3a1a]" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Aprobar y Asignar Revisor</h3>
             </div>
-          ) : revisores.length === 0 ? (
-            <div className="flex items-center gap-2 py-2 text-sm text-destructive">
-              <AlertTriangle className="h-4 w-4" />No hay usuarios con rol Revisor en su secretaría.
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-              {revisores.map(r => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setSeleccionado(r.id)}
-                  className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors ${
-                    seleccionado === r.id
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted text-card-foreground"
-                  }`}
-                >
-                  {seleccionado === r.id
-                    ? <CheckCircle2 className="h-4 w-4 shrink-0" />
-                    : <span className="h-4 w-4 shrink-0 rounded-full border border-muted-foreground/40 inline-block" />
-                  }
-                  {r.nombre}
-                </button>
-              ))}
-            </div>
-          )}
+            <button type="button" onClick={handleClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-3 pl-[52px]">
+            <p className="text-sm text-gray-500">
+              Seleccione el Revisor que revisará la solicitud <strong className="text-gray-700">{folio}</strong>.
+            </p>
+            {cargando ? (
+              <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+              </div>
+            ) : revisores.length === 0 ? (
+              <div className="flex items-center gap-2 py-2 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4" />No hay usuarios con rol Revisor en su secretaría.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                {revisores.map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setSeleccionado(r.id)}
+                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors ${
+                      seleccionado === r.id
+                        ? "text-white"
+                        : "hover:bg-gray-100 text-gray-700"
+                    }`}
+                    style={seleccionado === r.id ? { backgroundColor: "#1a3a1a" } : undefined}
+                  >
+                    {seleccionado === r.id
+                      ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      : <span className="h-4 w-4 shrink-0 rounded-full border border-gray-300 inline-block" />
+                    }
+                    {r.nombre}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between pt-1">
+            <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+            <Button
+              onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
+              disabled={!seleccionado || cargando}
+              className="gap-1.5 hover:opacity-90"
+              style={{ backgroundColor: "#1a3a1a", color: "#fff", border: "none" }}
+            >
+              <CheckCircle2 className="h-4 w-4" />Confirmar
+            </Button>
+          </div>
         </div>
-        <DialogFooter className="sm:justify-between">
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button
-            onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
-            disabled={!seleccionado || cargando}
-            className="gap-1.5"
-          >
-            <CheckCircle2 className="h-4 w-4" />Confirmar
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -1350,7 +1293,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         title="¿Aprobar y enviar a Validación?"
         description={`La solicitud ${solicitud.folioJustificacion} será enviada a la Bandeja de Validación  (DO).`}
         confirmLabel="Sí, aprobar"
-        icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
       <ConfirmModal
         open={showFirmarConfirm}
@@ -1359,7 +1301,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         title="¿Firmar Justificación?"
         description={`Se firmará la justificación ${solicitud.folioJustificacion} y pasará a Validación Final.`}
         confirmLabel="Sí, firmar"
-        icon={<Stamp className="h-5 w-5 text-secondary" />}
       />
     </div>
   )
@@ -1746,7 +1687,6 @@ export function ValidacionUefaPage() {
         title="¿Aprobar y enviar a Validación?"
         description={`La solicitud ${solicitudes.find(s => s.id === aprobarTargetId)?.folioJustificacion ?? ""} será enviada a la Bandeja de Validación Final (DO).`}
         confirmLabel="Sí, aprobar"
-        icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
       <ObservarModal
         open={!!observarTargetId}

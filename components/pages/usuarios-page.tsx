@@ -17,6 +17,7 @@ import {
   Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
   Landmark, Factory,
 } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -648,17 +649,16 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
 
   return (
     <>
-    <AlertDialog open={!!claveAlert} onOpenChange={(open) => { if (!open) setClaveAlert("") }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Secretaría sin configuración</AlertDialogTitle>
-          <AlertDialogDescription>{claveAlert}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setClaveAlert("")}>Entendido</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={!!claveAlert}
+      onClose={() => setClaveAlert("")}
+      onConfirm={() => setClaveAlert("")}
+      variant="default"
+      title="Secretaría sin configuración"
+      description={claveAlert}
+      confirmLabel="Entendido"
+      hideCancel
+    />
     {showConfirm && (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm">
         <div className="w-full max-w-md mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
@@ -1192,17 +1192,16 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
 
   return (
     <>
-    <AlertDialog open={!!claveAlert} onOpenChange={(open) => { if (!open) setClaveAlert("") }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Secretaría sin Unidades Administrativas</AlertDialogTitle>
-          <AlertDialogDescription>{claveAlert}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setClaveAlert("")}>Entendido</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={!!claveAlert}
+      onClose={() => setClaveAlert("")}
+      onConfirm={() => setClaveAlert("")}
+      variant="default"
+      title="Secretaría sin Unidades Administrativas"
+      description={claveAlert}
+      confirmLabel="Entendido"
+      hideCancel
+    />
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}

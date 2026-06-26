@@ -205,53 +205,27 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
         >
           {collapsed ? (
             <img
-              src="/LOGO_MORELOS_V1.png"
-              alt="Morelos"
+              src="/logo-quetzal-icono.svg"
+              alt="Quetzal"
               className="h-8 w-8 object-contain"
             />
           ) : (
-            <div className="flex items-center gap-2 min-w-0 w-full">
+            <div className="flex items-center gap-2">
               <img
-                src="/LOGO_MORELOS_V1.png"
-                alt="Morelos"
-                className="h-9 w-9 object-contain shrink-0"
+                src="/logo-quetzal-icono.svg"
+                alt="Quetzal"
+                className="shrink-0"
+                style={{ width: 40, height: 40 }}
               />
               <img
-                src="/logo-20finanzas.png"
+                src="/finanzas-logo-cortado.svg"
                 alt="Finanzas"
-                className="h-9 flex-1 object-contain object-left min-w-0"
+                style={{ width: 130, height: 45, objectFit: "contain", objectPosition: "left" }}
               />
             </div>
           )}
         </div>
 
-
-        <div
-          className={cn(
-            "shrink-0 border-b border-[#E0DED8]",
-            collapsed ? "flex justify-center px-2 py-2.5" : "px-4 py-2.5"
-          )}
-        >
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="block h-6 w-6 rounded-full bg-[#2D3B2D]/10 text-center text-[9px] font-bold leading-6 text-[#2D3B2D] cursor-default select-none">
-                  {(user?.rfc ?? "?").slice(0, 2).toUpperCase()}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="right">{user?.rfc ?? ""}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <div className="flex flex-col gap-0">
-              <span className="text-[10px] font-medium text-[#9CA3AF] uppercase tracking-wide leading-none mb-0.5">
-                RFC
-              </span>
-              <span className="text-[12px] font-semibold text-[#2D3B2D] leading-tight truncate">
-                {user?.rfc ?? "—"}
-              </span>
-            </div>
-          )}
-        </div>
 
         <nav className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-0.5" aria-label="Menú">
           {menusLoading && (

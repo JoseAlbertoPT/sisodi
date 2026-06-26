@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import {
-  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
-  AlertDialogTitle, AlertDialogDescription, AlertDialogAction,
-} from "@/components/ui/alert-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -159,45 +156,34 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
 
   return (
     <>
-    <AlertDialog open={confirmEmitirAbierto} onOpenChange={setConfirmEmitirAbierto}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-            Confirmar emisión del dictamen
-          </AlertDialogTitle>
-          <AlertDialogDescription className="leading-relaxed">
-            Estás a punto de emitir el dictamen{folio ? <> de la justificación <strong>{folio}</strong></> : null}.
-            El expediente quedará <strong>bloqueado</strong> y pasará a la sección de Dictámenes.
-            Esta acción <strong>no se puede revertir</strong>.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <Button variant="outline" onClick={() => setConfirmEmitirAbierto(false)} disabled={emitiendo}>Cancelar</Button>
-          <AlertDialogAction onClick={handleEmitirDictamen} disabled={emitiendo}>
-            Sí, emitir dictamen
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-    <AlertDialog open={avisoCargoAbierto} onOpenChange={setAvisoCargoAbierto}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-accent-foreground" />
-            Antes de escribir su cargo
-          </AlertDialogTitle>
-          <AlertDialogDescription className="leading-relaxed">
-            Escriba su cargo con <strong>exactitud y sin abreviaturas</strong>.
-            Este texto aparecerá impreso junto a su firma en el PDF definitivo y
-            <strong> no podrá modificarse después</strong>.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction onClick={aceptarAvisoCargo}>Entendido</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={confirmEmitirAbierto}
+      onClose={() => setConfirmEmitirAbierto(false)}
+      onConfirm={handleEmitirDictamen}
+      variant="observar"
+      title="Confirmar emisión del dictamen"
+      description={<>
+        Estás a punto de emitir el dictamen{folio ? <> de la justificación <strong>{folio}</strong></> : null}.
+        El expediente quedará <strong>bloqueado</strong> y pasará a la sección de Dictámenes.
+        Esta acción <strong>no se puede revertir</strong>.
+      </>}
+      confirmLabel="Sí, emitir dictamen"
+      loading={emitiendo}
+    />
+    <ConfirmDialog
+      open={avisoCargoAbierto}
+      onClose={() => setAvisoCargoAbierto(false)}
+      onConfirm={aceptarAvisoCargo}
+      variant="default"
+      title="Antes de escribir su cargo"
+      description={<>
+        Escriba su cargo con <strong>exactitud y sin abreviaturas</strong>.
+        Este texto aparecerá impreso junto a su firma en el PDF definitivo y
+        <strong> no podrá modificarse después</strong>.
+      </>}
+      confirmLabel="Entendido"
+      hideCancel
+    />
     <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>

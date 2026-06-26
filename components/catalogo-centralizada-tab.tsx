@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   Plus, Pencil, Trash2,
@@ -346,19 +347,17 @@ function SecretariaRow({
       </Dialog>
 
       {}
-      <Dialog open={deleteSecOpen} onOpenChange={setDeleteSecOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Eliminar Secretaría</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground py-1">Se eliminará <strong>{node.nombre}</strong> y sus <strong>{uas.length}</strong> unidades. Esta acción no se puede deshacer.</p>
-          {formError && <p className="text-xs text-destructive">{formError}</p>}
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button variant="destructive" onClick={handleDeleteSec} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteSecOpen}
+        onClose={() => { setDeleteSecOpen(false); setFormError("") }}
+        onConfirm={handleDeleteSec}
+        variant="eliminar"
+        title="Eliminar Secretaría"
+        description={<>Se eliminará <strong>{node.nombre}</strong> y sus <strong>{uas.length}</strong> unidades. Esta acción no se puede deshacer.</>}
+        confirmLabel="Sí, Eliminar"
+        loading={saving}
+        error={formError || undefined}
+      />
 
       {}
       <Dialog open={editUaOpen} onOpenChange={setEditUaOpen}>
@@ -385,19 +384,17 @@ function SecretariaRow({
       </Dialog>
 
       {}
-      <Dialog open={deleteUaOpen} onOpenChange={setDeleteUaOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Eliminar Unidad Administrativa</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground py-1">Se eliminará <strong>{targetUa?.nombre}</strong>. Esta acción no se puede deshacer.</p>
-          {formError && <p className="text-xs text-destructive">{formError}</p>}
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button variant="destructive" onClick={handleDeleteUa} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteUaOpen}
+        onClose={() => { setDeleteUaOpen(false); setFormError("") }}
+        onConfirm={handleDeleteUa}
+        variant="eliminar"
+        title="Eliminar Unidad Administrativa"
+        description={<>Se eliminará <strong>{targetUa?.nombre}</strong>. Esta acción no se puede deshacer.</>}
+        confirmLabel="Sí, Eliminar"
+        loading={saving}
+        error={formError || undefined}
+      />
     </>
   )
 }

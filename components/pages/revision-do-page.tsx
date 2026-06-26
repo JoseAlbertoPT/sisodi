@@ -14,15 +14,16 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PageLayout } from "@/components/page-layout"
 import {
 
-  ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle,
+  ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle, RotateCcw,
   History, MessageSquare, ClipboardCheck, Info, MinusCircle,
   ChevronDown, ChevronRight, Send, Download, Lock, Stamp,
   Users, Shield, Loader2, GraduationCap, Brain, Wrench, Heart, Star, Briefcase,
-  UserCheck, Pencil,
+  UserCheck, Pencil, X,
 
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
@@ -1168,39 +1169,46 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent style={{ width: 580, maxWidth: '90vw', minHeight: 280, padding: 32 }}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-primary" />
-            Aprobar y Asignar Revisor
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 pt-2">
-          <p className="text-sm text-muted-foreground">
-            Solicitud <span className="font-semibold text-card-foreground">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
-          </p>
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+      <DialogContent showCloseButton={false} className="max-w-md p-0">
+        <div className="p-6 flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#e6ede6] flex items-center justify-center shrink-0">
+                <UserCheck className="h-5 w-5 text-[#1a3a1a]" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Aprobar y Asignar Revisor</h3>
             </div>
-          ) : revisores.length === 0 ? (
-            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
-          ) : (
-            <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger className="w-full mt-4" style={{ height: 48, fontSize: 16, paddingLeft: 16, paddingRight: 16 }}>
-                <SelectValue placeholder="Seleccionar revisor..." />
-              </SelectTrigger>
-              <SelectContent>
-                {revisores.map(r => (
-                  <SelectItem key={r.id} value={r.id}>
-                    <span className="font-medium">{r.nombre}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-4 pl-[52px]">
+            <p className="text-sm text-gray-500">
+              Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
+            </p>
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+              </div>
+            ) : revisores.length === 0 ? (
+              <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+            ) : (
+              <Select value={selectedId} onValueChange={setSelectedId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleccionar revisor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {revisores.map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="font-medium">{r.nombre}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="flex justify-between pt-1">
             <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
               Cancelar
             </Button>
@@ -1208,7 +1216,8 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5"
+              className="gap-1.5 hover:opacity-90"
+              style={{ backgroundColor: "#1a3a1a", color: "#fff", border: "none" }}
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
               Aprobar y asignar
@@ -2032,13 +2041,13 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {isAceptadoPorRevisor ? (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
-                      <Button variant="outline" onClick={handleObservar}
+                      <Button variant="outline" size="sm" onClick={handleObservar}
                         disabled={!canObservar || observarBlocked || guardando}
-                        className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
-                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}Observar
+                        className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10">
+                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}Observar
                       </Button>
-                      <Button onClick={() => handleAprobar()} disabled={!canApprove || guardando}
-                        className={`gap-1.5 ${canApprove ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
+                      <Button size="sm" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
+                        className="gap-1.5">
                         {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                         Aprobar
                       </Button>
@@ -2047,15 +2056,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 ) : (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
-                      <Button variant="outline" onClick={handleObservar}
+                      <Button variant="outline" size="sm" onClick={handleObservar}
                         disabled={!canObservar || observarBlocked || guardando}
-                        className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
-                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}Observar
+                        className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10">
+                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}Observar
                       </Button>
-                      <Button onClick={() => handleAprobar()} disabled={!canApprove || guardando}
-                        className={`gap-1.5 ${canApprove ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
+                      <Button size="sm" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
+                        className="gap-1.5">
                         {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                        {filtro === 1 ? "Aprobar" : filtro === 2 ? "Aprobar" : "Aprobar"}
+                        Aprobar
                       </Button>
                     </CardContent>
                   </Card>

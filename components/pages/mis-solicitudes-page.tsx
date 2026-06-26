@@ -45,10 +45,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
@@ -1268,29 +1265,20 @@ function DetalleView({
           </div>
         </div>
       )}
-      <AlertDialog open={showConfirmPeriodo} onOpenChange={setShowConfirmPeriodo}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Confirmar cambio de periodo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {editingModoSolo
-                ? <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}). La solicitud permanecerá en borrador. Esta acción no se puede deshacer.</>
-                : <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}) y la justificación será enviada automáticamente a Validación de Justificaciones.
-                  {permisoDisponible && " Se consumirá el token  de Habilitación de Captura."}
-                  {" "}Esta acción no se puede deshacer.</>
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowConfirmPeriodo(false)}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmPeriodo}>
-              Sí, actualizar periodo
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showConfirmPeriodo}
+        onClose={() => setShowConfirmPeriodo(false)}
+        onConfirm={handleConfirmPeriodo}
+        variant="aprobar"
+        title="¿Confirmar cambio de periodo?"
+        description={editingModoSolo
+          ? <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}). La solicitud permanecerá en borrador. Esta acción no se puede deshacer.</>
+          : <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}) y la justificación será enviada automáticamente a Validación de Justificaciones.
+              {permisoDisponible && " Se consumirá el token de Habilitación de Captura."}
+              {" "}Esta acción no se puede deshacer.</>
+        }
+        confirmLabel="Sí, actualizar periodo"
+      />
 
       {(n === "borrador" || n === "en captura") && periodoCheck.vigente && tipoCompatible && !isBorradorFueraDeTiempo && (
         <Card className="border-2 border-secondary/30 shadow-sm">

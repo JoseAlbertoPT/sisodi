@@ -1,6 +1,6 @@
 "use client"
 
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { PanelLeft } from "lucide-react"
 import { useSidebar } from "@/lib/sidebar-context"
 
 interface PageLayoutProps {
@@ -11,7 +11,7 @@ interface PageLayoutProps {
 }
 
 export function PageLayout({ title, description, children, noContainer = false }: PageLayoutProps) {
-  const { collapsed, onToggle } = useSidebar()
+  const { onToggle } = useSidebar()
 
   return (
     <div className="flex flex-1 flex-col bg-white">
@@ -26,13 +26,10 @@ export function PageLayout({ title, description, children, noContainer = false }
                   <button
                     type="button"
                     onClick={onToggle}
-                    aria-label={collapsed ? "Expandir menú" : "Contraer menú"}
-                    className="shrink-0 rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
+                    aria-label="Toggle menú"
+                    className="p-1.5 rounded-md hover:bg-gray-200 text-gray-500 transition-colors"
                   >
-                    {collapsed
-                      ? <PanelLeftOpen className="h-4 w-4" />
-                      : <PanelLeftClose className="h-4 w-4" />
-                    }
+                    <PanelLeft size={18} />
                   </button>
                   <h2 className="text-base font-semibold text-black">
                     {title}
@@ -40,7 +37,7 @@ export function PageLayout({ title, description, children, noContainer = false }
                 </div>
               )}
               {description != null && (
-                <p className="text-sm text-muted-foreground pl-7">
+                <p className="text-sm text-muted-foreground">
                   {description}
                 </p>
               )}
