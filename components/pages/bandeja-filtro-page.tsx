@@ -15,13 +15,15 @@ import { PageLayout } from "@/components/page-layout"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ConfirmDialog, ObservarDialog } from "@/components/ui/confirm-dialog"
+import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import { SearchInput } from "@/components/ui/search-input"
 import {
   FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
-  HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
+  ArrowLeft, ChevronDown, ChevronRight,
   FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil, X,
 } from "lucide-react"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -249,9 +251,7 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
           )}
           {icon}{title}
           <span className="ml-auto">
-            {open
-              ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
           </span>
         </CardTitle>
       </CardHeader>
@@ -380,7 +380,7 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
           <div className="flex flex-col gap-2">
             {(raw.adjunto as any[]).map((adj, i) => (
               <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-                <FileText className="h-5 w-5 text-secondary shrink-0" />
+                <FileTypeIcon name={adj.nombre_archivo} size="sm" />
                 <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
                 {adj.ruta && (
                   <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
@@ -447,12 +447,12 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
   }, [open])
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent showCloseButton={false} className="max-w-md p-0">
-        <div className="p-6 flex flex-col gap-5">
+      <DialogContent showCloseButton={false} className="max-w-sm p-0">
+        <div className="p-4 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#e6ede6] flex items-center justify-center shrink-0">
-                <UserCheck className="h-5 w-5 text-[#1a3a1a]" />
+              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
               </div>
               <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Aprobar</h3>
             </div>
@@ -460,7 +460,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex flex-col gap-4 pl-[52px]">
+          <div className="flex flex-col gap-3 pl-[52px]">
             <p className="text-sm text-gray-500">
               Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
             </p>
@@ -472,7 +472,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
             ) : (
               <Select value={selectedId} onValueChange={setSelectedId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full max-w-sm">
                   <SelectValue placeholder="Seleccionar revisor..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -494,10 +494,9 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5 hover:opacity-90"
-              style={{ backgroundColor: "#1a3a1a", color: "#fff", border: "none" }}
+              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#5c2844]"
             >
-              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Aprobar y asignar
             </Button>
           </div>
@@ -535,20 +534,20 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent showCloseButton={false} className="max-w-md p-0">
-        <div className="p-6 flex flex-col gap-5">
+      <DialogContent showCloseButton={false} className="max-w-sm p-0">
+        <div className="p-4 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#e6ede6] flex items-center justify-center shrink-0">
-                <UserCheck className="h-5 w-5 text-[#1a3a1a]" />
+              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
               </div>
-              <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Asignar Revisor</h3>
+              <DialogTitle className="font-bold text-gray-900 text-base leading-tight pt-2">Asignar Revisor</DialogTitle>
             </div>
             <button type="button" onClick={onClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex flex-col gap-4 pl-[52px]">
+          <div className="flex flex-col gap-3 pl-[52px]">
             <p className="text-sm text-gray-500">
               Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá.
             </p>
@@ -560,7 +559,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
             ) : (
               <Select value={selectedId} onValueChange={setSelectedId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full max-w-sm">
                   <SelectValue placeholder="Seleccionar revisor..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -582,10 +581,9 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5 hover:opacity-90"
-              style={{ backgroundColor: "#1a3a1a", color: "#fff", border: "none" }}
+              style={{ backgroundColor: "#773357", color: "white", borderRadius: "999px", border: "none" }}
             >
-              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Asignar
             </Button>
           </div>
@@ -937,12 +935,13 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             {labelAprobar}
           </Button>
           <Button
-            variant="outline" size="sm"
+            size="sm"
             onClick={() => setShowObservarModal(true)}
             disabled={guardando}
-            className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
-            >
-            <RotateCcw className="h-4 w-4" />Observar
+            className="rounded-2xl font-medium hover:opacity-90"
+            style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
+          >
+            Observar
           </Button>
         </div>
       </div>
@@ -950,7 +949,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
       {solicitud.reingresoCount > 0 && (
         <Card className="border-2 border-accent/30 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
-            <Info className="h-5 w-5 text-accent-foreground shrink-0 mt-0.5" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0 mt-0.5" />
             <div>
               <span className="text-sm font-semibold text-accent-foreground">
                 {ordinalRegreso(solicitud.reingresoCount)}
@@ -1190,6 +1189,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const [aprobarAsignarTarget,  setAprobarAsignarTarget]  = useState<string | null>(null)
   const [asignarRevisorTarget,  setAsignarRevisorTarget]  = useState<string | null>(null)
   const [actionToast, setActionToast] = useState<{ key: number; variant: "success" | "error"; title: string; description?: string } | null>(null)
+  const [successMsg, setSuccessMsg] = useState<{ title: string; description: string; type: 'approve' | 'observe' } | null>(null)
 
   const showToast = (variant: "success" | "error", title: string, description?: string) => {
     setActionToast(prev => ({ key: (prev?.key ?? 0) + 1, variant, title, description }))
@@ -1288,9 +1288,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { showToast("error", "Error al aprobar", json.error ?? "No se pudo aprobar la solicitud."); return }
-      showToast("success", "Solicitud aprobada", "La solicitud fue enviada al siguiente filtro.")
-      setSelectedId(null)
       void cargar()
+      setSuccessMsg({ title: "Solicitud enviada al siguiente filtro", description: "La solicitud fue procesada exitosamente y avanzó a la siguiente bandeja.", type: 'approve' })
     } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false); setAprobarTarget(null) }
   }, [filtro, user])
@@ -1311,10 +1310,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { showToast("error", "Error al observar", json.error ?? "No se pudo registrar la observación."); return }
-      showToast("success", "Observaciones enviadas", "La solicitud fue devuelta a la URG con observaciones.")
-      setSelectedId(null); setObservarTarget(null)
+      setObservarTarget(null)
       setActiveTab("observadas")
       void cargar()
+      setSuccessMsg({ title: "Solicitud marcada con observaciones", description: "La solicitud fue devuelta con observaciones a la URG.", type: 'observe' })
     } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false) }
   }, [filtro, user])
@@ -1418,6 +1417,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   )
 
   const selectedSolicitud = selectedId ? solicitudes.find(s => s.id === selectedId) ?? null : null
+
+  if (successMsg) return (
+    <ActionResultScreen
+      type={successMsg.type}
+      title={successMsg.title}
+      description={successMsg.description}
+      onBack={() => { setSelectedId(null); setSuccessMsg(null) }}
+    />
+  )
 
   if (selectedSolicitud) return (
     <DetalleView
@@ -1633,7 +1641,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                   onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
                                   className="text-muted-foreground hover:text-card-foreground gap-1.5"
                                 >
-                                  <Eye className="h-4 w-4" />Ver
+                                  <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
                                 </Button>
                               ) : (
                                 <Button

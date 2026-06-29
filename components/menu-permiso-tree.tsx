@@ -78,7 +78,7 @@ export function MenuPermisoTree({
                     }
                   }}
                 >
-                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=closed]:rotate-[-90deg]" />
+                  <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className="shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-45" />
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Switch
                       checked={menuIdSet.has(node.id)}

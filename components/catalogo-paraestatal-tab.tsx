@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import React, { useState, useEffect, useMemo, useCallback } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
@@ -12,9 +12,12 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
-  Plus, Pencil, Trash2,
-  Landmark, Loader2, GripVertical, AlertCircle,
+  Plus, Pencil, Trash2, MoreHorizontal,
+  Landmark, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Search, X,
 } from "lucide-react"
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import {
   fetchCategoriasParaestatal,
   createCategoriaParaestatal,
@@ -27,6 +30,10 @@ import {
   type OrganoParaestatalItem,
 } from "@/lib/catalogo-api"
 
+const VINO = "#773357"
+const VINO_HOVER = "#5c2844"
+const AREA_PAGE_SIZE = 10
+
 function reorder<T>(list: T[], from: number, to: number): T[] {
   const result = [...list]
   const [removed] = result.splice(from, 1)
@@ -35,7 +42,21 @@ function reorder<T>(list: T[], from: number, to: number): T[] {
 }
 
 function normNombre(s: string) {
-  return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  return s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+}
+
+function paginationPages(total: number, current: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i)
+  const show = new Set([0, total - 1, current, current - 1, current + 1].filter(p => p >= 0 && p < total))
+  const sorted = Array.from(show).sort((a, b) => a - b)
+  const pages: (number | "...")[] = []
+  let prev = -1
+  for (const p of sorted) {
+    if (prev !== -1 && p - prev > 1) pages.push("...")
+    pages.push(p)
+    prev = p
+  }
+  return pages
 }
 
 function OrganoRow({
@@ -64,7 +85,23 @@ function OrganoRow({
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState("")
 
+  // Search + pagination inside the expanded panel
+  const [areaSearch, setAreaSearch] = useState("")
+  const [areaPage, setAreaPage] = useState(0)
+
   useEffect(() => { setAreas(node.organos) }, [node.organos])
+  useEffect(() => { setAreaPage(0) }, [areaSearch])
+  useEffect(() => { if (!open) { setAreaSearch(""); setAreaPage(0) } }, [open])
+
+  const areasFiltered = useMemo(() => {
+    const q = areaSearch.trim().toLowerCase()
+    if (!q) return areas
+    return areas.filter(a => a.nombre.toLowerCase().includes(q))
+  }, [areas, areaSearch])
+
+  const areaTotalPages = Math.max(1, Math.ceil(areasFiltered.length / AREA_PAGE_SIZE))
+  const safePage = Math.min(areaPage, areaTotalPages - 1)
+  const areasPageItems = areasFiltered.slice(safePage * AREA_PAGE_SIZE, (safePage + 1) * AREA_PAGE_SIZE)
 
   const handleAddArea = async () => {
     setFormError("")
@@ -141,74 +178,204 @@ function OrganoRow({
           onDragStart={() => onDragStart(index)}
           onDragOver={(e) => onDragOver(e, index)}
           onDrop={() => onDrop(index)}
-          className={`flex items-center gap-2 py-3 px-4 rounded-xl border transition-all
-            ${isDragging ? "opacity-40 border-dashed border-[#832B56] bg-[#832B56]/5" : "border-border bg-card hover:border-[#832B56]/40 hover:shadow-sm"}`}
+          className={[
+            "flex items-center gap-2 py-3 px-4 rounded-xl border bg-white transition-all",
+            isDragging
+              ? "opacity-40 border-dashed border-[#773357] bg-[#773357]/5"
+              : "border-[#e4e3dc] shadow-sm hover:border-[#773357]/30 hover:shadow-md",
+          ].join(" ")}
         >
-          <GripVertical className="h-4 w-4 text-muted-foreground/30 cursor-grab shrink-0" />
+          <GripVertical className="h-4 w-4 text-muted-foreground/30 cursor-grab shrink-0 hover:text-muted-foreground/60" />
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-              <Plus className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-45" : ""}`} />
-            </Button>
+            <button
+              type="button"
+              className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[#773357]/10"
+            >
+              <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
+            </button>
           </CollapsibleTrigger>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-semibold truncate block">{node.nombre}</span>
-            <span className="text-xs text-muted-foreground">{areas.length} area{areas.length !== 1 ? "s" : ""}</span>
+            <span className="text-sm font-semibold text-foreground truncate block leading-tight">{node.nombre}</span>
+            <span className="text-xs text-muted-foreground">
+              {areas.length} área{areas.length !== 1 ? "s" : ""}
+            </span>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-[#832B56] hover:bg-[#832B56]/10 gap-1"
-              onClick={(e) => { e.stopPropagation(); setAreaNombre(""); setFormError(""); setAddAreaOpen(true) }}>
-              <Plus className="h-3.5 w-3.5" /> Agregar area
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
-              onClick={(e) => { e.stopPropagation(); setOrgNombre(node.nombre); setFormError(""); setEditOrgOpen(true) }}>
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              onClick={(e) => { e.stopPropagation(); setFormError(""); setDeleteOrgOpen(true) }}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+          <div className="shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                  style={{ color: VINO }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${VINO}15`)}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label="Más opciones"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setOrgNombre(node.nombre); setFormError(""); setEditOrgOpen(true) }}>
+                  <Pencil className="h-4 w-4" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setFormError(""); setDeleteOrgOpen(true) }}>
+                  <Trash2 className="h-4 w-4" /> Eliminar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setAreaNombre(""); setFormError(""); setAddAreaOpen(true) }}>
+                  <Plus className="h-4 w-4" /> Agregar Área
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
+        {/* ── Áreas ── */}
         <CollapsibleContent>
-          <div className="mt-1 mb-2 ml-4 space-y-0.5">
-            {areas.map((area, i) => (
-              <div
-                key={area.id}
-                draggable
-                onDragStart={() => setAreaDragging(i)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleAreaDrop(i)}
-                className={`group flex items-center gap-2 py-2 px-3 rounded-lg border transition-all
-                  ${areaDragging === i ? "opacity-40 border-dashed border-[#832B56]" : "border-transparent hover:border-border hover:bg-muted/40"}`}
-              >
-                <GripVertical className="h-3.5 w-3.5 text-muted-foreground/30 cursor-grab shrink-0" />
-                <div className="w-1.5 h-1.5 rounded-full bg-[#832B56]/50 shrink-0" />
-                <span className="text-sm flex-1 truncate">{area.nombre}</span>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary"
-                    onClick={() => { setTargetArea(area); setAreaNombre(area.nombre); setFormError(""); setEditAreaOpen(true) }}>
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                    onClick={() => { setTargetArea(area); setFormError(""); setDeleteAreaOpen(true) }}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+          <div className="mt-2 mb-2 ml-6 border-l-2 border-[#773357]/15 pl-3">
+
+            {/* Search bar */}
+            {areas.length > 0 && (
+              <div className="flex items-center gap-2 py-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Buscar área..."
+                    value={areaSearch}
+                    onChange={(e) => setAreaSearch(e.target.value)}
+                    className="w-full h-8 rounded-lg border border-[#e4e3dc] bg-white pl-8 pr-8 text-xs outline-none transition-colors focus:border-[#773357]/50 placeholder:text-muted-foreground/40"
+                  />
+                  {areaSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setAreaSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                {areaSearch && (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {areasFiltered.length} resultado{areasFiltered.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Area items */}
+            <div className="space-y-0.5">
+              {areasPageItems.map((area, pageIdx) => {
+                const globalIdx = !areaSearch ? safePage * AREA_PAGE_SIZE + pageIdx : pageIdx
+                return (
+                  <div
+                    key={area.id}
+                    draggable={!areaSearch}
+                    onDragStart={() => { if (!areaSearch) setAreaDragging(globalIdx) }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => { if (!areaSearch) handleAreaDrop(globalIdx) }}
+                    className={[
+                      "group flex items-center gap-2 py-2 px-3 rounded-lg border transition-all",
+                      !areaSearch && areaDragging === globalIdx
+                        ? "opacity-40 border-dashed border-[#773357]"
+                        : "border-transparent hover:border-[#e4e3dc] hover:bg-[#f9f8f5]",
+                    ].join(" ")}
+                  >
+                    <GripVertical className={`h-3.5 w-3.5 shrink-0 ${areaSearch ? "invisible" : "text-muted-foreground/25 cursor-grab"}`} />
+                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: VINO, opacity: 0.5 }} />
+                    <span className="text-sm flex-1 truncate text-foreground">{area.nombre}</span>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
+                            style={{ color: VINO }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${VINO}15`)}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                            aria-label="Más opciones"
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setTargetArea(area); setAreaNombre(area.nombre); setFormError(""); setEditAreaOpen(true) }}>
+                            <Pencil className="h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setTargetArea(area); setFormError(""); setDeleteAreaOpen(true) }}>
+                            <Trash2 className="h-4 w-4" /> Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {areasFiltered.length === 0 && areaSearch && (
+                <p className="text-xs text-muted-foreground ml-4 py-2 italic">Sin resultados para &quot;{areaSearch}&quot;</p>
+              )}
+              {areas.length === 0 && (
+                <p className="text-xs text-muted-foreground ml-4 py-2 italic">Sin áreas internas</p>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {areaTotalPages > 1 && (
+              <div className="mt-2 pt-2 border-t border-[#e4e3dc]/60">
+                <div className="flex justify-center items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={safePage === 0}
+                    onClick={() => setAreaPage(p => Math.max(0, p - 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 disabled:opacity-30 hover:bg-gray-200 transition-colors"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+                  {paginationPages(areaTotalPages, safePage).map((p, idx) =>
+                    p === "..." ? (
+                      <span key={`el-${idx}`} className="flex h-8 w-8 items-center justify-center text-xs text-gray-400">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setAreaPage(p as number)}
+                        className={[
+                          "flex h-8 w-8 items-center justify-center rounded-md text-xs font-medium transition-colors",
+                          p === safePage
+                            ? "border border-gray-300 bg-white text-gray-700 font-semibold"
+                            : "text-gray-500 hover:bg-gray-50",
+                        ].join(" ")}
+                      >
+                        {(p as number) + 1}
+                      </button>
+                    )
+                  )}
+                  <button
+                    type="button"
+                    disabled={safePage === areaTotalPages - 1}
+                    onClick={() => setAreaPage(p => Math.min(areaTotalPages - 1, p + 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 disabled:opacity-30 hover:bg-gray-200 transition-colors"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
-            ))}
-            {areas.length === 0 && <p className="text-xs text-muted-foreground ml-6 py-2 italic">Sin areas internas</p>}
+            )}
           </div>
         </CollapsibleContent>
       </Collapsible>
 
+      {/* Dialogs */}
       <Dialog open={addAreaOpen} onOpenChange={setAddAreaOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Agregar Area</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Agregar Área</DialogTitle></DialogHeader>
           <p className="text-xs text-muted-foreground -mt-2">Organismo: <strong>{node.nombre}</strong></p>
           <div className="flex flex-col gap-3 py-1">
             <div className="flex flex-col gap-1.5">
-              <Label>Nombre del area <span className="text-destructive">*</span></Label>
+              <Label>Nombre del área <span className="text-destructive">*</span></Label>
               <Input value={areaNombre} onChange={(e) => setAreaNombre(e.target.value)} placeholder="Ej. Subdirección de Finanzas" onKeyDown={(e) => e.key === "Enter" && handleAddArea()} autoFocus />
             </div>
             {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
@@ -255,7 +422,7 @@ function OrganoRow({
 
       <Dialog open={editAreaOpen} onOpenChange={setEditAreaOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Editar Area</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Editar Área</DialogTitle></DialogHeader>
           <div className="flex flex-col gap-3 py-1">
             <div className="flex flex-col gap-1.5">
               <Label>Nombre <span className="text-destructive">*</span></Label>
@@ -335,32 +502,48 @@ export function CatalogoParaestatalTab() {
 
   return (
     <>
-      <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Landmark className="h-4 w-4 text-[#832B56]" />
-                Administracion Publica Paraestatal
-              </CardTitle>
-              <CardDescription>{!loading && `${organismos.length} organismos · ${totalAreas} areas`}</CardDescription>
+      <Card className="shadow-sm border-[#e4e3dc] overflow-hidden">
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#e4e3dc] bg-[#f9f8f5]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#773357]/10 shrink-0">
+              <Landmark className="h-5 w-5" style={{ color: VINO }} />
             </div>
-            <Button size="sm" className="bg-[#832B56] hover:bg-[#6B2347] text-white" onClick={() => { setNewOrgNombre(""); setFormError(""); setAddOrgOpen(true) }}>
-              <Plus className="h-4 w-4 mr-1" /> Agregar organismo
-            </Button>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground leading-tight">Administración Pública Paraestatal</h3>
+              {!loading && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {organismos.length} organismo{organismos.length !== 1 ? "s" : ""} · {totalAreas} área{totalAreas !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="mt-3">
-            <SearchInput placeholder="Buscar organismo o área..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-        </CardHeader>
-        <CardContent>
+          <Button
+            size="sm"
+            className="shrink-0 rounded-full text-white font-medium gap-1.5"
+            style={{ backgroundColor: VINO }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = VINO_HOVER)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = VINO)}
+            onClick={() => { setNewOrgNombre(""); setFormError(""); setAddOrgOpen(true) }}
+          >
+            <Plus className="h-4 w-4" /> Agregar Organismo
+          </Button>
+        </div>
+
+        {/* ── Búsqueda ── */}
+        <div className="px-6 py-3 border-b border-[#e4e3dc]">
+          <SearchInput placeholder="Buscar organismo o área..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+
+        {/* ── Lista ── */}
+        <CardContent className="p-4">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando...
             </div>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">
-              {search ? "Sin resultados" : "No hay organismos. Agrega uno con el botón de arriba."}
+              {search ? "Sin resultados para esa búsqueda." : "No hay organismos. Agrega uno con el botón de arriba."}
             </p>
           ) : (
             <div className="space-y-2">
@@ -378,6 +561,7 @@ export function CatalogoParaestatalTab() {
         </CardContent>
       </Card>
 
+      {/* Dialog nuevo organismo */}
       <Dialog open={addOrgOpen} onOpenChange={setAddOrgOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nuevo Organismo Paraestatal</DialogTitle></DialogHeader>
@@ -390,7 +574,7 @@ export function CatalogoParaestatalTab() {
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button className="bg-[#832B56] hover:bg-[#6B2347]" onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
+            <Button onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Crear
             </Button>
           </DialogFooter>

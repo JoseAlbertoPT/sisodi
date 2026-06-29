@@ -16,15 +16,17 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import { ConfirmDialog, ObservarDialog } from "@/components/ui/confirm-dialog"
+import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion"
 import {
-  Eye, CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
+  CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
-  Info, RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
+  RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
   Shield, FileSignature, X,
 } from "lucide-react"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
 import { FirmaModal } from "@/components/firma-modal"
 import { useAuth } from "@/lib/auth-context"
@@ -657,10 +659,7 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
           )}
           {icon}{title}
           <span className="ml-auto">
-            <ChevronDown
-              className="h-4 w-4 text-muted-foreground transition-transform duration-200"
-              style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-            />
+            <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
           </span>
         </CardTitle>
       </CardHeader>
@@ -879,7 +878,7 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
           <div className="flex flex-col gap-2">
             {raw.adjunto.map((adj: any, i: number) => (
               <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-                <FileText className="h-5 w-5 text-secondary shrink-0" />
+                <FileTypeIcon name={adj.nombre_archivo} size="sm" />
                 <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
                 {adj.ruta && (
                   <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
@@ -946,12 +945,12 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent showCloseButton={false} className="max-w-md p-0">
-        <div className="p-6 flex flex-col gap-5">
+      <DialogContent showCloseButton={false} className="max-w-sm p-0">
+        <div className="p-4 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#e6ede6] flex items-center justify-center shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-[#1a3a1a]" />
+              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
               </div>
               <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Aprobar y Asignar Revisor</h3>
             </div>
@@ -983,7 +982,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
                         ? "text-white"
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
-                    style={seleccionado === r.id ? { backgroundColor: "#1a3a1a" } : undefined}
+                    style={seleccionado === r.id ? { backgroundColor: "#773357" } : undefined}
                   >
                     {seleccionado === r.id
                       ? <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -1000,10 +999,9 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
             <Button
               onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
               disabled={!seleccionado || cargando}
-              className="gap-1.5 hover:opacity-90"
-              style={{ backgroundColor: "#1a3a1a", color: "#fff", border: "none" }}
+              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#5c2844]"
             >
-              <CheckCircle2 className="h-4 w-4" />Confirmar
+              Confirmar
             </Button>
           </div>
         </div>
@@ -1070,7 +1068,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         </div>
         <div className="flex items-center gap-3">
           <Button
-            size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
+            size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
             onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
@@ -1087,12 +1085,13 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                 Aprobar
               </Button>
               <Button
-                variant="outline" size="sm"
+                size="sm"
+                className="rounded-2xl font-medium hover:opacity-90"
+                style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
                 onClick={() => onObservar(solicitud.id)}
                 disabled={guardando}
-                className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
               >
-                <RotateCcw className="h-4 w-4" />Observar
+                Observar
               </Button>
             </>
           )}
@@ -1143,7 +1142,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
       {isEnProceso && (
         <Card className="border-2 border-primary/30 shadow-sm">
           <CardContent className="flex items-center gap-3 py-4">
-            <Info className="h-5 w-5 text-primary" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0" />
             <div>
               <span className="text-sm font-medium text-primary">En Proceso</span>
               <p className="text-xs text-muted-foreground">La solicitud está en revisión por Validación Final o Emisor. Solo lectura.</p>
@@ -1321,6 +1320,7 @@ export function ValidacionUefaPage() {
   const [dictamenViewId,   setDictamenViewId]   = useState<number | null>(null)
   const [firmaTargetId,    setFirmaTargetId]    = useState<number | null>(null)
   const [actionToast, setActionToast] = useState<{ key: number; variant: "success" | "error"; title: string; description?: string } | null>(null)
+  const [successMsg, setSuccessMsg] = useState<{ title: string; description: string; type: 'approve' | 'observe' } | null>(null)
 
   const showToast = (variant: "success" | "error", title: string, description?: string) => {
     setActionToast(prev => ({ key: (prev?.key ?? 0) + 1, variant, title, description }))
@@ -1361,7 +1361,6 @@ export function ValidacionUefaPage() {
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { showToast("error", "Error al aprobar", json.error ?? "No se pudo aprobar la solicitud."); return }
-      showToast("success", "Solicitud aprobada", "La solicitud fue enviada a Pendiente DO.")
       setSolicitudes(prev => prev.map(s => s.id === id ? {
         ...s,
         estado: "Pendiente DO",
@@ -1372,7 +1371,7 @@ export function ValidacionUefaPage() {
           estadoNuevo:    "Pendiente DO",
         }],
       } : s))
-      setSelectedId(null)
+      setSuccessMsg({ title: "Solicitud enviada al siguiente filtro", description: "La solicitud fue procesada exitosamente y avanzó a la siguiente bandeja.", type: 'approve' })
     } catch {
       showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
@@ -1397,7 +1396,6 @@ export function ValidacionUefaPage() {
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { showToast("error", "Error al observar", json.error ?? "No se pudo registrar la observación."); return }
-      showToast("success", "Observaciones enviadas", "La solicitud fue devuelta con observaciones.")
       setSolicitudes(prev => prev.map(s => s.id === observarTargetId ? {
         ...s,
         estado: "Observado por Validacion",
@@ -1412,7 +1410,7 @@ export function ValidacionUefaPage() {
         }],
       } : s))
       setObservarTargetId(null)
-      setSelectedId(null)
+      setSuccessMsg({ title: "Solicitud marcada con observaciones", description: "La solicitud fue devuelta con observaciones a la URG.", type: 'observe' })
     } catch {
       showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
@@ -1482,22 +1480,35 @@ export function ValidacionUefaPage() {
   const selectedSolicitud  = selectedId    !== null ? solicitudes.find(s => s.id === selectedId)    ?? null : null
   const dictamenViewSol    = dictamenViewId !== null ? solicitudes.find(s => s.id === dictamenViewId) ?? null : null
 
+  if (successMsg) return (
+    <PageLayout noContainer>
+      <ActionResultScreen
+        type={successMsg.type}
+        title={successMsg.title}
+        description={successMsg.description}
+        onBack={() => { setSelectedId(null); setSuccessMsg(null) }}
+      />
+    </PageLayout>
+  )
+
   if (selectedSolicitud) return (
     <PageLayout noContainer>
-      <DetalleView
-        solicitud={selectedSolicitud}
-        onBack={() => setSelectedId(null)}
-        onAprobar={handleAprobar}
-        onObservar={id => setObservarTargetId(id)}
-        onFirmarJustificacion={handleFirmarJustificacion}
-        guardando={guardando}
-      />
-      <ObservarModal
-        open={!!observarTargetId}
-        onClose={() => setObservarTargetId(null)}
-        onConfirm={handleObservarConfirm}
-        folio={solicitudes.find(s => s.id === observarTargetId)?.folioJustificacion ?? ""}
-      />
+      <>
+        <DetalleView
+          solicitud={selectedSolicitud}
+          onBack={() => setSelectedId(null)}
+          onAprobar={handleAprobar}
+          onObservar={id => setObservarTargetId(id)}
+          onFirmarJustificacion={handleFirmarJustificacion}
+          guardando={guardando}
+        />
+        <ObservarModal
+          open={!!observarTargetId}
+          onClose={() => setObservarTargetId(null)}
+          onConfirm={handleObservarConfirm}
+          folio={solicitudes.find(s => s.id === observarTargetId)?.folioJustificacion ?? ""}
+        />
+      </>
     </PageLayout>
   )
 
@@ -1636,7 +1647,7 @@ export function ValidacionUefaPage() {
                               onClick={() => setSelectedId(sol.id)}
                               className="text-secondary hover:text-primary gap-1.5"
                             >
-                              <Eye className="h-4 w-4" />Ver
+                              <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
                             </Button>
                             {solTab === "Nuevas" && (
                               <>

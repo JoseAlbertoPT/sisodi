@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, Building2, Landmark, FileSpreadsheet, Upload, Loader2, Trash2, FileText, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Building2, Landmark, FileSpreadsheet, Upload, Loader2, Trash2, FileText, AlertCircle, CheckCircle2 } from "lucide-react"
 import { FileDropZone } from "@/components/ui/file-drop-zone"
 import { PageLayout } from "@/components/page-layout"
 import { CatalogoCentralizadaTab } from "@/components/catalogo-centralizada-tab"
@@ -192,16 +192,16 @@ function HistoricoTab() {
 export function ConfiguracionPage() {
   return (
     <PageLayout
-      title={<span className="flex items-center gap-2"><Settings className="h-5 w-5 text-secondary" />Catálogo</span>}
+      title="Catálogo"
       description="Gestión de estructuras organizacionales de la administración centralizada y paraestatal."
     >
       <Tabs defaultValue="centralizada" className="w-full">
-        <TabsList className="bg-muted">
+        <TabsList>
 
-          <TabsTrigger value="historico" className="gap-1.5">
+          {/* <TabsTrigger value="historico" className="gap-1.5">
             <FileSpreadsheet className="h-4 w-4" />
             Histórico
-          </TabsTrigger>
+          </TabsTrigger> */}
 
           <TabsTrigger value="centralizada" className="gap-1.5">
             <Building2 className="h-4 w-4" />
@@ -212,9 +212,9 @@ export function ConfiguracionPage() {
             Paraestatal
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="historico" className="mt-6">
+        {/* <TabsContent value="historico" className="mt-6">
           <HistoricoTab />
-        </TabsContent>
+        </TabsContent> */}
         <TabsContent value="centralizada" className="mt-6">
           <CatalogoCentralizadaTab />
         </TabsContent>

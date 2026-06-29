@@ -13,17 +13,10 @@ import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import {
   Eye, Edit3, Download, FileCheck,
-  ChevronDown, ChevronRight, Info, History, FileText,
+  ChevronDown, ChevronRight, History, FileText,
   ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw,
-  MoreVertical, Pencil,
 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
   Tooltip,
   TooltipTrigger,
@@ -524,9 +517,7 @@ function SectionCard({
           {icon}
           {title}
           <span className="ml-auto">
-            {open
-              ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
           </span>
         </CardTitle>
       </CardHeader>
@@ -911,7 +902,7 @@ function AdjuntosSection({ bitacora }: { bitacora: BitacoraEntry[] }) {
     <ul className="flex flex-col gap-2">
       {adjuntosSection.eventos.map((ev, i) => (
         <li key={i} className="flex items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
-          <FileText className="h-4 w-4 text-secondary shrink-0" />
+          <FileTypeIcon name={ev.descripcion.replace("Archivo cargado: ", "")} size="sm" />
           <div className="flex flex-col">
             <span className="text-sm text-card-foreground">
               {ev.descripcion.replace("Archivo cargado: ", "")}
@@ -1126,7 +1117,7 @@ function DetalleView({
           {estadoBadge(sol.estado)}
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
+          <Button size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
             onClick={() => generateJustificacionPDF(sol.id, sol.folioJustificacion || sol.folio)}>
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
@@ -1170,7 +1161,7 @@ function DetalleView({
         n.includes("pendiente firma justificacion")) && (
         <Card className="border-2 border-blue-400/40 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
-            <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0 mt-0.5" />
             <div>
               <span className="text-sm font-medium text-blue-700">Solicitud en revisión por UEFA</span>
               <p className="text-sm text-muted-foreground mt-1">
@@ -1392,7 +1383,7 @@ function DetalleView({
                     : "text-muted-foreground hover:text-card-foreground"
                 }`}
               >
-                <Info className="mr-1.5 inline h-4 w-4" />Bitácora
+                <img src="/iconos2/Icon.svg" alt="" className="mr-1.5 inline h-4 w-4" />Bitácora
               </button>
               <button
                 onClick={() => setRightTab("observaciones")}
@@ -1421,7 +1412,7 @@ function DetalleView({
                 {/* Header */}
                 <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #A0845C 0%, #C4A882 100%)" }}>
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <Info className="h-5 w-5 text-white" />
+                    <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 brightness-0 invert" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-white">Bitácora de Captura</span>
@@ -1832,37 +1823,9 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                         })()}
                       </td>
                       <td className="px-4 py-3">
-                        <DropdownMenu>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" aria-label="Acciones">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent>Acciones</TooltipContent>
-                          </Tooltip>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setSelectedId(sol.id)}>
-                              <Eye className="h-4 w-4" />
-                              Ver solicitud
-                            </DropdownMenuItem>
-                            {(isBorrador || solTab === "Observadas / Devueltas") && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => onEditSolicitud
-                                    ? onEditSolicitud(solToEditPayload(sol))
-                                    : setSelectedId(sol.id)}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                  Editar
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button variant="ghost" size="sm" aria-label="Ver solicitud" onClick={() => setSelectedId(sol.id)}>
+                          <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" /> Ver
+                        </Button>
                       </td>
                     </tr>
                   )

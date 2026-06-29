@@ -2,8 +2,6 @@
 
 import * as React from 'react'
 import * as AccordionPrimitive from '@radix-ui/react-accordion'
-import { Plus } from 'lucide-react'
-
 import { cn } from '@/lib/utils'
 
 function Accordion({
@@ -35,13 +33,13 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          'flex flex-1 items-center justify-between gap-4 rounded-[12px] bg-[#F9FAFB] px-5 py-4 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-45',
+          'flex flex-1 items-center justify-between gap-4 rounded-[12px] bg-[#F9FAFB] px-5 py-4 text-left text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>img]:rotate-45',
           className,
         )}
         {...props}
       >
         {children}
-        <Plus className="size-5 shrink-0 text-muted-foreground transition-transform duration-200" />
+        <img src="/iconos2/addPlus.svg" alt="" className="size-5 shrink-0 opacity-50 transition-transform duration-200" />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   )

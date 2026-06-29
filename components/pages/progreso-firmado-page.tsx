@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2, RefreshCw, ClipboardCheck, Eye, Shield, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, RefreshCw, ClipboardCheck, Shield, CheckCircle2, AlertCircle } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { PageLayout } from "@/components/page-layout"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
@@ -160,7 +160,7 @@ export function ProgresoFirmadoPage() {
                       <td className="py-2.5 pr-4 text-muted-foreground text-xs">{new Date(p.fecha_creacion).toLocaleDateString("es-MX")}</td>
                       <td className="py-2.5 pr-4">
                         <Button variant="ghost" size="sm" onClick={() => setDetalle(p)} className="gap-1.5">
-                          <Eye className="h-4 w-4" /> Ver
+                          <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" /> Ver
                         </Button>
                       </td>
                     </tr>

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { PageLayout } from "@/components/page-layout"
-import { FileDropZone } from "@/components/ui/file-drop-zone"
+import { FileDropZone, UploadedFileRow } from "@/components/ui/file-drop-zone"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
@@ -18,8 +18,8 @@ import { Separator } from "@/components/ui/separator"
 import {
 
   FilePlus, Upload, ArrowLeft, ArrowRight, Plus, Trash2,
-  FileText, ClipboardList, Save, SendHorizonal, AlertCircle, Info,
-  ShieldAlert, CheckCircle2, Clock, Calendar, Lock, X, Search, Loader2,
+  FileText, ClipboardList, Save, SendHorizonal, AlertCircle,
+  ShieldAlert, CheckCircle2, Clock, Lock, X, Search, Loader2,
   Edit3, RotateCcw,
 
 } from "lucide-react"
@@ -395,7 +395,7 @@ function OficioUpload({
 }) {
   const [archivos, setArchivos] = useState<File[]>([])
 
-  const VALID_EXTS = ["pdf","doc","docx","xls","xlsx","png","jpg","jpeg","zip","rar","txt","odt","ods"]
+  const VALID_EXTS = ["pdf","doc","docx","xls","xlsx","ppt","pptx","png","jpg","jpeg","gif","webp","zip","rar","txt","odt","ods"]
 
   const handleFilesChange = (files: File[]) => {
     const filtered = files.filter((f) => {
@@ -408,25 +408,18 @@ function OficioUpload({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Archivos existentes previos */}
+      {/* Archivos existentes ya subidos al servidor */}
       {existingFiles && existingFiles.length > 0 && (
         <div className="flex flex-col gap-1.5 mb-1">
           {existingFiles.map((adj) => (
-            <div key={adj.id} className="flex items-center gap-2 rounded-[8px] border-[1.5px] border-[#ccc] bg-white px-3 py-2">
-              <FileText className="h-4 w-4 text-red-500 shrink-0" />
-              <span className="text-xs font-medium truncate flex-1">{adj.nombre_archivo}</span>
-              {adj.ruta && (
-                <button type="button" onClick={() => window.open(adj.ruta, "_blank")}
-                  className="text-xs text-[#7B2D5E] hover:underline shrink-0">Ver</button>
-              )}
-            </div>
+            <UploadedFileRow key={adj.id} nombre={adj.nombre_archivo} ruta={adj.ruta} />
           ))}
           <p className="text-xs text-muted-foreground">Para agregar o reemplazar archivos, cargue nuevos:</p>
         </div>
       )}
 
       <FileDropZone
-        hint="PDF, DOC, XLSX, imágenes · máx. 10 MB c/u"
+        hint="PDF, DOC, XLSX, PPT, imágenes, ZIP · máx. 10 MB c/u"
         files={archivos}
         onFilesChange={handleFilesChange}
       />
@@ -709,7 +702,7 @@ function useRowPrecarga(
 }
 
 type TipoSolicitud = "" | "prestacion" | "nombramiento"
-type Step = "tipo" | "renovacion" | "formulario"
+type Step = "tipo" | "formulario"
 
 type FolioExcel = {
   id:               string
@@ -747,7 +740,7 @@ function ReadonlyField({ label, value, hint }: { label: string; value: string; h
       <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
         <span className="text-sm text-muted-foreground truncate">{value || "—"}</span>
       </div>
-      {hint && <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3 shrink-0" />{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground flex items-center gap-1"><img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />{hint}</p>}
     </div>
   )
 }
@@ -911,7 +904,6 @@ function DynamicList({
 function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
   const steps = [
     { key: "tipo",       label: "Tipo de Solicitud" },
-    { key: "renovacion", label: "Renovación" },
     { key: "formulario", label: tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento" },
   ]
   const currentIndex = steps.findIndex((s) => s.key === step)
@@ -924,17 +916,17 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
 
         /* Circle style */
         const circleStyle: React.CSSProperties = isDone
-          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#2D3B2D', border: '2px solid #2D3B2D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
+          ? { width: 32, height: 32, flexShrink: 0, position: 'relative', zIndex: 1 }
           : isActive
-          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
+          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
           : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
 
         /* Label style */
         const labelStyle: React.CSSProperties = isActive
-          ? { fontSize: 12, fontWeight: 600, color: '#111827', textAlign: 'center', maxWidth: 80, lineHeight: 1.3 }
+          ? { fontSize: 12, fontWeight: 600, color: '#773357', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : isDone
-          ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 80, lineHeight: 1.3 }
-          : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center', maxWidth: 80, lineHeight: 1.3 }
+          ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
 
         return (
           <div key={s.key} className="flex flex-1 flex-col items-center" style={{ position: 'relative' }}>
@@ -947,7 +939,7 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
                 left: '-50%',
                 width: '100%',
                 height: 2,
-                backgroundColor: isDone ? '#2D3B2D' : '#D1D5DB',
+                backgroundColor: isDone ? '#2A3B29' : '#D1D5DB',
                 zIndex: 0,
               }} />
             )}
@@ -956,11 +948,9 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               <div style={circleStyle}>
                 {isDone ? (
-                  <svg width="14" height="14" fill="none" stroke="#ffffff" strokeWidth="3" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
+                  <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
                 ) : (
-                  <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#3B82F6' : '#9CA3AF', lineHeight: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#773357' : '#9CA3AF', lineHeight: 1 }}>
                     {i + 1}
                   </span>
                 )}
@@ -1144,7 +1134,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
           <>
             {!seleccionado && coincidencias.length > 1 && (
               <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
-                <Info className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+                <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
                 <span className="text-sm font-medium text-[#374151]">
                   Hay varias coincidencias — seleccione el nivel que corresponda.
                 </span>
@@ -1161,7 +1151,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
             )}
             {busqueda.trim() === "" ? (
               <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#9CA3AF] bg-[#F9FAFB] px-4 py-3">
-                <Info className="h-4 w-4 text-[#6B7280] shrink-0 mt-0.5" />
+                <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5 opacity-60" />
                 <span className="text-sm text-[#374151]">Ingrese el importe para ver coincidencias</span>
               </div>
             ) : coincidencias.length === 0 ? (
@@ -1227,7 +1217,7 @@ function SelectConBusqueda({
     >
       <SelectTrigger
         className={`w-full rounded-[12px]
-          data-[state=open]:border-[#F5A800] data-[state=open]:bg-[#FFF8E1]
+          data-[state=open]:bg-white
           ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
       >
         <span className="block truncate text-sm pr-1">
@@ -1270,7 +1260,7 @@ function SelectConBusqueda({
               <SelectItem
                 key={o.value}
                 value={o.value}
-                className="rounded-[8px] focus:bg-[#C49A5A] focus:text-white data-[state=checked]:bg-[#C49A5A] data-[state=checked]:text-white"
+                className="rounded-[8px] focus:bg-[#f0ede6] focus:text-[#773357] data-[state=checked]:bg-[#f0ede6] data-[state=checked]:text-[#773357]"
               >
                 {o.label}
               </SelectItem>
@@ -1293,7 +1283,7 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
         <div className="flex items-center gap-3 px-6 pt-6 pb-4" style={{ borderBottom: "1px solid #E5E7EB" }}>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
             style={{ backgroundColor: "#F3E8F0", border: "1px solid #E8D0E0" }}>
-            <Info className="h-5 w-5 text-[#7B2D5E]" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5" />
           </div>
           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
             <span className="text-base font-bold text-[#111827]">Marco Normativo</span>
@@ -2022,7 +2012,7 @@ function FormularioPrestacion({
                         startMonth={isoToDate(vigenciaInicio || efectivoMin)}
                         onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                         placeholder="Seleccionar inicio"
-                        className={`w-full bg-background ${inicioError ? "border-destructive" : ""}`}
+                        className={inicioError ? "border-destructive" : ""}
                       />
                       {inicioError && (
                         <p className="text-xs text-destructive flex items-center gap-1">
@@ -2039,7 +2029,7 @@ function FormularioPrestacion({
                         startMonth={isoToDate(vigenciaFin || vigenciaInicio || efectivoMin)}
                         onChange={(d) => d && setVigenciaFin(dateToIso(d))}
                         placeholder="Seleccionar término"
-                        className={`w-full bg-background ${finError ? "border-destructive" : ""}`}
+                        className={finError ? "border-destructive" : ""}
                       />
                       {finError && (
                         <p className="text-xs text-destructive flex items-center gap-1">
@@ -2079,7 +2069,7 @@ function FormularioPrestacion({
             Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4" />
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2108,7 +2098,7 @@ function FormularioPrestacion({
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4" />
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2162,7 +2152,7 @@ function FormularioPrestacion({
             </div>
           )}
           <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#3B82F6] bg-[#EFF6FF] px-4 py-3">
-            <Info className="h-4 w-4 shrink-0 text-[#3B82F6] mt-0.5" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
             <span className="text-sm font-semibold text-[#374151]">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
           </div>
         </CardContent>
@@ -2629,7 +2619,7 @@ function FormularioNombramiento({
               />
               {!bloqueadoPorRenovacion && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Info className="h-3 w-3 shrink-0" />Puede Obtenerse desde el Oficio de Suficiencia Presupuestal.
+                  <img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />Puede Obtenerse desde el Oficio de Suficiencia Presupuestal.
                 </p>
               )}
             </div>
@@ -2785,7 +2775,7 @@ function FormularioNombramiento({
                         startMonth={isoToDate(vigenciaInicio || efectivoMin)}
                         onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                         placeholder="Seleccionar inicio"
-                        className={`w-full bg-background ${inicioError ? "border-destructive" : ""}`}
+                        className={inicioError ? "border-destructive" : ""}
                       />
                       {inicioError && (
                         <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />Fecha anterior al inicio del periodo.</p>
@@ -2800,7 +2790,7 @@ function FormularioNombramiento({
                         startMonth={isoToDate(vigenciaFin || vigenciaInicio || efectivoMin)}
                         onChange={(d) => d && setVigenciaFin(dateToIso(d))}
                         placeholder="Seleccionar término"
-                        className={`w-full bg-background ${finError ? "border-destructive" : ""}`}
+                        className={finError ? "border-destructive" : ""}
                       />
                       {finError && (
                         <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />Fecha posterior al fin del periodo.</p>
@@ -2834,7 +2824,7 @@ function FormularioNombramiento({
             Objeto del Nombramiento
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4" />
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2863,7 +2853,7 @@ function FormularioNombramiento({
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4" />
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2916,7 +2906,7 @@ function FormularioNombramiento({
             </div>
           )}
           <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#3B82F6] bg-[#EFF6FF] px-4 py-3">
-            <Info className="h-4 w-4 shrink-0 text-[#3B82F6] mt-0.5" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
             <span className="text-sm font-semibold text-[#374151]">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
           </div>
         </CardContent>
@@ -3059,7 +3049,7 @@ function FormularioNombramiento({
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-3">
           <div className="flex items-start gap-2 rounded-md bg-muted/40 border border-border px-3 py-2.5">
-            <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-50" />
             <div className="flex flex-col gap-2">
               <p className="text-xs text-muted-foreground italic leading-relaxed">
                 <span className="font-semibold not-italic text-card-foreground">Administración Pública Centralizada:</span>{" "}
@@ -3823,7 +3813,12 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
   const hayFoliosReales = foliosReales.length > 0
   const foliosDBIds = useMemo(() => new Set(foliosDB.map((f) => f.id)), [foliosDB])
   const handleContinueToRenovacion = () => {
-    if (puedeAvanzarDeTipo) setStep("renovacion")
+    if (puedeAvanzarDeTipo) {
+      setDatosRenovacion(null)
+      setPrefilled(false)
+      setLockVigenciaOnly(false)
+      setStep("formulario")
+    }
   }
 
   const handleContinueToFormulario = () => {
@@ -3842,8 +3837,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
 
   const handleBack = useCallback(() => {
     if (step === "formulario" && editSolicitud) { onCancel?.(); return }
-    if (step === "formulario") setStep("renovacion")
-    else if (step === "renovacion") setStep("tipo")
+    if (step === "formulario") setStep("tipo")
   }, [step, editSolicitud, onCancel])
 
   const folioSeleccionadoData = folioSeleccionado
@@ -3995,8 +3989,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
         <div className="flex items-center justify-center min-h-[400px] w-full px-4 py-8">
           <div className="border border-[#E5E7EB] rounded-xl py-12 px-8 text-center w-full max-w-[600px]">
             <div className="flex items-center justify-center mx-auto mb-5"
-              style={{ width: 48, height: 48, borderRadius: 12, background: "#DCFCE7" }}>
-              <CheckCircle2 style={{ width: 24, height: 24, color: "#16A34A" }} />
+              style={{ width: 48, height: 48, borderRadius: 12, background: "#d2fad2" }}>
+              <CheckCircle2 style={{ width: 24, height: 24, color: "#1c7d29" }} />
             </div>
             <p className="text-lg font-bold mb-2">Solicitud enviada a validación</p>
             <p className="text-sm text-[#6B7280] mb-6">
@@ -4029,8 +4023,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
         <div className="flex items-center justify-center min-h-[400px] w-full px-4 py-8">
           <div className="border border-[#E5E7EB] rounded-xl py-12 px-8 text-center w-full max-w-[600px]">
             <div className="flex items-center justify-center mx-auto mb-5"
-              style={{ width: 48, height: 48, borderRadius: 12, background: "#DCFCE7" }}>
-              <Save style={{ width: 24, height: 24, color: "#16A34A" }} />
+              style={{ width: 48, height: 48, borderRadius: 12, background: "#d2fad2" }}>
+              <CheckCircle2 style={{ width: 24, height: 24, color: "#1c7d29" }} />
             </div>
             <p className="text-lg font-bold mb-2">
               {esEdicion ? "Cambios guardados correctamente" : "Borrador guardado correctamente"}
@@ -4123,7 +4117,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               <Card className={`shadow-sm border-secondary/30 border-2 ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
               <CardHeader className="px-4 pt-3 pb-1">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-              <Calendar className="h-4 w-4 text-secondary" />Período de Aplicación
+              <img src="/iconos2/calender-alt-1.svg" alt="" className="h-4 w-4 shrink-0 opacity-70" />Período de Aplicación
               </CardTitle>
               <CardDescription>Seleccione el régimen y período para consultar las fechas límite de recepción</CardDescription>
               </CardHeader>
@@ -4221,7 +4215,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
           </Card>
         </>
       )}
-      {step === "renovacion" && (
+      {false && (
         <Card className="shadow-sm border-border">
           <CardHeader className="px-4 pt-3 pb-1">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -4289,7 +4283,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                     </div>
                   ) : !hayFoliosReales ? (
                     <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-3">
-                      <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 opacity-50" />
                       <span className="text-sm text-muted-foreground">No se encontraron folios de dictamenes</span>
                     </div>
                   ) : (
@@ -4358,7 +4352,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                             style={{ borderBottom: "1px solid #E5E7EB" }}>
                             <div className="flex h-12 w-12 items-center justify-center rounded-full"
                               style={{ backgroundColor: "#F3E8F0", border: "1px solid #E8D0E0" }}>
-                              <Info className="h-6 w-6 text-[#7B2D5E]" />
+                              <img src="/iconos2/Icon.svg" alt="" className="h-6 w-6" />
                             </div>
                             <div className="flex flex-col items-center gap-1 text-center">
                               <span className="text-base font-bold text-[#111827]">¿Confirmar mismas condiciones?</span>
@@ -4380,7 +4374,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                               </span>
                               <ul className="flex flex-col gap-1.5">
                                 <li className="flex items-center gap-2 text-sm text-[#374151]">
-                                  <Calendar className="h-3.5 w-3.5 text-[#6B7280] shrink-0" />Vigencia
+                                  <img src="/iconos2/calender-alt-1.svg" alt="" className="h-3.5 w-3.5 shrink-0 opacity-60" />Vigencia
                                 </li>
                                 <li className="flex items-center gap-2 text-sm text-[#374151]">
                                   <FileText className="h-3.5 w-3.5 text-[#6B7280] shrink-0" />Oficio de Suficiencia
@@ -4443,7 +4437,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             )}
 
             <div className="flex items-center justify-between pt-2">
-              <Button variant="outline" onClick={handleBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Anterior</Button>
+              <Button variant="outline" onClick={handleBack} className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"><ArrowLeft className="mr-1.5 h-4 w-4" />Anterior</Button>
               <Button
                 onClick={handleContinueToFormulario}
                 disabled={
@@ -4466,7 +4460,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
        {isEditMode ? null : (
          <div className="flex flex-col gap-2">
            <div>
-             <Button variant="outline" size="sm" onClick={handleBack} className="gap-1.5">
+             <Button variant="outline" size="sm" onClick={handleBack} className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent">
                <ArrowLeft className="h-4 w-4" />Anterior
              </Button>
              {prefilled && datosRenovacion && (
@@ -4562,7 +4556,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   </div>
                 )}
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-                  <Button variant="outline" onClick={handleBack} disabled={enviando || guardandoBorrador}>
+                  <Button variant="outline" onClick={handleBack} disabled={enviando || guardandoBorrador} className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent">
                     <ArrowLeft className="mr-1.5 h-4 w-4" />Anterior
                   </Button>
                   <div className="flex items-center gap-3">

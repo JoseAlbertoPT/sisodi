@@ -13,7 +13,7 @@ import { SearchInput } from "@/components/ui/search-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  Download, Eye, FileCheck, Stamp, Printer,
+  Download, FileCheck, Stamp, Printer,
   Loader2, AlertTriangle, RefreshCw,
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
@@ -680,7 +680,7 @@ export function DictamenesPage() {
                             className="text-secondary hover:text-primary"
                             title="Ver dictamen"
                           >
-                            <Eye className="h-4 w-4" />
+                            <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"

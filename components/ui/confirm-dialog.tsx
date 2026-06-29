@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { HelpCircle, Info, AlertTriangle } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type ConfirmVariant = "aprobar" | "observar" | "eliminar" | "default"
@@ -15,25 +15,25 @@ const BTN_PURPLE: React.CSSProperties = { backgroundColor: "#6b2d6b", color: "#f
 
 const VARIANT_CFG = {
   aprobar: {
-    icon: <Info className="h-6 w-6 text-[#7c2d5e]" />,
+    icon: <img src="/iconos2/Icon.svg" alt="" className="h-6 w-6" />,
     iconBorderColor: "#7c2d5e",
     defaultLabel: "Sí, aprobar",
     inverted: false,
   },
   observar: {
-    icon: <HelpCircle className="h-6 w-6 text-[#7c2d5e]" />,
+    icon: <img src="/iconos2/question-circle.svg" alt="" className="h-6 w-6" />,
     iconBorderColor: "#7c2d5e",
     defaultLabel: "Sí, continuar",
     inverted: false,
   },
   eliminar: {
-    icon: <Info className="h-6 w-6 text-[#7c2d5e]" />,
+    icon: <img src="/iconos2/Icon.svg" alt="" className="h-6 w-6" />,
     iconBorderColor: "#7c2d5e",
     defaultLabel: "Sí, Eliminar",
     inverted: true,
   },
   default: {
-    icon: <Info className="h-6 w-6 text-[#7c2d5e]" />,
+    icon: <img src="/iconos2/Icon.svg" alt="" className="h-6 w-6" />,
     iconBorderColor: "#7c2d5e",
     defaultLabel: "Confirmar",
     inverted: false,
@@ -167,7 +167,7 @@ export function ObservarDialog({ open, onClose, onConfirm, folio }: ObservarDial
           style={{ boxShadow: "0 4px 24px 0 rgba(107,45,107,0.10)" }}
         >
           <div className="flex flex-col gap-3 mb-6">
-            <HelpCircle className="h-5 w-5 text-[#7c2d5e] shrink-0" />
+            <img src="/iconos2/question-circle.svg" alt="" className="h-5 w-5 shrink-0" />
             <h3 className="font-bold text-gray-900 text-xl leading-tight">¿Estás seguro de observar?</h3>
             <p className="text-sm text-gray-500">
               Vas a marcar <strong className="text-gray-700">{folio}</strong> con observaciones. Se devolverá a la URG.

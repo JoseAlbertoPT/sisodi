@@ -15,17 +15,19 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PageLayout } from "@/components/page-layout"
 import {
 
   ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle, RotateCcw,
-  History, MessageSquare, ClipboardCheck, Info, MinusCircle,
+  History, MessageSquare, ClipboardCheck, MinusCircle,
   ChevronDown, ChevronRight, Send, Download, Lock, Stamp,
   Users, Shield, Loader2, GraduationCap, Brain, Wrench, Heart, Star, Briefcase,
   UserCheck, Pencil, X,
 
 } from "lucide-react"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { useAuth } from "@/lib/auth-context"
 import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
 import { type EditSolicitudPayload, type FormularioData } from "@/components/pages/nueva-solicitud-page"
@@ -448,7 +450,7 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
           )}
           {icon}{title}
           <span className="ml-auto">
-            {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
           </span>
         </CardTitle>
       </CardHeader>
@@ -536,19 +538,17 @@ function RadioOption({ value, selected, onChange, label, style }: {
   value: string; selected: boolean; onChange: () => void; label: string; colorClass?: string; style?: React.CSSProperties
 }) {
   return (
-    <Button
+    <button
       type="button"
-      variant="outline"
-      size="sm"
       onClick={onChange}
-      style={selected ? style : undefined}
-      className={`gap-1.5 ${selected ? 'border-current' : ''}`}
+      style={selected ? style : { backgroundColor: "transparent", color: "#4B5563", borderColor: "#D1D5DB" }}
+      className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors hover:bg-gray-100"
     >
       {value === "si"       && <CheckCircle2 className="h-3.5 w-3.5" />}
       {value === "no"       && <XCircle className="h-3.5 w-3.5" />}
       {value === "noAplica" && <MinusCircle className="h-3.5 w-3.5" />}
       {label}
-    </Button>
+    </button>
   )
 }
 
@@ -658,7 +658,7 @@ function SeccionDocumentosAdjuntos({ raw }: { raw: any }) {
         <div className="flex flex-col gap-2">
           {(raw.adjunto as any[]).map((adj: any, i: number) => (
             <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-              <FileText className="h-8 w-8 text-secondary shrink-0" />
+              <FileTypeIcon name={adj.nombre_archivo} size="sm" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</p>
                 <p className="text-xs text-muted-foreground">{adj.tipo ?? "PDF"} — {formatFecha(adj.fecha_subida)}</p>
@@ -1169,12 +1169,12 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent showCloseButton={false} className="max-w-md p-0">
-        <div className="p-6 flex flex-col gap-5">
+      <DialogContent showCloseButton={false} className="max-w-sm p-0">
+        <div className="p-4 flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#e6ede6] flex items-center justify-center shrink-0">
-                <UserCheck className="h-5 w-5 text-[#1a3a1a]" />
+              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
               </div>
               <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Aprobar y Asignar Revisor</h3>
             </div>
@@ -1182,7 +1182,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex flex-col gap-4 pl-[52px]">
+          <div className="flex flex-col gap-3 pl-[52px]">
             <p className="text-sm text-gray-500">
               Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
             </p>
@@ -1194,7 +1194,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
             ) : (
               <Select value={selectedId} onValueChange={setSelectedId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full max-w-sm">
                   <SelectValue placeholder="Seleccionar revisor..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -1216,10 +1216,9 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5 hover:opacity-90"
-              style={{ backgroundColor: "#1a3a1a", color: "#fff", border: "none" }}
+              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#5c2844]"
             >
-              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Aprobar y asignar
             </Button>
           </div>
@@ -1325,7 +1324,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           avanzadaRef.current = true
           setError(`__avanzada__${accionExitosaRef.current}`)
         } else {
-          setError("Solicitud no encontrada en este filtro")
+          setError("Solicitud enviada al siguiente filtro")
         }
         return
       }
@@ -1476,7 +1475,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       if (!observacionGeneral.trim()) { setObservacionError("Escribe una observación para devolver el expediente."); return }
       setObservacionError("")
       const nuevoEstado = await patchEstado("observar", observacionGeneral.trim())
-      if (nuevoEstado) setObservacionGeneral("")
+      if (nuevoEstado) {
+        setObservacionGeneral("")
+        avanzadaRef.current = true
+        setError("__avanzada__observar")
+      }
       return
     }
     const errors: Record<string, boolean> = {}
@@ -1492,7 +1495,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       .join("\n")
     const obs = [observacionGeneral.trim(), resumen].filter(Boolean).join("\n")
     const nuevoEstado = await patchEstado("observar", obs)
-    if (nuevoEstado) { setObservacionGeneral(""); setChecklistErrors({}) }
+    if (nuevoEstado) {
+      setObservacionGeneral("")
+      setChecklistErrors({})
+      avanzadaRef.current = true
+      setError("__avanzada__observar")
+    }
   }
 
   const handleEmitir = async () => {
@@ -1573,36 +1581,27 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   if (error || !solicitud) {
     const esAvanzada = error?.startsWith('__avanzada__')
     const esObservada = error === '__avanzada__observar'
+    if (esAvanzada) return (
+      <ActionResultScreen
+        type={esObservada ? "observe" : "approve"}
+        onBack={() => onBack(filtro)}
+      />
+    )
     return (
-      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4">
-        {esAvanzada ? (
-          <div className="flex items-center justify-center" style={{ width: 64, height: 64, borderRadius: 12, background: '#DCFCE7' }}>
-            <CheckCircle2 style={{ width: 32, height: 32, color: '#16A34A' }} />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center rounded-full bg-[#F3F4F6]" style={{ width: 80, height: 80 }}>
-            <AlertCircle style={{ width: 40, height: 40, color: '#9CA3AF' }} />
-          </div>
-        )}
-        <p style={{ fontSize: 18, fontWeight: 600, color: '#111827' }}>
-          {esAvanzada
-            ? (esObservada ? 'Solicitud devuelta con observaciones' : 'Solicitud enviada al siguiente filtro')
-            : (error ?? 'Solicitud no encontrada')}
-        </p>
-        {esAvanzada && (
-          <p style={{ fontSize: 14, color: '#6B7280' }}>
-            {esObservada
-              ? 'La solicitud fue devuelta al capturista con las observaciones registradas.'
-              : 'La solicitud fue procesada exitosamente y avanzó a la siguiente bandeja.'}
-          </p>
-        )}
-        <Button
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f3f4f6]">
+          <AlertCircle className="h-8 w-8 text-[#9ca3af]" />
+        </div>
+        <div className="text-center max-w-sm">
+          <h2 className="text-lg font-semibold text-foreground">{error ?? "Solicitud no encontrada"}</h2>
+        </div>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-full border border-[#773357] px-5 py-2 text-sm font-medium text-[#773357] transition-colors hover:bg-[#773357]/5"
           onClick={() => onBack(filtro)}
-          style={{ border: '1.5px solid #2D3B2D', color: '#2D3B2D', borderRadius: 9999, background: 'white', padding: '10px 20px' }}
-          className="shadow-none hover:bg-[#F9FAFB]"
         >
           <ArrowLeft className="mr-1.5 h-4 w-4" />Regresar a bandeja
-        </Button>
+        </button>
       </div>
     )
   }
@@ -1700,7 +1699,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
+          <Button size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
             onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
@@ -1882,24 +1881,21 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                                               selected={valor === "si"}
                                               onChange={() => updateChecklist(item.key, valor === "si" ? null : "si", "")}
                                               label="Sí"
-                                              colorClass=""
-                                              style={{ color: COLOR_SI_TEXT, backgroundColor: `${COLOR_SI}15`, borderColor: COLOR_SI }}
+                                              style={{ backgroundColor: "#d2fad2", color: "#1c7d29", borderColor: "#1c7d29" }}
                                             />
                                             <RadioOption
                                               value="no"
                                               selected={valor === "no"}
                                               onChange={() => updateChecklist(item.key, valor === "no" ? null : "no")}
                                               label="No"
-                                              colorClass=""
-                                              style={{ color: COLOR_NO, backgroundColor: `${COLOR_NO}15`, borderColor: COLOR_NO }}
+                                              style={{ backgroundColor: "#ffd6d7", color: "#87090c", borderColor: "#87090c" }}
                                             />
                                             <RadioOption
                                               value="noAplica"
                                               selected={valor === "noAplica"}
                                               onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica", "")}
                                               label="No Aplica"
-                                              colorClass=""
-                                              style={{ color: COLOR_NO_APLICA, backgroundColor: `${COLOR_NO_APLICA}15`, borderColor: COLOR_NO_APLICA }}
+                                              style={{ backgroundColor: "#f3f2ee", color: "#4B5563", borderColor: "#9CA3AF" }}
                                             />
                                           </div>
 
@@ -2017,7 +2013,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {filtro === 1 && !canApprove && !canObservar && checklistStats.completed === checklistStats.total && checklistStats.hasNo && checklistStats.noWithoutObs > 0 && (
                   <Card className="shadow-sm border-destructive/40 border-2 bg-destructive/[0.04]">
                     <CardContent className="flex items-start gap-3 p-4">
-                      <Info className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+                      <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0 mt-0.5" />
                       <div>
                         <span className="text-sm font-medium text-destructive">Observaciones incompletas</span>
                         <p className="text-xs text-muted-foreground">{checklistStats.noWithoutObs} punto(s) marcado(s) como "No" requieren comentario obligatorio antes de observar.</p>
@@ -2028,7 +2024,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {!isAceptadoPorRevisor && !canApprove && !canObservar && filtro !== 3 && checklistStats.completed < checklistStats.total && (
                   <Card className="shadow-sm border-border bg-muted/30">
                     <CardContent className="flex items-start gap-3 p-4">
-                      <Info className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
+                      <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0 mt-0.5 opacity-50" />
                       <div>
                         <span className="text-sm font-medium text-card-foreground">Verificación en progreso</span>
                         <p className="text-xs text-muted-foreground">Faltan {checklistStats.total - checklistStats.completed} verificaciones por completar.</p>
@@ -2041,10 +2037,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {isAceptadoPorRevisor ? (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
-                      <Button variant="outline" size="sm" onClick={handleObservar}
+                      <Button size="sm" onClick={handleObservar}
                         disabled={!canObservar || observarBlocked || guardando}
-                        className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10">
-                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}Observar
+                        className="rounded-2xl font-medium hover:opacity-90"
+                        style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}>
+                        Observar
                       </Button>
                       <Button size="sm" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
                         className="gap-1.5">
@@ -2056,10 +2053,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 ) : (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
-                      <Button variant="outline" size="sm" onClick={handleObservar}
+                      <Button size="sm" onClick={handleObservar}
                         disabled={!canObservar || observarBlocked || guardando}
-                        className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10">
-                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}Observar
+                        className="rounded-2xl font-medium hover:opacity-90"
+                        style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}>
+                        Observar
                       </Button>
                       <Button size="sm" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
                         className="gap-1.5">

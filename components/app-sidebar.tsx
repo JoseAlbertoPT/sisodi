@@ -134,10 +134,10 @@ function SidebarItem({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] transition-colors text-left",
+        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors text-left",
         isActive
-          ? "bg-white text-[#2D3B2D] font-semibold shadow-sm"
-          : "text-[#4a5c4a] font-normal hover:bg-white/60 hover:text-[#2D3B2D]"
+          ? "bg-white text-[#2D3B2D] font-bold shadow-sm"
+          : "text-[#4a5c4a] font-medium hover:bg-white/60 hover:text-[#2D3B2D]"
       )}
     >
       <span className="shrink-0 [&>svg]:h-[18px] [&>svg]:w-[18px]">{icon}</span>
@@ -186,7 +186,6 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
       .sort((a, b) => a.orden - b.orden)
     return { allLeaves: leaves }
   }, [menuTree])
-
   return (
     <TooltipProvider delayDuration={0}>
       <aside
@@ -194,7 +193,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
           "flex h-screen flex-col border-r border-[#E0DED8] transition-all duration-300 overflow-hidden",
           collapsed ? "w-[64px]" : "w-[220px]"
         )}
-        style={{ backgroundColor: "#F5F5F0" }}
+        style={{ backgroundColor: "transparent" }}
         aria-label="Navegación principal"
       >
         <div
@@ -204,24 +203,13 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
           )}
         >
           {collapsed ? (
-            <img
-              src="/logo-quetzal-icono.svg"
-              alt="Quetzal"
-              className="h-8 w-8 object-contain"
-            />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#f1f1f0", borderRadius: 8, padding: 8, width: 48, height: 48, flexShrink: 0 }}>
+              <img src="/logo-quetzal-icono.svg" alt="Quetzal" style={{ width: 65, height: 65, objectFit: "contain" }} />
+            </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <img
-                src="/logo-quetzal-icono.svg"
-                alt="Quetzal"
-                className="shrink-0"
-                style={{ width: 40, height: 40 }}
-              />
-              <img
-                src="/finanzas-logo-cortado.svg"
-                alt="Finanzas"
-                style={{ width: 130, height: 45, objectFit: "contain", objectPosition: "left" }}
-              />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px" }}>
+              <img src="/logo-quetzal-icono.svg" alt="Quetzal" style={{ width: 40, height: 40, objectFit: "contain", flexShrink: 0 }} />
+              <img src="/finanzas-logo-cortado.svg" alt="Finanzas" style={{ width: 130, height: 45, objectFit: "contain", objectPosition: "left" }} />
             </div>
           )}
         </div>

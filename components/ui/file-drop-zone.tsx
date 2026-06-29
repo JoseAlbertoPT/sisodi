@@ -1,10 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import {
-  CloudUpload, Loader2, X,
-  FileText, FileSpreadsheet, FileImage,
-} from 'lucide-react'
+import { Loader2, X, File, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface FileDropZoneProps {
@@ -24,26 +21,22 @@ interface FileDropZoneProps {
   className?: string
 }
 
-/* ── Coloured file-type icon ──────────────────────────────── */
-function FileTypeIcon({ name }: { name: string }) {
+/* ── File type icon using system SVGs ──────────────────────── */
+export function FileTypeIcon({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
+  const cls = size === 'sm' ? 'h-6 w-6 shrink-0' : 'h-8 w-8 shrink-0'
 
   if (ext === 'pdf')
-    return <FileText className="h-6 w-6 text-[#EF4444]" />
-
+    return <img src="/Iconos1/doc icon-pdf.svg" alt="PDF" className={cls} />
   if (['xls', 'xlsx', 'csv'].includes(ext))
-    return <FileSpreadsheet className="h-6 w-6 text-[#16A34A]" />
-
+    return <img src="/Iconos1/doc csv.svg" alt="Excel" className={cls} />
   if (['ppt', 'pptx'].includes(ext))
-    return <FileText className="h-6 w-6 text-[#EA580C]" />
-
+    return <img src="/Iconos1/doc ppt.svg" alt="PowerPoint" className={cls} />
   if (['doc', 'docx', 'odt'].includes(ext))
-    return <FileText className="h-6 w-6 text-[#2563EB]" />
-
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'img', 'bmp'].includes(ext))
-    return <FileImage className="h-6 w-6 text-[#6B7280]" />
-
-  return <FileText className="h-6 w-6 text-[#9CA3AF]" />
+    return <img src="/Iconos1/doc word.svg" alt="Word" className={cls} />
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext))
+    return <img src="/Iconos1/doc img-jpg.svg" alt="Imagen" className={cls} />
+  return <File className={cn(cls, 'text-[#9CA3AF]')} />
 }
 
 export function FileDropZone({
@@ -99,22 +92,21 @@ export function FileDropZone({
   }
 
   const displayError = error ?? sizeError
+  const hasError = !!(displayError && !sizeError)
 
-  /* ── border / bg based on state ── */
-  const borderColor =
-    disabled || loading ? '#e0e0e0'
-    : displayError && !sizeError ? '#D32F2F'
-    : dragOver ? '#7B2D5E'
-    : '#cccccc'
-
-  const bgColor =
-    disabled || loading ? '#f5f5f5'
-    : displayError && !sizeError ? '#FFF5F5'
-    : dragOver ? '#f5f0f5'
-    : '#ffffff'
+  /* ── Visual state ── */
+  let borderColor = '#d1d5db'          // normal: gray-300
+  let bgColor     = '#ffffff'          // normal: white
+  if (disabled || loading) {
+    borderColor = '#e5e7eb'; bgColor = '#f9fafb'
+  } else if (hasError) {
+    borderColor = '#f87171'; bgColor = '#fef2f2'
+  } else if (dragOver) {
+    borderColor = '#773357'; bgColor = '#fdf5f8'
+  }
 
   return (
-    <div className={cn('flex flex-col gap-4', className)}>
+    <div className={cn('flex flex-col gap-2', className)}>
 
       {/* ── Drop zone ─────────────────────────────────────── */}
       <div
@@ -123,17 +115,17 @@ export function FileDropZone({
         aria-label="Zona de carga de archivos"
         onClick={() => !disabled && !loading && inputRef.current?.click()}
         onKeyDown={(e) => e.key === 'Enter' && !disabled && inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragOver(true) }}
+        onDragOver={(e) => { e.preventDefault(); if (!disabled && !loading) setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         style={{
           border: `2px dashed ${borderColor}`,
-          borderRadius: '12px',
+          borderRadius: '10px',
           backgroundColor: bgColor,
           transition: 'border-color 0.15s, background-color 0.15s',
         }}
         className={cn(
-          'relative flex w-full flex-col items-center justify-center gap-2 py-6 px-4 text-center select-none',
+          'flex w-full flex-col items-center justify-center gap-2 py-7 px-4 text-center select-none',
           disabled || loading ? 'cursor-not-allowed' : 'cursor-pointer',
         )}
       >
@@ -147,75 +139,116 @@ export function FileDropZone({
           disabled={disabled || loading}
         />
 
-        {/* Cloud icon + counter badge */}
+        {/* Icon + badge */}
         <div className="relative">
           {loading ? (
-            <Loader2 className="h-8 w-8 text-[#9CA3AF] animate-spin" />
+            <Loader2 className="h-9 w-9 text-gray-400 animate-spin" />
+          ) : hasError ? (
+            <img src="/iconos2/error_outline_cargaDoc.svg" alt="Error" className="h-9 w-9" />
           ) : (
-            <CloudUpload
-              className={cn(
-                'h-8 w-8',
-                displayError && !sizeError ? 'text-[#D32F2F]' : disabled ? 'text-[#ccc]' : 'text-[#9CA3AF]',
-              )}
+            <img
+              src="/iconos2/CargaDoc-black.svg"
+              alt="Cargar documento"
+              className={cn('h-9 w-9', disabled ? 'opacity-30' : 'opacity-60')}
             />
           )}
           {files.length > 0 && !loading && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#7B2D5E] text-[10px] font-bold text-white leading-none">
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#773357] text-[11px] font-bold text-white leading-none">
               {files.length}
             </span>
           )}
         </div>
 
-        {/* Prompt text */}
+        {/* Text */}
         <div className="flex flex-col items-center gap-0.5">
-          <p className={cn('text-sm', disabled ? 'text-[#aaa]' : 'text-[#6B7280]')}>
+          <p className={cn('text-sm', disabled ? 'text-gray-300' : loading ? 'text-gray-400' : 'text-gray-500')}>
             {loading ? loadingText : 'Arrastra tu archivo aquí, o'}
           </p>
           {!loading && (
-            <span className={cn('text-sm font-medium underline underline-offset-2', disabled ? 'text-[#aaa]' : 'text-[#7B2D5E]')}>
+            <span className={cn('text-sm font-medium underline underline-offset-2', disabled ? 'text-gray-300' : 'text-[#773357]')}>
               {selectLabel}
             </span>
           )}
         </div>
 
         {hint && !loading && (
-          <p className={cn('text-xs', disabled ? 'text-[#bbb]' : 'text-[#9CA3AF]')}>{hint}</p>
+          <p className="text-xs text-gray-400">{hint}</p>
         )}
       </div>
 
-      {/* ── File list ─────────────────────────────────────── */}
+      {/* ── Archivos seleccionados ─────────────────────────── */}
       {files.length > 0 && (
-        <div className="rounded-[12px] border border-[#E5E7EB] bg-[#FAFAFA] overflow-hidden">
+        <div className="flex flex-col gap-1.5 mt-1">
           {files.map((file, i) => (
-            <React.Fragment key={`${file.name}-${i}`}>
-              {i > 0 && <div className="h-px bg-[#E5E7EB]" />}
-              <div className="flex items-center gap-3 px-3 py-1.5">
-                <FileTypeIcon name={file.name} />
-                <div className="flex flex-col flex-1 min-w-0">
-                  <span className="text-[13px] font-medium text-[#374151] truncate leading-snug">{file.name}</span>
-                  <span className="text-[11px] text-[#9CA3AF] leading-none">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); removeFile(i) }}
-                  disabled={disabled || loading}
-                  aria-label={`Quitar ${file.name}`}
-                  className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#E5E7EB] text-[#6B7280] hover:bg-red-100 hover:text-red-500 transition-colors disabled:opacity-40"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+            <div
+              key={`${file.name}-${i}`}
+              className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5"
+            >
+              <FileTypeIcon name={file.name} size="sm" />
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-sm font-medium text-gray-800 truncate leading-snug">{file.name}</span>
+                <span className="text-xs text-gray-400 mt-0.5">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
               </div>
-            </React.Fragment>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); removeFile(i) }}
+                disabled={disabled || loading}
+                aria-label={`Quitar ${file.name}`}
+                className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors disabled:opacity-40"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
           ))}
         </div>
       )}
 
-      {/* ── Error message ─────────────────────────────────── */}
-      {displayError && (
-        <p className="flex items-center gap-1.5 text-xs text-[#D32F2F]">
-          <span className="shrink-0 text-base leading-none">⊘</span>
+      {/* ── Size error ────────────────────────────────────── */}
+      {sizeError && (
+        <p className="flex items-center gap-1.5 text-xs text-red-500">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          {sizeError}
+        </p>
+      )}
+
+      {/* ── Validation error ──────────────────────────────── */}
+      {hasError && displayError && (
+        <p className="flex items-center gap-1.5 text-xs text-red-500">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           {displayError}
         </p>
+      )}
+    </div>
+  )
+}
+
+/* ── Fila de archivo ya subido al servidor (con check) ──────── */
+export function UploadedFileRow({
+  nombre,
+  ruta,
+  onVer,
+}: {
+  nombre: string
+  ruta?: string
+  onVer?: () => void
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+      <div className="relative shrink-0">
+        <FileTypeIcon name={nombre} size="sm" />
+        <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white">
+          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+        </span>
+      </div>
+      <span className="text-sm font-medium text-gray-800 truncate flex-1 leading-snug">{nombre}</span>
+      {(ruta || onVer) && (
+        <button
+          type="button"
+          onClick={onVer ?? (() => ruta && window.open(ruta, '_blank'))}
+          className="shrink-0 text-xs font-medium text-[#773357] hover:underline"
+        >
+          Ver
+        </button>
       )}
     </div>
   )

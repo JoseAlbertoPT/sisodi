@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
-  CalendarDays, Pencil, Plus, Info, Loader2, Check, X,
+  CalendarDays, Pencil, Plus, Loader2, Check, X,
   CalendarPlus, ChevronDown,
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
@@ -304,7 +304,7 @@ export function CalendarioPage() {
 
         {error && (
           <div className="rounded-lg bg-destructive/5 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-center gap-2">
-            <Info className="h-4 w-4 shrink-0" />{error}
+            <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0" />{error}
           </div>
         )}
 
@@ -453,7 +453,7 @@ export function CalendarioPage() {
               </div>
             )}
              <div className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
-              <Info className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 opacity-40" />
               <span className="text-xs font-bold text-black leading-relaxed">
                 Información de referencia. Los cambios están sujetos a validación administrativa.
                 {!editing && !isEmpty && (
