@@ -4114,10 +4114,10 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               </div>
             </div>
           )}
-              <Card className={`shadow-sm border-secondary/30 border-2 ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
+                <Card className={`shadow-sm border-secondary/30 border-2 ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
               <CardHeader className="px-4 pt-3 pb-1">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-              <img src="/iconos2/calender-alt-1.svg" alt="" className="h-4 w-4 shrink-0 opacity-70" />Período de Aplicación
+              Período de Aplicación
               </CardTitle>
               <CardDescription>Seleccione el régimen y período para consultar las fechas límite de recepción</CardDescription>
               </CardHeader>

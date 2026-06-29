@@ -51,7 +51,6 @@ function HistoricoTab() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Upload card */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <div className="border-b border-border bg-muted/40 px-5 py-3.5 flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary/15">
@@ -64,25 +63,15 @@ function HistoricoTab() {
             Sube uno o dos archivos <span className="font-semibold text-card-foreground">.xlsx</span> con el histórico de dictámenes.
             Los datos se usarán para autocompletar renovaciones.
           </p>
-
           <FileDropZone
             accept=".xlsx"
             hint=".xlsx · máx. 10 MB c/u — puedes subir hasta 2 archivos"
             files={files}
             onFilesChange={(fs) => { setFiles(fs.slice(0, 2)); setUploadError(null); setUploadOk(false) }}
           />
-
           <div className="flex items-center gap-3 border-t border-border pt-4">
-            <Button
-              type="button"
-              onClick={handleUpload}
-              disabled={files.length === 0 || uploading}
-              size="sm"
-              className="gap-2"
-            >
-              {uploading
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : <Upload className="h-3.5 w-3.5" />}
+            <Button type="button" onClick={handleUpload} disabled={files.length === 0 || uploading} size="sm" className="gap-2">
+              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
               {uploading ? "Subiendo..." : "Subir archivos"}
             </Button>
             {uploadOk && (
@@ -99,7 +88,6 @@ function HistoricoTab() {
         </div>
       </div>
 
-      {/* Files list */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -114,7 +102,6 @@ function HistoricoTab() {
             <span className="text-xs text-muted-foreground">{totalRows.toLocaleString()} registros en total</span>
           )}
         </div>
-
         {loading ? (
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-12">
             <Loader2 className="h-4 w-4 animate-spin" />Cargando archivos...
@@ -175,9 +162,7 @@ function HistoricoTab() {
                     disabled={removingId === h.id}
                     className="rounded-lg p-2 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50 shrink-0"
                   >
-                    {removingId === h.id
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <Trash2 className="h-4 w-4" />}
+                    {removingId === h.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </button>
                 </div>
               )
@@ -189,20 +174,14 @@ function HistoricoTab() {
   )
 }
 
-export function ConfiguracionPage() {
+export function EntidadesPage() {
   return (
     <PageLayout
-      title="Dependencias"
+      title="Entidades"
       description="Gestión de estructuras organizacionales de la administración centralizada y paraestatal."
     >
       <Tabs defaultValue="centralizada" className="w-full">
         <TabsList>
-
-          {/* <TabsTrigger value="historico" className="gap-1.5">
-            <FileSpreadsheet className="h-4 w-4" />
-            Histórico
-          </TabsTrigger> */}
-
           <TabsTrigger value="centralizada" className="gap-1.5">
             <Building2 className="h-4 w-4" />
             Centralizada
@@ -212,9 +191,6 @@ export function ConfiguracionPage() {
             Paraestatal
           </TabsTrigger>
         </TabsList>
-        {/* <TabsContent value="historico" className="mt-6">
-          <HistoricoTab />
-        </TabsContent> */}
         <TabsContent value="centralizada" className="mt-6">
           <CatalogoCentralizadaTab />
         </TabsContent>

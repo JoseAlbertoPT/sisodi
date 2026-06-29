@@ -1618,11 +1618,6 @@ export function ValidacionUefaPage() {
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1">
                             <UefaEstadoBadge estado={sol.estado} />
-                            {sol.reingresoCount > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-[#832B56]/10 px-2 py-0.5 text-[10px] font-medium text-[#832B56] w-fit">
-                                <RotateCcw className="h-3 w-3" />{ordinalRegreso(sol.reingresoCount)}
-                              </span>
-                            )}
                           </div>
                         </td>
                         {activeTab === "Emitidas" && (

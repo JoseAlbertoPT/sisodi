@@ -946,27 +946,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         </div>
       </div>
 
-      {solicitud.reingresoCount > 0 && (
-        <Card className="border-2 border-accent/30 shadow-sm">
-          <CardContent className="flex items-start gap-3 py-4">
-            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0 mt-0.5" />
-            <div>
-              <span className="text-sm font-semibold text-accent-foreground">
-                {ordinalRegreso(solicitud.reingresoCount)}
-              </span>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Solicitud corregida y reenviada por la URG.
-                {solicitud.lastObservedStage && ` Última observación desde: Filtro ${solicitud.lastObservedStage}.`}
-              </p>
-              {ultimaObsDo && (
-                <p className="text-sm text-card-foreground mt-2 border-l-2 border-accent/40 pl-3 italic">
-                  "{ultimaObsDo}"
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {observacionesUefaActiva && (
         <Card className="border-2 border-[#832B56]/30 shadow-sm">
@@ -1087,14 +1066,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                       : "—"}
                   </span>
                 </div>
-                {solicitud.reingresoCount > 0 && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Regreso</span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-1 text-xs font-medium text-accent-foreground w-fit">
-                      <RotateCcw className="h-3 w-3" />{ordinalRegreso(solicitud.reingresoCount)}
-                    </span>
-                  </div>
-                )}
                 {solicitud.reingresoCount > 0 && solicitud.lastObservedStage && (
                   <div className="flex flex-col gap-1">
                     <span className="text-xs text-muted-foreground">Última Observacion desde</span>
@@ -1577,11 +1548,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                               <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit" style={{ backgroundColor: "#BE185D18", color: "#BE185D" }}>
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#BE185D]" />
                                 Observada
-                              </span>
-                            )}
-                            {sol.reingresoCount > 0 && (
-                              <span className="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent-foreground">
-                                {ordinalRegreso(sol.reingresoCount)}
                               </span>
                             )}
                           </div>

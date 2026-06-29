@@ -64,7 +64,6 @@ function paginationPages(total: number, current: number): (number | "...")[] {
 }
 
 const CLAVE_SEG = [2, 2, 2, 1, 1, 1, 1]
-
 function ClaveInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const refs = useRef<(HTMLInputElement | null)[]>([])
   const rawSegs = value.split(".")
@@ -111,6 +110,7 @@ function ClaveInput({ value, onChange }: { value: string; onChange: (v: string) 
     </div>
   )
 }
+
 
 function SecretariaRow({
   node, allTree, onRefresh, onDragStart, onDragOver, onDrop, draggingIndex, index,

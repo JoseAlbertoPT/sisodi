@@ -15,7 +15,8 @@ import { CalendarioPage } from "@/components/pages/calendario-page"
 import { UsuariosPage } from "@/components/pages/usuarios-page"
 import { PerfilPage } from "@/components/pages/perfil-page"
 import { ValidacionUefaPage } from "@/components/pages/validacion-uefa-page"
-import { ConfiguracionPage } from "@/components/pages/configuracion-page"
+import { EntidadesPage } from "@/components/pages/entidades-page"
+import { CatalogoJustificacionesPage } from "@/components/pages/catalogo-justificaciones-page"
 import { ProgresoFirmadoPage } from "@/components/pages/progreso-firmado-page"
 import { WelcomePage } from "@/components/welcome-splash"
 
@@ -138,10 +139,13 @@ export function AppShell() {
         return <CalendarioPage />
       case "usuarios":
         return <UsuariosPage />
+      case "catalogo-justificaciones":
+        return <CatalogoJustificacionesPage />
+      case "entidades":
       case "configuracion":
       case "dependencia":
       case "dependencias":
-        return <ConfiguracionPage />
+        return <EntidadesPage />
       case "perfil":
         return <PerfilPage />
       default:

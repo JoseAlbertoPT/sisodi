@@ -16,6 +16,7 @@ import {
   ScanSearch,
   Settings,
   Building2,
+  BookOpen,
   Menu as MenuIcon,
   LogOut,
 } from "lucide-react"
@@ -28,6 +29,7 @@ import {
 
 export type PageKey =
   | "dashboard"
+  | "catalogo-justificaciones"
   | "nueva-solicitud"
   | "mis-solicitudes"
   | "validacion-uefa"
@@ -39,6 +41,7 @@ export type PageKey =
   | "dictamenes"
   | "calendario"
   | "usuarios"
+  | "entidades"
   | "configuracion"
   | "dependencia"
   | "dependencias"
@@ -63,11 +66,13 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   ScanSearch,
   Settings,
   Building2,
+  BookOpen,
 }
 
 const KEY_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   dependencias: Building2,
   dependencia:  Building2,
+  entidades:    Building2,
 }
 
 function getIconForNode(node: MenuNode): React.ReactNode {
@@ -193,6 +198,14 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
     const leaves = collectLeafNodes(menuTree)
       .filter((n) => n.key && n.route !== null && n.key !== "revision-do")
       .sort((a, b) => a.orden - b.orden)
+
+    const dashIdx = leaves.findIndex((n) => n.key === "dashboard")
+    const catIdx  = leaves.findIndex((n) => n.key === "catalogo-justificaciones")
+    if (dashIdx !== -1 && catIdx !== -1 && catIdx !== dashIdx + 1) {
+      const [cat] = leaves.splice(catIdx, 1)
+      leaves.splice(dashIdx + 1, 0, cat)
+    }
+
     return { allLeaves: leaves }
   }, [menuTree])
   return (
