@@ -139,6 +139,8 @@ export function AppShell() {
       case "usuarios":
         return <UsuariosPage />
       case "configuracion":
+      case "dependencia":
+      case "dependencias":
         return <ConfiguracionPage />
       case "perfil":
         return <PerfilPage />

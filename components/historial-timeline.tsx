@@ -223,6 +223,9 @@ function getEvento(
       tipo:  "normal",
     }
 
+  if (n.includes("observado") || n.includes("observada"))
+    return { label: nuevo, desc: "devuelta con observaciones para corrección", tipo: "observacion" }
+
   return { label: nuevo, desc: "", tipo: "normal" }
 }
 
@@ -356,24 +359,26 @@ function TimelineDot({ tipo }: { tipo: Tipo }) {
     )
   if (tipo === "observacion")
     return (
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FEF3C7] ring-4 ring-[#F59E0B]/10">
-        <svg className="h-3.5 w-3.5 text-[#D97706]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#773357] ring-4 ring-[#773357]/15">
+        <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </div>
     )
   if (tipo === "edicion")
     return (
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FDF6EC] ring-4 ring-[#A0845C]/10">
-        <svg className="h-3.5 w-3.5 text-[#A0845C]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E8DCC8] ring-4 ring-[#C4A882]/15">
+        <svg className="h-3.5 w-3.5 text-[#8B6F47]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
       </div>
     )
-  /* captura / normal */
+  /* captura / normal / emision */
   return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white border-2 border-[#D1D5DB] ring-4 ring-transparent">
-      <div className="h-2 w-2 rounded-full bg-[#9CA3AF]" />
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2D3B2D] ring-4 ring-[#2D3B2D]/15">
+      <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
     </div>
   )
 }
@@ -400,10 +405,14 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
         const isLast = i === visible.length - 1 && !showToggle
 
         const labelColor =
-          tipo === "observacion" ? "text-[#92400E]"
-          : tipo === "edicion"    ? "text-[#A0845C]"
-          : tipo === "emision"    ? "text-[#2D3B2D]"
-          : "text-[#374151]"
+          tipo === "observacion" ? "text-[#773357]"
+          : tipo === "edicion"    ? "text-[#8B6F47]"
+          : "text-[#2D3B2D]"
+
+        const rowBg =
+          tipo === "observacion" ? "bg-[#773357]/[0.06] border border-[#773357]/20 rounded-lg px-3 py-2"
+          : tipo === "edicion"    ? "bg-[#F5EFE3] border border-[#C4A882]/30 rounded-lg px-3 py-2"
+          : "bg-[#2D3B2D]/[0.06] border border-[#2D3B2D]/20 rounded-lg px-3 py-2"
 
         return (
           <div key={i} className="flex gap-3">
@@ -415,17 +424,19 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
 
             {/* ── Right col: content ── */}
             <div className={`flex flex-col gap-0.5 pb-4 flex-1 min-w-0 ${isLast ? 'pb-0' : ''}`}>
-              <span className={`text-[13px] font-semibold leading-snug ${labelColor}`}>{label}</span>
-              <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-[#9CA3AF]">
-                <span className="font-medium text-[#6B7280]">{entry.usuario}</span>
-                <span>·</span>
-                <span>{fmtFecha(entry.fecha)}</span>
-              </div>
-              {diff && (
-                <div className="mt-1">
-                  <DiffDialog cambios={diff} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} />
+              <div className={rowBg}>
+                <span className={`text-[13px] font-semibold leading-snug ${labelColor}`}>{label}</span>
+                <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-[#9CA3AF] mt-0.5">
+                  <span className="font-medium text-[#6B7280]">{entry.usuario}</span>
+                  <span>·</span>
+                  <span>{fmtFecha(entry.fecha)}</span>
                 </div>
-              )}
+                {diff && (
+                  <div className="mt-1">
+                    <DiffDialog cambios={diff} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )

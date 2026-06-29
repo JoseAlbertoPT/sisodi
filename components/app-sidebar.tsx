@@ -15,6 +15,7 @@ import {
   Filter,
   ScanSearch,
   Settings,
+  Building2,
   Menu as MenuIcon,
   LogOut,
 } from "lucide-react"
@@ -39,6 +40,8 @@ export type PageKey =
   | "calendario"
   | "usuarios"
   | "configuracion"
+  | "dependencia"
+  | "dependencias"
   | "perfil"
 
 interface SidebarProps {
@@ -59,10 +62,16 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Filter,
   ScanSearch,
   Settings,
+  Building2,
+}
+
+const KEY_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  dependencias: Building2,
+  dependencia:  Building2,
 }
 
 function getIconForNode(node: MenuNode): React.ReactNode {
-  const Icon = (node.icon && ICON_MAP[node.icon]) || MenuIcon
+  const Icon = (node.key && KEY_ICON_MAP[node.key]) || (node.icon && ICON_MAP[node.icon]) || MenuIcon
   return <Icon className="h-[18px] w-[18px]" />
 }
 

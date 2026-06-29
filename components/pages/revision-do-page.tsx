@@ -1412,6 +1412,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     (filtro === 2 || filtro === 3)
       ? !sinObservacion
       : (checklistStats.allDone && checklistStats.hasNo && checklistStats.noWithoutObs === 0)
+        || observacionGeneral.trim().length > 0
   )
   const observarBlocked = false
 
@@ -1482,6 +1483,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       }
       return
     }
+    if (!checklistStats.hasNo && !observacionGeneral.trim()) {
+      setObservacionError("Escribe una observación general o marca al menos un item del checklist como 'No'.")
+      return
+    }
+    setObservacionError("")
     const errors: Record<string, boolean> = {}
     let hasErrors = false
     checklistItems.forEach(item => {

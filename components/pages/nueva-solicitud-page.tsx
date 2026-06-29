@@ -1478,7 +1478,7 @@ function FormularioPrestacion({
   const [unidadSeleccionada,   setUnidadSeleccionada]   = useState(
     datosRenovacion?.unidadAdscripcion ?? initialData?.unidadAdministrativa ?? unidadFija ?? ""
   )
-  const [claveUA, setClaveUA] = useState(initialData?.unidadAdministrativa ?? claveReportePlazas ?? "")
+  const [claveUA, setClaveUA] = useState(fmtClave(initialData?.unidadAdministrativa ?? claveReportePlazas ?? ""))
   const [urgSeleccionada,      setUrgSeleccionada]      = useState(
     datosRenovacion?.unidadResponsableGasto
     ?? initialData?.unidadResponsable
@@ -2286,7 +2286,7 @@ function FormularioNombramiento({
   const [unidadAdscripcion, setUnidadAdscripcion] = useState(
     datosRenovacion?.unidadAdscripcion ?? initialData?.unidadAdministrativa ?? unidadFija ?? ""
   )
-  const [claveUA, setClaveUA] = useState(initialData?.unidadAdministrativa ?? claveReportePlazas ?? "")
+  const [claveUA, setClaveUA] = useState(fmtClave(initialData?.unidadAdministrativa ?? claveReportePlazas ?? ""))
   const [urgSeleccionada, setUrgSeleccionada] = useState(
     datosRenovacion?.unidadResponsableGasto ?? initialData?.unidadResponsable ?? ""
   )

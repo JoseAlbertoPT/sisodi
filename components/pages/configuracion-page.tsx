@@ -192,7 +192,7 @@ function HistoricoTab() {
 export function ConfiguracionPage() {
   return (
     <PageLayout
-      title="Catálogo"
+      title="Dependencias"
       description="Gestión de estructuras organizacionales de la administración centralizada y paraestatal."
     >
       <Tabs defaultValue="centralizada" className="w-full">

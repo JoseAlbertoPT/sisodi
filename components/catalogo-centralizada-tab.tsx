@@ -543,6 +543,7 @@ function SecretariaRow({
 export function CatalogoCentralizadaTab() {
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
   const [addSecOpen, setAddSecOpen] = useState(false)
@@ -552,8 +553,9 @@ export function CatalogoCentralizadaTab() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try { setTree(await fetchCentralizadaTree()) }
-    catch (e) { console.error(e) }
+    catch (e) { setLoadError(e instanceof Error ? e.message : "Error al cargar el catálogo") }
     finally { setLoading(false) }
   }, [])
 
@@ -626,6 +628,14 @@ export function CatalogoCentralizadaTab() {
           {loading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando...
+            </div>
+          ) : loadError ? (
+            <div className="flex items-center gap-3 rounded-lg border-l-4 border-l-red-500 bg-red-50 px-4 py-3 my-4">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-red-700">Error al cargar el catálogo</span>
+                <span className="text-xs text-red-600">{loadError}</span>
+              </div>
             </div>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">
