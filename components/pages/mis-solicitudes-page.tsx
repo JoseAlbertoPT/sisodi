@@ -8,6 +8,7 @@ import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SearchInput } from "@/components/ui/search-input"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { Separator } from "@/components/ui/separator"
 import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
@@ -1566,6 +1567,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
   const [activeTab, setActiveTab]   = useState<UrgTab>(validInitialTab)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [calData, setCalData]       = useState<CalData>({ honorarios: [], asimilados: [], nombramiento: [] })
 
   useEffect(() => {
@@ -1617,6 +1619,9 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
   useRealtime(["solicitudes"], reloadCurrent)
 
   const filtered          = data
+  useEffect(() => { setCurrentPage(1) }, [activeTab, searchTerm])
+  const totalPages    = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginated     = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
   const selectedSolicitud = selectedId
     ? data.find((s) => s.id === selectedId) ?? null
     : null
@@ -1752,7 +1757,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                     </tr>
                   ))
                 }
-                {filtered.map((sol) => {
+                {paginated.map((sol) => {
                   const observador  = getObservador(sol.estado)
                   const subEstado   = getSubEstadoDGDO(sol.estado)
                   const isObservada = observador !== null
@@ -1843,6 +1848,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
           </div>
         </CardContent>
       </Card>
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </PageLayout>
   )
 }

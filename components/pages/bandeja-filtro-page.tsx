@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ConfirmDialog, ObservarDialog } from "@/components/ui/confirm-dialog"
 import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import { SearchInput } from "@/components/ui/search-input"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
   FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
@@ -1167,6 +1168,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   }
 
   const [searchTerm,    setSearchTerm]    = useState("")
+  const [currentPage,   setCurrentPage]   = useState(1)
   const [filterRegimen, setFilterRegimen] = useState("todos")
 
   const cargar = useCallback(async () => {
@@ -1387,6 +1389,11 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
     [solicitudes, activeTab, filtro, searchTerm, filterRegimen]
   )
 
+  useEffect(() => { setCurrentPage(1) }, [activeTab, filtro, searchTerm, filterRegimen])
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
   const selectedSolicitud = selectedId ? solicitudes.find(s => s.id === selectedId) ?? null : null
 
   if (successMsg) return (
@@ -1518,7 +1525,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                         </div>
                       </td>
                     </tr>
-                  ) : filtered.map(sol => {
+                  ) : paginated.map(sol => {
                     const tab    = classifySolicitud(sol, filtro)
                     const config = (filtro === 2 ? TAB_CONFIG_DO : filtro === 3 ? TAB_CONFIG_EMISION : TAB_CONFIG_REVISION)[tab]
                     return (
@@ -1657,6 +1664,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         </CardContent>
       </Card>
       )}
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       <ConfirmModal
         open={!!aprobarTarget}
         onClose={() => setAprobarTarget(null)}

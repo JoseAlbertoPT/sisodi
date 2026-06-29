@@ -14,8 +14,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Download, FileCheck, Stamp, Printer,
-  Loader2, AlertTriangle, RefreshCw,
+  Loader2, AlertTriangle, RefreshCw, MoreHorizontal, Eye,
 } from "lucide-react"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { PageLayout } from "@/components/page-layout"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
@@ -330,10 +337,10 @@ const DictamenViewModal = React.memo(({
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant={showFirmas ? "secondary" : "outline"}
               size="sm"
               onClick={() => setShowFirmas(!showFirmas)}
-              className="gap-1.5"
+              className="gap-1.5 font-medium hover:opacity-90"
+              style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
             >
               <Printer className="h-4 w-4" />
               {showFirmas ? "Ocultar Firmas" : "Editar Firmas"}
@@ -342,7 +349,7 @@ const DictamenViewModal = React.memo(({
               {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               {isDownloading ? "Generando..." : "Descargar"}
             </Button>
-            <Button variant="ghost" size="sm" onClick={onClose}>Cerrar</Button>
+            <Button variant="outline" size="sm" onClick={onClose}>Cerrar</Button>
           </div>
         </CardHeader>
 
@@ -420,6 +427,7 @@ export function DictamenesPage() {
   const [filterMes,        setFilterMes]        = useState("todos")
   const [filterSecretaria, setFilterSecretaria] = useState("todas")
   const [filterTipo,       setFilterTipo]       = useState("todos")
+  const [currentPage,      setCurrentPage]      = useState(1)
 
   const descargarPdfDictamen = async (solicitudId: string, folio: string | null, firmas: Record<string, string> = {}, formato: 'fisico' | 'en_linea' = 'fisico') => {
     setDownloadingId(solicitudId)
@@ -524,6 +532,11 @@ export function DictamenesPage() {
     [dictamenes, searchTerm, filterAnio, filterMes, filterSecretaria, filterTipo]
   )
 
+  useEffect(() => { setCurrentPage(1) }, [searchTerm, filterAnio, filterMes, filterSecretaria, filterTipo])
+
+  const totalPages    = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginated     = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
   const totalDictamenes  = dictamenes.filter((d) => d.tipoDoc === "dictamen").length
   const totalOpiniones   = dictamenes.filter((d) => d.tipoDoc === "opinion").length
   const totalElectronica = dictamenes.filter((d) => d.tipoFirma === "electronica").length
@@ -613,7 +626,7 @@ export function DictamenesPage() {
                         No se encontraron dictámenes emitidos
                       </td>
                     </tr>
-                  ) : filtered.map((d) => (
+                  ) : paginated.map((d) => (
                     <tr key={d.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
 
                       <td className="px-4 py-3 font-medium text-card-foreground font-mono text-xs">
@@ -673,35 +686,34 @@ export function DictamenesPage() {
                       </td>
 
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost" size="sm"
-                            onClick={() => setViewing(d)}
-                            className="text-secondary hover:text-primary"
-                            title="Ver dictamen"
-                          >
-                            <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => descargarPdfDictamen(
-                              d.id,
-                              d.folioDictamen,
-                              {},
-                              d.tipoFirma === 'electronica' ? 'en_linea' : 'fisico',
-                            )}
-                            disabled={downloadingId === d.id}
-                            className="gap-1.5 bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0 min-w-[32px]"
-                            title={`Descargar PDF (${d.tipoFirma === 'electronica' ? 'En línea' : 'Físico'})`}
-                          >
-                            {downloadingId === d.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              {downloadingId === d.id
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <MoreHorizontal className="h-4 w-4" />}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setViewing(d)} className="gap-2 cursor-pointer">
+                              <Eye className="h-4 w-4" />
+                              Ver dictamen
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => descargarPdfDictamen(
+                                d.id,
+                                d.folioDictamen,
+                                {},
+                                d.tipoFirma === 'electronica' ? 'en_linea' : 'fisico',
+                              )}
+                              disabled={downloadingId === d.id}
+                              className="gap-2 cursor-pointer"
+                            >
                               <Download className="h-4 w-4" />
-                            )}
-                          </Button>
-                          
-                        </div>
+                              Descargar PDF
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -711,6 +723,7 @@ export function DictamenesPage() {
           )}
         </CardContent>
       </Card>
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </PageLayout>
   )
 }

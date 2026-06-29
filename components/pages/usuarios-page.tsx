@@ -38,6 +38,7 @@ import {
   type OrganoCentralizadoNode,
   type CategoriaParaestatalItem,
 } from "@/lib/catalogo-api"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 
 const ROLES = ["Emisor", "Validador", "Revisor", "Capturista", "UEFA", "Administrador"]
 
@@ -1799,6 +1800,7 @@ export function UsuariosPage() {
   const [searchTerm,    setSearchTerm]    = useState("")
   const [filtroAdmin,   setFiltroAdmin]   = useState<"todos" | "centralizada" | "paraestatal">("todos")
   const [tabEstatus,    setTabEstatus]    = useState<"activos" | "deshabilitados">("activos")
+  const [currentPage,   setCurrentPage]   = useState(1)
   const [permisoUserId,         setPermisoUserId]         = useState<string | null>(null)
   const [editingUserId,         setEditingUserId]         = useState<string | null>(null)
   const [showNewForm,           setShowNewForm]           = useState(false)
@@ -1832,6 +1834,10 @@ export function UsuariosPage() {
       normalizeText(row.rol).includes(q) ||
       normalizeText(row.secretaria).includes(q)
   })
+
+  useEffect(() => { setCurrentPage(1) }, [tabEstatus, filtroAdmin, searchTerm])
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const hasActivePermiso = (id: string) =>
     permisos.some((p) => p.userId === id && p.active && !p.used)
@@ -1964,7 +1970,7 @@ export function UsuariosPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((row) => (
+                {paginated.map((row) => (
                   <tr key={row.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-medium text-card-foreground">
                       <div className="flex items-center gap-2">
@@ -2040,6 +2046,7 @@ export function UsuariosPage() {
           </div>
         </CardContent>
       </Card>
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </PageLayout>
   )
 }

@@ -33,6 +33,7 @@ import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 
 type UefaEstado = string
 
@@ -1314,6 +1315,7 @@ export function ValidacionUefaPage() {
   const [error,            setError]            = useState<string | null>(null)
   const [guardando,        setGuardando]        = useState(false)
   const [activeTab,        setActiveTab]        = useState<UefaTab>("Nuevas")
+  const [currentPage,      setCurrentPage]      = useState(1)
   const [selectedId,       setSelectedId]       = useState<number | null>(null)
   const [observarTargetId, setObservarTargetId] = useState<number | null>(null)
   const [aprobarTargetId,  setAprobarTargetId]  = useState<number | null>(null)
@@ -1477,6 +1479,10 @@ export function ValidacionUefaPage() {
     [solicitudes, activeTab]
   )
 
+  useEffect(() => { setCurrentPage(1) }, [activeTab])
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
   const selectedSolicitud  = selectedId    !== null ? solicitudes.find(s => s.id === selectedId)    ?? null : null
   const dictamenViewSol    = dictamenViewId !== null ? solicitudes.find(s => s.id === dictamenViewId) ?? null : null
 
@@ -1593,7 +1599,7 @@ export function ValidacionUefaPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(sol => {
+                  {paginated.map(sol => {
                     const solTab             = getTabForEstado(sol.estado)
                     const folioDictamenLabel = sol.numeroDictamen
                       ?? (sol.folioDictamen ? formatearFolio(sol.folioDictamen) : null)
@@ -1685,6 +1691,7 @@ export function ValidacionUefaPage() {
           )}
         </CardContent>
       </Card>
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
 
       <ConfirmModal
         open={!!aprobarTargetId}
