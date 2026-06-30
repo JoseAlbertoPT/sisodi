@@ -13,22 +13,27 @@ import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
+import { ConfirmDialog, ObservarDialog } from "@/components/ui/confirm-dialog"
+import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion"
 import {
-  Eye, CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
+  CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
-  Info, RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
-  Shield, FileSignature,
+  RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
+  Shield, FileSignature, X,
 } from "lucide-react"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
 import { FirmaModal } from "@/components/firma-modal"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { ConfirmToast } from "@/components/ui/confirm-toast"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 
 type UefaEstado = string
 
@@ -655,10 +660,7 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
           )}
           {icon}{title}
           <span className="ml-auto">
-            <ChevronDown
-              className="h-4 w-4 text-muted-foreground transition-transform duration-200"
-              style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-            />
+            <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
           </span>
         </CardTitle>
       </CardHeader>
@@ -739,7 +741,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
     v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -757,7 +759,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -877,7 +879,7 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
           <div className="flex flex-col gap-2">
             {raw.adjunto.map((adj: any, i: number) => (
               <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-                <FileText className="h-5 w-5 text-secondary shrink-0" />
+                <FileTypeIcon name={adj.nombre_archivo} size="sm" />
                 <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
                 {adj.ruta && (
                   <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
@@ -896,91 +898,27 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
   )
 }
 
-function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel, confirmVariant = "default", icon }: {
+function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel }: {
   open: boolean; onClose: () => void; onConfirm: () => void
   title: string; description: string; confirmLabel: string
-  confirmVariant?: "default" | "destructive"; icon?: React.ReactNode
 }) {
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            {icon ?? <HelpCircle className="h-5 w-5 text-primary" />}{title}
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">{description}</p>
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={onConfirm} className={confirmVariant === "destructive"
-            ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            : "bg-primary text-primary-foreground hover:bg-primary/90"}>
-            {confirmLabel}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title={title}
+      description={description}
+      confirmLabel={confirmLabel}
+      variant="aprobar"
+    />
   )
 }
 
 function ObservarModal({ open, onClose, onConfirm, folio }: {
   open: boolean; onClose: () => void; onConfirm: (obs: string) => void; folio: string
 }) {
-  const [step, setStep] = useState<"confirm" | "write">("confirm")
-  const [obs,  setObs]  = useState("")
-  const handleClose = () => { setStep("confirm"); setObs(""); onClose() }
-
-  if (step === "confirm") return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <HelpCircle className="h-5 w-5 text-destructive" />¿Estás seguro de observar?
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Vas a marcar <strong>{folio}</strong> con observaciones. Se enviará de regreso a la URG.
-        </p>
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={() => setStep("write")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5">
-            <AlertTriangle className="h-4 w-4" />Sí, continuar
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-  
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <AlertTriangle className="h-5 w-5 text-destructive" />Observar — {folio}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">Escriba las observaciones que se enviarán a la URG.</p>
-          <Textarea
-            placeholder="Describa las observaciones..."
-            value={obs}
-            onChange={e => setObs(e.target.value)}
-            className="min-h-[120px] bg-card"
-          />
-          <div className="flex items-center justify-end gap-3">
-            <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-            <Button
-              onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
-              disabled={!obs.trim()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
-            >
-              <RotateCcw className="h-4 w-4" />Confirmar observación
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
+  return <ObservarDialog open={open} onClose={onClose} onConfirm={onConfirm} folio={folio} />
 }
 
 function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: {
@@ -1008,54 +946,65 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <CheckCircle2 className="h-5 w-5 text-primary" />Aprobar y Asignar Revisor
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Seleccione el Revisor que revisará la solicitud <strong>{folio}</strong>.
-        </p>
-        {cargando ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+      <DialogContent showCloseButton={false} className="max-w-sm p-0">
+        <div className="p-4 flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Aprobar y Asignar Revisor</h3>
+            </div>
+            <button type="button" onClick={handleClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        ) : revisores.length === 0 ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-destructive">
-            <AlertTriangle className="h-4 w-4" />No hay usuarios con rol Revisor en su secretaría.
+          <div className="flex flex-col gap-3 pl-[52px]">
+            <p className="text-sm text-gray-500">
+              Seleccione el Revisor que revisará la solicitud <strong className="text-gray-700">{folio}</strong>.
+            </p>
+            {cargando ? (
+              <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+              </div>
+            ) : revisores.length === 0 ? (
+              <div className="flex items-center gap-2 py-2 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4" />No hay usuarios con rol Revisor en su secretaría.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                {revisores.map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setSeleccionado(r.id)}
+                    className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors ${
+                      seleccionado === r.id
+                        ? "text-white"
+                        : "hover:bg-gray-100 text-gray-700"
+                    }`}
+                    style={seleccionado === r.id ? { backgroundColor: "#773357" } : undefined}
+                  >
+                    {seleccionado === r.id
+                      ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      : <span className="h-4 w-4 shrink-0 rounded-full border border-gray-300 inline-block" />
+                    }
+                    {r.nombre}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto py-1">
-            {revisores.map(r => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setSeleccionado(r.id)}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors ${
-                  seleccionado === r.id
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted text-card-foreground"
-                }`}
-              >
-                {seleccionado === r.id
-                  ? <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  : <span className="h-4 w-4 shrink-0 rounded-full border border-muted-foreground/40 inline-block" />
-                }
-                {r.nombre}
-              </button>
-            ))}
+          <div className="flex justify-between pt-1">
+            <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+            <Button
+              onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
+              disabled={!seleccionado || cargando}
+              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#5c2844]"
+            >
+              Confirmar
+            </Button>
           </div>
-        )}
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button
-            onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
-            disabled={!seleccionado || cargando}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
-          >
-            <CheckCircle2 className="h-4 w-4" />Confirmar
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -1120,7 +1069,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         </div>
         <div className="flex items-center gap-3">
           <Button
-            size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
+            size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
             onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
@@ -1130,19 +1079,20 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
               <Button
                 onClick={() => setShowAprobarConfirm(true)}
                 disabled={guardando}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+                className="gap-1.5"
                 size="sm"
               >
                 {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 Aprobar
               </Button>
               <Button
-                variant="outline" size="sm"
+                size="sm"
+                className="rounded-2xl font-medium hover:opacity-90"
+                style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
                 onClick={() => onObservar(solicitud.id)}
                 disabled={guardando}
-                className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
               >
-                <RotateCcw className="h-4 w-4" />Observar
+                Observar
               </Button>
             </>
           )}
@@ -1193,7 +1143,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
       {isEnProceso && (
         <Card className="border-2 border-primary/30 shadow-sm">
           <CardContent className="flex items-center gap-3 py-4">
-            <Info className="h-5 w-5 text-primary" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0" />
             <div>
               <span className="text-sm font-medium text-primary">En Proceso</span>
               <p className="text-xs text-muted-foreground">La solicitud está en revisión por Validación Final o Emisor. Solo lectura.</p>
@@ -1343,7 +1293,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         title="¿Aprobar y enviar a Validación?"
         description={`La solicitud ${solicitud.folioJustificacion} será enviada a la Bandeja de Validación  (DO).`}
         confirmLabel="Sí, aprobar"
-        icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
       <ConfirmModal
         open={showFirmarConfirm}
@@ -1352,7 +1301,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         title="¿Firmar Justificación?"
         description={`Se firmará la justificación ${solicitud.folioJustificacion} y pasará a Validación Final.`}
         confirmLabel="Sí, firmar"
-        icon={<Stamp className="h-5 w-5 text-secondary" />}
       />
     </div>
   )
@@ -1367,11 +1315,18 @@ export function ValidacionUefaPage() {
   const [error,            setError]            = useState<string | null>(null)
   const [guardando,        setGuardando]        = useState(false)
   const [activeTab,        setActiveTab]        = useState<UefaTab>("Nuevas")
+  const [currentPage,      setCurrentPage]      = useState(1)
   const [selectedId,       setSelectedId]       = useState<number | null>(null)
   const [observarTargetId, setObservarTargetId] = useState<number | null>(null)
   const [aprobarTargetId,  setAprobarTargetId]  = useState<number | null>(null)
   const [dictamenViewId,   setDictamenViewId]   = useState<number | null>(null)
   const [firmaTargetId,    setFirmaTargetId]    = useState<number | null>(null)
+  const [actionToast, setActionToast] = useState<{ key: number; variant: "success" | "error"; title: string; description?: string } | null>(null)
+  const [successMsg, setSuccessMsg] = useState<{ title: string; description: string; type: 'approve' | 'observe' } | null>(null)
+
+  const showToast = (variant: "success" | "error", title: string, description?: string) => {
+    setActionToast(prev => ({ key: (prev?.key ?? 0) + 1, variant, title, description }))
+  }
 
   const cargarSolicitudes = useCallback(async () => {
     if (!hasDataRef.current) setLoading(true)
@@ -1407,7 +1362,7 @@ export function ValidacionUefaPage() {
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al aprobar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al aprobar", json.error ?? "No se pudo aprobar la solicitud."); return }
       setSolicitudes(prev => prev.map(s => s.id === id ? {
         ...s,
         estado: "Pendiente DO",
@@ -1418,9 +1373,9 @@ export function ValidacionUefaPage() {
           estadoNuevo:    "Pendiente DO",
         }],
       } : s))
-      setSelectedId(null)
+      setSuccessMsg({ title: "Solicitud enviada al siguiente filtro", description: "La solicitud fue procesada exitosamente y avanzó a la siguiente bandeja.", type: 'approve' })
     } catch {
-      alert("Error de conexión al aprobar")
+      showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
       setGuardando(false)
       setAprobarTargetId(null)
@@ -1442,7 +1397,7 @@ export function ValidacionUefaPage() {
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al observar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al observar", json.error ?? "No se pudo registrar la observación."); return }
       setSolicitudes(prev => prev.map(s => s.id === observarTargetId ? {
         ...s,
         estado: "Observado por Validacion",
@@ -1457,9 +1412,9 @@ export function ValidacionUefaPage() {
         }],
       } : s))
       setObservarTargetId(null)
-      setSelectedId(null)
+      setSuccessMsg({ title: "Solicitud marcada con observaciones", description: "La solicitud fue devuelta con observaciones a la URG.", type: 'observe' })
     } catch {
-      alert("Error de conexión al observar")
+      showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
       setGuardando(false)
     }
@@ -1479,7 +1434,8 @@ export function ValidacionUefaPage() {
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al firmar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al firmar", json.error ?? "No se pudo firmar la justificación."); return }
+      showToast("success", "Justificación firmada", "La justificación fue firmada y enviada a Emisión.")
       setSolicitudes(prev => prev.map(s => s.id === id ? {
         ...s,
         estado: "Pendiente Firma Dictamen",
@@ -1492,7 +1448,7 @@ export function ValidacionUefaPage() {
       } : s))
       setSelectedId(null)
     } catch {
-      alert("Error de conexión al firmar")
+      showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
       setGuardando(false)
     }
@@ -1523,32 +1479,56 @@ export function ValidacionUefaPage() {
     [solicitudes, activeTab]
   )
 
+  useEffect(() => { setCurrentPage(1) }, [activeTab])
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
   const selectedSolicitud  = selectedId    !== null ? solicitudes.find(s => s.id === selectedId)    ?? null : null
   const dictamenViewSol    = dictamenViewId !== null ? solicitudes.find(s => s.id === dictamenViewId) ?? null : null
 
+  if (successMsg) return (
+    <PageLayout noContainer>
+      <ActionResultScreen
+        type={successMsg.type}
+        title={successMsg.title}
+        description={successMsg.description}
+        onBack={() => { setSelectedId(null); setSuccessMsg(null) }}
+      />
+    </PageLayout>
+  )
+
   if (selectedSolicitud) return (
     <PageLayout noContainer>
-      <DetalleView
-        solicitud={selectedSolicitud}
-        onBack={() => setSelectedId(null)}
-        onAprobar={handleAprobar}
-        onObservar={id => setObservarTargetId(id)}
-        onFirmarJustificacion={handleFirmarJustificacion}
-        guardando={guardando}
-      />
-      <ObservarModal
-        open={!!observarTargetId}
-        onClose={() => setObservarTargetId(null)}
-        onConfirm={handleObservarConfirm}
-        folio={solicitudes.find(s => s.id === observarTargetId)?.folioJustificacion ?? ""}
-      />
+      <>
+        <DetalleView
+          solicitud={selectedSolicitud}
+          onBack={() => setSelectedId(null)}
+          onAprobar={handleAprobar}
+          onObservar={id => setObservarTargetId(id)}
+          onFirmarJustificacion={handleFirmarJustificacion}
+          guardando={guardando}
+        />
+        <ObservarModal
+          open={!!observarTargetId}
+          onClose={() => setObservarTargetId(null)}
+          onConfirm={handleObservarConfirm}
+          folio={solicitudes.find(s => s.id === observarTargetId)?.folioJustificacion ?? ""}
+        />
+      </>
     </PageLayout>
   )
 
   const firmaTargetSol = solicitudes.find(s => s.id === firmaTargetId) ?? null
 
   return (
-    <PageLayout>
+    <>
+    {actionToast && (
+      <ConfirmToast key={actionToast.key} variant={actionToast.variant} title={actionToast.title} description={actionToast.description} />
+    )}
+    <PageLayout
+      title="Bandeja de validación de justificaciones"
+      description="Gestiona y da seguimiento a las justificaciones durante su proceso de validación y emisión."
+    >
       {dictamenViewSol && (
         <DictamenModal solicitud={dictamenViewSol} onClose={() => setDictamenViewId(null)} />
       )}
@@ -1572,12 +1552,6 @@ export function ValidacionUefaPage() {
         />
       )}
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">Bandeja de validación de justificaciones</h2>
-          <p className="text-sm text-muted-foreground">Gestiona y da seguimiento a las justificaciones durante su proceso de validación y emisión.</p>
-        </div>
-      </div>
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="flex items-center gap-3 py-3">
@@ -1609,7 +1583,7 @@ export function ValidacionUefaPage() {
               <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">
@@ -1625,7 +1599,7 @@ export function ValidacionUefaPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(sol => {
+                  {paginated.map(sol => {
                     const solTab             = getTabForEstado(sol.estado)
                     const folioDictamenLabel = sol.numeroDictamen
                       ?? (sol.folioDictamen ? formatearFolio(sol.folioDictamen) : null)
@@ -1650,11 +1624,6 @@ export function ValidacionUefaPage() {
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1">
                             <UefaEstadoBadge estado={sol.estado} />
-                            {sol.reingresoCount > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-[#832B56]/10 px-2 py-0.5 text-[10px] font-medium text-[#832B56] w-fit">
-                                <RotateCcw className="h-3 w-3" />{ordinalRegreso(sol.reingresoCount)}
-                              </span>
-                            )}
                           </div>
                         </td>
                         {activeTab === "Emitidas" && (
@@ -1679,7 +1648,7 @@ export function ValidacionUefaPage() {
                               onClick={() => setSelectedId(sol.id)}
                               className="text-secondary hover:text-primary gap-1.5"
                             >
-                              <Eye className="h-4 w-4" />Ver
+                              <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
                             </Button>
                             {solTab === "Nuevas" && (
                               <>
@@ -1722,6 +1691,7 @@ export function ValidacionUefaPage() {
           )}
         </CardContent>
       </Card>
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
 
       <ConfirmModal
         open={!!aprobarTargetId}
@@ -1730,7 +1700,6 @@ export function ValidacionUefaPage() {
         title="¿Aprobar y enviar a Validación?"
         description={`La solicitud ${solicitudes.find(s => s.id === aprobarTargetId)?.folioJustificacion ?? ""} será enviada a la Bandeja de Validación Final (DO).`}
         confirmLabel="Sí, aprobar"
-        icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
       <ObservarModal
         open={!!observarTargetId}
@@ -1739,5 +1708,6 @@ export function ValidacionUefaPage() {
         folio={solicitudes.find(s => s.id === observarTargetId)?.folioJustificacion ?? ""}
       />
     </PageLayout>
+    </>
   )
 }

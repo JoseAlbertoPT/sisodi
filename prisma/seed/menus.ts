@@ -29,7 +29,8 @@ export const MENUS: MenuRow[] = [
   { id: 11, nombre: "CONFIGURACIÓN",     key: null,                icono: null,              ruta: null,                orden: 3, parent_id: null },
   { id: 12, nombre: "Calendario",        key: "calendario",        icono: "CalendarDays",    ruta: "/calendario",        orden: 1, parent_id: 11 },
   { id: 13, nombre: "Usuarios",          key: "usuarios",          icono: "Users",           ruta: "/usuarios",          orden: 2, parent_id: 11 },
-  { id: 14, nombre: "Catálogo",          key: "configuracion",     icono: "Settings",        ruta: "/configuracion",     orden: 3, parent_id: 11 },
+  { id: 14, nombre: "Entidades",          key: "entidades",         icono: "Building2",       ruta: "/entidades",         orden: 3, parent_id: 11 },
+  { id: 15, nombre: "Catálogo",          key: "catalogo-justificaciones", icono: "BookOpen", ruta: "/catalogo-justificaciones", orden: 5, parent_id: 1 },
 ]
 
 const safeDelete = async (label: string, fn: () => Promise<unknown>) => {
@@ -70,13 +71,13 @@ export async function seedMenus(prisma: PrismaClient) {
   //           12=calendario, 13=usuarios, 14=configuracion
   const ROL_MENUS: Record<string, number[]> = {
     "Administrador": MENUS.map((m) => m.id),
-    "Capturista":    [1, 3, 4, 6, 10],      // Nueva solicitud, Mis solicitudes, Dictámenes
-    "Emisor":        [1, 2, 6, 9, 10],      // Tablero, Emisión, Dictámenes
-    "Revisor":       [6, 7, 10],            // Revisión, Dictámenes
-    "Validador":     [1, 2, 6, 8, 10],      // Tablero, Validación, Dictámenes
-    "UEFA":          [1, 5, 6, 10],         // Validación UEFA, Dictámenes
-    "Enlace DGRH":   [1, 5, 6, 10],         // Validación UEFA, Dictámenes
-    "Consulta":      [2],
+    "Capturista":    [1, 3, 4, 6, 10, 15],
+    "Emisor":        [1, 2, 6, 9, 10, 15],
+    "Revisor":       [6, 7, 10, 15],
+    "Validador":     [1, 2, 6, 8, 10, 15],
+    "UEFA":          [1, 5, 6, 10, 15],
+    "Enlace DGRH":   [1, 5, 6, 10, 15],
+    "Consulta":      [2, 15],
   }
 
   for (const [rolNombre, menuIds] of Object.entries(ROL_MENUS)) {
@@ -103,7 +104,7 @@ export async function seedMenus(prisma: PrismaClient) {
 
   const max = Math.max(...MENUS.map((m) => m.id))
   await prisma.$executeRawUnsafe(
-    `SELECT setval(pg_get_serial_sequence('menu','id'), ${max}, true)`,
+    `SELECT setval(pg_get_serial_sequence('"menu"','id'), ${max}, true)`,
   )
 }
 

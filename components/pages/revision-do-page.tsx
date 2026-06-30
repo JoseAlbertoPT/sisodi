@@ -14,23 +14,27 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PageLayout } from "@/components/page-layout"
 import {
 
-  ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle,
-  History, MessageSquare, ClipboardCheck, Info, MinusCircle,
+  ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle, RotateCcw,
+  History, MessageSquare, ClipboardCheck, MinusCircle,
   ChevronDown, ChevronRight, Send, Download, Lock, Stamp,
   Users, Shield, Loader2, GraduationCap, Brain, Wrench, Heart, Star, Briefcase,
-  UserCheck, Pencil,
+  UserCheck, Pencil, X,
 
 } from "lucide-react"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { useAuth } from "@/lib/auth-context"
 import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
 import { type EditSolicitudPayload, type FormularioData } from "@/components/pages/nueva-solicitud-page"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 import { FirmaModal } from "@/components/firma-modal"
+import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
 import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
@@ -446,7 +450,7 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
           )}
           {icon}{title}
           <span className="ml-auto">
-            {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
           </span>
         </CardTitle>
       </CardHeader>
@@ -473,7 +477,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -491,7 +495,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -530,19 +534,15 @@ function ReadOnlyList({ items }: { items: string[] }) {
   )
 }
 
-function RadioOption({ value, selected, onChange, label, colorClass, style }: {
-  value: string; selected: boolean; onChange: () => void; label: string; colorClass: string; style?: React.CSSProperties
+function RadioOption({ value, selected, onChange, label, style }: {
+  value: string; selected: boolean; onChange: () => void; label: string; colorClass?: string; style?: React.CSSProperties
 }) {
   return (
     <button
       type="button"
       onClick={onChange}
-      style={selected ? style : undefined}
-      className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-all ${
-        selected
-          ? `${colorClass} border-current`
-          : "border-border text-muted-foreground hover:border-foreground/30 hover:text-card-foreground"
-      }`}
+      style={selected ? style : { backgroundColor: "transparent", color: "#4B5563", borderColor: "#D1D5DB" }}
+      className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors hover:bg-gray-100"
     >
       {value === "si"       && <CheckCircle2 className="h-3.5 w-3.5" />}
       {value === "no"       && <XCircle className="h-3.5 w-3.5" />}
@@ -658,7 +658,7 @@ function SeccionDocumentosAdjuntos({ raw }: { raw: any }) {
         <div className="flex flex-col gap-2">
           {(raw.adjunto as any[]).map((adj: any, i: number) => (
             <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-              <FileText className="h-8 w-8 text-secondary shrink-0" />
+              <FileTypeIcon name={adj.nombre_archivo} size="sm" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</p>
                 <p className="text-xs text-muted-foreground">{adj.tipo ?? "PDF"} — {formatFecha(adj.fecha_subida)}</p>
@@ -945,7 +945,7 @@ function FolioDictamenCard({
           <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview}</span>
           <p className="text-[10px] text-muted-foreground mt-0.5">Formato NN/MM/AAAA: número secuencial / mes / año.</p>
         </div>
-        <Button onClick={handleAsignar} disabled={guardando || !consecutivo || !mes || !anio} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+        <Button onClick={handleAsignar} disabled={guardando || !consecutivo || !mes || !anio} className="w-full gap-2">
           {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
           Asignar Folio de Dictamen
         </Button>
@@ -1169,39 +1169,46 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-primary" />
-            Aprobar y Asignar Revisor
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 pt-2">
-          <p className="text-sm text-muted-foreground">
-            Solicitud <span className="font-semibold text-card-foreground">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
-          </p>
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+      <DialogContent showCloseButton={false} className="max-w-sm p-0">
+        <div className="p-4 flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Aprobar y Asignar Revisor</h3>
             </div>
-          ) : revisores.length === 0 ? (
-            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
-          ) : (
-            <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccionar revisor..." />
-              </SelectTrigger>
-              <SelectContent>
-                {revisores.map(r => (
-                  <SelectItem key={r.id} value={r.id}>
-                    <span className="font-medium">{r.nombre}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-3 pl-[52px]">
+            <p className="text-sm text-gray-500">
+              Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
+            </p>
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+              </div>
+            ) : revisores.length === 0 ? (
+              <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+            ) : (
+              <Select value={selectedId} onValueChange={setSelectedId}>
+                <SelectTrigger className="w-full max-w-sm">
+                  <SelectValue placeholder="Seleccionar revisor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {revisores.map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="font-medium">{r.nombre}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="flex justify-between pt-1">
             <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
               Cancelar
             </Button>
@@ -1209,9 +1216,9 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#5c2844]"
             >
-              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Aprobar y asignar
             </Button>
           </div>
@@ -1230,7 +1237,9 @@ const AVAILABLE_DESTINATARIOS = [
 
 export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }: RevisionDOPageProps) {
   const { user } = useAuth()
-  const hasDataRef                   = useRef(false)
+  const hasDataRef       = useRef(false)
+  const accionExitosaRef = useRef<'aprobar' | 'observar' | null>(null)
+  const avanzadaRef      = useRef(false)
   const [solicitud,  setSolicitud]  = useState<SolicitudDetalle | null>(null)
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
@@ -1244,6 +1253,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
   const [showConfirmacion,        setShowConfirmacion]        = useState<string | null>(null)
   const [checklistErrors,    setChecklistErrors]    = useState<Record<string, boolean>>({})
+  const [errorToast, setErrorToast] = useState<{ key: number; title: string; description?: string } | null>(null)
+  const showToast = (variant: "success" | "error", title: string, description?: string) => {
+    if (variant === "error") setErrorToast(prev => ({ key: (prev?.key ?? 0) + 1, title, description }))
+  }
 
   const today = new Date().toISOString().slice(0, 10)
   const [fechaDictaminacion,    setFechaDictaminacion]    = useState(today)
@@ -1292,6 +1305,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [firmaEmisionAbierta,   setFirmaEmisionAbierta]   = useState(false)
 
   const cargar = useCallback(async () => {
+    if (avanzadaRef.current) return
     if (!hasDataRef.current) setLoading(true)
     setError(null)
     try {
@@ -1306,9 +1320,16 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         const json2 = await res2.json()
         const item2 = json2.ok ? (json2.data ?? []).find((d: any) => String(d.id) === String(solicitudId)) : null
         if (item2) { setSolicitud(mapBDtoDetalle(item2._raw ?? item2)); hasDataRef.current = true; return }
-        setError("Solicitud no encontrada en este filtro")
+        if (accionExitosaRef.current) {
+          avanzadaRef.current = true
+          setError(`__avanzada__${accionExitosaRef.current}`)
+        } else {
+          setError("Solicitud enviada al siguiente filtro")
+        }
         return
       }
+      accionExitosaRef.current = null
+      avanzadaRef.current = false
       const rawBase = item._raw ?? item
       const folioDictamenResuelto =
         resolverFolioDictamen(item) ??
@@ -1391,6 +1412,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     (filtro === 2 || filtro === 3)
       ? !sinObservacion
       : (checklistStats.allDone && checklistStats.hasNo && checklistStats.noWithoutObs === 0)
+        || observacionGeneral.trim().length > 0
   )
   const observarBlocked = false
 
@@ -1412,14 +1434,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? `Error al ${accion}`); return }
+      if (!res.ok || !json.ok) { showToast("error", accion === "aprobar" ? "Error al aprobar" : "Error al observar", json.error ?? `No se pudo ${accion} la solicitud.`); return }
+      accionExitosaRef.current = accion
       setSolicitud(prev => prev ? {
         ...prev,
         estado:        json.estadoNuevo ?? prev.estado,
         folioDictamen: json.folioDictamen ?? prev.folioDictamen,
       } : prev)
       return json.estadoNuevo as string
-    } catch { alert("Error de conexión") }
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false) }
   }, [solicitud, filtro, user])
 
@@ -1432,8 +1455,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     if (filtro === 3) {
       const modalidadExistente = (solicitud as any)?.modalidadFirma as "electronica" | "autografa" | null | undefined
       if (modalidadExistente === "electronica" || modalidadExistente === "autografa") {
-        const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadExistente)
-        if (nuevoEstado) setShowConfirmacion("Solicitud aprobada.")
+        await patchEstado("aprobar", undefined, undefined, modalidadExistente)
         return
       }
       setShowEmitConfirm(true); return
@@ -1442,27 +1464,30 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       setShowAprobarAsignarModal(true)
       return
     }
-    const nuevoEstado = await patchEstado("aprobar", undefined, revisorId)
-    if (nuevoEstado) {
-      setShowConfirmacion("Solicitud aprobada.")
-    }
+    await patchEstado("aprobar", undefined, revisorId)
   }
   const handleConfirmEmit = async () => {
     setShowEmitConfirm(false)
     const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
-    if (nuevoEstado) {
-      setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
-      setShowConfirmacion("Solicitud aprobada.")
-    }
+    if (nuevoEstado) setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
   }
   const handleObservar = async () => {
     if (filtro === 2 || filtro === 3 || (filtro === 1 && checklistYaRealizado)) {
       if (!observacionGeneral.trim()) { setObservacionError("Escribe una observación para devolver el expediente."); return }
       setObservacionError("")
       const nuevoEstado = await patchEstado("observar", observacionGeneral.trim())
-      if (nuevoEstado) { setObservacionGeneral(""); setShowConfirmacion("Solicitud observada y regresada.") }
+      if (nuevoEstado) {
+        setObservacionGeneral("")
+        avanzadaRef.current = true
+        setError("__avanzada__observar")
+      }
       return
     }
+    if (!checklistStats.hasNo && !observacionGeneral.trim()) {
+      setObservacionError("Escribe una observación general o marca al menos un item del checklist como 'No'.")
+      return
+    }
+    setObservacionError("")
     const errors: Record<string, boolean> = {}
     let hasErrors = false
     checklistItems.forEach(item => {
@@ -1476,19 +1501,18 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       .join("\n")
     const obs = [observacionGeneral.trim(), resumen].filter(Boolean).join("\n")
     const nuevoEstado = await patchEstado("observar", obs)
-    if (nuevoEstado) { setObservacionGeneral(""); setChecklistErrors({}); setShowConfirmacion("Solicitud observada y regresada a URG.") }
+    if (nuevoEstado) {
+      setObservacionGeneral("")
+      setChecklistErrors({})
+      avanzadaRef.current = true
+      setError("__avanzada__observar")
+    }
   }
 
   const handleEmitir = async () => {
     if (!solicitud) return
     const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
-    if (!nuevoEstado) return
-    setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
-    setShowConfirmacion(
-      modalidadFirma === "electronica"
-        ? "Dictamen emitido y firmado electrónicamente. Expediente bloqueado."
-        : "Dictamen emitido con firma autógrafa. Expediente bloqueado."
-    )
+    if (nuevoEstado) setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
   }
 
   const handleAsignarFolioDictamen = useCallback(async (folio: string) => {
@@ -1560,45 +1584,39 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     </div>
   )
 
-  if (error || !solicitud) return (
-    <div className="flex flex-col items-center justify-center gap-4 py-20">
-      <AlertCircle className="h-12 w-12 text-muted-foreground" />
-      <p className="text-muted-foreground">{error ?? "Solicitud no encontrada"}</p>
-      <Button variant="outline" onClick={() => onBack(filtro)}>
-        <ArrowLeft className="mr-1.5 h-4 w-4" />Regresar a bandeja
-      </Button>
-    </div>
-  )
+  if (error || !solicitud) {
+    const esAvanzada = error?.startsWith('__avanzada__')
+    const esObservada = error === '__avanzada__observar'
+    if (esAvanzada) return (
+      <ActionResultScreen
+        type={esObservada ? "observe" : "approve"}
+        onBack={() => onBack(filtro)}
+      />
+    )
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f3f4f6]">
+          <AlertCircle className="h-8 w-8 text-[#9ca3af]" />
+        </div>
+        <div className="text-center max-w-sm">
+          <h2 className="text-lg font-semibold text-foreground">{error ?? "Solicitud no encontrada"}</h2>
+        </div>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-full border border-[#773357] px-5 py-2 text-sm font-medium text-[#773357] transition-colors hover:bg-[#773357]/5"
+          onClick={() => onBack(filtro)}
+        >
+          <ArrowLeft className="mr-1.5 h-4 w-4" />Regresar a bandeja
+        </button>
+      </div>
+    )
+  }
 
   return (
     <PageLayout noContainer>
     <div className="flex flex-col gap-4 h-full">
-      {showConfirmacion && !isEmitido && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-          <Card className="w-full max-w-md shadow-lg border-secondary/30 border-2">
-            <CardContent className="flex flex-col items-center gap-4 p-8">
-              <CheckCircle2 className="h-12 w-12 text-secondary" />
-              <p className="text-base font-semibold text-card-foreground text-center">{showConfirmacion}</p>
-              <Button onClick={() => onBack(filtro)} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-                Regresar a bandeja
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-      {showConfirmacion && isEmitido && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-          <Card className="w-full max-w-md shadow-lg border-primary/30 border-2">
-            <CardContent className="flex flex-col items-center gap-4 p-8">
-              <Shield className="h-12 w-12 text-primary" />
-              <p className="text-base font-semibold text-card-foreground text-center">{showConfirmacion}</p>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setShowConfirmacion(null)}>Ver Expediente</Button>
-                <Button onClick={() => onBack(filtro)} className="bg-primary text-primary-foreground hover:bg-primary/90">Regresar a bandeja</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {errorToast && (
+        <ConfirmToast key={errorToast.key} variant="error" title={errorToast.title} description={errorToast.description} />
       )}
       {showEmitConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
@@ -1632,7 +1650,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               </RadioGroup>
               <div className="flex items-center gap-3 w-full">
                 <Button variant="outline" className="flex-1" onClick={() => setShowEmitConfirm(false)}>Cancelar</Button>
-                <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleConfirmEmit} disabled={guardando}>
+                <Button className="flex-1" onClick={handleConfirmEmit} disabled={guardando}>
                   {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y aprobar"}
                 </Button>
               </div>
@@ -1687,13 +1705,13 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
+          <Button size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
             onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           {onEditSolicitud && !isEnTabObservadas && (
-            <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90 text-white border-0"
+            <Button size="sm" className="gap-1.5"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
             >
               <Pencil className="h-4 w-4" />Editar
@@ -1869,24 +1887,21 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                                               selected={valor === "si"}
                                               onChange={() => updateChecklist(item.key, valor === "si" ? null : "si", "")}
                                               label="Sí"
-                                              colorClass=""
-                                              style={{ color: COLOR_SI_TEXT, backgroundColor: `${COLOR_SI}15`, borderColor: COLOR_SI }}
+                                              style={{ backgroundColor: "#d2fad2", color: "#1c7d29", borderColor: "#1c7d29" }}
                                             />
                                             <RadioOption
                                               value="no"
                                               selected={valor === "no"}
                                               onChange={() => updateChecklist(item.key, valor === "no" ? null : "no")}
                                               label="No"
-                                              colorClass=""
-                                              style={{ color: COLOR_NO, backgroundColor: `${COLOR_NO}15`, borderColor: COLOR_NO }}
+                                              style={{ backgroundColor: "#ffd6d7", color: "#87090c", borderColor: "#87090c" }}
                                             />
                                             <RadioOption
                                               value="noAplica"
                                               selected={valor === "noAplica"}
                                               onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica", "")}
                                               label="No Aplica"
-                                              colorClass=""
-                                              style={{ color: COLOR_NO_APLICA, backgroundColor: `${COLOR_NO_APLICA}15`, borderColor: COLOR_NO_APLICA }}
+                                              style={{ backgroundColor: "#f3f2ee", color: "#4B5563", borderColor: "#9CA3AF" }}
                                             />
                                           </div>
 
@@ -2004,7 +2019,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {filtro === 1 && !canApprove && !canObservar && checklistStats.completed === checklistStats.total && checklistStats.hasNo && checklistStats.noWithoutObs > 0 && (
                   <Card className="shadow-sm border-destructive/40 border-2 bg-destructive/[0.04]">
                     <CardContent className="flex items-start gap-3 p-4">
-                      <Info className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+                      <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0 mt-0.5" />
                       <div>
                         <span className="text-sm font-medium text-destructive">Observaciones incompletas</span>
                         <p className="text-xs text-muted-foreground">{checklistStats.noWithoutObs} punto(s) marcado(s) como "No" requieren comentario obligatorio antes de observar.</p>
@@ -2015,7 +2030,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {!isAceptadoPorRevisor && !canApprove && !canObservar && filtro !== 3 && checklistStats.completed < checklistStats.total && (
                   <Card className="shadow-sm border-border bg-muted/30">
                     <CardContent className="flex items-start gap-3 p-4">
-                      <Info className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
+                      <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0 mt-0.5 opacity-50" />
                       <div>
                         <span className="text-sm font-medium text-card-foreground">Verificación en progreso</span>
                         <p className="text-xs text-muted-foreground">Faltan {checklistStats.total - checklistStats.completed} verificaciones por completar.</p>
@@ -2028,13 +2043,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {isAceptadoPorRevisor ? (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
-                      <Button variant="outline" onClick={handleObservar}
+                      <Button size="sm" onClick={handleObservar}
                         disabled={!canObservar || observarBlocked || guardando}
-                        className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
-                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}Observar
+                        className="rounded-2xl font-medium hover:opacity-90"
+                        style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}>
+                        Observar
                       </Button>
-                      <Button onClick={() => handleAprobar()} disabled={!canApprove || guardando}
-                        className={`gap-1.5 ${canApprove ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
+                      <Button size="sm" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
+                        className="gap-1.5">
                         {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                         Aprobar
                       </Button>
@@ -2043,15 +2059,16 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 ) : (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
-                      <Button variant="outline" onClick={handleObservar}
+                      <Button size="sm" onClick={handleObservar}
                         disabled={!canObservar || observarBlocked || guardando}
-                        className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50">
-                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}Observar
+                        className="rounded-2xl font-medium hover:opacity-90"
+                        style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}>
+                        Observar
                       </Button>
-                      <Button onClick={() => handleAprobar()} disabled={!canApprove || guardando}
-                        className={`gap-1.5 ${canApprove ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}>
+                      <Button size="sm" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
+                        className="gap-1.5">
                         {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                        {filtro === 1 ? "Aprobar" : filtro === 2 ? "Aprobar" : "Aprobar"}
+                        Aprobar
                       </Button>
                     </CardContent>
                   </Card>
@@ -2148,7 +2165,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                           }
                         }}
                         disabled={!canEmit}
-                        className={`gap-1.5 ${canEmit ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                        className={`gap-1.5 ${canEmit ? "" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
                       >
                         <Send className="h-4 w-4" />
                         {modalidadFirma === "electronica" ? "Firmar y Emitir Dictamen" : "Emitir Dictamen"}

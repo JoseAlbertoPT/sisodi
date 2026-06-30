@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
-  CalendarDays, Pencil, Plus, Info, Loader2, Check, X,
+  CalendarDays, Pencil, Plus, Loader2, Check, X,
   CalendarPlus, ChevronDown,
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
@@ -256,7 +256,7 @@ export function CalendarioPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={String(ejercicio)} onValueChange={(v) => setEjercicio(Number(v))} disabled={editing}>
-              <SelectTrigger className="w-[90px] h-9 text-xs font-mono"><SelectValue placeholder="Año" /></SelectTrigger>
+              <SelectTrigger className="w-[90px] h-9 py-2 text-xs font-mono"><SelectValue placeholder="Año" /></SelectTrigger>
               <SelectContent>
                 {availableYears.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
@@ -281,7 +281,7 @@ export function CalendarioPage() {
             {!editing && !showNewYearInput && <div className="h-5 w-px bg-border" />}
             {!editing ? (
               isEmpty ? (
-                <Button size="sm" className="gap-1.5 text-xs h-9 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleCreateYear} disabled={loading}>
+                <Button size="sm" className="gap-1.5 text-xs h-9" onClick={handleCreateYear} disabled={loading}>
                   <CalendarPlus className="h-3.5 w-3.5" />Crear año {ejercicio}
                 </Button>
               ) : (
@@ -304,7 +304,7 @@ export function CalendarioPage() {
 
         {error && (
           <div className="rounded-lg bg-destructive/5 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-center gap-2">
-            <Info className="h-4 w-4 shrink-0" />{error}
+            <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0" />{error}
           </div>
         )}
 
@@ -355,7 +355,7 @@ export function CalendarioPage() {
             )}
 
             {tabRecepcion === "honorarios" && (
-              <div className="overflow-hidden rounded-lg border border-border">
+              <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
@@ -404,7 +404,7 @@ export function CalendarioPage() {
             )}
 
             {(tabRecepcion === "asimilados" || tabRecepcion === "nombramiento") && (
-              <div className="overflow-hidden rounded-lg border border-border">
+              <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
                 <table className="w-full text-sm">
 
                   <thead>
@@ -453,7 +453,7 @@ export function CalendarioPage() {
               </div>
             )}
              <div className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
-              <Info className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 opacity-40" />
               <span className="text-xs font-bold text-black leading-relaxed">
                 Información de referencia. Los cambios están sujetos a validación administrativa.
                 {!editing && !isEmpty && (

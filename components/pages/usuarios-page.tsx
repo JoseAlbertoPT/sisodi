@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -17,6 +18,7 @@ import {
   Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
   Landmark, Factory,
 } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -37,6 +39,7 @@ import {
   type OrganoCentralizadoNode,
   type CategoriaParaestatalItem,
 } from "@/lib/catalogo-api"
+<<<<<<< HEAD
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +47,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+=======
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
+>>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
 
 const ROLES = ["Emisor", "Validador", "Revisor", "Capturista", "UEFA", "Administrador"]
 
@@ -640,7 +646,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             if (key === "correo" && form.correo.trim() && /\S+@\S+\.\S+/.test(form.correo))
               checkUnico("correo", form.correo)
           }}
-          className={`bg-background h-9 text-xs ${hasError ? "border-destructive" : ""}`}
+          className={`bg-background h-9 py-2 text-xs ${hasError ? "border-destructive" : ""}`}
         />
         {isChecking && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
         {!isChecking && hint && !hasError && <span className="text-[10px] text-muted-foreground">{hint}</span>}
@@ -655,17 +661,16 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
 
   return (
     <>
-    <AlertDialog open={!!claveAlert} onOpenChange={(open) => { if (!open) setClaveAlert("") }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Secretaría sin configuración</AlertDialogTitle>
-          <AlertDialogDescription>{claveAlert}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setClaveAlert("")}>Entendido</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={!!claveAlert}
+      onClose={() => setClaveAlert("")}
+      onConfirm={() => setClaveAlert("")}
+      variant="default"
+      title="Secretaría sin configuración"
+      description={claveAlert}
+      confirmLabel="Entendido"
+      hideCancel
+    />
     {showConfirm && (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm">
         <div className="w-full max-w-md mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
@@ -738,7 +743,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Button>
             <Button
               size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              className="text-xs h-9 gap-1.5"
               onClick={handleSubmit}
               disabled={loading}
             >
@@ -827,7 +832,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     onBlur={() => {
                       if (form.rfc.trim()) checkUnico("rfc", form.rfc)
                     }}
-                    className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
+                    className={`bg-background h-9 py-2 text-xs font-mono tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
                     maxLength={13}
                   />
                   {checking.rfc && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
@@ -854,7 +859,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                       autoComplete="new-password"
                       value={form.password}
                       onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                      className={`bg-background h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                      className={`bg-background h-9 py-2 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
                     />
                     <button
                       type="button"
@@ -869,7 +874,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
                   <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
-                    <SelectTrigger className={`bg-background h-9 text-xs ${errors.rol ? "border-destructive" : ""}`}>
+                    <SelectTrigger className={`bg-background h-9 py-2 text-xs ${errors.rol ? "border-destructive" : ""}`}>
                       <SelectValue placeholder="Seleccione un rol" />
                     </SelectTrigger>
                     <SelectContent>
@@ -881,7 +886,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Estatus inicial</Label>
                   <Select value={form.estatus} onValueChange={(v) => setForm((f) => ({ ...f, estatus: v as "Activo" | "Inactivo" }))}>
-                    <SelectTrigger className="bg-background h-9 text-xs">
+                    <SelectTrigger className="bg-background h-9 py-2 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1019,7 +1024,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Button>
             <Button
               size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              className="text-xs h-9 gap-1.5"
               onClick={handleNext}
               disabled={step === 4 && permTreeLoading}
             >
@@ -1188,7 +1193,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         autoComplete={autoComplete}
         value={form[key] as string}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+<<<<<<< HEAD
         className={`bg-background rounded-full h-9 px-4 text-xs ${errors[key] ? "border-destructive" : ""}`}
+=======
+        className={`bg-background h-9 py-2 text-xs ${errors[key] ? "border-destructive" : ""}`}
+>>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
       />
       {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
@@ -1199,17 +1208,16 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
 
   return (
     <>
-    <AlertDialog open={!!claveAlert} onOpenChange={(open) => { if (!open) setClaveAlert("") }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Secretaría sin Unidades Administrativas</AlertDialogTitle>
-          <AlertDialogDescription>{claveAlert}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setClaveAlert("")}>Entendido</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={!!claveAlert}
+      onClose={() => setClaveAlert("")}
+      onConfirm={() => setClaveAlert("")}
+      variant="default"
+      title="Secretaría sin Unidades Administrativas"
+      description={claveAlert}
+      confirmLabel="Entendido"
+      hideCancel
+    />
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
@@ -1285,7 +1293,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                   value={form.rfc}
                   autoComplete="off"
                   onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
+<<<<<<< HEAD
                   className={`bg-background rounded-full h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+=======
+                  className={`bg-background h-9 py-2 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+>>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
                   maxLength={13}
                 />
                 {!errors.rfc && <span className="text-[10px] text-muted-foreground"></span>}
@@ -1295,7 +1307,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
                 <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
-                  <SelectTrigger className={`bg-background h-9 text-xs ${errors.rol ? "border-destructive" : ""}`}>
+                  <SelectTrigger className={`bg-background h-9 py-2 text-xs ${errors.rol ? "border-destructive" : ""}`}>
                     <SelectValue placeholder="Seleccione un rol" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1308,7 +1320,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Estatus</Label>
                 <Select value={form.estatus} onValueChange={(v) => setForm((f) => ({ ...f, estatus: v as "Activo" | "Inactivo" }))}>
-                  <SelectTrigger className="bg-background h-9 text-xs">
+                  <SelectTrigger className="bg-background h-9 py-2 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1399,7 +1411,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+<<<<<<< HEAD
                     className={`bg-background rounded-full px-4 h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+=======
+                    className={`bg-background h-9 py-2 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+>>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
                   />
                   <button
                     type="button"
@@ -1421,7 +1437,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.confirmPassword}
                     onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+<<<<<<< HEAD
                     className={`bg-background h-9 rounded-full px-4 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
+=======
+                    className={`bg-background h-9 py-2 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
+>>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
                   />
                   <button
                     type="button"
@@ -1445,7 +1465,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </Button>
             <Button
               size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 gap-1.5"
+              className="text-xs h-9 gap-1.5"
               onClick={handleSubmit}
               disabled={loading}
               >
@@ -1622,7 +1642,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10">
               <Shield className="h-5 w-5 text-primary" />
-            </div>
+            </div>GESTIÓN DGDO
             <div>
               <h2 className="text-base font-semibold text-card-foreground">
                 Permisos de menús
@@ -1807,6 +1827,7 @@ export function UsuariosPage() {
   const [searchTerm,    setSearchTerm]    = useState("")
   const [filtroAdmin,   setFiltroAdmin]   = useState<"todos" | "centralizada" | "paraestatal">("todos")
   const [tabEstatus,    setTabEstatus]    = useState<"activos" | "deshabilitados">("activos")
+  const [currentPage,   setCurrentPage]   = useState(1)
   const [permisoUserId,         setPermisoUserId]         = useState<string | null>(null)
   const [editingUserId,         setEditingUserId]         = useState<string | null>(null)
   const [showNewForm,           setShowNewForm]           = useState(false)
@@ -1840,6 +1861,10 @@ export function UsuariosPage() {
       normalizeText(row.rol).includes(q) ||
       normalizeText(row.secretaria).includes(q)
   })
+
+  useEffect(() => { setCurrentPage(1) }, [tabEstatus, filtroAdmin, searchTerm])
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const hasActivePermiso = (id: string) =>
     permisos.some((p) => p.userId === id && p.active && !p.used)
@@ -1920,6 +1945,7 @@ export function UsuariosPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
+<<<<<<< HEAD
         <div className="relative max-w-sm flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -1957,6 +1983,30 @@ export function UsuariosPage() {
       </div>
     ))}
   </RadioGroup>
+=======
+        <SearchInput
+          placeholder="Buscar por nombre, correo, RFC..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          containerClassName="max-w-sm flex-1 min-w-[200px]"
+        />
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+          {(["todos", "centralizada", "paraestatal"] as const).map((op) => (
+            <button
+              key={op}
+              onClick={() => setFiltroAdmin(op)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                filtroAdmin === op
+                  ? op === "paraestatal"
+                    ? "bg-[#7b1d3d] text-white"
+                    : "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-card-foreground"
+              }`}
+            >
+              {op === "todos" ? "Todos" : op === "centralizada" ? "Centralizada" : "Paraestatal"}
+            </button>
+          ))}
+>>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
         </div>
       </div>
 
@@ -1972,7 +2022,7 @@ export function UsuariosPage() {
               {loadError}
             </div>
           )}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-secondary text-secondary-foreground">
@@ -1987,7 +2037,7 @@ export function UsuariosPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((row) => (
+                {paginated.map((row) => (
                   <tr key={row.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-medium text-card-foreground">
                       <div className="flex items-center gap-2">
@@ -2082,6 +2132,7 @@ export function UsuariosPage() {
           </div>
         </CardContent>
       </Card>
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </PageLayout>
   )
 }

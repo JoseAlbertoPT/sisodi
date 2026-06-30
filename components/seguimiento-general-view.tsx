@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Search, Loader2, AlertTriangle, FileText, Info,
+  Loader2, AlertTriangle, FileText, Info,
 } from "lucide-react"
 
 interface SolicitudSeguimiento {
@@ -138,15 +138,11 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
       <div className="flex items-end gap-3 flex-wrap">
         <div className="flex flex-col gap-1 flex-1 min-w-[220px] max-w-sm">
           <Label className="text-xs text-muted-foreground">Búsqueda</Label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Folio, secretaría, denominación..."
-              value={q}
-              onChange={e => setQ(e.target.value)}
-              className="pl-10 bg-card"
-            />
-          </div>
+          <SearchInput
+            placeholder="Folio, secretaría, denominación..."
+            value={q}
+            onChange={e => setQ(e.target.value)}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Tipo de solicitud</Label>
@@ -229,7 +225,7 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
               <span className="text-sm">No hay solicitudes que coincidan.</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">

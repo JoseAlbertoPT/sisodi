@@ -7,15 +7,22 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { Separator } from "@/components/ui/separator"
 import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import {
-  Search, Eye, Edit3, Download, FileCheck,
-  ChevronDown, ChevronRight, Info, History, FileText,
+  Eye, Edit3, Download, FileCheck,
+  ChevronDown, ChevronRight, History, FileText,
   ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw,
 } from "lucide-react"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
@@ -32,10 +39,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
@@ -514,9 +518,7 @@ function SectionCard({
           {icon}
           {title}
           <span className="ml-auto">
-            {open
-              ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
           </span>
         </CardTitle>
       </CardHeader>
@@ -777,7 +779,7 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
     v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -795,7 +797,7 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-md border border-border">
+      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -901,7 +903,7 @@ function AdjuntosSection({ bitacora }: { bitacora: BitacoraEntry[] }) {
     <ul className="flex flex-col gap-2">
       {adjuntosSection.eventos.map((ev, i) => (
         <li key={i} className="flex items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
-          <FileText className="h-4 w-4 text-secondary shrink-0" />
+          <FileTypeIcon name={ev.descripcion.replace("Archivo cargado: ", "")} size="sm" />
           <div className="flex flex-col">
             <span className="text-sm text-card-foreground">
               {ev.descripcion.replace("Archivo cargado: ", "")}
@@ -1116,14 +1118,13 @@ function DetalleView({
           {estadoBadge(sol.estado)}
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
+          <Button size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
             onClick={() => generateJustificacionPDF(sol.id, sol.folioJustificacion || sol.folio)}>
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           {canEdit && !periodoConfirmado && (
             <>
               <Button size="sm"
-                className="gap-1.5 bg-primary hover:bg-primary/90 text-white border-0"
                 onClick={() => onEditSolicitud
                   ? onEditSolicitud(solToEditPayload(sol))
                   : handleDemoAction("Continuar captura")
@@ -1132,7 +1133,6 @@ function DetalleView({
               </Button>
               {(n === "borrador" || n === "en captura") && (
                 <Button size="sm"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
                   disabled={!canSend}
                   onClick={() => handleDemoAction("Enviar a Validacion")}
                   title={!canSend ? "Periodo fuera de tiempo o régimen incompatible" : ""}>
@@ -1162,7 +1162,7 @@ function DetalleView({
         n.includes("pendiente firma justificacion")) && (
         <Card className="border-2 border-blue-400/40 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
-            <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0 mt-0.5" />
             <div>
               <span className="text-sm font-medium text-blue-700">Solicitud en revisión por UEFA</span>
               <p className="text-sm text-muted-foreground mt-1">
@@ -1247,41 +1247,30 @@ function DetalleView({
       )}
 
       {canEdit && !tipoCompatible && (
-        <Card className="border-2 border-amber-400/40 shadow-sm">
-          <CardContent className="flex items-start gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-            <div>
-              <span className="text-sm font-medium text-amber-700">Régimen incompatible</span>
-              <p className="text-sm text-card-foreground mt-1">
-                El régimen <strong>{regimenLabel}</strong> no corresponde al tipo <strong>{sol.tipo}</strong>.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+          <div>
+            <span className="text-sm font-semibold text-[#374151]">Régimen incompatible</span>
+            <p className="text-sm text-[#374151] mt-0.5">
+              El régimen <strong>{regimenLabel}</strong> no corresponde al tipo <strong>{sol.tipo}</strong>.
+            </p>
+          </div>
+        </div>
       )}
-      <AlertDialog open={showConfirmPeriodo} onOpenChange={setShowConfirmPeriodo}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Confirmar cambio de periodo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {editingModoSolo
-                ? <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}). La solicitud permanecerá en borrador. Esta acción no se puede deshacer.</>
-                : <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}) y la justificación será enviada automáticamente a Validación de Justificaciones.
-                  {permisoDisponible && " Se consumirá el token  de Habilitación de Captura."}
-                  {" "}Esta acción no se puede deshacer.</>
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowConfirmPeriodo(false)}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmPeriodo}>
-              Sí, actualizar periodo
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showConfirmPeriodo}
+        onClose={() => setShowConfirmPeriodo(false)}
+        onConfirm={handleConfirmPeriodo}
+        variant="aprobar"
+        title="¿Confirmar cambio de periodo?"
+        description={editingModoSolo
+          ? <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}). La solicitud permanecerá en borrador. Esta acción no se puede deshacer.</>
+          : <>Se actualizará el periodo a <strong>{newPeriodo}</strong> ({regimenLabel}) y la justificación será enviada automáticamente a Validación de Justificaciones.
+              {permisoDisponible && " Se consumirá el token de Habilitación de Captura."}
+              {" "}Esta acción no se puede deshacer.</>
+        }
+        confirmLabel="Sí, actualizar periodo"
+      />
 
       {(n === "borrador" || n === "en captura") && periodoCheck.vigente && tipoCompatible && !isBorradorFueraDeTiempo && (
         <Card className="border-2 border-secondary/30 shadow-sm">
@@ -1395,7 +1384,7 @@ function DetalleView({
                     : "text-muted-foreground hover:text-card-foreground"
                 }`}
               >
-                <Info className="mr-1.5 inline h-4 w-4" />Bitácora
+                <img src="/iconos2/Icon.svg" alt="" className="mr-1.5 inline h-4 w-4" />Bitácora
               </button>
               <button
                 onClick={() => setRightTab("observaciones")}
@@ -1424,7 +1413,7 @@ function DetalleView({
                 {/* Header */}
                 <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #A0845C 0%, #C4A882 100%)" }}>
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <Info className="h-5 w-5 text-white" />
+                    <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 brightness-0 invert" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-white">Bitácora de Captura</span>
@@ -1578,6 +1567,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
   const [activeTab, setActiveTab]   = useState<UrgTab>(validInitialTab)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [calData, setCalData]       = useState<CalData>({ honorarios: [], asimilados: [], nombramiento: [] })
 
   useEffect(() => {
@@ -1629,6 +1619,9 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
   useRealtime(["solicitudes"], reloadCurrent)
 
   const filtered          = data
+  useEffect(() => { setCurrentPage(1) }, [activeTab, searchTerm])
+  const totalPages    = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginated     = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
   const selectedSolicitud = selectedId
     ? data.find((s) => s.id === selectedId) ?? null
     : null
@@ -1705,15 +1698,12 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
         items={TABS.map((tab) => ({ value: tab, label: tab, count: tabCounts[tab] }))}
       />
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por folio, tipo, secretaría..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-card"
-        />
-      </div>
+      <SearchInput
+        placeholder="Buscar por folio, tipo, secretaría..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        containerClassName="max-w-sm"
+      />
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">
@@ -1723,12 +1713,12 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-4">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {error}
+            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3 mb-4">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+              <span className="text-sm text-[#DC2626]">{error}</span>
             </div>
           )}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-secondary text-secondary-foreground">
@@ -1767,7 +1757,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                     </tr>
                   ))
                 }
-                {filtered.map((sol) => {
+                {paginated.map((sol) => {
                   const observador  = getObservador(sol.estado)
                   const subEstado   = getSubEstadoDGDO(sol.estado)
                   const isObservada = observador !== null
@@ -1838,13 +1828,9 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                         })()}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm"
-                            onClick={() => setSelectedId(sol.id)}
-                            className="text-secondary hover:text-primary gap-1.5">
-                            <Eye className="h-4 w-4" />Ver
-                          </Button>
-                        </div>
+                        <Button variant="ghost" size="sm" aria-label="Ver solicitud" onClick={() => setSelectedId(sol.id)}>
+                          <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" /> Ver
+                        </Button>
                       </td>
                     </tr>
                   )
@@ -1862,6 +1848,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
           </div>
         </CardContent>
       </Card>
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </PageLayout>
   )
 }

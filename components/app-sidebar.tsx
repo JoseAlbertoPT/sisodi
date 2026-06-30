@@ -15,23 +15,21 @@ import {
   Filter,
   ScanSearch,
   Settings,
+  Building2,
+  BookOpen,
   Menu as MenuIcon,
-  ChevronRight,
-  ChevronLeft,
-  ChevronUp,
-  X,
   LogOut,
-  UserCircle,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+
 export type PageKey =
   | "dashboard"
+  | "catalogo-justificaciones"
   | "nueva-solicitud"
   | "mis-solicitudes"
   | "validacion-uefa"
@@ -43,14 +41,16 @@ export type PageKey =
   | "dictamenes"
   | "calendario"
   | "usuarios"
+  | "entidades"
   | "configuracion"
+  | "dependencia"
+  | "dependencias"
   | "perfil"
 
 interface SidebarProps {
   currentPage: PageKey
   onNavigate: (page: PageKey) => void
   collapsed: boolean
-  onToggleSidebar?: () => void
   onMenuReady?: (ready: boolean) => void
 }
 
@@ -65,11 +65,19 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Filter,
   ScanSearch,
   Settings,
+  Building2,
+  BookOpen,
+}
+
+const KEY_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  dependencias: Building2,
+  dependencia:  Building2,
+  entidades:    Building2,
 }
 
 function getIconForNode(node: MenuNode): React.ReactNode {
-  const Icon = (node.icon && ICON_MAP[node.icon]) || MenuIcon
-  return <Icon className="h-4 w-4" />
+  const Icon = (node.key && KEY_ICON_MAP[node.key]) || (node.icon && ICON_MAP[node.icon]) || MenuIcon
+  return <Icon className="h-[18px] w-[18px]" />
 }
 
 function collectLeafNodes(nodes: MenuNode[]): MenuNode[] {
@@ -89,13 +97,13 @@ const SECTION_DEFS = [
   },
   {
     id: "gestion",
-    label: "Gestión  DGDO ",
+    label: "Gestión DGDO",
     keys: ["bandeja-filtro1", "bandeja-filtro2", "bandeja-filtro3", "dictamenes"] as PageKey[],
   },
   {
-    id: "configuracion",
-    label: "Configuración",
-    keys: ["calendario", "usuarios", "configuracion"] as PageKey[],
+    id: "administracion",
+    label: "Administración",
+    keys: ["calendario", "usuarios"] as PageKey[],
   },
 ]
 
@@ -112,14 +120,6 @@ function SidebarItem({
   onClick: () => void
   collapsed: boolean
 }) {
-  const [hovered, setHovered] = useState(false)
-
-  const style: React.CSSProperties = isActive
-    ? { backgroundColor: "#283C2A", color: "#FFFFFF" }
-    : hovered
-    ? { backgroundColor: "#832B56", color: "#FFFFFF" }
-    : {}
-
   if (collapsed) {
     return (
       <Tooltip>
@@ -127,13 +127,15 @@ function SidebarItem({
           <button
             type="button"
             onClick={onClick}
-            className="flex w-full justify-center rounded p-2 transition-colors"
-            style={style}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
             aria-label={label}
+            className={cn(
+              "flex w-full justify-center rounded-lg p-2.5 transition-colors",
+              isActive
+                ? "bg-white text-[#2D3B2D] shadow-sm"
+                : "text-[#5a6c5a] hover:bg-white/60 hover:text-[#2D3B2D]"
+            )}
           >
-            <span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+            <span className="[&>svg]:h-[18px] [&>svg]:w-[18px]">{icon}</span>
           </button>
         </TooltipTrigger>
         <TooltipContent side="right">{label}</TooltipContent>
@@ -145,88 +147,21 @@ function SidebarItem({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-start gap-2 rounded pl-1 pr-2 py-2 text-[13px] font-medium transition-colors"
-      style={style}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors text-left",
+        isActive
+          ? "bg-white text-[#2D3B2D] font-bold shadow-sm"
+          : "text-[#4a5c4a] font-medium hover:bg-white/60 hover:text-[#2D3B2D]"
+      )}
     >
-      <span className="shrink-0 mt-0.5 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
-      <span className="leading-tight">{label}</span>
+      <span className="shrink-0 [&>svg]:h-[18px] [&>svg]:w-[18px]">{icon}</span>
+      <span className="leading-tight truncate">{label}</span>
     </button>
   )
 }
-function SidebarSection({
-  label,
-  items,
-  currentPage,
-  onNavigate,
-  expanded,
-  onToggle,
-  showDivider,
-}: {
-  label: string
-  items: MenuNode[]
-  currentPage: PageKey
-  onNavigate: (page: PageKey) => void
-  expanded: boolean
-  onToggle: () => void
-  showDivider: boolean
-}) {
-  const [hovered, setHovered] = useState(false)
 
-  const btnStyle: React.CSSProperties = expanded
-    ? { backgroundColor: "rgba(94,23,51,0.18)", color: "#5e1733" }
-    : hovered
-    ? { backgroundColor: "rgba(94,23,51,0.10)", color: "#5e1733" }
-    : { backgroundColor: "transparent", color: "#283c2a" }
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      {showDivider && <div className="h-px bg-border/40 mx-1 my-0.5" />}
-      <button
-        type="button"
-        onClick={onToggle}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 transition-colors"
-        style={btnStyle}
-      >
-        <span className="text-[11px] font-semibold uppercase tracking-wider">
-          {label}
-        </span>
-        {expanded ? (
-          <ChevronUp className="h-3 w-3 shrink-0" />
-        ) : (
-          <ChevronRight className="h-3 w-3 shrink-0" />
-        )}
-      </button>
-      <div
-        className={cn(
-          "grid transition-[grid-template-rows] duration-200 ease-out",
-          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        )}
-      >
-        <div className="min-h-0 overflow-hidden">
-          <div className="flex flex-col gap-0.5 pt-0.5 pb-1 pl-3">
-            {items.map((node) => (
-              <SidebarItem
-                key={node.id}
-                label={node.label}
-                icon={getIconForNode(node)}
-                isActive={currentPage === (node.key as PageKey)}
-                onClick={() => onNavigate(node.key as PageKey)}
-                collapsed={false}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar, onMenuReady }: SidebarProps) {
-  const { user, logout } = useAuth()
+export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: SidebarProps) {
+  const { logout, user } = useAuth()
   const [menuTree, setMenuTree] = useState<MenuNode[] | null>(null)
   const [menusLoading, setMenusLoading] = useState(true)
   const [menusError, setMenusError] = useState<string | null>(null)
@@ -247,114 +182,72 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
   const INTERNAL_PAGES = useMemo(() => new Set(["revision-do", "progreso-firmado", "perfil", "nueva-solicitud"]), [])
   useEffect(() => {
     if (menusLoading || !menuTree) return
-    const availableKeys = new Set(collectLeafNodes(menuTree).filter((n) => n.key).map((n) => n.key!))
+    const availableKeys = new Set(collectLeafNodes(menuTree).filter((n) => n.key && n.route !== null).map((n) => n.key!))
     if (!INTERNAL_PAGES.has(currentPage) && !availableKeys.has(currentPage)) {
       const firstKey = SECTION_DEFS.flatMap((s) => s.keys).find((k) => availableKeys.has(k))
       if (firstKey) {
         onNavigate(firstKey)
-        // onMenuReady se llamará en el siguiente ciclo, cuando currentPage ya sea firstKey
         return
       }
     }
     onMenuReady?.(true)
   }, [menuTree, menusLoading, currentPage, onNavigate, INTERNAL_PAGES, onMenuReady])
 
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    justificaciones: true,
-    gestion: true,
-    configuracion: true,
-  })
+  const { allLeaves } = useMemo(() => {
+    if (!menuTree) return { allLeaves: [] }
+    const leaves = collectLeafNodes(menuTree)
+      .filter((n) => n.key && n.route !== null && n.key !== "revision-do")
+      .sort((a, b) => a.orden - b.orden)
 
-  const toggleSection = useCallback((id: string) => {
-    setExpandedSections((prev) => ({ ...prev, [id]: !prev[id] }))
-  }, [])
+    const dashIdx = leaves.findIndex((n) => n.key === "dashboard")
+    const catIdx  = leaves.findIndex((n) => n.key === "catalogo-justificaciones")
+    if (dashIdx !== -1 && catIdx !== -1 && catIdx !== dashIdx + 1) {
+      const [cat] = leaves.splice(catIdx, 1)
+      leaves.splice(dashIdx + 1, 0, cat)
+    }
 
-  const { visibleSections, allLeaves } = useMemo(() => {
-    if (!menuTree) return { visibleSections: [], allLeaves: [] }
-
-    const leaves = collectLeafNodes(menuTree).filter((n) => n.key && n.key !== "revision-do")
-    const leafMap = new Map(leaves.map((n) => [n.key!, n]))
-
-    const sections = SECTION_DEFS.map((def) => ({
-      def,
-      items: def.keys.filter((k) => leafMap.has(k)).map((k) => leafMap.get(k)!),
-    })).filter(({ items }) => items.length > 0)
-
-    return { visibleSections: sections, allLeaves: leaves }
+    return { allLeaves: leaves }
   }, [menuTree])
-  const userInitial = user?.nombre?.charAt(0)?.toUpperCase() ?? "?"
   return (
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "flex h-screen flex-col bg-sidebar-bg-light text-foreground border-r border-border/80 transition-all duration-300 shadow-sm",
-          collapsed ? "w-14" : "w-56"
+          "flex h-screen flex-col border-r border-[#E0DED8] transition-all duration-300 overflow-hidden",
+          collapsed ? "w-[64px]" : "w-[220px]"
         )}
+        style={{ backgroundColor: "transparent" }}
         aria-label="Navegación principal"
       >
         <div
           className={cn(
-            "flex items-center border-b border-border/60",
-            collapsed ? "justify-center px-1.5 py-3" : "gap-2 px-3 py-2"
+            "flex shrink-0 items-center border-b border-[#E0DED8]",
+            collapsed ? "h-[64px] justify-center px-2" : "h-[64px] gap-2 px-3"
           )}
         >
           {collapsed ? (
-            onToggleSidebar && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={onToggleSidebar}
-                    className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
-                    aria-label="Abrir menú"
-                    aria-expanded={false}
-                  >
-                    <MenuIcon className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">Abrir menú</TooltipContent>
-              </Tooltip>
-            )
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#f1f1f0", borderRadius: 8, padding: 8, width: 48, height: 48, flexShrink: 0 }}>
+              <img src="/logo-quetzal-icono.svg" alt="Quetzal" style={{ width: 65, height: 65, objectFit: "contain" }} />
+            </div>
           ) : (
-            <>
-              <div className="flex-1 min-w-0">
-                <img
-                  src="/logo-20finanzas.png"
-                  alt="Finanzas"
-                  className="w-full h-14 object-contain"
-                />
-              </div>
-              {onToggleSidebar && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={onToggleSidebar}
-                      className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-foreground/8 border border-border/50 hover:border-border transition-colors"
-                      aria-label="Cerrar menú"
-                      aria-expanded={true}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Cerrar menú</TooltipContent>
-                </Tooltip>
-              )}
-            </>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px" }}>
+              <img src="/logo-quetzal-icono.svg" alt="Quetzal" style={{ width: 40, height: 40, objectFit: "contain", flexShrink: 0 }} />
+              <img src="/finanzas-logo-cortado.svg" alt="Finanzas" style={{ width: 130, height: 45, objectFit: "contain", objectPosition: "left" }} />
+            </div>
           )}
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label="Menú">
+
+        <nav className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-0.5" aria-label="Menú">
           {menusLoading && (
-            <p className="text-sm text-muted-foreground px-2.5 py-2">Cargando menú…</p>
+            <p className="text-xs text-[#9CA3AF] px-3 py-2">Cargando…</p>
           )}
           {!menusLoading && menusError && (
-            <div className="flex flex-col gap-1.5 px-2.5 py-2">
-              <p className="text-xs text-destructive">{menusError}</p>
+            <div className="flex flex-col gap-1 px-3 py-2">
+              <p className="text-xs text-red-500">{menusError}</p>
               <button
                 type="button"
                 onClick={() => setRetryCount((n) => n + 1)}
-                className="text-xs text-muted-foreground underline hover:text-foreground text-left"
+                className="text-xs text-[#6B7280] underline hover:text-[#2D3B2D] text-left"
               >
                 Reintentar
               </button>
@@ -362,107 +255,48 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onToggleSidebar
           )}
 
           {!menusLoading && !menusError && menuTree && (
-            collapsed ? (
-              <div className="flex flex-col gap-px">
-                {allLeaves.map((node) => (
-                  <SidebarItem
-                    key={node.id}
-                    label={node.label}
-                    icon={getIconForNode(node)}
-                    isActive={currentPage === (node.key as PageKey)}
-                    onClick={() => onNavigate(node.key as PageKey)}
-                    collapsed
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col">
-                {visibleSections.map(({ def, items }, index) => (
-                  <SidebarSection
-                    key={def.id}
-                    label={def.label}
-                    items={items}
-                    currentPage={currentPage}
-                    onNavigate={onNavigate}
-                    expanded={expandedSections[def.id] !== false}
-                    onToggle={() => toggleSection(def.id)}
-                    showDivider={index > 0}
-                  />
-                ))}
-              </div>
-            )
+            <>
+              {allLeaves.map((node) => (
+                <SidebarItem
+                  key={node.id}
+                  label={node.label}
+                  icon={getIconForNode(node)}
+                  isActive={currentPage === (node.key as PageKey)}
+                  onClick={() => onNavigate(node.key as PageKey)}
+                  collapsed={collapsed}
+                />
+              ))}
+            </>
           )}
         </nav>
 
-        {!collapsed ? (
-          <div className="border-t border-border/60 px-3 py-2.5">
-            <div className="mb-2.5 flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-dropdown text-destructive-foreground text-xs font-medium">
-                {userInitial}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-foreground">
-                  {user?.nombre ?? "Usuario"}
-                </p>
-                <p className="truncate text-[10px] text-muted-foreground">
-                  {user?.rol ?? ""}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-1.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 flex-1 text-xs font-medium text-foreground hover:bg-foreground/5"
-                onClick={() => onNavigate("perfil")}
-                aria-label="Ir a Perfil"
-              >
-                <UserCircle className="h-3.5 w-3.5 shrink-0" />
-                <span className="ml-1">Perfil</span>
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 flex-1 text-xs font-medium bg-sidebar-dropdown text-destructive-foreground hover:opacity-90"
-                onClick={() => void logout()}
-                aria-label="Cerrar sesión"
-              >
-                <LogOut className="h-3.5 w-3.5 shrink-0" />
-                <span className="ml-1">Salir</span>
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="border-t border-border/60 px-1.5 py-2 flex flex-col items-center gap-0.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => onNavigate("perfil")}
-                  className="rounded p-1.5 text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
-                  aria-label="Perfil"
-                >
-                  <UserCircle className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Perfil</TooltipContent>
-            </Tooltip>
+        <div className="shrink-0 border-t border-[#E0DED8] px-2 py-3">
+          {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
                   onClick={() => void logout()}
-                  className="rounded p-1.5 text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
+                  className="flex w-full justify-center rounded-lg p-2.5 text-[#9CA3AF] hover:bg-white/60 hover:text-red-500 transition-colors"
                   aria-label="Cerrar sesión"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="h-[18px] w-[18px]" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right">Salir</TooltipContent>
+              <TooltipContent side="right">Cerrar sesión</TooltipContent>
             </Tooltip>
-          </div>
-        )}
+          ) : (
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-[#9CA3AF] hover:bg-white/60 hover:text-red-500 transition-colors"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="h-[18px] w-[18px] shrink-0" />
+              <span className="leading-tight">Cerrar sesión</span>
+            </button>
+          )}
+        </div>
       </aside>
     </TooltipProvider>
   )

@@ -10,14 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { PageLayout } from "@/components/page-layout"
+import { FileDropZone, UploadedFileRow } from "@/components/ui/file-drop-zone"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
+import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { Separator } from "@/components/ui/separator"
 import {
 
   FilePlus, Upload, ArrowLeft, ArrowRight, Plus, Trash2,
-  FileText, ClipboardList, Save, SendHorizonal, AlertCircle, Info,
-  ShieldAlert, CheckCircle2, Clock, Calendar, Lock, X, Search, Loader2,
+  FileText, ClipboardList, Save, SendHorizonal, AlertCircle,
+  ShieldAlert, CheckCircle2, Clock, Lock, X, Search, Loader2,
   Edit3, RotateCcw,
 
 } from "lucide-react"
@@ -384,76 +386,43 @@ function esFolioValido(folio: string): boolean {
 }
 
 function OficioUpload({
-  vigenciaInicio, onFileChange,
+  vigenciaInicio, onFilesChange,
   existingFiles,
 }: {
   vigenciaInicio: string
-  onFileChange?: (file: File | null) => void
+  onFilesChange?: (files: File[]) => void
   existingFiles?: { id: number; nombre_archivo: string; ruta: string }[]
 }) {
-  const [archivo, setArchivo] = useState<File | null>(null)
-  const [error,   setError]   = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const handleFile = (file: File) => {
-    setError(null)
-    const ext = file.name.split(".").pop()?.toLowerCase()
-    if (!["pdf", "doc", "docx", "xls", "xlsx", "png", "jpg", "jpeg", "zip", "rar", "txt", "odt", "ods"].includes(ext ?? "")) {
-      setError("Formato no soportado. Se aceptan PDF, DOC, DOCX, XLS, XLSX, imágenes, ZIP, entre otros."); return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setError("El archivo supera el límite de 10 MB."); return
-    }
-    setArchivo(file)
-    onFileChange?.(file)
+  const [archivos, setArchivos] = useState<File[]>([])
+
+  const VALID_EXTS = ["pdf","doc","docx","xls","xlsx","ppt","pptx","png","jpg","jpeg","gif","webp","zip","rar","txt","odt","ods"]
+
+  const handleFilesChange = (files: File[]) => {
+    const filtered = files.filter((f) => {
+      const ext = f.name.split(".").pop()?.toLowerCase() ?? ""
+      return VALID_EXTS.includes(ext)
+    })
+    setArchivos(filtered)
+    onFilesChange?.(filtered)
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
+      {/* Archivos existentes ya subidos al servidor */}
       {existingFiles && existingFiles.length > 0 && (
-        <div className="flex flex-col gap-1 mb-1">
+        <div className="flex flex-col gap-1.5 mb-1">
           {existingFiles.map((adj) => (
-            <div key={adj.id} className="flex items-center gap-2 rounded-md border border-secondary/30 bg-secondary/5 px-3 py-2">
-              <FileText className="h-4 w-4 text-secondary shrink-0" />
-              <span className="text-xs font-medium text-secondary truncate flex-1">{adj.nombre_archivo}</span>
-              {adj.ruta && (
-                <button type="button" onClick={() => window.open(adj.ruta, "_blank")}
-                  className="text-xs text-muted-foreground hover:text-secondary underline shrink-0">
-                  Ver
-                </button>
-              )}
-            </div>
+            <UploadedFileRow key={adj.id} nombre={adj.nombre_archivo} ruta={adj.ruta} />
           ))}
-          <p className="text-xs text-muted-foreground pl-1">Para reemplazar el archivo cargue uno nuevo:</p>
+          <p className="text-xs text-muted-foreground">Para agregar o reemplazar archivos, cargue nuevos:</p>
         </div>
       )}
-      <input ref={inputRef} type="file" accept="*" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-      <div
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f) }}
-        className={`flex items-center justify-center rounded-lg border-2 border-dashed px-4 py-4 cursor-pointer transition-colors
-          ${archivo ? "border-secondary bg-secondary/5" : error ? "border-destructive/50 bg-destructive/5" : "border-border bg-background hover:border-secondary"}`}
-      >
-        {archivo ? (
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
-            <span className="text-xs font-medium text-secondary truncate max-w-xs">{archivo.name}</span>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setArchivo(null); setError(null); onFileChange?.(null) }}
-              className="text-muted-foreground hover:text-destructive ml-1 text-xs leading-none">✕</button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-1 text-center">
-            <Upload className="h-5 w-5 text-muted-foreground" />
-            <p className="text-xs text-muted-foreground">Cualquier formato (máx. 10 MB) — Clic para buscar o Arrastra</p>
-          </div>
-        )}
-      </div>
-      {error && (
-        <p className="text-xs text-destructive flex items-center gap-1">
-          <AlertCircle className="h-3 w-3 shrink-0" />{error}
-        </p>
-      )}
+
+      <FileDropZone
+        hint="PDF, DOC, XLSX, PPT, imágenes, ZIP · máx. 10 MB c/u"
+        files={archivos}
+        onFilesChange={handleFilesChange}
+      />
     </div>
   )
 }
@@ -733,7 +702,7 @@ function useRowPrecarga(
 }
 
 type TipoSolicitud = "" | "prestacion" | "nombramiento"
-type Step = "tipo" | "renovacion" | "formulario"
+type Step = "tipo" | "formulario"
 
 type FolioExcel = {
   id:               string
@@ -771,7 +740,7 @@ function ReadonlyField({ label, value, hint }: { label: string; value: string; h
       <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
         <span className="text-sm text-muted-foreground truncate">{value || "—"}</span>
       </div>
-      {hint && <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3 shrink-0" />{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground flex items-center gap-1"><img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />{hint}</p>}
     </div>
   )
 }
@@ -842,24 +811,21 @@ function DynamicList({
         </Label>
       )}
       {items.map((item, idx) => (
-        <div key={idx} className="flex flex-col gap-0.5">
-          <div
-            className={`flex items-start gap-2 rounded-lg border-2 px-3 py-2 ${dupFlags[idx] ? "border-destructive/60 bg-destructive/5" : "border-transparent"}`}
-            style={{ width: "100%" }}
-          >
-            <span className="flex h-6 w-6 mt-0.5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
+        <div key={idx} className="flex flex-col gap-1">
+          <div className="flex items-start gap-2 w-full">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary mt-[10px]">
               {idx + 1}
             </span>
             {readonly && !item ? (
-                <span className="text-sm text-muted-foreground">—</span>
-             ) : readonly ? (
-                <span
-                  className="text-sm text-muted-foreground"
-                  style={{ whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word", flex: 1, minWidth: 0 }}
-                >
-                  {item}
-                </span>
-             ) : (
+              <span className="text-sm text-muted-foreground py-2">—</span>
+            ) : readonly ? (
+              <span
+                className="flex-1 text-sm text-muted-foreground py-2"
+                style={{ whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word", minWidth: 0 }}
+              >
+                {item}
+              </span>
+            ) : (
               <textarea
                 ref={(el) => {
                   itemRefs.current[idx] = el
@@ -894,29 +860,26 @@ function DynamicList({
                   }
                 }}
                 placeholder={`${label || "Item"} ${idx + 1}`}
-                className="border-0 shadow-none p-0 text-sm bg-transparent outline-none focus:outline-none"
+                className={`ds-list-input flex-1${dupFlags[idx] ? " ds-list-input--error" : ""}`}
                 style={{
                   resize: "none", overflow: "hidden",
                   whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word",
-                  flex: 1, minWidth: 0, lineHeight: "1.5rem",
+                  minWidth: 0, lineHeight: "1.5rem",
                 }}
               />
-             )}
-            {dupFlags[idx] && !readonly && (
-              <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
             )}
             {!readonly && items.length > 1 && (
               <button
                 type="button"
                 onClick={() => { const copy = items.filter((_, i) => i !== idx); onChange(copy) }}
-                className="ml-auto shrink-0 text-muted-foreground hover:text-destructive transition-colors mt-0.5"
+                className="shrink-0 text-muted-foreground hover:text-destructive transition-colors mt-[15px]"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
           {dupFlags[idx] && !readonly && (
-            <p className="text-xs text-destructive flex items-center gap-1 px-3">
+            <p className="text-xs flex items-center gap-1 pl-8" style={{ color: "#D32F2F" }}>
               <AlertCircle className="h-3 w-3 shrink-0" />Este texto ya existe en otra sección o se repite.
             </p>
           )}
@@ -941,28 +904,62 @@ function DynamicList({
 function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
   const steps = [
     { key: "tipo",       label: "Tipo de Solicitud" },
-    { key: "renovacion", label: "Renovacion" },
-    { key: "formulario", label: tipo === "prestacion" ? "Prestacion de Servicios" : "Nombramiento" },
+    { key: "formulario", label: tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento" },
   ]
   const currentIndex = steps.findIndex((s) => s.key === step)
+
   return (
-    <div className="flex items-center gap-2">
-      {steps.map((s, i) => (
-        <div key={s.key} className="flex items-center gap-2">
-          <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors
-              ${i === currentIndex ? "bg-primary text-primary-foreground"
-                : i < currentIndex ? "bg-secondary text-secondary-foreground"
-                : "bg-muted text-muted-foreground"}`}>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current text-[10px]">
-              {i + 1}
-            </span>
-            <span className="hidden sm:inline">{s.label}</span>
+    <div className="flex items-start w-full">
+      {steps.map((s, i) => {
+        const isDone    = i < currentIndex
+        const isActive  = i === currentIndex
+
+        /* Circle style */
+        const circleStyle: React.CSSProperties = isDone
+          ? { width: 32, height: 32, flexShrink: 0, position: 'relative', zIndex: 1 }
+          : isActive
+          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
+          : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
+
+        /* Label style */
+        const labelStyle: React.CSSProperties = isActive
+          ? { fontSize: 12, fontWeight: 600, color: '#773357', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          : isDone
+          ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+
+        return (
+          <div key={s.key} className="flex flex-1 flex-col items-center" style={{ position: 'relative' }}>
+
+            {/* ── Connector line (between circles) ────────── */}
+            {i > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: 16,
+                left: '-50%',
+                width: '100%',
+                height: 2,
+                backgroundColor: isDone ? '#2A3B29' : '#D1D5DB',
+                zIndex: 0,
+              }} />
+            )}
+
+            {/* ── Circle + label ────────────────────────── */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <div style={circleStyle}>
+                {isDone ? (
+                  <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
+                ) : (
+                  <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#773357' : '#9CA3AF', lineHeight: 1 }}>
+                    {i + 1}
+                  </span>
+                )}
+              </div>
+              <span style={labelStyle}>{s.label}</span>
+            </div>
           </div>
-          {i < steps.length - 1 && (
-            <div className={`h-px w-6 ${i < currentIndex ? "bg-secondary" : "bg-border"}`} />
-          )}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -1136,31 +1133,31 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
         ) : (
           <>
             {!seleccionado && coincidencias.length > 1 && (
-              <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-                <Info className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+                <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
+                <span className="text-sm font-medium text-[#374151]">
                   Hay varias coincidencias — seleccione el nivel que corresponda.
                 </span>
               </div>
             )}
             {seleccionado && (
-              <div className="flex items-center gap-2 rounded-md bg-secondary/10 border border-secondary/30 px-3 py-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                <span className="text-xs text-secondary font-medium">
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#22C55E] bg-[#F0FDF4] px-4 py-3">
+                <CheckCircle2 className="h-4 w-4 text-[#16A34A] shrink-0 mt-0.5" />
+                <span className="text-sm font-medium text-[#374151]">
                   Nivel seleccionado: <strong>{seleccionado.nivel}</strong>
                   {seleccionado.categoria ? ` — categoría ${seleccionado.categoria}` : ""}
                 </span>
               </div>
             )}
             {busqueda.trim() === "" ? (
-              <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
-                <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className="text-xs text-muted-foreground">Ingrese el importe para ver coincidencias</span>
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#9CA3AF] bg-[#F9FAFB] px-4 py-3">
+                <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5 opacity-60" />
+                <span className="text-sm text-[#374151]">Ingrese el importe para ver coincidencias</span>
               </div>
             ) : coincidencias.length === 0 ? (
-              <div className="flex items-center gap-2 rounded-md bg-destructive/5 border border-destructive/20 px-3 py-2">
-                <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                <span className="text-xs text-destructive">Sin coincidencias en el tabulador.</span>
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+                <AlertCircle className="h-4 w-4 text-[#DC2626] shrink-0 mt-0.5" />
+                <span className="text-sm text-[#DC2626]">Sin coincidencias en el tabulador.</span>
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
@@ -1218,43 +1215,55 @@ function SelectConBusqueda({
       open={open}
       onOpenChange={(o) => { setOpen(o); if (!o) setBusqueda("") }}
     >
-      <SelectTrigger className={`bg-background w-full ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}>
+      <SelectTrigger
+        className={`w-full rounded-[12px]
+          data-[state=open]:bg-white
+          ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
+      >
         <span className="block truncate text-sm pr-1">
           {selectedLabel ?? <span className="text-muted-foreground">{placeholder}</span>}
         </span>
       </SelectTrigger>
-      <SelectContent>
-        <div className="px-2 py-1.5 border-b border-border sticky top-0 bg-popover z-10">
+      <SelectContent className="rounded-[12px] border-[#E5E7EB] shadow-lg p-1.5">
+        {/* ── Buscador interno ── */}
+        <div className="sticky top-0 z-10 bg-white pb-1.5 px-0.5">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#9CA3AF] pointer-events-none" />
             <Input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar…"
-              className="h-7 text-xs bg-background pl-7 pr-6"
+              className="h-9 rounded-full border-[#E5E7EB] bg-white text-sm pl-9 pr-8 focus:border-[#2D3B2D]"
               onKeyDown={(e) => e.stopPropagation()}
               autoFocus
             />
             {busqueda && (
               <button
                 onClick={() => setBusqueda("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#374151]"
               >
                 <X className="h-3 w-3" />
               </button>
             )}
           </div>
           {busqueda && (
-            <p className="text-[10px] text-muted-foreground mt-1 pl-1">
+            <p className="text-[10px] text-[#9CA3AF] mt-1 pl-3">
               {filtradas.length} resultado{filtradas.length !== 1 ? "s" : ""}
             </p>
           )}
         </div>
+        {/* ── Opciones ── */}
         <div className="max-h-52 overflow-y-auto">
           {filtradas.length === 0
             ? <div className="px-3 py-3 text-xs text-muted-foreground text-center">Sin resultados para "{busqueda}"</div>
             : filtradas.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              <SelectItem
+                key={o.value}
+                value={o.value}
+                className="rounded-[8px] focus:bg-[#f0ede6] focus:text-[#773357] data-[state=checked]:bg-[#f0ede6] data-[state=checked]:text-[#773357]"
+              >
+                {o.label}
+              </SelectItem>
             ))
           }
         </div>
@@ -1267,30 +1276,59 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onDismiss} />
-      <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-border bg-muted/30">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Info className="h-5 w-5 text-primary" />
+      <div className="relative z-10 w-full max-w-md bg-white flex flex-col overflow-hidden"
+        style={{ borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-6 pt-6 pb-4" style={{ borderBottom: "1px solid #E5E7EB" }}>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: "#F3E8F0", border: "1px solid #E8D0E0" }}>
+            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5" />
           </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Marco Normativo — Aviso importante</span>
+          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+            <span className="text-base font-bold text-[#111827]">Marco Normativo</span>
+            <span className="text-sm text-[#6B7280]">Aviso importante antes de continuar</span>
           </div>
-          <button onClick={onDismiss} className="ml-auto text-muted-foreground hover:text-foreground">
+          <button onClick={onDismiss}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="px-6 py-5 flex flex-col gap-3">
-          <p className="text-sm text-card-foreground">
+
+        {/* Body */}
+        <div className="px-6 py-6 flex flex-col gap-3">
+          <p className="text-sm text-[#374151]">
             Este apartado deberá contar con <strong>validación previa por la UEJ</strong> o su equivalente antes de su envío.
           </p>
-          <p className="text-sm text-card-foreground">
+          <p className="text-sm text-[#374151]">
             La información registrada será <strong>responsabilidad de la persona titular</strong> de la Unidad de Enlace Financiero Administrativo o equivalente.
           </p>
         </div>
-        <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/20">
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onAccept}>
-            <CheckCircle2 className="mr-1.5 h-4 w-4" />Entendido, continuar
-          </Button>
+
+        {/* Footer */}
+        <div className="flex justify-end px-6 py-4" style={{ borderTop: "1px solid #E5E7EB" }}>
+          <button
+            type="button"
+            onClick={onAccept}
+            style={{
+              border: "none",
+              borderRadius: 9999,
+              background: "#2D3B2D",
+              padding: "10px 24px",
+              fontSize: 14,
+              fontWeight: 600,
+              color: "white",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Entendido, continuar
+          </button>
         </div>
       </div>
     </div>
@@ -1307,36 +1345,84 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-2xl rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Info className="h-4 w-4 text-primary" />
-          </div>
+      <div
+        className="relative z-10 w-full bg-white flex flex-col overflow-hidden"
+        style={{ maxWidth: 580, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
+      >
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between px-6 py-5">
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Fórmula de llenado</span>
-            <span className="text-xs text-muted-foreground">Guía para redactar correctamente el campo</span>
-
+            <span style={{ fontSize: 18, fontWeight: 700, color: "#111827", lineHeight: 1.3 }}>Fórmula de llenado</span>
+            <span className="text-sm text-[#6B7280]">Guía para redactar correctamente el campo</span>
           </div>
-          <button onClick={onClose} className="ml-auto text-muted-foreground hover:text-foreground transition-colors">
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="px-6 py-5 overflow-auto max-h-[65vh]">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-            </thead>
+
+        {/* ── Separador ── */}
+        <div style={{ borderBottom: "1px solid #E5E7EB" }} />
+
+        {/* ── Contenido / Tabla ── */}
+        <div className="overflow-auto px-6 py-4" style={{ maxHeight: "65vh" }}>
+          <table className="w-full text-sm" style={{ borderCollapse: "collapse", border: "1px solid #E5E7EB" }}>
             <tbody>
               {filas.map((fila, i) => (
-                <tr key={i} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
-                  <td className="px-4 py-3 font-medium text-muted-foreground border border-border align-top">{fila.elemento}</td>
-                  <td className="px-4 py-3 text-card-foreground border border-border leading-relaxed">{fila.ejemplo}</td>
+                <tr key={i} style={{ borderBottom: "1px solid #E5E7EB" }}>
+                  <td
+                    className="align-top"
+                    style={{
+                      width: "40%",
+                      padding: "12px 16px",
+                      backgroundColor: "#F9FAFB",
+                      color: "#6B7280",
+                      fontWeight: 500,
+                      borderRight: "1px solid #E5E7EB",
+                    }}
+                  >
+                    {fila.elemento}
+                  </td>
+                  <td
+                    className="align-top leading-relaxed"
+                    style={{
+                      padding: "12px 16px",
+                      backgroundColor: "#ffffff",
+                      color: "#111827",
+                    }}
+                  >
+                    {fila.ejemplo}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/20">
-          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+
+        {/* ── Footer ── */}
+        <div
+          className="flex justify-end px-6 py-4"
+          style={{ borderTop: "1px solid #E5E7EB" }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              border: "1.5px solid #ccc",
+              borderRadius: 9999,
+              background: "white",
+              padding: "10px 24px",
+              fontSize: 14,
+              fontWeight: 500,
+              color: "#374151",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F9FAFB")}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "white")}
+          >
+            Cerrar
+          </button>
         </div>
       </div>
     </div>
@@ -1361,7 +1447,7 @@ function FormularioPrestacion({
   esRenovacion?: boolean
   datosRenovacion?: FolioExcel | null
   onFormChange: (data: Partial<FormularioData>) => void
-  onArchivoChange?: (file: File | null) => void
+  onArchivoChange?: (files: File[]) => void
   secretariaFija?: string | null
   unidadFija?: string | null
   claveReportePlazas?: string | null
@@ -1392,7 +1478,7 @@ function FormularioPrestacion({
   const [unidadSeleccionada,   setUnidadSeleccionada]   = useState(
     datosRenovacion?.unidadAdscripcion ?? initialData?.unidadAdministrativa ?? unidadFija ?? ""
   )
-  const [claveUA, setClaveUA] = useState(initialData?.unidadAdministrativa ?? claveReportePlazas ?? "")
+  const [claveUA, setClaveUA] = useState(fmtClave(initialData?.unidadAdministrativa ?? claveReportePlazas ?? ""))
   const [urgSeleccionada,      setUrgSeleccionada]      = useState(
     datosRenovacion?.unidadResponsableGasto
     ?? initialData?.unidadResponsable
@@ -1683,7 +1769,7 @@ function FormularioPrestacion({
                 Secretaría / Dependencia / Organismo
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+              <div className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#ccc] bg-muted/40 px-4 py-3 min-h-[44px]">
                 <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
               </div>
             </div>
@@ -1852,7 +1938,7 @@ function FormularioPrestacion({
                 onChange={(e) => setNumeroPrestadores(e.target.value.replace(/[^0-9]/g, ""))}
                 onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Tab"].includes(e.key)) e.preventDefault() }}
                 placeholder="Ej. 5"
-                className="bg-background"
+                className="ns-ds-field bg-background"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -1892,7 +1978,7 @@ function FormularioPrestacion({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  className={`ns-ds-field pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
@@ -1926,7 +2012,7 @@ function FormularioPrestacion({
                         startMonth={isoToDate(vigenciaInicio || efectivoMin)}
                         onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                         placeholder="Seleccionar inicio"
-                        className={`w-full bg-background ${inicioError ? "border-destructive" : ""}`}
+                        className={inicioError ? "border-destructive" : ""}
                       />
                       {inicioError && (
                         <p className="text-xs text-destructive flex items-center gap-1">
@@ -1943,7 +2029,7 @@ function FormularioPrestacion({
                         startMonth={isoToDate(vigenciaFin || vigenciaInicio || efectivoMin)}
                         onChange={(d) => d && setVigenciaFin(dateToIso(d))}
                         placeholder="Seleccionar término"
-                        className={`w-full bg-background ${finError ? "border-destructive" : ""}`}
+                        className={finError ? "border-destructive" : ""}
                       />
                       {finError && (
                         <p className="text-xs text-destructive flex items-center gap-1">
@@ -1959,7 +2045,7 @@ function FormularioPrestacion({
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
-              <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} existingFiles={existingAdjuntos} />
+              <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} />
             </div>
           </div>
         </CardContent>
@@ -1982,8 +2068,8 @@ function FormularioPrestacion({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.II ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4 text-[#7B2D3E]" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2011,8 +2097,8 @@ function FormularioPrestacion({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.III ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4 text-[#7B2D3E]" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2058,18 +2144,16 @@ function FormularioPrestacion({
             forbiddenTexts={forbiddenTextsPS.responsabilidades}
           />
           {!bloqueadoPorRenovacion && actividades.length !== responsabilidades.length && (
-            <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-              <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span className="text-xs text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+              <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+              <span className="text-sm text-[#374151]">
                 <strong>Actividades a Realizar</strong> tiene <strong>{actividades.length}</strong> {actividades.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
               </span>
             </div>
           )}
-          <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
-            <Info className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-semibold text-card-foreground">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
-            </div>
+          <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#3B82F6] bg-[#EFF6FF] px-4 py-3">
+            <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
+            <span className="text-sm font-semibold text-[#374151]">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
           </div>
         </CardContent>
       </Card>
@@ -2128,9 +2212,9 @@ function FormularioPrestacion({
                 forbiddenTexts={forbiddenTextsPS[fKey]}
               />
               {!bloqueadoPorRenovacion && actividades.length !== items.length && (
-                <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+                  <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+                  <span className="text-sm text-[#374151]">
                     <strong>Actividades a Realizar</strong> tiene <strong>{actividades.length}</strong> {actividades.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
                   </span>
                 </div>
@@ -2144,12 +2228,12 @@ function FormularioPrestacion({
 }
 function FormularioNombramiento({
   prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
-  tipoAdministracionUsuario = "centralizada", initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin,
+  tipoAdministracionUsuario = "centralizada", initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin, regimenPeriodo = "",
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
   onFormChange: (data: Partial<FormularioData>) => void
-  onArchivoChange?: (file: File | null) => void
+  onArchivoChange?: (files: File[]) => void
   secretariaFija?: string | null
   unidadFija?: string | null
   claveReportePlazas?: string | null
@@ -2159,6 +2243,7 @@ function FormularioNombramiento({
   existingAdjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
   periodoFechaInicio?: string
   periodoFechaFin?: string
+  regimenPeriodo?: string
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState(false)
@@ -2201,7 +2286,7 @@ function FormularioNombramiento({
   const [unidadAdscripcion, setUnidadAdscripcion] = useState(
     datosRenovacion?.unidadAdscripcion ?? initialData?.unidadAdministrativa ?? unidadFija ?? ""
   )
-  const [claveUA, setClaveUA] = useState(initialData?.unidadAdministrativa ?? claveReportePlazas ?? "")
+  const [claveUA, setClaveUA] = useState(fmtClave(initialData?.unidadAdministrativa ?? claveReportePlazas ?? ""))
   const [urgSeleccionada, setUrgSeleccionada] = useState(
     datosRenovacion?.unidadResponsableGasto ?? initialData?.unidadResponsable ?? ""
   )
@@ -2440,7 +2525,7 @@ function FormularioNombramiento({
                 Secretaría / Dependencia / Organismo
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+              <div className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#ccc] bg-muted/40 px-4 py-3 min-h-[44px]">
                 <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
               </div>
             </div>
@@ -2534,9 +2619,25 @@ function FormularioNombramiento({
               />
               {!bloqueadoPorRenovacion && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Info className="h-3 w-3 shrink-0" />Puede Obtenerse desde el Oficio de Suficiencia Presupuestal.
+                  <img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />Puede Obtenerse desde el Oficio de Suficiencia Presupuestal.
                 </p>
               )}
+            </div>
+
+            {/* Régimen de Contratación — readonly, valor del paso 1 */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                Régimen de Contratación
+                <Lock className="h-3 w-3 text-muted-foreground" />
+              </Label>
+              <div className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#ccc] bg-muted/40 px-4 py-3 min-h-[44px]">
+                <span className="text-sm text-muted-foreground">
+                  {regimenPeriodo === "honorarios"    ? "Honorarios"
+                  : regimenPeriodo === "asimilados"   ? "Honorarios asimilados a Salarios"
+                  : regimenPeriodo === "nombramiento" ? "Nombramiento por Tiempo Determinado"
+                  : regimenPeriodo || "—"}
+                </span>
+              </div>
             </div>
 
             <>
@@ -2644,7 +2745,7 @@ function FormularioNombramiento({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  className={`ns-ds-field pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
@@ -2674,7 +2775,7 @@ function FormularioNombramiento({
                         startMonth={isoToDate(vigenciaInicio || efectivoMin)}
                         onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                         placeholder="Seleccionar inicio"
-                        className={`w-full bg-background ${inicioError ? "border-destructive" : ""}`}
+                        className={inicioError ? "border-destructive" : ""}
                       />
                       {inicioError && (
                         <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />Fecha anterior al inicio del periodo.</p>
@@ -2689,7 +2790,7 @@ function FormularioNombramiento({
                         startMonth={isoToDate(vigenciaFin || vigenciaInicio || efectivoMin)}
                         onChange={(d) => d && setVigenciaFin(dateToIso(d))}
                         placeholder="Seleccionar término"
-                        className={`w-full bg-background ${finError ? "border-destructive" : ""}`}
+                        className={finError ? "border-destructive" : ""}
                       />
                       {finError && (
                         <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />Fecha posterior al fin del periodo.</p>
@@ -2702,7 +2803,7 @@ function FormularioNombramiento({
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
-              <OficioUpload vigenciaInicio={vigenciaInicio} onFileChange={onArchivoChange} existingFiles={existingAdjuntos} />
+              <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} />
             </div>
           </div>
         </CardContent>
@@ -2722,8 +2823,8 @@ function FormularioNombramiento({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.II ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto del Nombramiento
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4 text-[#7B2D3E]" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2751,8 +2852,8 @@ function FormularioNombramiento({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.III ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 hover:opacity-70 transition-opacity" title="Ver fórmula de llenado">
-              <Info className="h-4 w-4 text-[#7B2D3E]" />
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+              <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
         </CardHeader>
@@ -2797,16 +2898,17 @@ function FormularioNombramiento({
             forbiddenTexts={forbiddenTextsNom.responsabilidades}
           />
           {!bloqueadoPorRenovacion && funciones.length !== responsabilidades.length && (
-            <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-              <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-              <span className="text-xs text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+              <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+              <span className="text-sm text-[#374151]">
                 <strong>Actividades / Funciones</strong> tiene <strong>{funciones.length}</strong> {funciones.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
               </span>
             </div>
           )}
-          <p className="text-xs text-muted-foreground italic">
-            Las responsabilidades deberán ser congruentes con las actividades registradas.
-          </p>
+          <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#3B82F6] bg-[#EFF6FF] px-4 py-3">
+            <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
+            <span className="text-sm font-semibold text-[#374151]">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
+          </div>
         </CardContent>
       </Card>
 
@@ -2832,15 +2934,21 @@ function FormularioNombramiento({
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 px-4 pb-4 pt-0">
+          {/* ── Condiciones de Trabajo ── */}
           <div>
             <Label className="text-sm font-medium mb-3 block">Condiciones de Trabajo</Label>
-            <div className="overflow-hidden rounded-md border border-border">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+              <table className="w-full table-fixed text-sm conditions-table">
+                <colgroup>
+                  <col style={{ width: "50%" }} />
+                  <col style={{ width: "25%" }} />
+                  <col style={{ width: "25%" }} />
+                </colgroup>
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">
                     <th className="px-4 py-2.5 text-left font-medium text-card-foreground">Condición</th>
-                    <th className="px-4 py-2.5 text-center font-medium">Sí</th>
-                    <th className="px-4 py-2.5 text-center font-medium">No</th>
+                    <th className="py-2.5 font-medium">Sí</th>
+                    <th className="py-2.5 font-medium">No</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2850,15 +2958,23 @@ function FormularioNombramiento({
                       <tr key={c} className="border-t border-border">
                         <td className="px-4 py-2.5 text-card-foreground">{c}</td>
                         {["si", "no"].map((opt) => (
-                          <td key={opt} className="px-4 py-2.5 text-center">
-                            <input
-                              type="radio"
-                              name={`cond-${key}`}
-                              value={opt}
-                              checked={condiciones[key] === opt}
-                              onChange={() => setCondiciones(prev => ({ ...prev, [key]: opt }))}
-                              className="cursor-pointer"
-                            />
+                          <td key={opt} className="py-2.5">
+                            <button
+                              type="button"
+                              onClick={() => setCondiciones(prev => ({ ...prev, [key]: opt }))}
+                              aria-label={`${c}: ${opt === "si" ? "Sí" : "No"}`}
+                              className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border-2 transition-colors ${
+                                condiciones[key] === opt
+                                  ? "border-[#7B2D5E] bg-[#7B2D5E]"
+                                  : "border-[#ccc] bg-white hover:border-[#7B2D5E]"
+                              }`}
+                            >
+                              {condiciones[key] === opt && (
+                                <svg className="h-2.5 w-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </button>
                           </td>
                         ))}
                       </tr>
@@ -2869,16 +2985,23 @@ function FormularioNombramiento({
             </div>
           </div>
 
+          {/* ── Tabla de Riesgos ── */}
           <div>
             <Label className="text-sm font-medium mb-3 block">Tabla de Riesgos</Label>
-            <div className="overflow-hidden rounded-md border border-border">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+              <table className="w-full table-fixed text-sm conditions-table">
+                <colgroup>
+                  <col style={{ width: "50%" }} />
+                  <col style={{ width: "16.67%" }} />
+                  <col style={{ width: "16.67%" }} />
+                  <col style={{ width: "16.67%" }} />
+                </colgroup>
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">
                     <th className="px-4 py-2.5 text-left font-medium">Riesgo</th>
-                    <th className="px-4 py-2.5 text-center font-medium">Bajo</th>
-                    <th className="px-4 py-2.5 text-center font-medium">Medio</th>
-                    <th className="px-4 py-2.5 text-center font-medium">Alto</th>
+                    <th className="py-2.5 font-medium">Bajo</th>
+                    <th className="py-2.5 font-medium">Medio</th>
+                    <th className="py-2.5 font-medium">Alto</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2888,15 +3011,23 @@ function FormularioNombramiento({
                       <tr key={r} className="border-t border-border">
                         <td className="px-4 py-2.5 text-card-foreground">{r}</td>
                         {["Bajo", "Medio", "Alto"].map((nivel) => (
-                          <td key={nivel} className="px-4 py-2.5 text-center">
-                            <input
-                              type="radio"
-                              name={`riesgo-${key}`}
-                              value={nivel}
-                              checked={riesgos[key] === nivel}
-                              onChange={() => setRiesgos(prev => ({ ...prev, [key]: nivel }))}
-                              className="cursor-pointer"
-                            />
+                          <td key={nivel} className="py-2.5">
+                            <button
+                              type="button"
+                              onClick={() => setRiesgos(prev => ({ ...prev, [key]: nivel }))}
+                              aria-label={`${r}: ${nivel}`}
+                              className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border-2 transition-colors ${
+                                riesgos[key] === nivel
+                                  ? "border-[#7B2D5E] bg-[#7B2D5E]"
+                                  : "border-[#ccc] bg-white hover:border-[#7B2D5E]"
+                              }`}
+                            >
+                              {riesgos[key] === nivel && (
+                                <svg className="h-2.5 w-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </button>
                           </td>
                         ))}
                       </tr>
@@ -2918,7 +3049,7 @@ function FormularioNombramiento({
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-3">
           <div className="flex items-start gap-2 rounded-md bg-muted/40 border border-border px-3 py-2.5">
-            <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <img src="/iconos2/Icon.svg" alt="" className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-50" />
             <div className="flex flex-col gap-2">
               <p className="text-xs text-muted-foreground italic leading-relaxed">
                 <span className="font-semibold not-italic text-card-foreground">Administración Pública Centralizada:</span>{" "}
@@ -3004,9 +3135,9 @@ function FormularioNombramiento({
                 forbiddenTexts={forbiddenTextsNom[fKey]}
               />
               {!bloqueadoPorRenovacion && funciones.length !== items.length && (
-                <div className="flex items-center gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2">
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                  <span className="text-xs text-amber-700 dark:text-amber-400">
+                <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+                  <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+                  <span className="text-sm text-[#374151]">
                     <strong>Actividades / Funciones</strong> tiene <strong>{funciones.length}</strong> {funciones.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
                   </span>
                 </div>
@@ -3084,7 +3215,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
             <div className="flex gap-3">
               <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Volver</Button>
               <Button onClick={() => { setSubmitted(false); setTipoSolicitud(""); setSecretaria(""); setUnidad(""); setDenominacion(""); setVigenciaInicio(""); setVigenciaFin(""); setImporteBruto(""); setFolioManual(""); setFechaRecepcion(""); setFolioSolicitud(""); setAssignedFolio("") }}
-                className="bg-primary text-primary-foreground hover:bg-primary/90">Registrar Otra</Button>
+               >Registrar Otra</Button>
             </div>
           </CardContent>
         </Card>
@@ -3128,7 +3259,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
       </Card>
       <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
         <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Cancelar</Button>
-        <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
+        <Button onClick={handleSubmit} disabled={!canSubmit} className="gap-1.5">
           {subTipo === "regularizacion" ? <Clock className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
           {subTipo === "regularizacion" ? "Registrar Regularización" : "Registrar Excepción DO"}
         </Button>
@@ -3391,7 +3522,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
   const [errorBorrador,         setErrorBorrador]         = useState<string | null>(null)
   const [folioBorradorGuardado, setFolioBorradorGuardado] = useState<string>("")
   const [formData, setFormData] = useState<Partial<FormularioData>>(editSolicitud?.formData ?? {})
-  const [archivoAdjunto, setArchivoAdjunto] = useState<File | null>(null)
+  const [archivosAdjuntos, setArchivosAdjuntos] = useState<File[]>([])
   const [excelUploading, setExcelUploading] = useState(false)
   const [excelError,     setExcelError]     = useState<string | null>(null)
   const excelInputRef = useRef<HTMLInputElement>(null)
@@ -3682,7 +3813,12 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
   const hayFoliosReales = foliosReales.length > 0
   const foliosDBIds = useMemo(() => new Set(foliosDB.map((f) => f.id)), [foliosDB])
   const handleContinueToRenovacion = () => {
-    if (puedeAvanzarDeTipo) setStep("renovacion")
+    if (puedeAvanzarDeTipo) {
+      setDatosRenovacion(null)
+      setPrefilled(false)
+      setLockVigenciaOnly(false)
+      setStep("formulario")
+    }
   }
 
   const handleContinueToFormulario = () => {
@@ -3701,8 +3837,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
 
   const handleBack = useCallback(() => {
     if (step === "formulario" && editSolicitud) { onCancel?.(); return }
-    if (step === "formulario") setStep("renovacion")
-    else if (step === "renovacion") setStep("tipo")
+    if (step === "formulario") setStep("tipo")
   }, [step, editSolicitud, onCancel])
 
   const folioSeleccionadoData = folioSeleccionado
@@ -3809,12 +3944,14 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
           setFolioGenerado(json.folio ?? json.data?.folio_justificacion ?? json.data?.folio_recepcion ?? "")
         }
 
-        if (archivoAdjunto && solicitudId) {
+        if (archivosAdjuntos.length > 0 && solicitudId) {
           try {
-            const fd = new FormData()
-            fd.append("file", archivoAdjunto)
-            fd.append("solicitudId", String(solicitudId))
-            await fetch("/api/adjunto", { method: "POST", body: fd })
+            await Promise.all(archivosAdjuntos.map((file) => {
+              const fd = new FormData()
+              fd.append("file", file)
+              fd.append("solicitudId", String(solicitudId))
+              return fetch("/api/adjunto", { method: "POST", body: fd })
+            }))
           } catch {  }
         }
 
@@ -3828,7 +3965,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
         setEnviado(true)
       } catch { setErrorEnvio("Error de conexión.") } finally { setEnviando(false) }
     },
-    [user, regimenPeriodo, periodoSeleccionado, consumirPermiso, tipo, formData, archivoAdjunto, esRenovacion, folioSeleccionado, editSolicitud]
+    [user, regimenPeriodo, periodoSeleccionado, consumirPermiso, tipo, formData, archivosAdjuntos, esRenovacion, folioSeleccionado, editSolicitud]
   )
 
   const handleReset = useCallback(() => {
@@ -3843,65 +3980,104 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
 
   if (enviado) {
     return (
-      <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
-        <Card className="shadow-sm border-2 border-secondary/30">
-          <CardContent className="flex flex-col items-center gap-5 p-10">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary/10">
-              <CheckCircle2 className="h-9 w-9 text-secondary" />
+      <>
+        <ConfirmToast
+          variant="success"
+          title="Solicitud enviada a validación"
+          description="La solicitud fue enviada exitosamente."
+        />
+        <div className="flex items-center justify-center min-h-[400px] w-full px-4 py-8">
+          <div className="border border-[#E5E7EB] rounded-xl py-12 px-8 text-center w-full max-w-[600px]">
+            <div className="flex items-center justify-center mx-auto mb-5"
+              style={{ width: 48, height: 48, borderRadius: 12, background: "#d2fad2" }}>
+              <CheckCircle2 style={{ width: 24, height: 24, color: "#1c7d29" }} />
             </div>
-            <div className="flex flex-col items-center gap-1 text-center">
-              <p className="text-lg font-semibold text-card-foreground">Solicitud enviada a validación</p>
-              <p className="text-sm text-muted-foreground">La solicitud fue enviada exitosamente. Puede seguir su seguimiento en Validación Justificación.</p>
-            </div>
+            <p className="text-lg font-bold mb-2">Solicitud enviada a validación</p>
+            <p className="text-sm text-[#6B7280] mb-6">
+              La solicitud fue enviada exitosamente. Puede seguir su seguimiento en Validación Justificación.
+            </p>
             {folioGenerado && (
-              <Badge className="bg-primary/10 text-primary border-0 text-sm px-4 py-1.5">Folio: {folioGenerado}</Badge>
+              <div className="flex justify-center mb-6">
+                <span className="text-sm rounded-full px-4 py-1.5 bg-[#F3F4F6]">
+                  Folio: {folioGenerado}
+                </span>
+              </div>
             )}
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={handleReset}>
-                <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Button onClick={handleReset} className="rounded-full bg-white border-[1.5px] border-[#ccc] text-foreground hover:bg-gray-50 shadow-none">
+              <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
+            </Button>
+          </div>
+        </div>
+      </>
     )
   }
   if (borradorGuardado) {
     const esEdicion = !!editSolicitud?.id
     return (
-      <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
-        <Card className="shadow-sm border-2 border-muted">
-          <CardContent className="flex flex-col items-center gap-5 p-10">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
-              <Save className="h-9 w-9 text-muted-foreground" />
+      <>
+        <ConfirmToast
+          variant="success"
+          title={esEdicion ? "Cambios guardados correctamente" : "Borrador guardado correctamente"}
+          description={esEdicion ? "Los cambios han sido guardados." : "Puede continuar desde Mis Solicitudes → Borradores."}
+        />
+        <div className="flex items-center justify-center min-h-[400px] w-full px-4 py-8">
+          <div className="border border-[#E5E7EB] rounded-xl py-12 px-8 text-center w-full max-w-[600px]">
+            <div className="flex items-center justify-center mx-auto mb-5"
+              style={{ width: 48, height: 48, borderRadius: 12, background: "#d2fad2" }}>
+              <CheckCircle2 style={{ width: 24, height: 24, color: "#1c7d29" }} />
             </div>
-            <div className="flex flex-col items-center gap-1 text-center">
-              <p className="text-lg font-semibold text-card-foreground">
-                {esEdicion ? "Cambios guardados correctamente" : "Borrador guardado correctamente"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {esEdicion
-                  ? "Los cambios han sido guardados. Puede cerrar esta pantalla."
-                  : "Puede continuar la captura desde \"Mis Solicitudes\" → pestaña \"Borradores\"."}
-              </p>
-            </div>
+            <p className="text-lg font-bold mb-2">
+              {esEdicion ? "Cambios guardados correctamente" : "Borrador guardado correctamente"}
+            </p>
+            <p className="text-sm text-[#6B7280] mb-6">
+              {esEdicion
+                ? "Los cambios han sido guardados. Puede cerrar esta pantalla."
+                : "Puede continuar la captura desde \"Mis Solicitudes\" → pestaña \"Borradores\"."}
+            </p>
             {folioBorradorGuardado && (
-              <Badge className="bg-muted text-muted-foreground border-0 text-sm px-4 py-1.5">Folio: {folioBorradorGuardado}</Badge>
-            )}
-            {!esEdicion && (
-              <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={handleReset}>
-                  <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
-                </Button>
+              <div className="flex justify-center mb-6">
+                <span className="text-sm rounded-full px-4 py-1.5 bg-[#F3F4F6]">
+                  Folio: {folioBorradorGuardado}
+                </span>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+            {!esEdicion && (
+              <Button onClick={handleReset} className="rounded-full bg-white border-[1.5px] border-[#ccc] text-foreground hover:bg-gray-50 shadow-none">
+                <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
+              </Button>
+            )}
+          </div>
+        </div>
+      </>
+    )
+  }
+  if (errorEnvio && !enviando) {
+    return (
+      <>
+        <ConfirmToast
+          variant="error"
+          title="La solicitud no se ha podido enviar"
+          description={errorEnvio}
+        />
+        <div className="flex items-center justify-center min-h-[400px] w-full px-4 py-8">
+          <div className="border border-[#E5E7EB] rounded-xl py-12 px-8 text-center w-full max-w-[600px]">
+            <div className="flex items-center justify-center mx-auto mb-5"
+              style={{ width: 48, height: 48, borderRadius: 12, background: "#FEE2E2" }}>
+              <FileText style={{ width: 24, height: 24, color: "#DC2626" }} />
+            </div>
+            <p className="text-lg font-bold mb-2">La solicitud no se ha podido enviar</p>
+            <p className="text-sm text-[#6B7280] mb-6">{errorEnvio}</p>
+            <Button onClick={() => setErrorEnvio(null)} className="rounded-full bg-white border-[1.5px] border-[#ccc] text-foreground hover:bg-gray-50 shadow-none">
+              Volver a la solicitud
+            </Button>
+          </div>
+        </div>
+      </>
     )
   }
   const isEditMode = !!editSolicitud?.id
   return (
+    <div className="ns-select">
     <PageLayout
       title={isEditMode ? "Modificación de Solicitud" : "Nueva solicitud"}
       description={isEditMode
@@ -3928,24 +4104,20 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             </Card>
           )}
           {!calCargando && !calendarioCompleto && (
-            <Card className="shadow-sm border-destructive/40 bg-destructive/5">
-              <CardContent className="flex items-start gap-3 px-4 py-3">
-                <AlertCircle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-destructive">Calendario de Recepción Incompleto!</span>
-                  <span className="text-xs text-muted-foreground">
-                    Para continuar con el  registro  es Necesario Contar  con las fechas de
-                    los <strong> 3 Regímenes</strong> (Honorarios, Asimilados y Nombramiento)
-                    <strong> Todos los  Meses/Quincenas   </strong> Deben tener fecha Configurada.
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+              <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-semibold text-[#DC2626]">Calendario de Recepción Incompleto</span>
+                <span className="text-sm text-[#374151]">
+                  Para continuar con el registro es necesario contar con las fechas de los <strong>3 Regímenes</strong> (Honorarios, Asimilados y Nombramiento). <strong>Todos los Meses/Quincenas</strong> deben tener fecha configurada.
+                </span>
+              </div>
+            </div>
           )}
-              <Card className={`shadow-sm border-secondary/30 border-2 ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
+                <Card className={`shadow-sm border-secondary/30 border-2 ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
               <CardHeader className="px-4 pt-3 pb-1">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-              <Calendar className="h-4 w-4 text-secondary" />Período de Aplicación
+              Período de Aplicación
               </CardTitle>
               <CardDescription>Seleccione el régimen y período para consultar las fechas límite de recepción</CardDescription>
               </CardHeader>
@@ -4036,14 +4208,14 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             </CardContent>
             <CardContent className="flex justify-end px-4 pb-3 pt-2">
               <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+                className="disabled:opacity-50">
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
             </CardContent>
           </Card>
         </>
       )}
-      {step === "renovacion" && (
+      {false && (
         <Card className="shadow-sm border-border">
           <CardHeader className="px-4 pt-3 pb-1">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -4111,7 +4283,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                     </div>
                   ) : !hayFoliosReales ? (
                     <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-3">
-                      <Info className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 opacity-50" />
                       <span className="text-sm text-muted-foreground">No se encontraron folios de dictamenes</span>
                     </div>
                   ) : (
@@ -4168,39 +4340,93 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                       </div>
                     {showModalMismasCondiciones && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        {/* Backdrop */}
                         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModalMismasCondiciones(false)} />
-                        <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
-                          <div className="flex items-center gap-3 px-6 py-5 border-b border-border bg-muted/30">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary/15">
-                              <Lock className="h-5 w-5 text-secondary" />
+
+                        {/* Modal — DS Cuadro de Diálogo */}
+                        <div className="relative z-10 w-full bg-white flex flex-col overflow-hidden"
+                          style={{ maxWidth: 480, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+
+                          {/* ── Header ── */}
+                          <div className="flex flex-col items-center gap-3 px-6 pt-6 pb-4"
+                            style={{ borderBottom: "1px solid #E5E7EB" }}>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full"
+                              style={{ backgroundColor: "#F3E8F0", border: "1px solid #E8D0E0" }}>
+                              <img src="/iconos2/Icon.svg" alt="" className="h-6 w-6" />
                             </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-sm font-semibold text-card-foreground">¿Confirmar mismas condiciones?</span>
-                              <span className="text-xs text-muted-foreground">Esta acción bloqueará los campos del formulario</span>
+                            <div className="flex flex-col items-center gap-1 text-center">
+                              <span className="text-base font-bold text-[#111827]">¿Confirmar mismas condiciones?</span>
+                              <span className="text-sm text-[#6B7280]">Esta acción bloqueará los campos del formulario</span>
                             </div>
                           </div>
-                          <div className="px-6 py-5 flex flex-col gap-4">
-                            <p className="text-sm text-card-foreground">
+
+                          {/* ── Cuerpo ── */}
+                          <div className="flex flex-col gap-3 px-6 py-6">
+                            <p className="text-sm text-center text-[#374151]">
                               a) La persona Titular de la Unidad de Enlace Financiero Administrativo se compromete a que la justificación cuente con las mismas condiciones técnico funcionales.
                             </p>
-                            <p className="text-sm text-card-foreground">
+                            <p className="text-sm text-center text-[#374151]">
                               b) La Dirección General de Desarrollo Organizacional emitirá la dictaminación correspondiente a la presente Justificación.
                             </p>
-                            <div className="rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3 flex flex-col gap-1.5">
-                              <span className="text-xs font-semibold text-secondary uppercase tracking-wide">Campos editables en renovación</span>
-                              <ul className="text-sm text-card-foreground flex flex-col gap-1">
-                                <li className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-secondary shrink-0" />Vigencia</li>
-                                <li className="flex items-center gap-2"><FileText className="h-3.5 w-3.5 text-secondary shrink-0" />Oficio de Suficiencia</li>
-                                <li className="flex items-center gap-2"><ClipboardList className="h-3.5 w-3.5 text-secondary shrink-0" />Número de Prestadores de Servicios</li>
+                            <div className="flex flex-col gap-2 rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
+                              <span className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">
+                                Campos editables en renovación
+                              </span>
+                              <ul className="flex flex-col gap-1.5">
+                                <li className="flex items-center gap-2 text-sm text-[#374151]">
+                                  <img src="/iconos2/calender-alt-1.svg" alt="" className="h-3.5 w-3.5 shrink-0 opacity-60" />Vigencia
+                                </li>
+                                <li className="flex items-center gap-2 text-sm text-[#374151]">
+                                  <FileText className="h-3.5 w-3.5 text-[#6B7280] shrink-0" />Oficio de Suficiencia
+                                </li>
+                                <li className="flex items-center gap-2 text-sm text-[#374151]">
+                                  <ClipboardList className="h-3.5 w-3.5 text-[#6B7280] shrink-0" />Número de Prestadores de Servicios
+                                </li>
                               </ul>
                             </div>
                           </div>
-                          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/20">
-                            <Button variant="outline" onClick={() => setShowModalMismasCondiciones(false)}>Cancelar</Button>
-                            <Button className="bg-primary text-primary-foreground hover:bg-primary/90"
-                              onClick={() => { setCondicionRenovacion("mismas"); setShowModalMismasCondiciones(false) }}>
-                              <CheckCircle2 className="mr-1.5 h-4 w-4" />Sí, confirmar
-                            </Button>
+
+                          {/* ── Footer ── */}
+                          <div className="flex items-center justify-center gap-3 px-6 py-4"
+                            style={{ borderTop: "1px solid #E5E7EB" }}>
+                            <button
+                              type="button"
+                              onClick={() => setShowModalMismasCondiciones(false)}
+                              style={{
+                                border: "1.5px solid #ccc",
+                                borderRadius: 9999,
+                                background: "white",
+                                padding: "10px 24px",
+                                fontSize: 14,
+                                fontWeight: 500,
+                                color: "#374151",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setCondicionRenovacion("mismas"); setShowModalMismasCondiciones(false) }}
+                              style={{
+                                border: "none",
+                                borderRadius: 9999,
+                                background: "#2D3B2D",
+                                padding: "10px 24px",
+                                fontSize: 14,
+                                fontWeight: 600,
+                                color: "white",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                              Sí, confirmar
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -4211,7 +4437,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             )}
 
             <div className="flex items-center justify-between pt-2">
-              <Button variant="outline" onClick={handleBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Anterior</Button>
+              <Button variant="outline" onClick={handleBack} className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"><ArrowLeft className="mr-1.5 h-4 w-4" />Anterior</Button>
               <Button
                 onClick={handleContinueToFormulario}
                 disabled={
@@ -4219,7 +4445,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   (esRenovacion === "si" && !folioSeleccionado) ||
                   (esRenovacion === "si" && folioSeleccionado && condicionRenovacion !== "mismas")
                 }
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+               
               >
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
@@ -4234,7 +4460,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
        {isEditMode ? null : (
          <div className="flex flex-col gap-2">
            <div>
-             <Button variant="outline" size="sm" onClick={handleBack} className="gap-1.5">
+             <Button variant="outline" size="sm" onClick={handleBack} className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent">
                <ArrowLeft className="h-4 w-4" />Anterior
              </Button>
              {prefilled && datosRenovacion && (
@@ -4255,7 +4481,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               esRenovacion={esRenovacion === "si"}
               datosRenovacion={datosRenovacion}
               onFormChange={handleFormChange}
-              onArchivoChange={setArchivoAdjunto}
+              onArchivoChange={setArchivosAdjuntos}
               secretariaFija={userSecretariaOriginal}
               unidadFija={userUAOriginal}
               claveReportePlazas={userClaveReporte}
@@ -4272,7 +4498,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               excelRows={excelRows}
               datosRenovacion={datosRenovacion}
               onFormChange={handleFormChange}
-              onArchivoChange={setArchivoAdjunto}
+              onArchivoChange={setArchivosAdjuntos}
               secretariaFija={userSecretariaOriginal}
               unidadFija={userUAOriginal}
               claveReportePlazas={userClaveReporte}
@@ -4282,6 +4508,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               existingAdjuntos={editSolicitud?.adjuntos}
               periodoFechaInicio={periodoVigenciaRange.min}
               periodoFechaFin={periodoVigenciaRange.max}
+              regimenPeriodo={regimenPeriodo}
             />
           )}
 
@@ -4310,37 +4537,31 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             return (
               <div className="flex flex-col gap-3">
                 {errorBorrador && (
-                  <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
-                    <span className="text-xs text-destructive">{errorBorrador}</span>
-                  </div>
-                )}
-                {errorEnvio && (
-                  <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
-                    <span className="text-xs text-destructive">{errorEnvio}</span>
+                  <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+                    <span className="text-sm text-[#DC2626]">{errorBorrador}</span>
                   </div>
                 )}
                 {esRenovacion !== "si" && camposFaltantes.length > 0 && (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-300/50 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                  <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-[#D97706] mt-0.5" />
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                      <span className="text-sm font-semibold text-[#374151]">
                         Campos obligatorios pendientes ({camposFaltantes.length}):
                       </span>
-                      <span className="text-xs text-amber-600 dark:text-amber-500">
+                      <span className="text-xs text-[#6B7280]">
                         {camposFaltantes.join(" · ")}
                       </span>
                     </div>
                   </div>
                 )}
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-                  <Button variant="outline" onClick={handleBack} disabled={enviando || guardandoBorrador}>
+                  <Button variant="outline" onClick={handleBack} disabled={enviando || guardandoBorrador} className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent">
                     <ArrowLeft className="mr-1.5 h-4 w-4" />Anterior
                   </Button>
                   <div className="flex items-center gap-3">
                     {isEditingBorrador ? (
-                      <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
+                      <Button className="min-w-[160px]"
                         disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}>
                         {guardandoBorrador
                           ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Guardando...</>
@@ -4355,7 +4576,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                             : <><Save className="mr-1.5 h-4 w-4" />Guardar Borrador</>
                           }
                         </Button>
-                        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
+                        <Button className="min-w-[160px]"
                           disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
                           {enviando
                             ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
@@ -4372,5 +4593,6 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
         </>
       )}
     </PageLayout>
+    </div>
   )
 }

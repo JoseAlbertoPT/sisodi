@@ -223,6 +223,9 @@ function getEvento(
       tipo:  "normal",
     }
 
+  if (n.includes("observado") || n.includes("observada"))
+    return { label: nuevo, desc: "devuelta con observaciones para corrección", tipo: "observacion" }
+
   return { label: nuevo, desc: "", tipo: "normal" }
 }
 
@@ -344,6 +347,42 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
   )
 }
 
+/* ── Dot icon for timeline ────────────────────────────────────────────────── */
+function TimelineDot({ tipo }: { tipo: Tipo }) {
+  if (tipo === "emision")
+    return (
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2D3B2D] ring-4 ring-[#2D3B2D]/10">
+        <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+    )
+  if (tipo === "observacion")
+    return (
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#773357] ring-4 ring-[#773357]/15">
+        <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </div>
+    )
+  if (tipo === "edicion")
+    return (
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E8DCC8] ring-4 ring-[#C4A882]/15">
+        <svg className="h-3.5 w-3.5 text-[#8B6F47]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      </div>
+    )
+  /* captura / normal / emision */
+  return (
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2D3B2D] ring-4 ring-[#2D3B2D]/15">
+      <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+  )
+}
+
 export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -359,38 +398,54 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
   const visible = showToggle && !expanded ? reversed.slice(0, VISIBLE_DEFAULT) : reversed
 
   return (
-    <div className="flex flex-col gap-0">
+    <div className="flex flex-col">
       {visible.map((entry, i) => {
-        const { label, tipo } = getEvento(
-          entry.estadoAnterior,
-          entry.estadoNuevo,
-          entry.comentario,
-        )
-        const diff = parseDiff(entry.comentario)
-        const isObs  = tipo === "observacion"
-        const isEdit = tipo === "edicion"
+        const { label, tipo } = getEvento(entry.estadoAnterior, entry.estadoNuevo, entry.comentario)
+        const diff   = parseDiff(entry.comentario)
+        const isLast = i === visible.length - 1 && !showToggle
 
-        const labelColor = isObs ? "text-[#832B56]" : isEdit ? "text-[#A0845C]" : "text-[#6e795a]"
+        const labelColor =
+          tipo === "observacion" ? "text-[#773357]"
+          : tipo === "edicion"    ? "text-[#8B6F47]"
+          : "text-[#2D3B2D]"
+
+        const rowBg =
+          tipo === "observacion" ? "bg-[#773357]/[0.06] border border-[#773357]/20 rounded-lg px-3 py-2"
+          : tipo === "edicion"    ? "bg-[#F5EFE3] border border-[#C4A882]/30 rounded-lg px-3 py-2"
+          : "bg-[#2D3B2D]/[0.06] border border-[#2D3B2D]/20 rounded-lg px-3 py-2"
 
         return (
-          <div key={i} className="flex gap-2.5 py-2 border-b border-border/50 last:border-0">
-            <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isObs ? "bg-[#832B56]" : isEdit ? "bg-[#A0845C]" : "bg-[#6e795a]"}`} />
-            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-              <span className={`text-xs font-semibold ${labelColor}`}>{label}</span>
-              <div className="flex items-center gap-1 flex-wrap text-[11px] text-muted-foreground">
-                <span>{entry.usuario}</span>
-                <span>·</span>
-                <span>{fmtFecha(entry.fecha)}</span>
+          <div key={i} className="flex gap-3">
+            {/* ── Left col: dot + vertical line ── */}
+            <div className="flex flex-col items-center">
+              <TimelineDot tipo={tipo} />
+              {!isLast && <div className="w-px flex-1 bg-[#E5E7EB] mt-1 mb-1 min-h-[20px]" />}
+            </div>
+
+            {/* ── Right col: content ── */}
+            <div className={`flex flex-col gap-0.5 pb-4 flex-1 min-w-0 ${isLast ? 'pb-0' : ''}`}>
+              <div className={rowBg}>
+                <span className={`text-[13px] font-semibold leading-snug ${labelColor}`}>{label}</span>
+                <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-[#9CA3AF] mt-0.5">
+                  <span className="font-medium text-[#6B7280]">{entry.usuario}</span>
+                  <span>·</span>
+                  <span>{fmtFecha(entry.fecha)}</span>
+                </div>
+                {diff && (
+                  <div className="mt-1">
+                    <DiffDialog cambios={diff} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} />
+                  </div>
+                )}
               </div>
-              {diff && <DiffDialog cambios={diff} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} />}
             </div>
           </div>
         )
       })}
+
       {showToggle && (
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-1.5 text-[11px] text-secondary hover:text-secondary/80 font-medium mt-1 ml-4 transition-colors"
+          className="flex items-center gap-1.5 text-[11px] text-secondary hover:text-secondary/80 font-medium mt-1 ml-9 transition-colors"
         >
           {expanded ? (
             <><ChevronUp className="h-3 w-3" />Mostrar menos</>

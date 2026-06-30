@@ -1,18 +1,23 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, useRef } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
-  ChevronRight, ChevronDown, Plus, Pencil, Trash2, Search,
-  Building2, Loader2, GripVertical, AlertCircle,
+  Plus, Pencil, Trash2, MoreHorizontal,
+  Building2, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Search, X,
 } from "lucide-react"
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import {
   fetchCentralizadaTree,
   createOrganoCentralizado,
@@ -21,6 +26,10 @@ import {
   type OrganoCentralizadoNode,
 } from "@/lib/catalogo-api"
 
+const VINO = "#773357"
+const VINO_HOVER = "#5c2844"
+const UA_PAGE_SIZE = 10
+
 function reorder<T>(list: T[], from: number, to: number): T[] {
   const result = [...list]
   const [removed] = result.splice(from, 1)
@@ -28,17 +37,10 @@ function reorder<T>(list: T[], from: number, to: number): T[] {
   return result
 }
 function normNombre(s: string) {
-  return s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  return s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
 }
-
-function normClave(s: string) {
-  return s.replace(/\D/g, "")
-}
-
-function displayClave(c: string): string {
-  return c.replace(/\./g, " ").trim()
-}
-
+function normClave(s: string) { return s.replace(/\D/g, "") }
+function displayClave(c: string): string { return c.replace(/\./g, " ").trim() }
 function rawToClaveStr(raw: string): string {
   if (!raw || raw.includes(".")) return raw
   const d = raw.replace(/\D/g, "")
@@ -47,14 +49,25 @@ function rawToClaveStr(raw: string): string {
   return parts.filter(Boolean).join(".")
 }
 
-const CLAVE_SEG = [2, 2, 2, 1, 1, 1, 1]
+function paginationPages(total: number, current: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i)
+  const show = new Set([0, total - 1, current, current - 1, current + 1].filter(p => p >= 0 && p < total))
+  const sorted = Array.from(show).sort((a, b) => a - b)
+  const pages: (number | "...")[] = []
+  let prev = -1
+  for (const p of sorted) {
+    if (prev !== -1 && p - prev > 1) pages.push("...")
+    pages.push(p)
+    prev = p
+  }
+  return pages
+}
 
+const CLAVE_SEG = [2, 2, 2, 1, 1, 1, 1]
 function ClaveInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const refs = useRef<(HTMLInputElement | null)[]>([])
-
   const rawSegs = value.split(".")
   const segs = Array.from({ length: 7 }, (_, i) => rawSegs[i] ?? "")
-
   const commit = (i: number, digits: string) => {
     const clean = i === 0 && digits.length === 2 && digits[0] === "0" ? digits[1] : digits
     const next = segs.map((s, j) => (j === i ? clean : s))
@@ -65,16 +78,11 @@ function ClaveInput({ value, onChange }: { value: string; onChange: (v: string) 
       refs.current[i + 1]?.select()
     }
   }
-
   const onKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !segs[i] && i > 0) {
-      refs.current[i - 1]?.focus()
-      refs.current[i - 1]?.select()
-    }
+    if (e.key === "Backspace" && !segs[i] && i > 0) { refs.current[i - 1]?.focus(); refs.current[i - 1]?.select() }
     if (e.key === "ArrowLeft"  && i > 0)                    refs.current[i - 1]?.focus()
     if (e.key === "ArrowRight" && i < CLAVE_SEG.length - 1) refs.current[i + 1]?.focus()
   }
-
   return (
     <div className="flex items-center gap-1.5">
       {CLAVE_SEG.map((size, i) => (
@@ -103,6 +111,7 @@ function ClaveInput({ value, onChange }: { value: string; onChange: (v: string) 
   )
 }
 
+
 function SecretariaRow({
   node, allTree, onRefresh, onDragStart, onDragOver, onDrop, draggingIndex, index,
 }: {
@@ -130,7 +139,26 @@ function SecretariaRow({
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState("")
 
+  // Search + pagination inside the expanded panel
+  const [uaSearch, setUaSearch] = useState("")
+  const [uaPage, setUaPage] = useState(0)
+
   useEffect(() => { setUas(node.children) }, [node.children])
+  useEffect(() => { setUaPage(0) }, [uaSearch])
+  useEffect(() => { if (!open) { setUaSearch(""); setUaPage(0) } }, [open])
+
+  const uasFiltered = useMemo(() => {
+    const q = uaSearch.trim().toLowerCase()
+    if (!q) return uas
+    return uas.filter(ua =>
+      ua.nombre.toLowerCase().includes(q) ||
+      (ua.ua_clave_administrativa ?? ua.clave_reporte_plazas ?? "").toLowerCase().includes(q)
+    )
+  }, [uas, uaSearch])
+
+  const uaTotalPages = Math.max(1, Math.ceil(uasFiltered.length / UA_PAGE_SIZE))
+  const safePage = Math.min(uaPage, uaTotalPages - 1)
+  const uasPageItems = uasFiltered.slice(safePage * UA_PAGE_SIZE, (safePage + 1) * UA_PAGE_SIZE)
 
   const handleAddUa = async () => {
     setFormError("")
@@ -220,86 +248,205 @@ function SecretariaRow({
           onDragStart={() => onDragStart(index)}
           onDragOver={(e) => onDragOver(e, index)}
           onDrop={() => onDrop(index)}
-          className={`flex items-center gap-2 py-3 px-4 rounded-xl border transition-all
-            ${isDragging ? "opacity-40 border-dashed border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30 hover:shadow-sm"}`}
+          className={[
+            "flex items-center gap-2 py-3 px-4 rounded-xl border bg-white transition-all",
+            isDragging
+              ? "opacity-40 border-dashed border-[#773357] bg-[#773357]/5"
+              : "border-[#e4e3dc] shadow-sm hover:border-[#773357]/30 hover:shadow-md",
+          ].join(" ")}
         >
-          <GripVertical className="h-4 w-4 text-muted-foreground/30 cursor-grab shrink-0" />
+          <GripVertical className="h-4 w-4 text-muted-foreground/30 cursor-grab shrink-0 hover:text-muted-foreground/60" />
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-              {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </Button>
+            <button
+              type="button"
+              className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[#773357]/10"
+            >
+              <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
+            </button>
           </CollapsibleTrigger>
           <div className="flex-1 min-w-0">
-            <span className="text-sm font-semibold truncate block">{node.nombre}</span>
-            <span className="text-xs text-muted-foreground">{uas.length} Unidad{uas.length !== 1 ? "es" : ""} Administrativa{uas.length !== 1 ? "s" : ""}</span>
+            <span className="text-sm font-semibold text-foreground truncate block leading-tight">{node.nombre}</span>
+            <span className="text-xs text-muted-foreground">
+              {uas.length} Unidad{uas.length !== 1 ? "es" : ""} Administrativa{uas.length !== 1 ? "s" : ""}
+            </span>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary hover:bg-primary/10 gap-1"
-              onClick={(e) => { e.stopPropagation(); setUaNombre(""); setUaClave(""); setFormError(""); setAddUaOpen(true) }}>
-              <Plus className="h-3.5 w-3.5" /> Agregar UA
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
-              onClick={(e) => { e.stopPropagation(); setSecNombre(node.nombre); setFormError(""); setEditSecOpen(true) }}>
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              onClick={(e) => { e.stopPropagation(); setFormError(""); setDeleteSecOpen(true) }}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+          <div className="shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                  style={{ color: VINO }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${VINO}15`)}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label="Más opciones"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSecNombre(node.nombre); setFormError(""); setEditSecOpen(true) }}>
+                  <Pencil className="h-4 w-4" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setFormError(""); setDeleteSecOpen(true) }}>
+                  <Trash2 className="h-4 w-4" /> Eliminar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setUaNombre(""); setUaClave(""); setFormError(""); setAddUaOpen(true) }}>
+                  <Plus className="h-4 w-4" /> Agregar UA
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
+        {/* ── Unidades Administrativas ── */}
         <CollapsibleContent>
-          <div className="mt-1 mb-2 ml-4 space-y-0.5">
-            {uas.map((ua, i) => {
-              const clave = ua.ua_clave_administrativa ?? ua.clave_reporte_plazas ?? ""
-              return (
-                <div
-                  key={ua.id}
-                  draggable
-                  onDragStart={() => setUaDragging(i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => handleUaDrop(i)}
-                  className={`group flex items-center gap-2 py-2 px-3 rounded-lg border transition-all
-                      ${uaDragging === i ? "opacity-40 border-dashed border-primary" : "border-transparent hover:border-border hover:bg-muted/40"}`}
-                   >
-                  <GripVertical className="h-3.5 w-3.5 text-muted-foreground/30 cursor-grab shrink-0" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30 shrink-0" />
-                  <div className="flex-1 min-w-0 flex items-center gap-2">
-                    <span className="text-sm truncate">{ua.nombre}</span>
-                    {clave && (
-                       <span
-                        className="text-xs text-muted-foreground font-mono shrink-0 ml-auto pr-2"
-                        title="Clave Reporte Plazas"
-                        >
-                        {displayClave(clave)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary"
-                      onClick={() => {
-                        setTargetUa(ua)
-                        setUaNombre(ua.nombre)
-                        setUaClave(rawToClaveStr(ua.ua_clave_administrativa ?? ua.clave_reporte_plazas ?? ""))
-                        setFormError("")
-                        setEditUaOpen(true)
-                        }}>
-                        <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                         onClick={() => { setTargetUa(ua); setFormError(""); setDeleteUaOpen(true) }}>
-                         <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+          <div className="mt-2 mb-2 ml-6 border-l-2 border-[#773357]/15 pl-3">
+
+            {/* Search bar */}
+            {uas.length > 0 && (
+              <div className="flex items-center gap-2 py-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Buscar unidad..."
+                    value={uaSearch}
+                    onChange={(e) => setUaSearch(e.target.value)}
+                    className="w-full h-8 rounded-lg border border-[#e4e3dc] bg-white pl-8 pr-8 text-xs outline-none transition-colors focus:border-[#773357]/50 placeholder:text-muted-foreground/40"
+                  />
+                  {uaSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setUaSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
-              )
-            })}
-            {uas.length === 0 && <p className="text-xs text-muted-foreground ml-6 py-2 italic">Sin unidades administrativas</p>}
+                {uaSearch && (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {uasFiltered.length} resultado{uasFiltered.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* UA items */}
+            <div className="space-y-0.5">
+              {uasPageItems.map((ua, pageIdx) => {
+                const globalIdx = !uaSearch ? safePage * UA_PAGE_SIZE + pageIdx : pageIdx
+                const clave = ua.ua_clave_administrativa ?? ua.clave_reporte_plazas ?? ""
+                return (
+                  <div
+                    key={ua.id}
+                    draggable={!uaSearch}
+                    onDragStart={() => { if (!uaSearch) setUaDragging(globalIdx) }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => { if (!uaSearch) handleUaDrop(globalIdx) }}
+                    className={[
+                      "group flex items-center gap-2 py-2 px-3 rounded-lg border transition-all",
+                      !uaSearch && uaDragging === globalIdx
+                        ? "opacity-40 border-dashed border-[#773357]"
+                        : "border-transparent hover:border-[#e4e3dc] hover:bg-[#f9f8f5]",
+                    ].join(" ")}
+                  >
+                    <GripVertical className={`h-3.5 w-3.5 shrink-0 ${uaSearch ? "invisible" : "text-muted-foreground/25 cursor-grab"}`} />
+                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: VINO, opacity: 0.5 }} />
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <span className="text-sm truncate text-foreground">{ua.nombre}</span>
+                      {clave && (
+                        <span className="text-xs text-muted-foreground font-mono shrink-0 ml-auto pr-2" title="Clave Reporte Plazas">
+                          {displayClave(clave)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
+                            style={{ color: VINO }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${VINO}15`)}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                            aria-label="Más opciones"
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setTargetUa(ua); setUaNombre(ua.nombre); setUaClave(rawToClaveStr(ua.ua_clave_administrativa ?? ua.clave_reporte_plazas ?? "")); setFormError(""); setEditUaOpen(true) }}>
+                            <Pencil className="h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setTargetUa(ua); setFormError(""); setDeleteUaOpen(true) }}>
+                            <Trash2 className="h-4 w-4" /> Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {uasFiltered.length === 0 && uaSearch && (
+                <p className="text-xs text-muted-foreground ml-4 py-2 italic">Sin resultados para &quot;{uaSearch}&quot;</p>
+              )}
+              {uas.length === 0 && (
+                <p className="text-xs text-muted-foreground ml-4 py-2 italic">Sin unidades administrativas</p>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {uaTotalPages > 1 && (
+              <div className="mt-2 pt-2 border-t border-[#e4e3dc]/60">
+                <div className="flex justify-center items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={safePage === 0}
+                    onClick={() => setUaPage(p => Math.max(0, p - 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 disabled:opacity-30 hover:bg-gray-200 transition-colors"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+                  {paginationPages(uaTotalPages, safePage).map((p, idx) =>
+                    p === "..." ? (
+                      <span key={`el-${idx}`} className="flex h-8 w-8 items-center justify-center text-xs text-gray-400">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setUaPage(p as number)}
+                        className={[
+                          "flex h-8 w-8 items-center justify-center rounded-md text-xs font-medium transition-colors",
+                          p === safePage
+                            ? "border border-gray-300 bg-white text-gray-700 font-semibold"
+                            : "text-gray-500 hover:bg-gray-50",
+                        ].join(" ")}
+                      >
+                        {(p as number) + 1}
+                      </button>
+                    )
+                  )}
+                  <button
+                    type="button"
+                    disabled={safePage === uaTotalPages - 1}
+                    onClick={() => setUaPage(p => Math.min(uaTotalPages - 1, p + 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 disabled:opacity-30 hover:bg-gray-200 transition-colors"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </CollapsibleContent>
       </Collapsible>
-      {}
+
+      {/* Dialogs */}
       <Dialog open={addUaOpen} onOpenChange={setAddUaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Agregar Unidad Administrativa</DialogTitle></DialogHeader>
@@ -324,7 +471,6 @@ function SecretariaRow({
         </DialogContent>
       </Dialog>
 
-      {}
       <Dialog open={editSecOpen} onOpenChange={setEditSecOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Secretaría</DialogTitle></DialogHeader>
@@ -344,22 +490,18 @@ function SecretariaRow({
         </DialogContent>
       </Dialog>
 
-      {}
-      <Dialog open={deleteSecOpen} onOpenChange={setDeleteSecOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Eliminar Secretaría</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground py-1">Se eliminará <strong>{node.nombre}</strong> y sus <strong>{uas.length}</strong> unidades. Esta acción no se puede deshacer.</p>
-          {formError && <p className="text-xs text-destructive">{formError}</p>}
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button variant="destructive" onClick={handleDeleteSec} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteSecOpen}
+        onClose={() => { setDeleteSecOpen(false); setFormError("") }}
+        onConfirm={handleDeleteSec}
+        variant="eliminar"
+        title="Eliminar Secretaría"
+        description={<>Se eliminará <strong>{node.nombre}</strong> y sus <strong>{uas.length}</strong> unidades. Esta acción no se puede deshacer.</>}
+        confirmLabel="Sí, Eliminar"
+        loading={saving}
+        error={formError || undefined}
+      />
 
-      {}
       <Dialog open={editUaOpen} onOpenChange={setEditUaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Unidad Administrativa</DialogTitle></DialogHeader>
@@ -383,20 +525,17 @@ function SecretariaRow({
         </DialogContent>
       </Dialog>
 
-      {}
-      <Dialog open={deleteUaOpen} onOpenChange={setDeleteUaOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Eliminar Unidad Administrativa</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground py-1">Se eliminará <strong>{targetUa?.nombre}</strong>. Esta acción no se puede deshacer.</p>
-          {formError && <p className="text-xs text-destructive">{formError}</p>}
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button variant="destructive" onClick={handleDeleteUa} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteUaOpen}
+        onClose={() => { setDeleteUaOpen(false); setFormError("") }}
+        onConfirm={handleDeleteUa}
+        variant="eliminar"
+        title="Eliminar Unidad Administrativa"
+        description={<>Se eliminará <strong>{targetUa?.nombre}</strong>. Esta acción no se puede deshacer.</>}
+        confirmLabel="Sí, Eliminar"
+        loading={saving}
+        error={formError || undefined}
+      />
     </>
   )
 }
@@ -404,29 +543,35 @@ function SecretariaRow({
 export function CatalogoCentralizadaTab() {
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
   const [addSecOpen, setAddSecOpen] = useState(false)
   const [newSecNombre, setNewSecNombre] = useState("")
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState("")
+
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try { setTree(await fetchCentralizadaTree()) }
-    catch (e) { console.error(e) }
+    catch (e) { setLoadError(e instanceof Error ? e.message : "Error al cargar el catálogo") }
     finally { setLoading(false) }
   }, [])
 
   useEffect(() => { void load() }, [load])
+
   const filtered = search
     ? tree.filter((n) => n.nombre.toLowerCase().includes(search.toLowerCase()) || n.children.some((c) => c.nombre.toLowerCase().includes(search.toLowerCase())))
     : tree
+
   const handleDrop = async (toIndex: number) => {
     if (draggingIndex === null || draggingIndex === toIndex) { setDraggingIndex(null); return }
     const reordered = reorder(tree, draggingIndex, toIndex)
     setTree(reordered); setDraggingIndex(null)
     await Promise.all(reordered.map((n, idx) => updateOrganoCentralizado(n.id, { orden: idx }))).catch(console.error)
   }
+
   const handleAddSec = async () => {
     setFormError("")
     if (!newSecNombre.trim()) { setFormError("El nombre es requerido"); return }
@@ -441,37 +586,60 @@ export function CatalogoCentralizadaTab() {
     finally { setSaving(false) }
   }
 
-   const totalUas = tree.reduce((s, n) => s + n.children.length, 0)
+  const totalUas = tree.reduce((s, n) => s + n.children.length, 0)
 
   return (
     <>
-      <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+      <Card className="shadow-sm border-[#e4e3dc] overflow-hidden">
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#e4e3dc] bg-[#f9f8f5]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#773357]/10 shrink-0">
+              <Building2 className="h-5 w-5" style={{ color: VINO }} />
+            </div>
             <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-blue-500" />
-                Administración Pública Centralizada
-          </CardTitle>
-          <CardDescription>{!loading && `${tree.length} secretarías · ${totalUas} unidades administrativas`}</CardDescription>
+              <h3 className="text-sm font-semibold text-foreground leading-tight">Administración Pública Centralizada</h3>
+              {!loading && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {tree.length} secretaría{tree.length !== 1 ? "s" : ""} · {totalUas} unidad{totalUas !== 1 ? "es" : ""} administrativa{totalUas !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
           </div>
-          <Button size="sm" onClick={() => { setNewSecNombre(""); setFormError(""); setAddSecOpen(true) }}>
-          <Plus className="h-4 w-4 mr-1" /> Agregar Secretaría
+          <Button
+            size="sm"
+            className="shrink-0 rounded-full text-white font-medium gap-1.5"
+            style={{ backgroundColor: VINO }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = VINO_HOVER)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = VINO)}
+            onClick={() => { setNewSecNombre(""); setFormError(""); setAddSecOpen(true) }}
+          >
+            <Plus className="h-4 w-4" /> Agregar Secretaría
           </Button>
-          </div>
-          <div className="relative mt-3">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar secretaría o unidad..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-          </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+
+        {/* ── Búsqueda ── */}
+        <div className="px-6 py-3 border-b border-[#e4e3dc]">
+          <SearchInput placeholder="Buscar secretaría o unidad..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+
+        {/* ── Lista ── */}
+        <CardContent className="p-4">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando...
             </div>
+          ) : loadError ? (
+            <div className="flex items-center gap-3 rounded-lg border-l-4 border-l-red-500 bg-red-50 px-4 py-3 my-4">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-red-700">Error al cargar el catálogo</span>
+                <span className="text-xs text-red-600">{loadError}</span>
+              </div>
+            </div>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">
-              {search ? "Sin resultados" : "No hay secretarías. Agrega una con el botón de arriba."}
+              {search ? "Sin resultados para esa búsqueda." : "No hay secretarías. Agrega una con el botón de arriba."}
             </p>
           ) : (
             <div className="space-y-2">
@@ -489,7 +657,7 @@ export function CatalogoCentralizadaTab() {
         </CardContent>
       </Card>
 
-      {}
+      {/* Dialog nueva secretaría */}
       <Dialog open={addSecOpen} onOpenChange={setAddSecOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nueva Secretaría</DialogTitle></DialogHeader>
@@ -497,8 +665,8 @@ export function CatalogoCentralizadaTab() {
             <div className="flex flex-col gap-1.5">
               <Label>Nombre <span className="text-destructive">*</span></Label>
               <Input value={newSecNombre} onChange={(e) => setNewSecNombre(e.target.value)} placeholder="Ej. Secretaría de Educación" onKeyDown={(e) => e.key === "Enter" && handleAddSec()} autoFocus />
-          </div>
-          {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
+            </div>
+            {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>

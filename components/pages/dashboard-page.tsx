@@ -822,7 +822,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
         <Button
           variant="outline"
           size="sm"
-          className="gap-2 ml-auto"
+          className="gap-2 ml-auto rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
           disabled={!data || loading}
           onClick={() => setModalAbierto(true)}
         >

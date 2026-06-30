@@ -14,27 +14,22 @@ interface FilterTabsProps {
   value: string
   onValueChange: (value: string) => void
   items: FilterTabItem[]
-  
   sectionLabel?: string
   className?: string
 }
 
-export function FilterTabs({ value, onValueChange, items, sectionLabel = "Secciones", className }: FilterTabsProps) {
+export function FilterTabs({ value, onValueChange, items, sectionLabel, className }: FilterTabsProps) {
   return (
-    <section
+    <div className="flex w-full justify-center">
+    <div
       className={cn(
-        "rounded-lg border border-border bg-sidebar-bg-light px-5 py-4",
+        "inline-flex w-fit items-center gap-0.5 rounded-lg border border-gray-200 bg-white p-[3px]",
         className
       )}
-      aria-label={sectionLabel}
+      role="tablist"
+      aria-label={sectionLabel ?? "Filtros"}
     >
-      {sectionLabel && (
-        <p className="mb-3 text-center text-[10px] font-semibold uppercase tracking-widest text-foreground/70">
-          {sectionLabel}
-        </p>
-      )}
-      <div className="flex flex-wrap items-center justify-center gap-2" role="tablist">
-        {items.map((item) => {
+      {items.map((item) => {
         const isActive = value === item.value
         return (
           <button
@@ -46,23 +41,18 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel = "Seccio
             id={`tab-${item.value}`}
             onClick={() => onValueChange(item.value)}
             className={cn(
-              "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border",
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-[5px] text-[13px] whitespace-nowrap transition-colors focus-visible:outline-none",
               isActive
-                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                : "bg-white text-foreground border-border shadow-sm hover:bg-white hover:border-foreground/20 hover:shadow"
+                ? "bg-[#e4e3d6] border border-[#c2d4a8] rounded-lg text-[#3a4a2a] font-medium px-4 py-1.5"
+                : "bg-transparent border-none text-gray-500 font-normal hover:text-gray-900"
             )}
           >
-            {item.icon != null && (
-              <span className="[&_svg]:h-4 [&_svg]:w-4 shrink-0" aria-hidden>
-                {item.icon}
-              </span>
-            )}
             <span>{item.label}</span>
             {item.count !== undefined && (
               <span
                 className={cn(
-                  "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
-                  isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-sidebar-bg-light text-foreground"
+                  "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-none",
+                  isActive ? "bg-gray-100 text-[#1f1f1f]" : "bg-gray-100 text-gray-500"
                 )}
               >
                 {item.count}
@@ -71,7 +61,7 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel = "Seccio
           </button>
         )
       })}
-      </div>
-    </section>
+    </div>
+    </div>
   )
 }

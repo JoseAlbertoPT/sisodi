@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { AppSidebar, type PageKey } from "@/components/app-sidebar"
-import { AppHeader } from "@/components/app-header"
+import { SidebarProvider } from "@/lib/sidebar-context"
 import { DashboardPage } from "@/components/pages/dashboard-page"
 import { BandejaFiltroPage } from "@/components/pages/bandeja-filtro-page"
 import { RevisionDOPage } from "@/components/pages/revision-do-page"
@@ -15,7 +15,8 @@ import { CalendarioPage } from "@/components/pages/calendario-page"
 import { UsuariosPage } from "@/components/pages/usuarios-page"
 import { PerfilPage } from "@/components/pages/perfil-page"
 import { ValidacionUefaPage } from "@/components/pages/validacion-uefa-page"
-import { ConfiguracionPage } from "@/components/pages/configuracion-page"
+import { EntidadesPage } from "@/components/pages/entidades-page"
+import { CatalogoJustificacionesPage } from "@/components/pages/catalogo-justificaciones-page"
 import { ProgresoFirmadoPage } from "@/components/pages/progreso-firmado-page"
 import { WelcomePage } from "@/components/welcome-splash"
 
@@ -138,8 +139,13 @@ export function AppShell() {
         return <CalendarioPage />
       case "usuarios":
         return <UsuariosPage />
+      case "catalogo-justificaciones":
+        return <CatalogoJustificacionesPage />
+      case "entidades":
       case "configuracion":
-        return <ConfiguracionPage />
+      case "dependencia":
+      case "dependencias":
+        return <EntidadesPage />
       case "perfil":
         return <PerfilPage />
       default:
@@ -153,20 +159,21 @@ export function AppShell() {
       : currentPage
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <AppSidebar
-        currentPage={sidebarCurrentPage}
-        onNavigate={handleNavigate}
-        collapsed={sidebarCollapsed}
-        onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onMenuReady={setMenuReady}
-      />
-      <main className={`flex flex-1 flex-col overflow-y-auto ${showSplash ? "" : "p-6"}`}>
-        {showSplash && user
-          ? <WelcomePage userName={user.nombre} userRole={user.rol} />
-          : menuReady ? renderPage() : null
-        }
-      </main>
-    </div>
+    <SidebarProvider value={{ collapsed: sidebarCollapsed, onToggle: () => setSidebarCollapsed((c) => !c) }}>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <AppSidebar
+          currentPage={sidebarCurrentPage}
+          onNavigate={handleNavigate}
+          collapsed={sidebarCollapsed}
+          onMenuReady={setMenuReady}
+        />
+        <main className={`flex flex-1 flex-col overflow-y-auto ${showSplash ? "" : "p-6"}`}>
+          {showSplash && user
+            ? <WelcomePage userName={user.nombre} userRole={user.rol} />
+            : menuReady ? renderPage() : null
+          }
+        </main>
+      </div>
+    </SidebarProvider>
   )
 }

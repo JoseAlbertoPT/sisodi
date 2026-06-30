@@ -3,7 +3,7 @@
 import * as React from "react"
 import { DayPicker } from "react-day-picker"
 import { es } from "date-fns/locale"
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -146,16 +146,16 @@ export function DatePickerHabil({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           disabled={disabled}
           className={cn(
-            "justify-start text-left font-normal gap-1.5",
-            compact ? "h-7 px-2 text-xs" : "h-9 px-3 text-sm",
+            "justify-start text-left font-normal gap-1.5 w-fit rounded-full bg-gray-100 border border-gray-200 text-gray-700 hover:bg-gray-200 h-auto",
+            compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm",
             !value && "text-muted-foreground",
             className,
           )}
         >
-          <CalendarIcon className={cn("shrink-0", compact ? "h-3 w-3" : "h-4 w-4")} />
+          <img src="/iconos2/calender-alt-1.svg" alt="" className={cn("shrink-0 opacity-60", compact ? "h-3 w-3" : "h-4 w-4")} />
           <span className="truncate">{label}</span>
         </Button>
       </PopoverTrigger>

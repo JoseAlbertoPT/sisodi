@@ -14,12 +14,17 @@ import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ConfirmDialog, ObservarDialog } from "@/components/ui/confirm-dialog"
+import { ActionResultScreen } from "@/components/ui/action-result-screen"
+import { SearchInput } from "@/components/ui/search-input"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
-  Search, FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
+  FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
-  HelpCircle, ArrowLeft, Info, ChevronDown, ChevronRight,
-  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil,
+  ArrowLeft, ChevronDown, ChevronRight,
+  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil, X,
 } from "lucide-react"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -27,6 +32,7 @@ import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
 import { ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { useRealtime } from "@/hooks/use-realtime"
 
 interface FiltroSolicitud {
@@ -84,7 +90,6 @@ function ordinalRegreso(n: number): string {
   if (n === 3) return "3er Regreso"
   return `${n}° Regreso`
 }
-
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio) return "---"
   const match = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
@@ -164,7 +169,8 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   if (filtro === 3) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma emisor") return "pendientes_firma"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
-      return (s.openedInFiltro[filtro] || (filtro !== 3 && !!s.folioDictamen)) ? "revision" : "nuevas"
+      if (filtro === 3) return "revision"
+      return (s.openedInFiltro[filtro] || !!s.folioDictamen) ? "revision" : "nuevas"
     }
     const preEmisor = new Set([
       "pendiente do",
@@ -246,9 +252,7 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
           )}
           {icon}{title}
           <span className="ml-auto">
-            {open
-              ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
           </span>
         </CardTitle>
       </CardHeader>
@@ -280,6 +284,7 @@ function PerfilListField({ label, value }: { label: string; value: string | null
     </div>
   )
 }
+
 
 function ListaItems({ items }: { items: string[] }) {
   const validItems = (items ?? []).filter(Boolean)
@@ -376,7 +381,7 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
           <div className="flex flex-col gap-2">
             {(raw.adjunto as any[]).map((adj, i) => (
               <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-                <FileText className="h-5 w-5 text-secondary shrink-0" />
+                <FileTypeIcon name={adj.nombre_archivo} size="sm" />
                 <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
                 {adj.ruta && (
                   <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
@@ -394,85 +399,26 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
     </div>
   )
 }
-function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel, icon }: {
+function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel }: {
   open: boolean; onClose: () => void; onConfirm: () => void
-  title: string; description: string; confirmLabel: string; icon?: React.ReactNode
+  title: string; description: string; confirmLabel: string
 }) {
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            {icon ?? <HelpCircle className="h-5 w-5 text-primary" />}{title}
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">{description}</p>
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={onConfirm} className="bg-primary text-primary-foreground hover:bg-primary/90">
-            {confirmLabel}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title={title}
+      description={description}
+      confirmLabel={confirmLabel}
+      variant="aprobar"
+    />
   )
 }
 function ObservarModal({ open, onClose, onConfirm, folio }: {
   open: boolean; onClose: () => void; onConfirm: (obs: string) => void; folio: string
 }) {
-  const [step, setStep] = useState<"confirm" | "write">("confirm")
-  const [obs, setObs]   = useState("")
-  const handleClose = () => { setStep("confirm"); setObs(""); onClose() }
-  if (step === "confirm") return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <HelpCircle className="h-5 w-5 text-destructive" />¿Estás seguro de observar?
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-         Vas a marcar <strong>{folio}</strong> con observaciones. Se devolverá a la URG.
-        </p>
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={() => setStep("write")} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5">
-            <AlertTriangle className="h-4 w-4" />Sí, continuar
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <AlertTriangle className="h-5 w-5 text-destructive" />Observar — {folio}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">Escriba las Observaciones que se Enviarán a la URG.</p>
-          <Textarea
-            placeholder="Describa las Observaciones..."
-            value={obs}
-            onChange={e => setObs(e.target.value)}
-            className="min-h-[120px] bg-card"
-          />
-          <div className="flex items-center justify-end gap-3">
-            <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-            <Button
-              onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
-              disabled={!obs.trim()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5"
-            >
-              <RotateCcw className="h-4 w-4" />Confirmar observación
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
+  return <ObservarDialog open={open} onClose={onClose} onConfirm={onConfirm} folio={folio} />
 }
 
 interface RevisorInfo { id: string; nombre: string; correo: string }
@@ -502,39 +448,46 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
   }, [open])
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-primary" />
-            Aprobar
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 pt-2">
-          <p className="text-sm text-muted-foreground">
-            Solicitud <span className="font-semibold text-card-foreground">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
-          </p>
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+      <DialogContent showCloseButton={false} className="max-w-sm p-0">
+        <div className="p-4 flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-base leading-tight pt-2">Aprobar</h3>
             </div>
-          ) : revisores.length === 0 ? (
-            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
-          ) : (
-            <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccionar revisor..." />
-              </SelectTrigger>
-              <SelectContent>
-                {revisores.map(r => (
-                  <SelectItem key={r.id} value={r.id}>
-                    <span className="font-medium">{r.nombre}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-3 pl-[52px]">
+            <p className="text-sm text-gray-500">
+              Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá en Filtro de Revisión.
+            </p>
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+              </div>
+            ) : revisores.length === 0 ? (
+              <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+            ) : (
+              <Select value={selectedId} onValueChange={setSelectedId}>
+                <SelectTrigger className="w-full max-w-sm">
+                  <SelectValue placeholder="Seleccionar revisor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {revisores.map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="font-medium">{r.nombre}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="flex justify-between pt-1">
             <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
               Cancelar
             </Button>
@@ -542,9 +495,9 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
-              >
-              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#5c2844]"
+            >
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Aprobar y asignar
             </Button>
           </div>
@@ -582,39 +535,46 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-primary" />
-            Asignar Revisor
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 pt-2">
-          <p className="text-sm text-muted-foreground">
-            Solicitud <span className="font-semibold text-card-foreground">{folio}</span> — selecciona el revisor que la atenderá.
-          </p>
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+      <DialogContent showCloseButton={false} className="max-w-sm p-0">
+        <div className="p-4 flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
+              </div>
+              <DialogTitle className="font-bold text-gray-900 text-base leading-tight pt-2">Asignar Revisor</DialogTitle>
             </div>
-          ) : revisores.length === 0 ? (
-            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
-          ) : (
-            <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccionar revisor..." />
-              </SelectTrigger>
-              <SelectContent>
-                {revisores.map(r => (
-                  <SelectItem key={r.id} value={r.id}>
-                    <span className="font-medium">{r.nombre}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-3 pl-[52px]">
+            <p className="text-sm text-gray-500">
+              Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá.
+            </p>
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
+              </div>
+            ) : revisores.length === 0 ? (
+              <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+            ) : (
+              <Select value={selectedId} onValueChange={setSelectedId}>
+                <SelectTrigger className="w-full max-w-sm">
+                  <SelectValue placeholder="Seleccionar revisor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {revisores.map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <span className="font-medium">{r.nombre}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <div className="flex justify-between pt-1">
             <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
               Cancelar
             </Button>
@@ -622,9 +582,9 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+              style={{ backgroundColor: "#773357", color: "white", borderRadius: "999px", border: "none" }}
             >
-              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Asignar
             </Button>
           </div>
@@ -740,7 +700,7 @@ function FolioDictamenCard({
         <Button
           onClick={handleAsignar}
           disabled={guardando || cargando || !consecutivo || !mes || !anio}
-          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+          className="w-full gap-2"
            >
           {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
           Asignar Folio de Dictamen
@@ -958,7 +918,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             <Button
               size="sm"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
-              className="gap-1.5 bg-primary hover:bg-primary/90 text-white border-0"
+              className="gap-1.5"
             >
               <Pencil className="h-4 w-4" />Editar
             </Button>
@@ -969,44 +929,24 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               else setShowAprobarModal(true)
             }}
             disabled={guardando}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+            className="gap-1.5"
             size="sm"
             >
             {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
             {labelAprobar}
           </Button>
           <Button
-            variant="outline" size="sm"
+            size="sm"
             onClick={() => setShowObservarModal(true)}
             disabled={guardando}
-            className="gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10"
-            >
-            <RotateCcw className="h-4 w-4" />Observar
+            className="rounded-2xl font-medium hover:opacity-90"
+            style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
+          >
+            Observar
           </Button>
         </div>
       </div>
 
-      {solicitud.reingresoCount > 0 && (
-        <Card className="border-2 border-accent/30 shadow-sm">
-          <CardContent className="flex items-start gap-3 py-4">
-            <Info className="h-5 w-5 text-accent-foreground shrink-0 mt-0.5" />
-            <div>
-              <span className="text-sm font-semibold text-accent-foreground">
-                {ordinalRegreso(solicitud.reingresoCount)}
-              </span>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Solicitud corregida y reenviada por la URG.
-                {solicitud.lastObservedStage && ` Última observación desde: Filtro ${solicitud.lastObservedStage}.`}
-              </p>
-              {ultimaObsDo && (
-                <p className="text-sm text-card-foreground mt-2 border-l-2 border-accent/40 pl-3 italic">
-                  "{ultimaObsDo}"
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {observacionesUefaActiva && (
         <Card className="border-2 border-[#832B56]/30 shadow-sm">
@@ -1127,14 +1067,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                       : "—"}
                   </span>
                 </div>
-                {solicitud.reingresoCount > 0 && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Regreso</span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-1 text-xs font-medium text-accent-foreground w-fit">
-                      <RotateCcw className="h-3 w-3" />{ordinalRegreso(solicitud.reingresoCount)}
-                    </span>
-                  </div>
-                )}
                 {solicitud.reingresoCount > 0 && solicitud.lastObservedStage && (
                   <div className="flex flex-col gap-1">
                     <span className="text-xs text-muted-foreground">Última Observacion desde</span>
@@ -1185,7 +1117,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         title={`¿${labelAprobar}?`}
         description={`La solicitud ${folioFormateado} avanzará al siguiente paso del proceso.`}
         confirmLabel="Sí, aprobar"
-        icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
         />
       <ObservarModal
         open={showObservarModal}
@@ -1229,8 +1160,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const [aprobarTarget,        setAprobarTarget]        = useState<string | null>(null)
   const [aprobarAsignarTarget,  setAprobarAsignarTarget]  = useState<string | null>(null)
   const [asignarRevisorTarget,  setAsignarRevisorTarget]  = useState<string | null>(null)
+  const [actionToast, setActionToast] = useState<{ key: number; variant: "success" | "error"; title: string; description?: string } | null>(null)
+  const [successMsg, setSuccessMsg] = useState<{ title: string; description: string; type: 'approve' | 'observe' } | null>(null)
+
+  const showToast = (variant: "success" | "error", title: string, description?: string) => {
+    setActionToast(prev => ({ key: (prev?.key ?? 0) + 1, variant, title, description }))
+  }
 
   const [searchTerm,    setSearchTerm]    = useState("")
+  const [currentPage,   setCurrentPage]   = useState(1)
   const [filterRegimen, setFilterRegimen] = useState("todos")
 
   const cargar = useCallback(async () => {
@@ -1322,10 +1260,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al aprobar"); return }
-      setSelectedId(null)
+      if (!res.ok || !json.ok) { showToast("error", "Error al aprobar", json.error ?? "No se pudo aprobar la solicitud."); return }
       void cargar()
-    } catch { alert("Error de conexión al aprobar") }
+      setSuccessMsg({ title: "Solicitud enviada al siguiente filtro", description: "La solicitud fue procesada exitosamente y avanzó a la siguiente bandeja.", type: 'approve' })
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false); setAprobarTarget(null) }
   }, [filtro, user])
 
@@ -1344,11 +1282,12 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al observar"); return }
-      setSelectedId(null); setObservarTarget(null)
+      if (!res.ok || !json.ok) { showToast("error", "Error al observar", json.error ?? "No se pudo registrar la observación."); return }
+      setObservarTarget(null)
       setActiveTab("observadas")
       void cargar()
-    } catch { alert("Error de conexión al observar") }
+      setSuccessMsg({ title: "Solicitud marcada con observaciones", description: "La solicitud fue devuelta con observaciones a la URG.", type: 'observe' })
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false) }
   }, [filtro, user])
 
@@ -1365,12 +1304,13 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al aceptar"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al aceptar", json.error ?? "No se pudo aceptar la solicitud."); return }
+      showToast("success", "Solicitud aceptada", "La solicitud ha sido aceptada para revisión.")
       // Update state so the row moves from "Asignadas" tab to "En revisión" tab
       setSolicitudes(prev =>
         prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? "Aceptado por Revisor" } : s)
       )
-    } catch { alert("Error de conexión al aceptar") }
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false) }
   }, [user])
   const handleAsignarRevisor = useCallback(async (id: string, revisorId: string) => {
@@ -1387,13 +1327,14 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
-      if (!res.ok || !json.ok) { alert(json.error ?? "Error al asignar revisor"); return }
+      if (!res.ok || !json.ok) { showToast("error", "Error al asignar revisor", json.error ?? "No se pudo asignar el revisor."); return }
+      showToast("success", "Revisor asignado", "El revisor fue asignado correctamente.")
       setSolicitudes(prev =>
         prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? s.estado } : s)
       )
       setAsignarRevisorTarget(null)
       setSelectedId(null)
-    } catch { alert("Error de conexión al asignar revisor") }
+    } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
     finally { setGuardando(false) }
   }, [user])
 
@@ -1408,6 +1349,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       const tab = classifySolicitud(s, filtro)
       if (tab !== "todas") c[tab]++
     })
+    if (filtro === 3) c.nuevas = solicitudes.filter(s => classifySolicitud(s, filtro) !== "todas").length
     c.pendientes_firma = pendientesFirmaCount
     c.solicitudes = solicitudesCount
     return c
@@ -1418,6 +1360,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       .filter(s => {
         const tab = classifySolicitud(s, filtro)
         if (filtro === 3 && tab === "todas") return false
+        if (filtro === 3 && activeTab === "nuevas") return true
         if (activeTab !== "todas") return tab === activeTab
         if (filtro === 2) return tab !== "pendientes_asignacion"
         return true
@@ -1446,7 +1389,21 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
     [solicitudes, activeTab, filtro, searchTerm, filterRegimen]
   )
 
+  useEffect(() => { setCurrentPage(1) }, [activeTab, filtro, searchTerm, filterRegimen])
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
   const selectedSolicitud = selectedId ? solicitudes.find(s => s.id === selectedId) ?? null : null
+
+  if (successMsg) return (
+    <ActionResultScreen
+      type={successMsg.type}
+      title={successMsg.title}
+      description={successMsg.description}
+      onBack={() => { setSelectedId(null); setSuccessMsg(null) }}
+    />
+  )
 
   if (selectedSolicitud) return (
     <DetalleView
@@ -1461,22 +1418,18 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   )
 
   return (
-    <PageLayout>
-      {}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">
-            {filtro === 1 ? "Bandeja en revisión" : filtro === 2 ? "Bandeja en validación" : "Bandeja en emisión"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {filtro === 1
-              ? "Revisa y analiza las solicitudes asignadas, realizando el primer filtro de revisión y observaciones."
-              : filtro === 2
-              ? "Valida y asigna las solicitudes, realizando el segundo filtro de revisión y observaciones."
-              : "Gestiona la emisión de las solicitudes, realizando la dictaminación final y la generación de dictámenes u opiniones técnicas."}
-          </p>
-        </div>
-      </div>
+    <>
+    {actionToast && (
+      <ConfirmToast key={actionToast.key} variant={actionToast.variant} title={actionToast.title} description={actionToast.description} />
+    )}
+    <PageLayout
+      title={filtro === 1 ? "Bandeja en revisión" : filtro === 2 ? "Bandeja en validación" : "Bandeja en emisión"}
+      description={filtro === 1
+        ? "Revisa y analiza las solicitudes asignadas, realizando el primer filtro de revisión y observaciones."
+        : filtro === 2
+        ? "Valida y asigna las solicitudes, realizando el segundo filtro de revisión y observaciones."
+        : "Gestiona la emisión de las solicitudes, realizando la dictaminación final y la generación de dictámenes u opiniones técnicas."}
+    >
 
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
@@ -1504,15 +1457,12 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       />
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por folio, denominación, secretaría..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="pl-10 bg-card"
-          />
-        </div>
+        <SearchInput
+          placeholder="Buscar por folio, denominación, secretaría..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          containerClassName="flex-1 max-w-sm"
+        />
         <Select value={filterRegimen} onValueChange={setFilterRegimen}>
           <SelectTrigger className="w-60 bg-card"><SelectValue placeholder="Régimen" /></SelectTrigger>
           <SelectContent>
@@ -1548,7 +1498,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
               <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-secondary text-secondary-foreground">
@@ -1575,7 +1525,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                         </div>
                       </td>
                     </tr>
-                  ) : filtered.map(sol => {
+                  ) : paginated.map(sol => {
                     const tab    = classifySolicitud(sol, filtro)
                     const config = (filtro === 2 ? TAB_CONFIG_DO : filtro === 3 ? TAB_CONFIG_EMISION : TAB_CONFIG_REVISION)[tab]
                     return (
@@ -1605,11 +1555,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                               <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit" style={{ backgroundColor: "#BE185D18", color: "#BE185D" }}>
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#BE185D]" />
                                 Observada
-                              </span>
-                            )}
-                            {sol.reingresoCount > 0 && (
-                              <span className="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent-foreground">
-                                {ordinalRegreso(sol.reingresoCount)}
                               </span>
                             )}
                           </div>
@@ -1669,7 +1614,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                   onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
                                   className="text-muted-foreground hover:text-card-foreground gap-1.5"
                                 >
-                                  <Eye className="h-4 w-4" />Ver
+                                  <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
                                 </Button>
                               ) : (
                                 <Button
@@ -1719,6 +1664,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         </CardContent>
       </Card>
       )}
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       <ConfirmModal
         open={!!aprobarTarget}
         onClose={() => setAprobarTarget(null)}
@@ -1731,7 +1677,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         })()}
         description={`La solicitud ${formatearFolio(solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion)} avanzará al siguiente paso del proceso.`}
         confirmLabel="Sí, confirmar"
-        icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
       />
       <ObservarModal
         open={!!observarTarget}
@@ -1761,5 +1706,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         guardando={guardando}
       />
     </PageLayout>
+    </>
   )
 }

@@ -4,7 +4,6 @@ import * as React from 'react'
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 
 import { cn } from '@/lib/utils'
-import { buttonVariants } from '@/components/ui/button'
 
 function AlertDialog({
   ...props
@@ -54,7 +53,7 @@ function AlertDialogContent({
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
         className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
+          'bg-white data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[16px] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.2)] duration-200 sm:max-w-lg',
           className,
         )}
         {...props}
@@ -124,7 +123,13 @@ function AlertDialogAction({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Action>) {
   return (
     <AlertDialogPrimitive.Action
-      className={cn(buttonVariants(), className)}
+      className={cn(
+        'inline-flex items-center justify-center rounded-full px-6 py-2.5 text-sm font-medium',
+        'bg-[#7B2D5E] text-white border-0 transition-colors',
+        'hover:bg-[#6a2750] focus-visible:outline-2 focus-visible:outline-[#F5A800] focus-visible:outline-offset-2',
+        'disabled:pointer-events-none disabled:opacity-50',
+        className,
+      )}
       {...props}
     />
   )
@@ -136,7 +141,13 @@ function AlertDialogCancel({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
   return (
     <AlertDialogPrimitive.Cancel
-      className={cn(buttonVariants({ variant: 'outline' }), className)}
+      className={cn(
+        'inline-flex items-center justify-center rounded-full px-6 py-2.5 text-sm font-medium',
+        'border-[1.5px] border-[#ccc] bg-white text-foreground transition-colors',
+        'hover:bg-[#f5f5f5] focus-visible:outline-2 focus-visible:outline-[#F5A800] focus-visible:outline-offset-2',
+        'disabled:pointer-events-none disabled:opacity-50',
+        className,
+      )}
       {...props}
     />
   )

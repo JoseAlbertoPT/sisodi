@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Download, Upload, CheckCircle2, Loader2, FileText, AlertCircle } from "lucide-react"
+import { FileDropZone } from "@/components/ui/file-drop-zone"
 
 interface FirmaProceso {
   id: number
@@ -109,28 +110,24 @@ export function FirmaAutografaPanel({
           ) : (
             <>
               {archivoSubido && (
-                <div className="flex items-center gap-2 rounded-md border border-secondary/30 bg-secondary/5 p-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-secondary" />
-                  <span className="flex-1 truncate">{firma?.archivo_firmado?.split("/").pop()}</span>
-                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs text-secondary hover:underline">Ver</a>
+                <div className="flex items-center gap-2 rounded-[8px] border border-[#E5E7EB] bg-white px-2 py-2">
+                  <FileText className="h-4 w-4 shrink-0 text-red-500" />
+                  <span className="flex-1 truncate text-sm text-[#374151]">{firma?.archivo_firmado?.split("/").pop()}</span>
+                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs text-[#7B2D5E] hover:underline shrink-0">Ver</a>
                 </div>
               )}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="file" accept="application/pdf" className="hidden"
-                  onChange={e => {
-                    const f = e.target.files?.[0]
-                    if (f) handleUpload(f)
-                    e.target.value = ""
-                  }}
-                  disabled={uploading}
-                />
-                <span className={`inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm ${uploading ? "opacity-60" : "hover:bg-muted"}`}>
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  {archivoSubido ? "Reemplazar archivo" : "Seleccionar PDF"}
-                </span>
-              </label>
-              {error && <p className="text-xs text-destructive">{error}</p>}
+              <FileDropZone
+                accept="application/pdf"
+                hint="Solo PDF · máx. 10 MB"
+                selectLabel={archivoSubido ? "Reemplazar archivo" : "Seleccionar PDF"}
+                multiple={false}
+                files={[]}
+                onFilesChange={(fs) => { if (fs[0]) handleUpload(fs[0]) }}
+                disabled={uploading}
+                loading={uploading}
+                loadingText="Subiendo archivo..."
+                error={error}
+              />
             </>
           )}
         </CardContent>
@@ -140,7 +137,7 @@ export function FirmaAutografaPanel({
         <Button
           onClick={() => onFinalizar()}
           disabled={!archivoSubido || guardandoFinal}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+          className="gap-1.5"
         >
           {guardandoFinal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Enviar a Emisor

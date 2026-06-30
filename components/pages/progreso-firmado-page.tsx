@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loader2, RefreshCw, ClipboardCheck, Eye, Shield, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, RefreshCw, ClipboardCheck, Shield, CheckCircle2, AlertCircle } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { PageLayout } from "@/components/page-layout"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
@@ -85,19 +85,15 @@ export function ProgresoFirmadoPage() {
   }
 
   return (
-    <PageLayout>
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5" /> Progreso de Firmado
-          </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Estado de los procesos de firma electrónica de justificaciones.</p>
-        </div>
-      </div>
+    <PageLayout
+      title="Progreso de Firmado"
+      description="Estado de los procesos de firma electrónica de justificaciones."
+    >
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive flex items-center gap-2">
-          <AlertCircle className="h-4 w-4" /> {error}
+        <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+          <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+          <span className="text-sm text-[#DC2626]">{error}</span>
         </div>
       )}
 
@@ -122,7 +118,7 @@ export function ProgresoFirmadoPage() {
                   rol: p.mi_firmante_pendiente!.rol,
                   cargo: p.mi_firmante_pendiente!.cargo,
                 })}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
+                className="gap-1.5">
                 <Shield className="h-4 w-4" /> Firmar
               </Button>
             </div>
@@ -138,7 +134,7 @@ export function ProgresoFirmadoPage() {
           {procesos.length === 0 ? (
             <p className="text-sm text-muted-foreground">No hay procesos de firma aún.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground border-b">
@@ -164,7 +160,7 @@ export function ProgresoFirmadoPage() {
                       <td className="py-2.5 pr-4 text-muted-foreground text-xs">{new Date(p.fecha_creacion).toLocaleDateString("es-MX")}</td>
                       <td className="py-2.5 pr-4">
                         <Button variant="ghost" size="sm" onClick={() => setDetalle(p)} className="gap-1.5">
-                          <Eye className="h-4 w-4" /> Ver
+                          <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" /> Ver
                         </Button>
                       </td>
                     </tr>

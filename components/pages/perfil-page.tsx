@@ -197,9 +197,9 @@ export function PerfilPage() {
               </div>
             ))}
             {error && (
-              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5">
-                <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
-                <p className="text-sm text-destructive">{error}</p>
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
+                <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+                <p className="text-sm text-[#DC2626]">{error}</p>
               </div>
             )}
             <div className="flex justify-end gap-3 pt-1">
@@ -209,7 +209,7 @@ export function PerfilPage() {
               <Button
                 onClick={() => void handleCambiarPassword()}
                 disabled={cargando}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+               
               >
                 {cargando ? "Guardando..." : "Cambiar Contraseña"}
               </Button>
