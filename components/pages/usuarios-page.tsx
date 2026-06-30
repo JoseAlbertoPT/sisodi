@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import {
 
-  Search, UserPlus, KeyRound, Pencil, X, PowerOff, Power,
+  Search, UserPlus, KeyRound, MoreVertical, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
   Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
   Landmark, Factory,
@@ -36,6 +37,13 @@ import {
   type OrganoCentralizadoNode,
   type CategoriaParaestatalItem,
 } from "@/lib/catalogo-api"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const ROLES = ["Emisor", "Validador", "Revisor", "Capturista", "UEFA", "Administrador"]
 
@@ -339,7 +347,7 @@ function SecretariaTreeSelector({
                         setSearchAtLevel(idx, e.target.value)
                         setAutocompleteQuery(e.target.value)
                       }}
-                      className={`pl-8 h-8 text-xs bg-background ${error && idx === 0 ? "border-destructive" : ""}`}
+                      className={`pl-8 h-8 rounded-full px-4 text-xs bg-background ${error && idx === 0 ? "border-destructive" : ""}`}
                       autoFocus={idx !== 0}
                     />
                   </div>
@@ -1180,7 +1188,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         autoComplete={autoComplete}
         value={form[key] as string}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-        className={`bg-background h-9 text-xs ${errors[key] ? "border-destructive" : ""}`}
+        className={`bg-background rounded-full h-9 px-4 text-xs ${errors[key] ? "border-destructive" : ""}`}
       />
       {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
@@ -1277,7 +1285,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                   value={form.rfc}
                   autoComplete="off"
                   onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
-                  className={`bg-background h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+                  className={`bg-background rounded-full h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
                   maxLength={13}
                 />
                 {!errors.rfc && <span className="text-[10px] text-muted-foreground"></span>}
@@ -1391,7 +1399,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className={`bg-background h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                    className={`bg-background rounded-full px-4 h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
@@ -1413,7 +1421,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.confirmPassword}
                     onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                    className={`bg-background h-9 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                    className={`bg-background h-9 rounded-full px-4 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
@@ -1622,7 +1630,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
               <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
           </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={requestClose}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 " onClick={requestClose}>
           <X className="h-4 w-4" />
           </Button>
         </div>
@@ -1764,7 +1772,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
               </div>
 
               <div className="flex items-center gap-3 pt-3 border-t border-border shrink-0">
-                <Button
+                <Button variant="primary"
                   onClick={() => void handleSavePermisos()}
                   disabled={permisosSaveLoading}
                   className="min-w-[140px]"
@@ -1784,7 +1792,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
           )}
         </div>
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
-          <Button variant="outline" size="sm" className="text-xs h-9" onClick={requestClose}>Cerrar</Button>
+          <Button variant="default" size="sm" className="text-xs h-9" onClick={requestClose}>Cerrar</Button>
         </div>
       </div>
     </div>
@@ -1921,22 +1929,34 @@ export function UsuariosPage() {
             className="pl-10 bg-card"
           />
         </div>
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
-          {(["todos", "centralizada", "paraestatal"] as const).map((op) => (
-            <button
-              key={op}
-              onClick={() => setFiltroAdmin(op)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                filtroAdmin === op
-                  ? op === "paraestatal"
-                    ? "bg-[#7b1d3d] text-white"
-                    : "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-card-foreground"
-              }`}
-            >
-              {op === "todos" ? "Todos" : op === "centralizada" ? "Centralizada" : "Paraestatal"}
-            </button>
-          ))}
+        <div className="flex items-center gap-6 rounded-lg border border-border bg-card p-2">
+          <RadioGroup
+    value={filtroAdmin}
+    onValueChange={(value) =>
+      setFiltroAdmin(value as "todos" | "centralizada" | "paraestatal")
+    }
+    className="flex items-center gap-6"
+  >
+    {(["todos", "centralizada", "paraestatal"] as const).map((op) => (
+      <div key={op} className="flex items-center gap-1.5">
+        <RadioGroupItem
+          value={op}
+          id={`filtro-admin-${op}`}
+        />
+
+        <label
+          htmlFor={`filtro-admin-${op}`}
+          className="text-sm text-muted-foreground cursor-pointer font-normal"
+        >
+          {op === "todos"
+            ? "Todos"
+            : op === "centralizada"
+              ? "Centralizada"
+              : "Paraestatal"}
+        </label>
+      </div>
+    ))}
+  </RadioGroup>
         </div>
       </div>
 
@@ -1984,13 +2004,11 @@ export function UsuariosPage() {
                     <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
                     <td className="px-4 py-3">
                       {row.tipoAdministracion === "centralizada" ? (
-                        <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "#16653418", color: "#166534" }}>
-                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#166534" }} />
+                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: "#16653418", color: "#166534" }}>
                           Centralizada
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
-                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#7b1d3d" }} />
+                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
                           Paraestatal
                         </span>
                       )}
@@ -2001,41 +2019,62 @@ export function UsuariosPage() {
                     <td className="px-4 py-3">
                       {row.estatus === "Activo" ? (
                         <span
-                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+                          className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
                           style={{ backgroundColor: "#16653418", color: "#166534" }}
                         >
-                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#166534" }} />
                           Activo
                         </span>
                       ) : (
                         <span
-                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+                          className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
                           style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}
                         >
-                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "#7b1d3d" }} />
                           Inactivo
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" className="text-secondary hover:text-primary gap-1.5 text-xs" onClick={() => setPermisoUserId(row.id)}>
-                          <KeyRound className="h-3.5 w-3.5" />Permiso
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1.5 text-xs" onClick={() => setEditingUserId(row.id)}>
-                          <Pencil className="h-3.5 w-3.5" />Editar
-                        </Button>
-                        <Button
-                          variant="ghost" size="sm"
-                          className={`gap-1.5 text-xs ${row.estatus === "Activo" ? "text-[#7b1d3d] hover:text-[#7b1d3d]/80" : "text-[#166534] hover:text-[#166534]/80"}`}
-                          onClick={() => toggleEstatus(row)}
-                        >
-                          {row.estatus === "Activo"
-                            ? <><PowerOff className="h-3.5 w-3.5" />Deshabilitar</>
-                            : <><Power    className="h-3.5 w-3.5" />Habilitar</>}
-                        </Button>
-                      </div>
-                    </td>
+  <div className="flex items-center justify-end">
+    <DropdownMenu>
+      <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="hover:bg-stone-200 hover:text-foreground" aria-label="Acciones">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Acciones</TooltipContent>
+                        </Tooltip>
+
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setPermisoUserId(row.id)}>
+          <KeyRound className="mr-2 h-4 w-4" />
+          Permisos
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={() => setEditingUserId(row.id)}>
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={() => toggleEstatus(row)}>
+          {row.estatus === "Activo" ? (
+            <>
+              <PowerOff className="mr-2 h-4 w-4" />
+              Deshabilitar
+            </>
+          ) : (
+            <>
+              <Power className="mr-2 h-4 w-4" />
+              Habilitar
+            </>
+          )}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </div>
+</td>
                   </tr>
                 ))}
               </tbody>

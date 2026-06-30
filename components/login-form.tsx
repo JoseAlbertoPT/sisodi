@@ -451,7 +451,7 @@ export function LoginForm() {
       <div className="relative">
         <User
           size={18}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#aeada6] pointer-events-none"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeada6] pointer-events-none"
         />
 
         <input
@@ -467,7 +467,7 @@ export function LoginForm() {
           readOnly={mustChangePassword}
           maxLength={13}
           autoComplete="username"
-          className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pl-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors uppercase"
+          className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pr-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors"
         />
       </div>
     </div>

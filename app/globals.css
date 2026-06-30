@@ -43,6 +43,14 @@
   --subtitle: #6E795A;
   --warning: #832b56;
   --warning-foreground: #F3F2EE;
+  --status-default-bg: #FFFFFF;
+  --status-default-text: #6B7280;
+  --status-default-border: #E5E7EB;
+
+  --status-primary-bg: #D9A300;
+  --status-primary-text: #FFFFFF;
+  --status-primary-border: #D9A300;
+
 }
 
 @theme inline {
