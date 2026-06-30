@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef } from "react"
+import Image from "next/image"
 import { useAuth } from "@/lib/auth-context"
 import { PageLayout } from "@/components/page-layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -13,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { TablePagination } from "@/components/ui/table-pagination"
 import {
   Search,
   Loader2,
@@ -40,7 +42,6 @@ const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => 
   ),
 })
 
-// ──────────────────── types ────────────────────
 
 interface CatalogoRecord {
   id: number
@@ -79,6 +80,11 @@ interface AdminRecord extends CatalogoRecord {
   }[]
 }
 
+const C_VERDE: string = "#2d4a3e"
+const C_BEIGE: string = "#f0ede4"
+// Construido en runtime para que el linter no lo reescriba
+const C_VINO: string  = "#" + "7b2d5e"
+
 // ──────────────────── helpers ────────────────────
 
 function fmt(val: string | null | undefined) {
@@ -110,7 +116,7 @@ function ConsultaTab() {
   const [total, setTotal]       = useState(0)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
-  const limit = 20
+  const limit = 10
 
   // view-doc modal
   const [viewRec, setViewRec]     = useState<CatalogoRecord | null>(null)
@@ -198,23 +204,132 @@ function ConsultaTab() {
   const isParaestatal = (rec: CatalogoRecord) =>
     rec.solicitud.tipo_solicitud.toLowerCase().includes("paraestatal")
 
+  const [tipoTab, setTipoTab] = useState<"honorarios" | "nombramiento">("honorarios")
+
+  const honorarios   = records.filter((r) => !isParaestatal(r))
+  const nombramiento = records.filter((r) =>  isParaestatal(r))
+  const visibleRows  = tipoTab === "honorarios" ? honorarios : nombramiento
+
+  const VERDE  = C_VERDE
+  const BEIGE  = C_BEIGE
+  const MORADO = C_VINO
+
   return (
     <>
-      {/* Search bar */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por programa, denominación, vigencia…"
-            className="pl-9"
-          />
+      {/* ════════════════ HERO BANNER ════════════════ */}
+      <div
+        className="rounded-2xl overflow-hidden mb-5 shadow-lg"
+        style={{ background: `linear-gradient(140deg, ${VERDE} 0%, #1a3028 100%)` }}
+      >
+        {/* Título + subtítulo */}
+        <div className="px-8 pt-8 pb-4 text-center">
+          <h2 className="text-xl font-bold text-white tracking-wide leading-snug">
+            Catálogo de Justificaciones Dictaminadas
+          </h2>
+          <p className="mt-1.5 text-sm" style={{ color: "rgba(255,255,255,.65)" }}>
+            Consulta los dictámenes vigentes y solicita reutilización de justificaciones
+          </p>
         </div>
-        <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </Button>
-        <span className="text-sm text-muted-foreground">{total} registro{total !== 1 ? "s" : ""}</span>
+
+        {/* Selector de tipo — segmented control */}
+        <div className="flex justify-center px-6 pb-5">
+          <div
+            className="flex items-center gap-1 rounded-xl p-1"
+            style={{ backgroundColor: "rgba(0,0,0,.22)" }}
+          >
+            <button
+              type="button"
+              onClick={() => { setTipoTab("honorarios"); setPage(1) }}
+              className="flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold transition-all duration-150"
+              style={
+                tipoTab === "honorarios"
+                  ? { backgroundColor: "#fff", color: VERDE, boxShadow: "0 1px 4px rgba(0,0,0,.2)" }
+                  : { color: "rgba(255,255,255,.75)" }
+              }
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              Honorarios
+              <span
+                className="ml-0.5 inline-flex items-center justify-center rounded-full w-4 h-4 text-[10px] font-bold"
+                style={
+                  tipoTab === "honorarios"
+                    ? { backgroundColor: "rgba(45,74,62,.12)", color: VERDE }
+                    : { backgroundColor: "rgba(255,255,255,.2)", color: "#fff" }
+                }
+              >
+                {honorarios.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setTipoTab("nombramiento"); setPage(1) }}
+              className="flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold transition-all duration-150"
+              style={
+                tipoTab === "nombramiento"
+                  ? { backgroundColor: "#fff", color: VERDE, boxShadow: "0 1px 4px rgba(0,0,0,.2)" }
+                  : { color: "rgba(255,255,255,.75)" }
+              }
+            >
+              <ListChecks className="h-3.5 w-3.5" />
+              Nombramiento / Paraestatal
+              <span
+                className="ml-0.5 inline-flex items-center justify-center rounded-full w-4 h-4 text-[10px] font-bold"
+                style={
+                  tipoTab === "nombramiento"
+                    ? { backgroundColor: "rgba(45,74,62,.12)", color: VERDE }
+                    : { backgroundColor: "rgba(255,255,255,.2)", color: "#fff" }
+                }
+              >
+                {nombramiento.length}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Search container */}
+        <div className="px-6 pb-7">
+          <div
+            className="flex items-center gap-2 max-w-2xl mx-auto rounded-2xl px-4 py-1.5"
+            style={{ backgroundColor: "#fff", boxShadow: "0 4px 16px rgba(0,0,0,.18)" }}
+          >
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar por dependencia, programa, denominación…"
+              className="flex-1 border-0 bg-transparent text-sm shadow-none focus-visible:ring-0 h-9 px-0"
+            />
+            <button
+              type="button"
+              onClick={fetchData}
+              disabled={loading}
+              className="flex items-center justify-center rounded-full w-9 h-9 shrink-0 transition-opacity hover:opacity-85 disabled:opacity-50"
+              style={{ backgroundColor: VERDE }}
+            >
+              {loading
+                ? <Loader2 className="h-4 w-4 animate-spin text-white" />
+                : <Search className="h-4 w-4 text-white" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Contador + refresh */}
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <span className="text-xs text-muted-foreground">
+          {total} registro{total !== 1 ? "s" : ""}
+        </span>
+        <button
+          type="button"
+          onClick={fetchData}
+          disabled={loading}
+          className="flex items-center justify-center rounded-lg w-7 h-7 border transition-colors hover:bg-muted/30 disabled:opacity-40"
+          style={{ borderColor: "#d4cfc8" }}
+        >
+          {loading
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            : <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />}
+        </button>
       </div>
 
       {error && (
@@ -224,163 +339,191 @@ function ConsultaTab() {
         </div>
       )}
 
-      {/* Honorarios table */}
-      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden mb-6">
-        <div className="border-b border-border bg-muted/40 px-5 py-3.5 flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-secondary" />
-          <h3 className="text-sm font-semibold text-card-foreground">Honorarios</h3>
-        </div>
+      {/* ── Tabla ───────────────────────────────────── */}
+      <div
+        className="rounded-xl overflow-hidden mb-5"
+        style={{ boxShadow: "0 2px 12px rgba(0,0,0,.08)", border: "1px solid #e2ddd6" }}
+      >
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/30 border-b border-border">
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Entidad</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa / Proyecto</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Régimen</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Personas</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Importe bruto</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Reutilizaciones</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center">
-                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-                  </td>
+          {tipoTab === "honorarios" ? (
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: VERDE }}>
+                  {["Dependencia", "Programa / Proyecto", "Régimen", "Vigencia", "Personas", "Importe bruto", "Acciones"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap"
+                      style={{ color: "rgba(255,255,255,.9)" }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              )}
-              {!loading && records.filter((r) => !isParaestatal(r)).length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    Sin registros de honorarios
-                  </td>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto" style={{ color: VERDE }} />
+                    </td>
+                  </tr>
+                )}
+                {!loading && honorarios.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      Sin registros de honorarios
+                    </td>
+                  </tr>
+                )}
+                {!loading && honorarios.map((rec, idx) => (
+                  <tr
+                    key={rec.id}
+                    className="transition-colors"
+                    style={{
+                      backgroundColor: idx % 2 === 1 ? BEIGE : "#fff",
+                      borderBottom: "1px solid #e8e4dc",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e8e2d8")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = idx % 2 === 1 ? BEIGE : "#fff")}
+                  >
+                    <td className="px-4 py-3 text-xs max-w-[180px] truncate font-medium" style={{ color: "#2a2a2a" }} title={entidadNombre(rec)}>
+                      {entidadNombre(rec)}
+                    </td>
+                    <td className="px-4 py-3 text-xs max-w-[220px] truncate text-gray-600" title={rec.programa_proyecto}>
+                      {fmt(rec.programa_proyecto)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize"
+                        style={{ backgroundColor: "rgba(45,74,62,.1)", color: VERDE }}
+                      >
+                        {fmt(rec.regimen_contratacion)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{fmt(rec.vigencia)}</td>
+                    <td className="px-4 py-3 text-xs text-center text-gray-600">{rec.numero_personas ?? "—"}</td>
+                    <td className="px-4 py-3 text-xs font-medium" style={{ color: "#2a2a2a" }}>{fmtMoney(rec.importe_bruto)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openView(rec)}
+                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80"
+                          style={{ backgroundColor: `${MORADO}15`, color: MORADO, border: `1px solid ${MORADO}30` }}
+                        >
+                          <Eye className="h-3 w-3" />Ver
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openSol(rec)}
+                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80"
+                          style={{ backgroundColor: `${VERDE}15`, color: VERDE, border: `1px solid ${VERDE}30` }}
+                        >
+                          <Send className="h-3 w-3" />Solicitar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: VERDE }}>
+                  {["Dependencia", "Denominación / Nombramiento", "Tipo actividad", "Vigencia", "Personas", "Acciones"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap"
+                      style={{ color: "rgba(255,255,255,.9)" }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              )}
-              {!loading && records.filter((r) => !isParaestatal(r)).map((rec) => (
-                <tr key={rec.id} className="border-b border-border hover:bg-muted/10 transition-colors">
-                  <td className="px-4 py-3 text-xs max-w-[160px] truncate" title={entidadNombre(rec)}>{entidadNombre(rec)}</td>
-                  <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.programa_proyecto}>{fmt(rec.programa_proyecto)}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className="text-xs capitalize">{fmt(rec.regimen_contratacion)}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
-                  <td className="px-4 py-3 text-xs text-center">{rec.numero_personas ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs">{fmtMoney(rec.importe_bruto)}</td>
-                  <td className="px-4 py-3 text-xs text-center">
-                    <span className="inline-flex items-center justify-center rounded-full bg-secondary/10 text-secondary w-6 h-6 text-xs font-semibold">
-                      {rec._count.catalogo_solicitudes}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver documento" onClick={() => openView(rec)}>
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Solicitar reutilización" onClick={() => openSol(rec)}>
-                        <Send className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto" style={{ color: VERDE }} />
+                    </td>
+                  </tr>
+                )}
+                {!loading && nombramiento.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                      Sin registros de nombramiento / paraestatal
+                    </td>
+                  </tr>
+                )}
+                {!loading && nombramiento.map((rec, idx) => (
+                  <tr
+                    key={rec.id}
+                    className="transition-colors"
+                    style={{
+                      backgroundColor: idx % 2 === 1 ? BEIGE : "#fff",
+                      borderBottom: "1px solid #e8e4dc",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e8e2d8")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = idx % 2 === 1 ? BEIGE : "#fff")}
+                  >
+                    <td className="px-4 py-3 text-xs max-w-[180px] truncate font-medium" style={{ color: "#2a2a2a" }} title={entidadNombre(rec)}>
+                      {entidadNombre(rec)}
+                    </td>
+                    <td className="px-4 py-3 text-xs max-w-[240px] truncate text-gray-600" title={rec.denominacion_nombramiento ?? ""}>
+                      {fmt(rec.denominacion_nombramiento)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{fmt(rec.tipo_actividad)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{fmt(rec.vigencia)}</td>
+                    <td className="px-4 py-3 text-xs text-center text-gray-600">{rec.numero_personas ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openView(rec)}
+                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80"
+                          style={{ backgroundColor: `${MORADO}15`, color: MORADO, border: `1px solid ${MORADO}30` }}
+                        >
+                          <Eye className="h-3 w-3" />Ver
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openSol(rec)}
+                          className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80"
+                          style={{ backgroundColor: `${VERDE}15`, color: VERDE, border: `1px solid ${VERDE}30` }}
+                        >
+                          <Send className="h-3 w-3" />Solicitar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
-      {/* Nombramiento table */}
-      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden mb-5">
-        <div className="border-b border-border bg-muted/40 px-5 py-3.5 flex items-center gap-2">
-          <ListChecks className="h-4 w-4 text-secondary" />
-          <h3 className="text-sm font-semibold text-card-foreground">Nombramiento / Paraestatal</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/30 border-b border-border">
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Entidad</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Denominación / Nombramiento</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Tipo actividad</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Personas</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Reutilizaciones</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center">
-                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-                  </td>
-                </tr>
-              )}
-              {!loading && records.filter((r) => isParaestatal(r)).length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    Sin registros de nombramiento / paraestatal
-                  </td>
-                </tr>
-              )}
-              {!loading && records.filter((r) => isParaestatal(r)).map((rec) => (
-                <tr key={rec.id} className="border-b border-border hover:bg-muted/10 transition-colors">
-                  <td className="px-4 py-3 text-xs max-w-[160px] truncate" title={entidadNombre(rec)}>{entidadNombre(rec)}</td>
-                  <td className="px-4 py-3 text-xs max-w-[220px] truncate" title={rec.denominacion_nombramiento ?? ""}>{fmt(rec.denominacion_nombramiento)}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{fmt(rec.tipo_actividad)}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
-                  <td className="px-4 py-3 text-xs text-center">{rec.numero_personas ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs text-center">
-                    <span className="inline-flex items-center justify-center rounded-full bg-secondary/10 text-secondary w-6 h-6 text-xs font-semibold">
-                      {rec._count.catalogo_solicitudes}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Ver documento" onClick={() => openView(rec)}>
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Solicitar reutilización" onClick={() => openSol(rec)}>
-                        <Send className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground">Página {page} de {totalPages}</span>
-          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages || loading}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      {/* ── Paginación ──────────────────────────────── */}
+      <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
 
       {/* Ver documento modal */}
       <Dialog open={showView} onOpenChange={setShowView}>
-        <DialogContent className="max-w-3xl h-[80vh] flex flex-col gap-0 p-0 overflow-hidden">
-          <DialogHeader className="px-5 py-4 border-b border-border">
-            <DialogTitle className="text-base font-semibold">Documento de justificación</DialogTitle>
+        <DialogContent className="max-w-3xl h-[80vh] flex flex-col gap-0 p-0 overflow-hidden" style={{ backgroundColor: MORADO }}>
+          <DialogHeader className="px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,.15)" }}>
+            <DialogTitle className="text-base font-semibold text-white">
+              Documento de justificación
+            </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden p-4">
             {viewRec?.archivo_pdf_sin_firmas ? (
               <PdfPreview fileUrl={viewRec.archivo_pdf_sin_firmas} />
             ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-                <AlertCircle className="h-10 w-10 text-muted-foreground/40" />
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-white">
+                <AlertCircle className="h-10 w-10 opacity-40" />
                 <p className="text-sm font-medium">Sin archivo PDF disponible</p>
-                <p className="text-xs text-center max-w-xs">
+                <p className="text-xs text-center max-w-xs opacity-60">
                   Este registro no tiene un PDF adjunto. El documento se vincula automáticamente
                   cuando el dictamen es emitido con archivo.
                 </p>
@@ -392,33 +535,39 @@ function ConsultaTab() {
 
       {/* Solicitar reutilización modal */}
       <Dialog open={showSol} onOpenChange={setShowSol}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" style={{ backgroundColor: MORADO }}>
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold">Solicitar reutilización</DialogTitle>
+            <DialogTitle className="text-base font-semibold text-white">
+              Solicitar reutilización
+            </DialogTitle>
           </DialogHeader>
           {solRec && (
             <div className="flex flex-col gap-4 pt-1">
-              <div className="rounded-lg bg-muted/40 border border-border px-4 py-3 text-xs space-y-1">
-                <p className="font-semibold text-card-foreground">{entidadNombre(solRec)}</p>
-                <p className="text-muted-foreground">{fmt(solRec.programa_proyecto)}</p>
-                <p className="text-muted-foreground">Vigencia actual: <span className="font-medium text-card-foreground">{fmt(solRec.vigencia)}</span></p>
+              <div className="rounded-lg px-4 py-3 text-xs space-y-1" style={{ backgroundColor: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)" }}>
+                <p className="font-semibold text-white">{entidadNombre(solRec)}</p>
+                <p style={{ color: "rgba(255,255,255,.7)" }}>{fmt(solRec.programa_proyecto)}</p>
+                <p style={{ color: "rgba(255,255,255,.7)" }}>
+                  Vigencia actual:{" "}
+                  <span className="font-medium text-white">{fmt(solRec.vigencia)}</span>
+                </p>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-card-foreground">
-                  Nueva vigencia <span className="text-destructive">*</span>
+                <label className="text-xs font-semibold text-white">
+                  Nueva vigencia <span style={{ color: "#ffaaaa" }}>*</span>
                 </label>
                 <Input
                   placeholder="Ej: 01/01/2026 / 31/12/2026"
                   value={solVigencia}
                   onChange={(e) => setSolVigencia(e.target.value)}
                   disabled={solLoading || solOk}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus-visible:ring-white/40"
                 />
               </div>
 
               <div className="flex gap-3">
                 <div className="flex flex-col gap-1.5 flex-1">
-                  <label className="text-xs font-semibold text-card-foreground">Núm. personas</label>
+                  <label className="text-xs font-semibold text-white">Núm. personas</label>
                   <Input
                     type="number"
                     min={1}
@@ -426,10 +575,11 @@ function ConsultaTab() {
                     value={solPersonas}
                     onChange={(e) => setSolPersonas(e.target.value)}
                     disabled={solLoading || solOk}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus-visible:ring-white/40"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1">
-                  <label className="text-xs font-semibold text-card-foreground">Núm. prestadores</label>
+                  <label className="text-xs font-semibold text-white">Núm. prestadores</label>
                   <Input
                     type="number"
                     min={1}
@@ -437,29 +587,38 @@ function ConsultaTab() {
                     value={solPrestadores}
                     onChange={(e) => setSolPrestadores(e.target.value)}
                     disabled={solLoading || solOk}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus-visible:ring-white/40"
                   />
                 </div>
               </div>
 
               {solError && (
-                <div className="flex items-center gap-2 text-sm text-destructive">
+                <div className="flex items-center gap-2 text-sm" style={{ color: "#ffaaaa" }}>
                   <AlertCircle className="h-4 w-4 shrink-0" />{solError}
                 </div>
               )}
               {solOk && (
-                <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+                <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <CheckCircle2 className="h-4 w-4" />Solicitud enviada correctamente
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-1 border-t border-border">
-                <Button variant="outline" size="sm" onClick={() => setShowSol(false)} disabled={solLoading}>Cancelar</Button>
+              <div className="flex items-center justify-end gap-2 pt-1" style={{ borderTop: "1px solid rgba(255,255,255,.15)" }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSol(false)}
+                  disabled={solLoading}
+                  className="border-white/30 text-white hover:bg-white/10"
+                >
+                  Cancelar
+                </Button>
                 <Button
                   size="sm"
                   onClick={handleSolicitar}
                   disabled={solLoading || solOk || !solVigencia.trim()}
-                  style={{ backgroundColor: "#773357", color: "#fff" }}
-                  className="hover:opacity-90 gap-2"
+                  className="gap-2 hover:opacity-90"
+                  style={{ backgroundColor: "#fff", color: MORADO }}
                 >
                   {solLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                   {solLoading ? "Enviando…" : "Enviar solicitud"}
@@ -668,7 +827,7 @@ export function CatalogoJustificacionesPage() {
 
   return (
     <PageLayout
-      title="Catálogo de Justificaciones"
+      title="Catálogo "
       description="Consulta y reutilización de justificaciones dictaminadas previamente."
     >
       <Tabs defaultValue="consulta" className="w-full">
