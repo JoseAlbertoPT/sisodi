@@ -56,7 +56,6 @@
   --sidebar-accent-foreground: #f3f2ee;
   --sidebar-border: #344636;
   --sidebar-ring: #c69c6d;
-<<<<<<< HEAD
   --sidebar-bg-light: #F3F2EE;
   --sidebar-dropdown: #6B2347;
   --title: #C69C6D;
@@ -71,7 +70,6 @@
   --status-primary-text: #FFFFFF;
   --status-primary-border: #D9A300;
 
-=======
   --sidebar-bg-light: #f9f8f5;
   --sidebar-dropdown: #773357;
 
@@ -101,7 +99,6 @@
   --badge-info-fg: #3266cb;
   --badge-rose-bg: #ffeaea;
   --badge-rose-fg: #87090c;
->>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
 }
 
 @theme inline {

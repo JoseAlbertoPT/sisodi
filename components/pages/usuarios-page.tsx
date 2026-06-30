@@ -39,7 +39,6 @@ import {
   type OrganoCentralizadoNode,
   type CategoriaParaestatalItem,
 } from "@/lib/catalogo-api"
-<<<<<<< HEAD
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,9 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-=======
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
->>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
 
 const ROLES = ["Emisor", "Validador", "Revisor", "Capturista", "UEFA", "Administrador"]
 
@@ -1193,11 +1190,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         autoComplete={autoComplete}
         value={form[key] as string}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-<<<<<<< HEAD
         className={`bg-background rounded-full h-9 px-4 text-xs ${errors[key] ? "border-destructive" : ""}`}
-=======
-        className={`bg-background h-9 py-2 text-xs ${errors[key] ? "border-destructive" : ""}`}
->>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
       />
       {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
@@ -1293,11 +1286,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                   value={form.rfc}
                   autoComplete="off"
                   onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
-<<<<<<< HEAD
                   className={`bg-background rounded-full h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
-=======
-                  className={`bg-background h-9 py-2 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
->>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
                   maxLength={13}
                 />
                 {!errors.rfc && <span className="text-[10px] text-muted-foreground"></span>}
@@ -1411,11 +1400,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-<<<<<<< HEAD
                     className={`bg-background rounded-full px-4 h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
-=======
-                    className={`bg-background h-9 py-2 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
->>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
                   />
                   <button
                     type="button"
@@ -1437,11 +1422,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.confirmPassword}
                     onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-<<<<<<< HEAD
                     className={`bg-background h-9 rounded-full px-4 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
-=======
-                    className={`bg-background h-9 py-2 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
->>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
                   />
                   <button
                     type="button"
@@ -1945,7 +1926,6 @@ export function UsuariosPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-<<<<<<< HEAD
         <div className="relative max-w-sm flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -1983,30 +1963,6 @@ export function UsuariosPage() {
       </div>
     ))}
   </RadioGroup>
-=======
-        <SearchInput
-          placeholder="Buscar por nombre, correo, RFC..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          containerClassName="max-w-sm flex-1 min-w-[200px]"
-        />
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
-          {(["todos", "centralizada", "paraestatal"] as const).map((op) => (
-            <button
-              key={op}
-              onClick={() => setFiltroAdmin(op)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                filtroAdmin === op
-                  ? op === "paraestatal"
-                    ? "bg-[#7b1d3d] text-white"
-                    : "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-card-foreground"
-              }`}
-            >
-              {op === "todos" ? "Todos" : op === "centralizada" ? "Centralizada" : "Paraestatal"}
-            </button>
-          ))}
->>>>>>> b8f647151c2319bc68bb343ce23cc2c9de5bc1db
         </div>
       </div>
 
