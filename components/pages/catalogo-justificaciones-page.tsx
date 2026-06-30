@@ -82,10 +82,8 @@ interface AdminRecord extends CatalogoRecord {
 
 const C_VERDE: string = "#2d4a3e"
 const C_BEIGE: string = "#f0ede4"
-// Construido en runtime para que el linter no lo reescriba
 const C_VINO: string  = "#" + "7b2d5e"
 
-// ──────────────────── helpers ────────────────────
 
 function fmt(val: string | null | undefined) {
   return val ?? "—"
@@ -104,7 +102,6 @@ function entidadNombre(rec: CatalogoRecord) {
     ?? "—"
 }
 
-// ──────────────────── ConsultaTab ────────────────────
 
 function ConsultaTab() {
   const { user } = useAuth()
@@ -117,12 +114,8 @@ function ConsultaTab() {
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
   const limit = 10
-
-  // view-doc modal
   const [viewRec, setViewRec]     = useState<CatalogoRecord | null>(null)
   const [showView, setShowView]   = useState(false)
-
-  // solicitar-reutilizacion modal
   const [solRec, setSolRec]       = useState<CatalogoRecord | null>(null)
   const [showSol, setShowSol]     = useState(false)
   const [solVigencia, setSolVigencia]       = useState("")
@@ -132,7 +125,6 @@ function ConsultaTab() {
   const [solError, setSolError]       = useState<string | null>(null)
   const [solOk, setSolOk]             = useState(false)
 
-  // debounce search
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedQ(q); setPage(1) }, 400)
     return () => clearTimeout(t)
@@ -201,8 +193,10 @@ function ConsultaTab() {
     }
   }
 
-  const isParaestatal = (rec: CatalogoRecord) =>
-    rec.solicitud.tipo_solicitud.toLowerCase().includes("paraestatal")
+  const isParaestatal = (rec: CatalogoRecord) => {
+    const t = rec.solicitud.tipo_solicitud.toLowerCase()
+    return t.includes("paraestatal") || t.includes("nombramiento")
+  }
 
   const [tipoTab, setTipoTab] = useState<"honorarios" | "nombramiento">("honorarios")
 
@@ -216,7 +210,6 @@ function ConsultaTab() {
 
   return (
     <>
-      {/* ════════════════ HERO BANNER ════════════════ */}
       <div
         className="rounded-2xl overflow-hidden mb-5 shadow-lg"
         style={{ background: `linear-gradient(140deg, ${VERDE} 0%, #1a3028 100%)` }}
@@ -231,7 +224,6 @@ function ConsultaTab() {
           </p>
         </div>
 
-        {/* Selector de tipo — segmented control */}
         <div className="flex justify-center px-6 pb-5">
           <div
             className="flex items-center gap-1 rounded-xl p-1"
@@ -339,7 +331,6 @@ function ConsultaTab() {
         </div>
       )}
 
-      {/* ── Tabla ───────────────────────────────────── */}
       <div
         className="rounded-xl overflow-hidden mb-5"
         style={{ boxShadow: "0 2px 12px rgba(0,0,0,.08)", border: "1px solid #e2ddd6" }}

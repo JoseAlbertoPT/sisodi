@@ -17,6 +17,9 @@ import {
   Settings,
   Building2,
   BookOpen,
+  ListChecks,
+  Search,
+  FileOutput,
   Menu as MenuIcon,
   LogOut,
 } from "lucide-react"
@@ -70,9 +73,12 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 const KEY_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  dependencias: Building2,
-  dependencia:  Building2,
-  entidades:    Building2,
+  dependencias:      Building2,
+  dependencia:       Building2,
+  entidades:         Building2,
+  "bandeja-filtro1": Search,
+  "bandeja-filtro2": ListChecks,
+  "bandeja-filtro3": FileOutput,
 }
 
 function getIconForNode(node: MenuNode): React.ReactNode {
