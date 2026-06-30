@@ -26,6 +26,8 @@ const buttonVariants = cva(
         ghost:
           'text-[#5d5e5f] hover:bg-secondary/10 hover:text-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
+        vino:
+          'bg-[#773357] text-white hover:bg-[#5c2844]',
       },
       size: {
         default: "h-10 px-6",

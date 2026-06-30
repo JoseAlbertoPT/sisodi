@@ -11,7 +11,7 @@ export type ConfirmVariant = "aprobar" | "observar" | "eliminar" | "default"
 
 // Shared button styles used across all variants
 const BTN_PINK: React.CSSProperties = { backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }
-const BTN_PURPLE: React.CSSProperties = { backgroundColor: "#6b2d6b", color: "#fff", border: "none" }
+const BTN_PURPLE: React.CSSProperties = { backgroundColor: "#773357", color: "#fff", border: "none" }
 
 const VARIANT_CFG = {
   aprobar: {

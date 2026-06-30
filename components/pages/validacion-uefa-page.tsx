@@ -6,6 +6,7 @@ import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge, estadoBadge } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
@@ -95,7 +96,6 @@ interface UefaSolicitud {
   reingresoCount: number
   _raw?: any
 }
-
 const INICIALES_MES_MAP: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
   "05": "MY", "06": "JN", "07": "JL", "08": "AG",
@@ -412,7 +412,12 @@ function DictamenModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5">
+            <Button
+              size="sm"
+              onClick={handlePrint}
+              className="gap-1.5 rounded-2xl font-medium hover:opacity-90"
+              style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
+            >
               <Printer className="h-4 w-4" />Imprimir
             </Button>
             <Button variant="ghost" size="sm" onClick={onClose}>Cerrar</Button>
@@ -510,40 +515,7 @@ function DictamenModal({
 }
 
 function UefaEstadoBadge({ estado }: { estado: string }) {
-  const n = norm(estado)
-  let color = "#64748b"
-  let label = estado
-  if (n === "en captura" || n.includes("en validacion justificaciones") || n.includes("enviada a validacion")) {
-    color = "#2563EB"; label = "En Validación"
-  } else if (n.includes("observado por revisor")) {
-    color = "#9D174D"; label = "Obs. Revisión"
-  } else if (n.includes("observado por validacion final")) {
-    color = "#BE185D"; label = "Obs. Validación"
-  } else if (n.includes("observado por emisor")) {
-    color = "#DB2777"; label = "Obs. Emisión"
-  } else if (n.includes("observado") || n.includes("devuelta")) {
-    color = "#832B56"; label = "Observada"
-  } else if (n.includes("pendiente firma dictamen")) {
-    color = "#6D28D9"; label = "Pdte. Firma"
-  } else if (n.includes("en revision revisor")) {
-    color = "#0F766E"; label = "En Revisión"
-  } else if (n.includes("en validacion final")) {
-    color = "#7C3AED"; label = "En Validación DGDO"
-  } else if (n.includes("en revision emisor")) {
-    color = "#0891B2"; label = "En Emisión"
-  } else if (n === "emitido" || n.includes("emitido")) {
-    color = "#15803d"; label = "Emitido"
-  }
-
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
-      style={{ backgroundColor: `${color}18`, color }}
-    >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-      {label}
-    </span>
-  )
+  return estadoBadge(estado)
 }
 
 function DevolucionObs({ comentario }: { comentario: string }) {
@@ -1110,9 +1082,10 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
           {isEmitida && (
             <>
               <Button
-                variant="outline" size="sm"
+                size="sm"
                 onClick={() => setShowDictamen(true)}
-                className="gap-1.5"
+                className="gap-1.5 rounded-2xl font-medium hover:opacity-90"
+                style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
               >
                 <FileCheck className="h-4 w-4" />Ver Dictamen
               </Button>

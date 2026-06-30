@@ -623,8 +623,6 @@ function ConsultaTab() {
   )
 }
 
-// ──────────────────── AdministracionTab ────────────────────
-
 function AdministracionTab() {
   const [q, setQ]               = useState("")
   const [debouncedQ, setDebouncedQ] = useState("")

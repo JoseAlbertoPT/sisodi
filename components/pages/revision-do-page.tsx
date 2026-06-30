@@ -2049,7 +2049,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                         style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}>
                         Observar
                       </Button>
-                      <Button size="sm" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
+                      <Button size="sm" variant="vino" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
                         className="gap-1.5">
                         {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                         Aprobar
@@ -2065,7 +2065,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                         style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}>
                         Observar
                       </Button>
-                      <Button size="sm" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
+                      <Button size="sm" variant="vino" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
                         className="gap-1.5">
                         {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                         Aprobar

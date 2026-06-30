@@ -7,6 +7,7 @@ import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge, estadoBadge } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -149,7 +150,7 @@ function classifyDO(s: FiltroSolicitud): TabKey {
   ) return "observadas"
   if (
     n === "aceptado por revisor"     || n === "aprobado por revisor" ||
-    n.includes("en validacion final")
+    n.includes("en validacionfinal")
   ) return "en_validacion"
   return "todas"
 }
@@ -224,14 +225,13 @@ const TAB_CONFIG_DO: TabCfg = {
   todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 
+
 function SlaIndicator({ diasRestantes }: { diasRestantes: number | null }) {
-  const color = getSlaColor(diasRestantes)
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
-      style={{ backgroundColor: `${color}18`, color }}
+      className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
+      style={getSlaStyle(diasRestantes)}
     >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
       {getSlaLabel(diasRestantes)}
     </span>
   )
@@ -896,7 +896,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               <h2 className="text-lg font-semibold text-foreground">
                 {folioFormateado || <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>}
               </h2>
-              <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>
+              {estadoBadge(solicitud.estado)}
               {folioDictamen && (
                 <Badge className="bg-secondary/15 text-secondary border-0 text-xs gap-1">
                   <Stamp className="h-3 w-3" />Dict. {folioDictamen}
@@ -1053,7 +1053,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Estado actual</span>
-                  <Badge className="bg-primary/15 text-primary border-0 text-xs w-fit">{solicitud.estado}</Badge>
+                  {estadoBadge(solicitud.estado)}
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Plazo de Atención</span>
@@ -1306,7 +1306,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       const json = await res.json()
       if (!res.ok || !json.ok) { showToast("error", "Error al aceptar", json.error ?? "No se pudo aceptar la solicitud."); return }
       showToast("success", "Solicitud aceptada", "La solicitud ha sido aceptada para revisión.")
-      // Update state so the row moves from "Asignadas" tab to "En revisión" tab
       setSolicitudes(prev =>
         prev.map(s => s.id === id ? { ...s, estado: json.estadoNuevo ?? "Aceptado por Revisor" } : s)
       )
@@ -1533,29 +1532,13 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
 
                         <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
-                            {filtro === 2 && tab === "pendientes_asignacion" && sol.revisorAsignado ? (
-                              <span
-                                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
-                                style={{ backgroundColor: "#0E749018", color: "#0E7490" }}
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#0E7490]" />
-                                Pendiente de aceptación
-                              </span>
-                            ) : (
-                              <span
-                                className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
-                                style={{ backgroundColor: `${(config.badgeStyle.backgroundColor as string)}18`, color: config.badgeStyle.backgroundColor as string }}
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: config.badgeStyle.backgroundColor as string }} />
-                                {config.label}
-                              </span>
-                            )}
+                            {filtro === 2 && tab === "pendientes_asignacion" && sol.revisorAsignado
+                              ? <StatusBadge label="Pendiente de aceptación" color="#0E7490" />
+                              : <StatusBadge label={config.label} color={config.badgeStyle.backgroundColor as string} />
+                            }
                             {((filtro === 1 && sol.estado.toLowerCase() === "observado por validacion final") ||
                               (filtro === 2 && sol.estado.toLowerCase().includes("observado por emisor"))) && (
-                              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit" style={{ backgroundColor: "#BE185D18", color: "#BE185D" }}>
-                                <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#BE185D]" />
-                                Observada
-                              </span>
+                              <StatusBadge label="Observada" color="#BE185D" />
                             )}
                           </div>
                         </td>

@@ -4,6 +4,7 @@ import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
@@ -1241,23 +1242,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             <p className="text-[11px] text-muted-foreground truncate">{usuario.correo} · {usuario.rol}</p>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <Badge
-              className={`text-[11px] ${usuario.estatus === "Activo" ? "bg-secondary/20 text-secondary-foreground border-secondary/30" : ""}`}
-              variant="outline"
-            >
-              {usuario.estatus}
-            </Badge>
-            {usuario.tipoAdministracion === "centralizada" ? (
-              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: "#16653418", color: "#166534" }}>
-                <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: "#166534" }} />
-                Centralizada
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
-                <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: "#7b1d3d" }} />
-                Paraestatal
-              </span>
-            )}
+            <StatusBadge label={usuario.estatus} />
+            <StatusBadge
+              label={usuario.tipoAdministracion === "centralizada" ? "Centralizada" : "Paraestatal"}
+              color={usuario.tipoAdministracion === "centralizada" ? "#166534" : "#7b1d3d"}
+            />
           </div>
         </div>
 
@@ -1926,15 +1915,12 @@ export function UsuariosPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative max-w-sm flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre, correo, RFC..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-card"
-          />
-        </div>
+        <SearchInput
+          placeholder="Buscar por nombre, correo, RFC..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          containerClassName="flex-1 max-w-sm min-w-[200px]"
+        />
         <div className="flex items-center gap-6 rounded-lg border border-border bg-card p-2">
           <RadioGroup
     value={filtroAdmin}

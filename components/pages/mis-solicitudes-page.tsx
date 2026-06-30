@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge, estadoBadge } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { SearchInput } from "@/components/ui/search-input"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
@@ -257,53 +258,6 @@ function getSubEstadoDGDO(estado: UrgEstado): string | null {
   if (n.includes("pendiente firma dictamen"))
     return "En Emisión"
   return null
-}
-function estadoBadge(estado: UrgEstado) {
-  const n = (estado ?? "").toLowerCase()
-  let color = "#64748b"
-  let label: string = estado ?? "—"
-  if (n === "borrador" || n === "en captura") {
-    color = "#94a3b8"; label = "Borrador"
-  } else if (
-    n.includes("en validacion justificaciones") || n.includes("enviada a validacion") ||
-    n.includes("pendiente firma justificacion")
-  ) {
-    color = "#2563EB"; label = "En Aprobación"
-  } else if (n.includes("observada por uefa") || n.includes("observado por uefa") ||
-    (n.includes("observado por validacion") && !n.includes("final"))) {
-    color = "#832B56"; label = "Obs. UEFA"
-  } else if (n.includes("observado por revisor")) {
-    color = "#9D174D"; label = "Obs. Revisión"
-  } else if (n.includes("observado por validacion final")) {
-    color = "#BE185D"; label = "Obs. Validación"
-  } else if (n.includes("observado por emisor")) {
-    color = "#DB2777"; label = "Obs. Emisión"
-  } else if (
-    n.includes("devuelta por do") || n.includes("observado do filtro") || n.includes("observado por do")
-  ) {
-    color = "#EA580C"; label = "Devuelta por DO"
-  } else if (n.includes("en revision revisor") || n === "aprobado por revisor" || n === "aceptado por revisor") {
-    color = "#0F766E"; label = "En Revisión"
-  } else if (n.includes("en validacion final") || n === "aprobado") {
-    color = "#7C3AED"; label = "En Validación"
-  } else if (n.includes("en revision emisor")) {
-    color = "#0891B2"; label = "En Emisión"
-  } else if (n.includes("pendiente firma dictamen")) {
-    color = "#6D28D9"; label = "Pendiente Firma"
-  } else if (n.includes("en revision do") || n === "en proceso do" || n === "pendiente do") {
-    color = "#4F46E5"; label = "En Proceso DGDO"
-  } else if (n === "emitido") {
-    color = "#15803d"; label = "Emitido"
-  }
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
-      style={{ backgroundColor: `${color}18`, color }}
-    >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-      {label}
-    </span>
-  )
 }
 
 function esJsonEdicion(comentario: string | null | undefined): boolean {
@@ -1818,10 +1772,9 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                           const label = sol.slaRestante <= 0 ? "Cerrada" : `${sol.slaRestante} ${sol.slaRestante === 1 ? "día" : "días"}`
                           return (
                             <span
-                              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold w-fit"
+                              className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
                               style={{ backgroundColor: `${color}18`, color }}
                             >
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
                               {label}
                             </span>
                           )
