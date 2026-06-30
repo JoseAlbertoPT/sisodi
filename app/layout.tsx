@@ -57,6 +57,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`light ${karolSans.variable} ${twogetherSans.variable}`} style={{ colorScheme: 'light' }} suppressHydrationWarning>
+      <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/morelosdesign/morelos-ds@main/tokens/css/all.css" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/morelosdesign/morelos-ds@main/tokens/css/typography-compound.css" />
+      </head>
       <body className="theme-light theme-desktop min-h-screen bg-background font-sans antialiased">
         <AuthProvider>
           <SolicitudesProvider>
