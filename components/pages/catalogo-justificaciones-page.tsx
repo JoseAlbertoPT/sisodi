@@ -226,26 +226,43 @@ function ConsultaTab() {
     try {
       const vi = dateToIso(solVigInicio!)
       const vf = dateToIso(solVigFin!)
-      const np = isParaestatal(solRec) ? (solPersonas ? Number(solPersonas) : null) : null
-      const npr = !isParaestatal(solRec) ? (solPrestadores ? Number(solPrestadores) : null) : null
-      const res = await fetch("/api/catalogo-justificaciones/solicitar", {
+      const npNum = isParaestatal(solRec) ? (solPersonas ? Number(solPersonas) : null) : null
+      const nprNum = !isParaestatal(solRec) ? (solPrestadores ? Number(solPrestadores) : null) : null
+
+      // Registrar quién generó (para que aparezca en administración)
+      await fetch("/api/catalogo-justificaciones/solicitar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           catalogo_justificacion_id: solRec.id,
           usuario_id: user.id,
           nueva_vigencia: `${vi} / ${vf}`,
-          nuevo_numero_personas: np,
-          nuevos_numero_prestadores: npr,
+          nuevo_numero_personas: npNum,
+          nuevos_numero_prestadores: nprNum,
         }),
       })
-      if (!res.ok) {
-        const body = await res.json()
-        throw new Error(body.error ?? "Error al enviar la solicitud")
-      }
+
+      // Descargar el PDF
+      const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
+      const params = new URLSearchParams({
+        id: String(solRec.solicitud.id),
+        vigenciaInicio: vi,
+        vigenciaFin: vf,
+        sinFirmas: "true",
+      })
+      if (np) params.set("numeroPersonas", np)
+      const pdfRes = await fetch(`/api/pdf/justificacion?${params}`)
+      if (!pdfRes.ok) throw new Error("Error al generar el PDF")
+      const blob = await pdfRes.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `Justificacion_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
       setShowSol(false)
     } catch (e) {
-      setSolError(e instanceof Error ? e.message : "Error al enviar la solicitud")
+      setSolError(e instanceof Error ? e.message : "Error al generar el PDF")
     } finally {
       setSolLoading(false)
     }
@@ -541,7 +558,6 @@ function ConsultaTab() {
                 ))}
               </tbody>
             </table>
-
           )}
         </div>
       </div>
@@ -586,23 +602,20 @@ function ConsultaTab() {
           </div>
         </DialogContent>
       </Dialog>
-
       <Dialog open={showSol} onOpenChange={setShowSol}>
         <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-[#E5E7EB]">
             <DialogTitle className="text-base font-semibold text-[#1F2937]">
-              Solicitar reutilización
+              Generar dictamen
             </DialogTitle>
           </div>
-
           {solRec && (
             <div className="flex flex-col gap-4 px-6 py-5">
               <p className="text-xs text-[#6B7280]">
                 {isParaestatal(solRec)
-                  ? "Indica la vigencia y el número de personas para la reutilización. Tu solicitud quedará registrada para su procesamiento."
-                  : "Indica la vigencia y el número de prestadores de servicio. Tu solicitud quedará registrada para su procesamiento."}
+                  ? "Ajusta la vigencia y el número de personas. Se descargará el PDF del dictamen sin firmas."
+                  : "Ajusta la vigencia y el número de prestadores de servicio. Se descargará el PDF del dictamen sin firmas."}
               </p>
-
               <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[#F3F4F6] border border-[#E5E7EB]">
                 <p className="font-semibold text-[#1F2937]">{entidadNombre(solRec)}</p>
                 <p className="text-[#6B7280]">{fmt(solRec.programa_proyecto)}</p>
@@ -636,7 +649,6 @@ function ConsultaTab() {
                 </div>
               </div>
 
-              {/* Campo numérico según régimen */}
               <div className="flex flex-col gap-2">
                 {isParaestatal(solRec) ? (
                   <>
@@ -666,15 +678,11 @@ function ConsultaTab() {
                   </>
                 )}
               </div>
-
-              {/* Estados */}
               {solError && (
                 <div className="flex items-center gap-2 text-xs text-destructive">
                   <AlertCircle className="h-4 w-4 shrink-0" />{solError}
                 </div>
               )}
-
-              {/* Footer */}
               <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#E5E7EB]">
                 <Button
                   onClick={() => setShowSol(false)}
@@ -691,7 +699,7 @@ function ConsultaTab() {
                   style={{ backgroundColor: MORADO, color: "#fff" }}
                 >
                   {solLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  {solLoading ? "Enviando…" : "Solicitar"}
+                  {solLoading ? "Generando…" : "Generar"}
                 </Button>
               </div>
             </div>
@@ -745,7 +753,6 @@ function AdministracionTab() {
   }, [debouncedQ, page])
 
   useEffect(() => { void fetchData() }, [fetchData])
-
   const handleToggle = async (rec: AdminRecord) => {
     setToggling(rec.id)
     try {
@@ -763,40 +770,31 @@ function AdministracionTab() {
     }
   }
 
-  const handleProcesar = async (sol: AdminRecord["catalogo_solicitudes"][0]) => {
-    if (!user) return
+  const handleProcesar = async (rec: AdminRecord, sol: AdminRecord["catalogo_solicitudes"][0]) => {
     setProcesando(sol.id)
     try {
-      const res = await fetch("/api/catalogo-justificaciones/procesar", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ catalogo_solicitud_id: sol.id, admin_usuario_id: user.id }),
-      })
-      const body = await res.json()
-      if (res.status === 409) {
-        await fetchData()
-        return
-      }
+      const partes = sol.nueva_vigencia.split("/").map((s) => s.trim())
+      const vi = partes[0] ?? ""
+      const vf = partes[1] ?? ""
+      const params = new URLSearchParams({ id: String(rec.solicitud.id), sinFirmas: "true" })
+      if (vi) params.set("vigenciaInicio", vi)
+      if (vf) params.set("vigenciaFin", vf)
+      const np = sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores
+      if (np) params.set("numeroPersonas", String(np))
 
-      if (!res.ok) throw new Error(body.error ?? "Error al procesar")
-      const { solicitud_id, folio } = body
-      const pdfRes = await fetch(`/api/pdf/justificacion?id=${solicitud_id}&sinFirmas=true`)
-      if (pdfRes.ok) {
-        const blob = await pdfRes.blob()
-        const url  = URL.createObjectURL(blob)
-        const a    = document.createElement("a")
-        a.href     = url
-        a.download = `justificacion-reutilizacion-${folio ?? solicitud_id}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        setTimeout(() => URL.revokeObjectURL(url), 1000)
-      }
-
-      // 3. Refrescar desde BD para reflejar estado real
-      await fetchData()
+      const pdfRes = await fetch(`/api/pdf/justificacion?${params}`)
+      if (!pdfRes.ok) throw new Error("Error al generar el PDF")
+      const blob = await pdfRes.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement("a")
+      a.href     = url
+      a.download = `justificacion-catalogo-${rec.solicitud.folio_dictamen ?? rec.solicitud.folio_recepcion ?? rec.solicitud.id}_${vi}_${vf}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al procesar")
+      setError(e instanceof Error ? e.message : "Error al generar el PDF")
     } finally {
       setProcesando(null)
     }
@@ -969,28 +967,13 @@ function AdministracionTab() {
                             ) : (
                               <span
                                 className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-light"
-                                style={{ backgroundColor: "#f59e0b18", color: "#b45309" }}
+                                style={{ backgroundColor: "#15803d18", color: "#15803d" }}
                               >
-                                Pendiente
+                                Realizada
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-2" colSpan={2}>
-                            {!sol.procesado && (
-                              <Button
-                                size="sm"
-                                className="gap-1.5 h-7 px-3 text-xs"
-                                style={{ backgroundColor: C_VINO, color: "#fff" }}
-                                disabled={procesando === sol.id}
-                                onClick={() => handleProcesar(sol)}
-                              >
-                                {procesando === sol.id
-                                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                                  : <Send className="h-3 w-3" />}
-                                {procesando === sol.id ? "Generando…" : "Generar PDF"}
-                              </Button>
-                            )}
-                          </td>
+                          <td className="px-4 py-2" colSpan={2} />
                         </tr>
                       ))}
                     </>
