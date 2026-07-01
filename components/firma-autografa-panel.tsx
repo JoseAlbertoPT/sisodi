@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, Upload, CheckCircle2, Loader2, FileText, AlertCircle } from "lucide-react"
-import { FileDropZone } from "@/components/ui/file-drop-zone"
+import { Download, Upload, CheckCircle2, Loader2, AlertCircle, X } from "lucide-react"
+import { FileDropZone, FileTypeIcon } from "@/components/ui/file-drop-zone"
 
 interface FirmaProceso {
   id: number
@@ -35,6 +35,7 @@ export function FirmaAutografaPanel({
   const [firma, setFirma] = useState<FirmaProceso | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [clearing, setClearing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const cargar = useCallback(async () => {
@@ -71,10 +72,28 @@ export function FirmaAutografaPanel({
     }
   }
 
+  const handleClear = async () => {
+    setClearing(true); setError(null)
+    try {
+      const res = await fetch("/api/firma-efirma/autografa/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solicitudId }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) { setError(json.error ?? "Error al quitar el archivo"); return }
+      await cargar()
+    } catch {
+      setError("Error de conexión")
+    } finally {
+      setClearing(false)
+    }
+  }
+
   const archivoSubido = Boolean(firma?.archivo_firmado)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex items-start gap-2">
         <AlertCircle className="h-4 w-4 text-accent-foreground mt-0.5 shrink-0" />
         <p className="text-xs text-muted-foreground">
@@ -83,26 +102,31 @@ export function FirmaAutografaPanel({
         </p>
       </div>
 
-      <Card className="border-border">
-        <CardHeader className="pb-3">
+      <Card className="border-border py-4 gap-3">
+        <CardHeader className="px-5 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <FileText className="h-4 w-4 text-secondary" /> Paso 1 — Descargar justificación
+            <Download className="h-4 w-4 text-secondary" /> Paso 1 — Descargar justificación
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Button variant="outline" size="sm" onClick={() => onGenerarPdf()} className="gap-1.5">
+        <CardContent className="px-5 pb-1 pt-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onGenerarPdf()}
+            className="gap-1.5"
+          >
             <Download className="h-4 w-4" /> Descargar PDF ({folioJustificacion})
           </Button>
         </CardContent>
       </Card>
 
-      <Card className="border-border">
-        <CardHeader className="pb-3">
+      <Card className="border-border py-4 gap-3">
+        <CardHeader className="px-5 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Upload className="h-4 w-4 text-secondary" /> Paso 2 — Subir PDF firmado
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+        <CardContent className="px-5 pb-1 pt-0 flex flex-col gap-2">
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
@@ -111,9 +135,18 @@ export function FirmaAutografaPanel({
             <>
               {archivoSubido && (
                 <div className="flex items-center gap-2 rounded-[8px] border border-[#E5E7EB] bg-white px-2 py-2">
-                  <FileText className="h-4 w-4 shrink-0 text-red-500" />
+                  <FileTypeIcon name={firma?.archivo_firmado?.split("/").pop() ?? "archivo.pdf"} size="sm" />
                   <span className="flex-1 truncate text-sm text-[#374151]">{firma?.archivo_firmado?.split("/").pop()}</span>
                   <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs text-[#7B2D5E] hover:underline shrink-0">Ver</a>
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    disabled={clearing}
+                    aria-label="Quitar archivo"
+                    className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors disabled:opacity-40"
+                  >
+                    {clearing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                  </button>
                 </div>
               )}
               <FileDropZone
@@ -127,17 +160,19 @@ export function FirmaAutografaPanel({
                 loading={uploading}
                 loadingText="Subiendo archivo..."
                 error={error}
+                compact
               />
             </>
           )}
         </CardContent>
       </Card>
 
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-end px-6 py-4 border-t border-[#E5E7EB]">
         <Button
           onClick={() => onFinalizar()}
           disabled={!archivoSubido || guardandoFinal}
-          className="gap-1.5"
+          className="gap-1.5 px-5 py-2"
+          style={{ backgroundColor: "#7b2d5e", color: "#fff", border: "none" }}
         >
           {guardandoFinal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Enviar a Emisor

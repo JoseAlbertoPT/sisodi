@@ -1298,7 +1298,7 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
         {/* Body */}
         <div className="px-6 py-6 flex flex-col gap-3">
           <p className="text-sm text-[#374151]">
-            Este apartado deberá contar con <strong>validación previa por la UEJ</strong> o su equivalente antes de su envío.
+            Este apartado deberá contar con <strong>validación previa por la UEF</strong> o su equivalente antes de su envío.
           </p>
           <p className="text-sm text-[#374151]">
             La información registrada será <strong>responsabilidad de la persona titular</strong> de la Unidad de Enlace Financiero Administrativo o equivalente.
@@ -1313,7 +1313,7 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
             style={{
               border: "none",
               borderRadius: 9999,
-              background: "#2D3B2D",
+              background: "#6B7280",
               padding: "10px 24px",
               fontSize: 14,
               fontWeight: 600,

@@ -436,11 +436,11 @@ export function FirmaElectronicaTabs({
         />
       )}
 
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-end px-6 py-4 border-t border-[#E5E7EB]">
         <Button
           onClick={() => onFinalizar()}
           disabled={!puedeContinuar || guardandoFinal || (!!selladoEtapa && !selladoSubido)}
-          className="gap-1.5"
+          className="gap-1.5 px-5 py-2"
         >
           {guardandoFinal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Enviar

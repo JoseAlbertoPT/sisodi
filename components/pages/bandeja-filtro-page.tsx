@@ -1615,7 +1615,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                 variant="ghost" size="sm"
                                 onClick={() => handleAceptar(sol.id)}
                                 disabled={guardando}
-                                className="text-primary hover:text-primary/80 gap-1.5 font-medium"
+                                className="gap-1.5 font-medium"
+                                style={{ color: "#6B7280" }}
                               >
                                 <ClipboardCheck className="h-4 w-4" />Aceptar
                               </Button>

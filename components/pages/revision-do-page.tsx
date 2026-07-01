@@ -1650,8 +1650,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 ))}
               </RadioGroup>
               <div className="flex items-center gap-3 w-full">
-                <Button variant="outline" className="flex-1" onClick={() => setShowEmitConfirm(false)}>Cancelar</Button>
-                <Button className="flex-1" onClick={handleConfirmEmit} disabled={guardando}>
+                <Button variant="outline" className="flex-1" onClick={() => setShowEmitConfirm(false)}
+                  style={{ backgroundColor: "#fce4f0", color: "#7b2d5e", borderColor: "#f0b0d0" }}>Cancelar</Button>
+                <Button className="flex-1" onClick={handleConfirmEmit} disabled={guardando}
+                  style={{ backgroundColor: "#7b2d5e", color: "#fff", border: "none" }}>
                   {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y aprobar"}
                 </Button>
               </div>

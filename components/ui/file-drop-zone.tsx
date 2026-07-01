@@ -19,6 +19,8 @@ interface FileDropZoneProps {
   loadingText?: string
   error?: string | null
   className?: string
+  /** Reduces vertical padding and icon size of the drop zone */
+  compact?: boolean
 }
 
 /* ── File type icon using system SVGs ──────────────────────── */
@@ -52,6 +54,7 @@ export function FileDropZone({
   loadingText = 'Subiendo archivo...',
   error,
   className,
+  compact = false,
 }: FileDropZoneProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = React.useState(false)
@@ -125,7 +128,8 @@ export function FileDropZone({
           transition: 'border-color 0.15s, background-color 0.15s',
         }}
         className={cn(
-          'flex w-full flex-col items-center justify-center gap-2 py-7 px-4 text-center select-none',
+          'flex w-full flex-col items-center justify-center text-center select-none',
+          compact ? 'gap-1.5 py-5 px-3' : 'gap-2 py-7 px-4',
           disabled || loading ? 'cursor-not-allowed' : 'cursor-pointer',
         )}
       >
@@ -142,14 +146,14 @@ export function FileDropZone({
         {/* Icon + badge */}
         <div className="relative">
           {loading ? (
-            <Loader2 className="h-9 w-9 text-gray-400 animate-spin" />
+            <Loader2 className={cn(compact ? 'h-7 w-7' : 'h-9 w-9', 'text-gray-400 animate-spin')} />
           ) : hasError ? (
-            <img src="/iconos2/error_outline_cargaDoc.svg" alt="Error" className="h-9 w-9" />
+            <img src="/iconos2/error_outline_cargaDoc.svg" alt="Error" className={compact ? 'h-7 w-7' : 'h-9 w-9'} />
           ) : (
             <img
               src="/iconos2/CargaDoc-black.svg"
               alt="Cargar documento"
-              className={cn('h-9 w-9', disabled ? 'opacity-30' : 'opacity-60')}
+              className={cn(compact ? 'h-7 w-7' : 'h-9 w-9', disabled ? 'opacity-30' : 'opacity-60')}
             />
           )}
           {files.length > 0 && !loading && (

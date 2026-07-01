@@ -9,78 +9,134 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "20")))
     const skip  = (page - 1) * limit
 
-    const where = q
-      ? {
-          OR: [
-            { programa_proyecto:        { contains: q, mode: "insensitive" as const } },
-            { tipo_actividad:            { contains: q, mode: "insensitive" as const } },
-            { denominacion_nombramiento: { contains: q, mode: "insensitive" as const } },
-            { vigencia:                  { contains: q, mode: "insensitive" as const } },
-            { regimen_contratacion:      { contains: q, mode: "insensitive" as const } },
-          ],
-        }
-      : {}
+    // Raw SQL para evitar el cliente Prisma cacheado
+    const searchClause = q
+      ? `AND (
+          cj.programa_proyecto        ILIKE $3 OR
+          cj.tipo_actividad           ILIKE $3 OR
+          cj.denominacion_nombramiento ILIKE $3 OR
+          cj.vigencia                 ILIKE $3 OR
+          cj.regimen_contratacion     ILIKE $3
+        )`
+      : ""
 
-    const [total, records] = await Promise.all([
-      prisma.catalogo_justificacion.count({ where }),
-      prisma.catalogo_justificacion.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { creado_en: "desc" },
-        include: {
-          solicitud: {
-            select: {
-              id: true,
-              tipo_solicitud: true,
-              folio_recepcion: true,
-              folio_dictamen: true,
-              secretaria: true,
-              secretaria_txt_snapshot: true,
-            },
-          },
-          _count: { select: { catalogo_solicitudes: true } },
-          catalogo_solicitudes: {
-            orderBy: { creado_en: "desc" },
-            include: {
-              usuario: { select: { nombre: true, rfc: true } },
-            },
-          },
-        },
-      }),
+    const countParams: any[] = q ? [`%${q}%`] : []
+    const queryParams: any[] = q ? [`%${q}%`, limit, skip] : [limit, skip]
+
+    const countSql = `
+      SELECT COUNT(*) AS total
+      FROM catalogo_justificacion cj
+      ${q ? `WHERE cj.programa_proyecto ILIKE $1 OR cj.tipo_actividad ILIKE $1 OR cj.denominacion_nombramiento ILIKE $1 OR cj.vigencia ILIKE $1 OR cj.regimen_contratacion ILIKE $1` : ""}
+    `
+
+    const listSql = `
+      SELECT
+        cj.id,
+        cj.solicitud_id,
+        cj.regimen_contratacion,
+        cj.programa_proyecto,
+        cj.tipo_actividad,
+        cj.denominacion_nombramiento,
+        cj.puesto_jefe_inmediato,
+        cj.numero_personas,
+        cj.tipo_pago,
+        cj.importe_bruto,
+        cj.importe_neto,
+        cj.vigencia,
+        cj.archivo_pdf_sin_firmas,
+        cj.activo,
+        cj.creado_en,
+        cj.actualizado_en,
+        s.id               AS sol_id,
+        s.tipo_solicitud   AS sol_tipo,
+        s.folio_recepcion  AS sol_folio_recepcion,
+        s.folio_dictamen   AS sol_folio_dictamen,
+        s.secretaria       AS sol_secretaria,
+        s.secretaria_txt_snapshot AS sol_secretaria_txt
+      FROM catalogo_justificacion cj
+      LEFT JOIN solicitud s ON s.id = cj.solicitud_id
+      ${q ? `WHERE cj.programa_proyecto ILIKE $1 OR cj.tipo_actividad ILIKE $1 OR cj.denominacion_nombramiento ILIKE $1 OR cj.vigencia ILIKE $1 OR cj.regimen_contratacion ILIKE $1` : ""}
+      ORDER BY cj.creado_en DESC
+      LIMIT $${q ? 2 : 1} OFFSET $${q ? 3 : 2}
+    `
+
+    const [countRows, rows] = await Promise.all([
+      prisma.$queryRawUnsafe<{ total: bigint }[]>(countSql, ...countParams),
+      prisma.$queryRawUnsafe<any[]>(listSql, ...queryParams),
     ])
 
-    // El cliente Prisma puede estar cacheado y no devolver los campos nuevos
-    // (procesado, procesado_en, solicitud_nueva_id). Los obtenemos via raw y los mergeamos.
-    const solIds = records.flatMap((r: any) => r.catalogo_solicitudes.map((s: any) => s.id as number))
-    if (solIds.length > 0) {
-      const idList = solIds.join(",")
-      // Traemos también el folio de la solicitud nueva para mostrarlo en la UI
-      const extras = await prisma.$queryRawUnsafe<
-        { id: number; procesado: boolean; procesado_en: Date | null; solicitud_nueva_id: number | null; folio_nueva: string | null }[]
-      >(`
-        SELECT cs.id,
-               cs.procesado,
-               cs.procesado_en,
-               cs.solicitud_nueva_id,
-               s.folio_justificacion AS folio_nueva
-        FROM   catalogo_solicitud cs
-        LEFT   JOIN solicitud s ON s.id = cs.solicitud_nueva_id
-        WHERE  cs.id IN (${idList})
+    const total = Number(countRows[0]?.total ?? 0)
+
+    // Para cada catalogo_justificacion obtener sus catalogo_solicitudes
+    const cjIds = rows.map((r: any) => Number(r.id))
+
+    let solsMap: Record<number, any[]> = {}
+    if (cjIds.length > 0) {
+      const solsRows = await prisma.$queryRawUnsafe<any[]>(`
+        SELECT
+          cs.id,
+          cs.catalogo_justificacion_id,
+          cs.nueva_vigencia,
+          cs.nuevo_numero_personas,
+          cs.nuevos_numero_prestadores,
+          cs.procesado,
+          cs.procesado_en,
+          cs.solicitud_nueva_id,
+          cs.creado_en,
+          u.nombre  AS usuario_nombre,
+          u.rfc     AS usuario_rfc,
+          s.folio_justificacion AS folio_nueva
+        FROM catalogo_solicitud cs
+        JOIN usuario u ON u.id = cs.usuario_id
+        LEFT JOIN solicitud s ON s.id = cs.solicitud_nueva_id
+        WHERE cs.catalogo_justificacion_id IN (${cjIds.join(",")})
+        ORDER BY cs.creado_en DESC
       `)
-      const extrasMap = new Map(extras.map((e) => [e.id, e]))
-      for (const rec of records as any[]) {
-        for (const sol of rec.catalogo_solicitudes) {
-          const extra = extrasMap.get(sol.id)
-          if (extra) {
-            sol.procesado           = extra.procesado
-            sol.procesado_en        = extra.procesado_en
-            sol.solicitud_nueva_id  = extra.solicitud_nueva_id
-            sol.folio_nueva         = extra.folio_nueva
-          }
-        }
+      for (const sol of solsRows) {
+        const cjId = Number(sol.catalogo_justificacion_id)
+        if (!solsMap[cjId]) solsMap[cjId] = []
+        solsMap[cjId].push({
+          id:                       Number(sol.id),
+          nueva_vigencia:           sol.nueva_vigencia,
+          nuevo_numero_personas:    sol.nuevo_numero_personas,
+          nuevos_numero_prestadores: sol.nuevos_numero_prestadores,
+          procesado:                sol.procesado,
+          procesado_en:             sol.procesado_en,
+          solicitud_nueva_id:       sol.solicitud_nueva_id,
+          folio_nueva:              sol.folio_nueva ?? null,
+          creado_en:                sol.creado_en,
+          usuario: { nombre: sol.usuario_nombre, rfc: sol.usuario_rfc },
+        })
       }
     }
+
+    const records = rows.map((r: any) => ({
+      id:                       Number(r.id),
+      solicitud_id:             Number(r.solicitud_id),
+      regimen_contratacion:     r.regimen_contratacion,
+      programa_proyecto:        r.programa_proyecto,
+      tipo_actividad:           r.tipo_actividad,
+      denominacion_nombramiento: r.denominacion_nombramiento,
+      puesto_jefe_inmediato:    r.puesto_jefe_inmediato,
+      numero_personas:          r.numero_personas,
+      tipo_pago:                r.tipo_pago,
+      importe_bruto:            r.importe_bruto,
+      importe_neto:             r.importe_neto,
+      vigencia:                 r.vigencia,
+      archivo_pdf_sin_firmas:   r.archivo_pdf_sin_firmas,
+      activo:                   r.activo,
+      creado_en:                r.creado_en,
+      solicitud: {
+        id:                     Number(r.sol_id),
+        tipo_solicitud:         r.sol_tipo,
+        folio_recepcion:        r.sol_folio_recepcion,
+        folio_dictamen:         r.sol_folio_dictamen,
+        secretaria:             r.sol_secretaria,
+        secretaria_txt_snapshot: r.sol_secretaria_txt,
+      },
+      _count: { catalogo_solicitudes: (solsMap[Number(r.id)] ?? []).length },
+      catalogo_solicitudes: solsMap[Number(r.id)] ?? [],
+    }))
 
     return NextResponse.json({ records, total, page, limit })
   } catch (e) {

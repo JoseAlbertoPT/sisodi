@@ -331,7 +331,6 @@ function ConsultaTab() {
           </div>
         </div>
 
-        {/* Search container */}
         <div className="px-6 pb-7">
           <div
             className="flex items-center gap-2 max-w-2xl mx-auto rounded-2xl px-4 py-1.5"
@@ -511,7 +510,7 @@ function ConsultaTab() {
                     <td className="px-4 py-3 text-xs max-w-[160px] truncate text-gray-500">{fmt(rec.puesto_jefe_inmediato)}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{fmt(rec.tipo_actividad)}</td>
                     <td className="px-4 py-3 text-xs text-center text-gray-600">{rec.numero_personas ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs font-medium" style={{ color: "#2a2a2a" }}>{fmtMoney(rec.importe_neto)}</td>
+                    <td className="px-4 py-3 text-xs font-medium" style={{ color: "#2a2a2a" }}>{fmtMoney(rec.importe_bruto)}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 capitalize">{fmt(rec.tipo_pago)}</td>
                     <td className="px-4 py-3 text-center">
                       <DropdownMenu>
@@ -714,8 +713,8 @@ function AdministracionTab() {
   const [total, setTotal]       = useState(0)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
-  const [toggling, setToggling]       = useState<number | null>(null)
-  const [procesando, setProcesando]   = useState<number | null>(null)
+  const [toggling, setToggling]         = useState<number | null>(null)
+  const [procesando, setProcesando]     = useState<number | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
   const { user } = useAuth()
   const toggleRow = (id: number) =>
