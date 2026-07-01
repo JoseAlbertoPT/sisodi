@@ -162,7 +162,13 @@ async function resolverNombresFirmantes(
   return out;
 }
 
-async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null) {
+interface PdfOverrides {
+  vigenciaInicio?: string
+  vigenciaFin?: string
+  numeroPersonas?: number
+}
+
+async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null, overrides: PdfOverrides = {}, sinFirmas = false) {
   let firmas: FirmaNames = { ...firmasInput };
   try {
     if (!solicitudId) {
@@ -197,7 +203,9 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       );
     }
 
-    firmas = await resolverNombresFirmantes(Number(solicitudId), firmas, soloFirmanteId);
+    if (!sinFirmas) {
+      firmas = await resolverNombresFirmantes(Number(solicitudId), firmas, soloFirmanteId);
+    }
 
     const tipoAdministracion: 'centralizada' | 'paraestatal' =
       sol.tipo_administracion === 'paraestatal' ? 'paraestatal'
@@ -219,18 +227,18 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         denominacionNombramiento: applyTextRules(formatString(sol.denominacion)),
         tipoActividad: applyTextRules(formatString(sol.tipo_actividades)),
         puestoJefeInmediato: applyTextRules(formatString(sol.puesto_jefe_inmediato)),
-        numeroPersonas: sol.numero_prestadores ?? 1,
+        numeroPersonas: overrides.numeroPersonas ?? sol.numero_prestadores ?? 1,
         importeNetoMensual: sol.importe_bruto
           ? `$${Number(sol.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
           : "",
         tipoPago: (sol.tipo_importe ?? "").replace(/_/g, " "),
         equivalenciaNivel: `${sol.nivel_tabulador ?? ""} - ${sol.categoria_tabulador ?? ""}`.trim() === "-" ? "" : `${sol.nivel_tabulador ?? ""} ${sol.categoria_tabulador ?? ""}`,
-        vigenciaInicio: sol.vigencia_inicio
+        vigenciaInicio: overrides.vigenciaInicio ?? (sol.vigencia_inicio
           ? sol.vigencia_inicio.toISOString().split("T")[0]
-          : "",
-        vigenciaTermino: sol.vigencia_fin
+          : ""),
+        vigenciaTermino: overrides.vigenciaFin ?? (sol.vigencia_fin
           ? sol.vigencia_fin.toISOString().split("T")[0]
-          : "",
+          : ""),
         clavePresupuestal: "",
         renovacion: sol.es_renovacion ?? false,
         folioAnterior: sol.folio_anterior ?? "",
@@ -269,6 +277,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         firmaDictVerificoNombre: firmas.firmaDictVerificoNombre,
         firmaDictEmitioNombre: firmas.firmaDictEmitioNombre,
         fechaDictaminacion,
+        ocultarFirmas: sinFirmas,
       };
 
       pdfElement = React.createElement(
@@ -283,15 +292,15 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         unidadAdministrativa: sol.unidad_administrativa ?? "",
         unidadResponsable:  sol.unidad_responsable ?? "",
         regimenContratacion: sol.regimen ?? "",
-        numeroPrestadores:  sol.numero_prestadores ?? 1,
+        numeroPrestadores:  overrides.numeroPersonas ?? sol.numero_prestadores ?? 1,
         programaProyecto:   applyTextRules(formatString(sol.programa_proyecto)),
         tipoActividades:    applyTextRules(formatString(sol.tipo_actividades)),
-        vigenciaInicio:     sol.vigencia_inicio
+        vigenciaInicio:     overrides.vigenciaInicio ?? (sol.vigencia_inicio
           ? sol.vigencia_inicio.toISOString().split("T")[0]
-          : "",
-        vigenciaTermino:    sol.vigencia_fin
+          : ""),
+        vigenciaTermino:    overrides.vigenciaFin ?? (sol.vigencia_fin
           ? sol.vigencia_fin.toISOString().split("T")[0]
-          : "",
+          : ""),
         importeBruto:       sol.importe_bruto
           ? `$${Number(sol.importe_bruto).toLocaleString("es-MX", {
               minimumFractionDigits: 2,
@@ -326,6 +335,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         firmaDictVerificoCargo: firmas.firmaDictVerificoCargo,
         firmaDictEmitioCargo: firmas.firmaDictEmitioCargo,
         fechaDictaminacion,
+        ocultarFirmas: sinFirmas,
       };
 
       pdfElement = React.createElement(
@@ -463,5 +473,10 @@ export async function GET(req: NextRequest) {
     firmaDictEmitioNombre: searchParams.get("firmaDictEmitioNombre") || undefined,
     formato: searchParams.get("formato") === 'en_linea' ? 'en_linea' : 'fisico',
   };
-  return generatePDFResponse(solicitudId, firmas, firmanteId);
+  const overrides: PdfOverrides = {}
+  const vi = searchParams.get("vigenciaInicio"); if (vi) overrides.vigenciaInicio = vi
+  const vf = searchParams.get("vigenciaFin");    if (vf) overrides.vigenciaFin    = vf
+  const np = searchParams.get("numeroPersonas"); if (np) overrides.numeroPersonas = Number(np)
+  const sinFirmas = searchParams.get("sinFirmas") === "true"
+  return generatePDFResponse(solicitudId, firmas, firmanteId, overrides, sinFirmas);
 }

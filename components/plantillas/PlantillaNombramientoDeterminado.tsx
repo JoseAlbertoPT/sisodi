@@ -65,6 +65,7 @@ export interface JustificacionNombramientoData {
   firmaDictVerificoNombre?: string;
   firmaDictEmitioNombre?: string;
   fechaDictaminacion?: string;
+  ocultarFirmas?: boolean;
 }
 
 const LOGO_FINANZAS = path.join(process.cwd(), "public/logo-20finanzas.png");
@@ -582,15 +583,17 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             </View>
           )}
 
-          <View style={{ flexDirection: "row", justifyContent: "center", marginTop: data.formato === 'en_linea' ? 10 : 30 }}>
-            <View style={{ width: "45%", alignItems: "center" }}>
-              <Text style={{ fontSize: 8, marginBottom: 5, fontFamily: "Helvetica-Bold" }}>Vo. Bo. Marco Normativo</Text>
-              <Text style={s.firmaNombre}>{data.firmaVoBoJuridicoNombre || ""}</Text>
-              <View style={{ borderTopWidth: 1, borderTopColor: "#000", width: "100%", marginBottom: 4 }}></View>
-              <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Titular de la Unidad de Enlace</Text>
-              <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Jurídico o Equivalente</Text>
+          {!data.ocultarFirmas ? (
+            <View style={{ flexDirection: "row", justifyContent: "center", marginTop: data.formato === 'en_linea' ? 10 : 30 }}>
+              <View style={{ width: "45%", alignItems: "center" }}>
+                <Text style={{ fontSize: 8, marginBottom: 5, fontFamily: "Helvetica-Bold" }}>Vo. Bo. Marco Normativo</Text>
+                <Text style={s.firmaNombre}>{data.firmaVoBoJuridicoNombre || ""}</Text>
+                <View style={{ borderTopWidth: 1, borderTopColor: "#000", width: "100%", marginBottom: 4 }}></View>
+                <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Titular de la Unidad de Enlace</Text>
+                <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Jurídico o Equivalente</Text>
+              </View>
             </View>
-          </View>
+          ) : null}
         </View>
 
         <View wrap={false}>
@@ -783,34 +786,37 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         </View>
 
 
-        <View style={{ flex: 1 }} />
+        {!data.ocultarFirmas ? <View style={{ flex: 1 }} /> : null}
 
-        {data.formato === 'en_linea' && (
-          <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
-            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
-            <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
-              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
-            </Text>
+        {!data.ocultarFirmas ? (
+          <View>
+            {data.formato === 'en_linea' ? (
+              <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+                <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
+                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+                </Text>
+              </View>
+            ) : null}
+            <View style={s.firmasWrapper} wrap={false}>
+              <View style={s.firmaBox}>
+                <Text style={s.firmaLabel}>Elaboró</Text>
+                <Text style={s.firmaNombre}>{data.firmaElaboroNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                <Text style={s.firmaDesc}>Nombre y cargo de la</Text>
+                <Text style={s.firmaDesc}>Persona Titular de la Unidad Administrativa u Organismo Auxiliar</Text>
+              </View>
+              <View style={s.firmaBox}>
+                <Text style={s.firmaLabel}>Revisó</Text>
+                <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la</Text>
+                <Text style={s.firmaDesc}>Unidad de Enlace Financiero Administrativo o Equivalente</Text>
+              </View>
+            </View>
           </View>
-        )}
-
-        <View style={s.firmasWrapper} wrap={false}>
-          <View style={s.firmaBox}>
-            <Text style={s.firmaLabel}>Elaboró</Text>
-            <Text style={s.firmaNombre}>{data.firmaElaboroNombre || ""}</Text>
-            <View style={s.firmaLine}></View>
-            <Text style={s.firmaDesc}>Nombre y cargo de la</Text>
-            <Text style={s.firmaDesc}>Persona Titular de la Unidad Administrativa u Organismo Auxiliar</Text>
-          </View>
-          <View style={s.firmaBox}>
-            <Text style={s.firmaLabel}>Revisó</Text>
-            <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
-            <View style={s.firmaLine}></View>
-            <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la</Text>
-            <Text style={s.firmaDesc}>Unidad de Enlace Financiero Administrativo o Equivalente</Text>
-          </View>
-        </View>
+        ) : null}
 
       </Page>
 
@@ -887,38 +893,41 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         </View>
 
-        <View style={{ flex: 1 }} />
+        {!data.ocultarFirmas ? <View style={{ flex: 1 }} /> : null}
 
-        {data.formato === 'en_linea' && (
-          <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
-            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-            <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
-            <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
-              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
-            </Text>
+        {!data.ocultarFirmas ? (
+          <View>
+            {data.formato === 'en_linea' ? (
+              <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+                <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
+                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+                </Text>
+              </View>
+            ) : null}
+            <View style={s.firmasDictWrapper} wrap={false}>
+              <View style={s.firmaDictBox}>
+                <Text style={s.firmaLabel}>Revisó</Text>
+                <Text style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                <Text style={s.firmaDesc}>Nombre y cargo de la Persona responsable de la revisión de la Justificación</Text>
+              </View>
+              <View style={s.firmaDictBox}>
+                <Text style={s.firmaLabel}>Verificó</Text>
+                <Text style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la Dirección de Análisis Normativo y Funcional</Text>
+              </View>
+              <View style={s.firmaDictBox}>
+                <Text style={s.firmaLabel}>Emitió</Text>
+                <Text style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la Dirección General de Desarrollo Organizacional</Text>
+              </View>
+            </View>
           </View>
-        )}
-
-        <View style={s.firmasDictWrapper} wrap={false}>
-          <View style={s.firmaDictBox}>
-            <Text style={s.firmaLabel}>Revisó</Text>
-            <Text style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</Text>
-            <View style={s.firmaLine}></View>
-            <Text style={s.firmaDesc}>Nombre y cargo de la Persona responsable de la revisión de la Justificación</Text>
-          </View>
-          <View style={s.firmaDictBox}>
-            <Text style={s.firmaLabel}>Verificó</Text>
-            <Text style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</Text>
-            <View style={s.firmaLine}></View>
-            <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la Dirección de Análisis Normativo y Funcional</Text>
-          </View>
-          <View style={s.firmaDictBox}>
-            <Text style={s.firmaLabel}>Emitió</Text>
-            <Text style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</Text>
-            <View style={s.firmaLine}></View>
-            <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la Dirección General de Desarrollo Organizacional</Text>
-          </View>
-        </View>
+        ) : null}
 
       </Page>
     </Document>

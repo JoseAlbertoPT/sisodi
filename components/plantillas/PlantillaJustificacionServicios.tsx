@@ -47,6 +47,7 @@ export interface JustificacionData {
   firmaDictVerificoCargo?: string;
   firmaDictEmitioCargo?: string;
   fechaDictaminacion?: string;
+  ocultarFirmas?: boolean;
 }
 
 const LOGO_FINANZAS = path.join(process.cwd(), "public/logo-20finanzas.png");
@@ -577,46 +578,48 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         ))}
 
-        <View wrap={false} style={{ marginTop: 25 }}>
-          {data.formato === 'en_linea' && (
-            <View style={{ marginBottom: 15, alignItems: 'center' }}>
-              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
-              <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
-                a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
-              </Text>
-            </View>
-          )}
+        {!data.ocultarFirmas ? (
+          <View wrap={false} style={{ marginTop: 25 }}>
+            {data.formato === 'en_linea' ? (
+              <View style={{ marginBottom: 15, alignItems: 'center' }}>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+                <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
+                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+                </Text>
+              </View>
+            ) : null}
 
-          <View style={s.firmasWrapper} wrap={false}>
-            <View style={s.firmaBox}>
-              <Text style={s.firmaLabel}>Elaboró</Text>
-              <Text style={s.firmaNombre}>{data.firmaElaboroNombre || ""}</Text>
-              <View style={s.firmaLine}></View>
-              {data.firmaElaboroNombre && data.firmaElaboroCargo ? (
-                <Text style={s.firmaDesc}>{data.firmaElaboroCargo}</Text>
-              ) : (
-                <>
-                  <Text style={s.firmaDesc}>Nombre y cargo de la</Text>
-                  <Text style={s.firmaDesc}>Persona Titular de la Unidad Administrativa u Organismo Auxiliar</Text>
-                </>
-              )}
-            </View>
-            <View style={s.firmaBox}>
-              <Text style={s.firmaLabel}>Revisó</Text>
-              <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
-              <View style={s.firmaLine}></View>
-              {data.firmaRevisoNombre && data.firmaRevisoCargo ? (
-                <Text style={s.firmaDesc}>{data.firmaRevisoCargo}</Text>
-              ) : (
-                <>
-                  <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la</Text>
-                  <Text style={s.firmaDesc}>Unidad de Enlace Financiero Administrativo o Equivalente</Text>
-                </>
-              )}
+            <View style={s.firmasWrapper} wrap={false}>
+              <View style={s.firmaBox}>
+                <Text style={s.firmaLabel}>Elaboró</Text>
+                <Text style={s.firmaNombre}>{data.firmaElaboroNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                {data.firmaElaboroNombre && data.firmaElaboroCargo ? (
+                  <Text style={s.firmaDesc}>{data.firmaElaboroCargo}</Text>
+                ) : (
+                  <View>
+                    <Text style={s.firmaDesc}>Nombre y cargo de la</Text>
+                    <Text style={s.firmaDesc}>Persona Titular de la Unidad Administrativa u Organismo Auxiliar</Text>
+                  </View>
+                )}
+              </View>
+              <View style={s.firmaBox}>
+                <Text style={s.firmaLabel}>Revisó</Text>
+                <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                {data.firmaRevisoNombre && data.firmaRevisoCargo ? (
+                  <Text style={s.firmaDesc}>{data.firmaRevisoCargo}</Text>
+                ) : (
+                  <View>
+                    <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la</Text>
+                    <Text style={s.firmaDesc}>Unidad de Enlace Financiero Administrativo o Equivalente</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
-        </View>
+        ) : null}
 
       </Page>
 
@@ -696,50 +699,52 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         </View>
 
-        <View wrap={false} style={{ marginTop: 25 }}>
-          {data.formato === 'en_linea' && (
-            <View style={{ marginBottom: 15, alignItems: 'center' }}>
-              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
-              <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
-                a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
-              </Text>
-            </View>
-          )}
+        {!data.ocultarFirmas ? (
+          <View wrap={false} style={{ marginTop: 25 }}>
+            {data.formato === 'en_linea' ? (
+              <View style={{ marginBottom: 15, alignItems: 'center' }}>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+                <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
+                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+                </Text>
+              </View>
+            ) : null}
 
-          <View style={s.firmasDictWrapper} wrap={false}>
-            <View style={s.firmaDictBox}>
-              <Text style={s.firmaLabel}>Revisó</Text>
-              <Text style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</Text>
-              <View style={s.firmaLine}></View>
-              <Text style={s.firmaDesc}>
-                {data.firmaDictRevisoNombre && data.firmaDictRevisoCargo
-                  ? data.firmaDictRevisoCargo
-                  : "Nombre y cargo de la Persona responsable de la revisión de la Justificación"}
-              </Text>
-            </View>
-            <View style={s.firmaDictBox}>
-              <Text style={s.firmaLabel}>Verificó</Text>
-              <Text style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</Text>
-              <View style={s.firmaLine}></View>
-              <Text style={s.firmaDesc}>
-                {data.firmaDictVerificoNombre && data.firmaDictVerificoCargo
-                  ? data.firmaDictVerificoCargo
-                  : "Nombre y cargo de la Persona Titular de la Dirección de Análisis Normativo y Funcional"}
-              </Text>
-            </View>
-            <View style={s.firmaDictBox}>
-              <Text style={s.firmaLabel}>Emitió</Text>
-              <Text style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</Text>
-              <View style={s.firmaLine}></View>
-              <Text style={s.firmaDesc}>
-                {data.firmaDictEmitioNombre && data.firmaDictEmitioCargo
-                  ? data.firmaDictEmitioCargo
-                  : "Nombre y cargo de la Persona Titular de la Dirección General de Desarrollo Organizacional"}
-              </Text>
+            <View style={s.firmasDictWrapper} wrap={false}>
+              <View style={s.firmaDictBox}>
+                <Text style={s.firmaLabel}>Revisó</Text>
+                <Text style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                <Text style={s.firmaDesc}>
+                  {data.firmaDictRevisoNombre && data.firmaDictRevisoCargo
+                    ? data.firmaDictRevisoCargo
+                    : "Nombre y cargo de la Persona responsable de la revisión de la Justificación"}
+                </Text>
+              </View>
+              <View style={s.firmaDictBox}>
+                <Text style={s.firmaLabel}>Verificó</Text>
+                <Text style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                <Text style={s.firmaDesc}>
+                  {data.firmaDictVerificoNombre && data.firmaDictVerificoCargo
+                    ? data.firmaDictVerificoCargo
+                    : "Nombre y cargo de la Persona Titular de la Dirección de Análisis Normativo y Funcional"}
+                </Text>
+              </View>
+              <View style={s.firmaDictBox}>
+                <Text style={s.firmaLabel}>Emitió</Text>
+                <Text style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</Text>
+                <View style={s.firmaLine}></View>
+                <Text style={s.firmaDesc}>
+                  {data.firmaDictEmitioNombre && data.firmaDictEmitioCargo
+                    ? data.firmaDictEmitioCargo
+                    : "Nombre y cargo de la Persona Titular de la Dirección General de Desarrollo Organizacional"}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
+        ) : null}
         </View>
 
       </Page>

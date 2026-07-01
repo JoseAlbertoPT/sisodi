@@ -148,7 +148,6 @@ function ConsultaTab() {
   const [solPrestadores, setSolPrestadores] = useState("")
   const [solLoading, setSolLoading]   = useState(false)
   const [solError, setSolError]       = useState<string | null>(null)
-  const [solOk, setSolOk]             = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -192,7 +191,7 @@ function ConsultaTab() {
     const controller = new AbortController()
     setPdfBlobUrl(null)
     setPdfLoading(true)
-    fetch(`/api/pdf/justificacion?id=${viewRec.solicitud.id}`, { signal: controller.signal })
+    fetch(`/api/pdf/justificacion?id=${viewRec.solicitud.id}&sinFirmas=true`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw new Error("Error al generar PDF"); return r.blob() })
       .then((blob) => {
         if (controller.signal.aborted) return
@@ -216,7 +215,6 @@ function ConsultaTab() {
     setSolPersonas("")
     setSolPrestadores("")
     setSolError(null)
-    setSolOk(false)
     setShowSol(true)
   }
 
@@ -226,22 +224,28 @@ function ConsultaTab() {
     setSolLoading(true)
     setSolError(null)
     try {
+      const vi = dateToIso(solVigInicio!)
+      const vf = dateToIso(solVigFin!)
+      const np = isParaestatal(solRec) ? (solPersonas ? Number(solPersonas) : null) : null
+      const npr = !isParaestatal(solRec) ? (solPrestadores ? Number(solPrestadores) : null) : null
       const res = await fetch("/api/catalogo-justificaciones/solicitar", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           catalogo_justificacion_id: solRec.id,
-          usuario_id:                user.id,
-          nueva_vigencia:            `${dateToIso(solVigInicio!)} / ${dateToIso(solVigFin!)}`,
-          nuevo_numero_personas:     solPersonas ? Number(solPersonas) : null,
-          nuevos_numero_prestadores: solPrestadores ? Number(solPrestadores) : null,
+          usuario_id: user.id,
+          nueva_vigencia: `${vi} / ${vf}`,
+          nuevo_numero_personas: np,
+          nuevos_numero_prestadores: npr,
         }),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? "Error al solicitar")
-      setSolOk(true)
-      setTimeout(() => { setShowSol(false); setSolOk(false) }, 1800)
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error ?? "Error al enviar la solicitud")
+      }
+      setShowSol(false)
     } catch (e) {
-      setSolError(e instanceof Error ? e.message : "Error al solicitar reutilización")
+      setSolError(e instanceof Error ? e.message : "Error al enviar la solicitud")
     } finally {
       setSolLoading(false)
     }
@@ -587,7 +591,7 @@ function ConsultaTab() {
         <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-[#E5E7EB]">
             <DialogTitle className="text-base font-semibold text-[#1F2937]">
-              Solicitar Reutilización
+              Solicitar reutilización
             </DialogTitle>
           </div>
 
@@ -595,8 +599,8 @@ function ConsultaTab() {
             <div className="flex flex-col gap-4 px-6 py-5">
               <p className="text-xs text-[#6B7280]">
                 {isParaestatal(solRec)
-                  ? "Para generar esta solicitud, únicamente deberás editar la vigencia y el número de personas a contratar."
-                  : "Para generar esta solicitud, únicamente deberás editar la vigencia y el número de prestadores de servicio."}
+                  ? "Indica la vigencia y el número de personas para la reutilización. Tu solicitud quedará registrada para su procesamiento."
+                  : "Indica la vigencia y el número de prestadores de servicio. Tu solicitud quedará registrada para su procesamiento."}
               </p>
 
               <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[#F3F4F6] border border-[#E5E7EB]">
@@ -607,8 +611,6 @@ function ConsultaTab() {
                   <span className="font-medium text-[#1F2937]">{fmt(solRec.vigencia)}</span>
                 </p>
               </div>
-
-              {/* Nueva vigencia */}
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Nueva vigencia <span className="text-destructive">*</span>
@@ -645,7 +647,7 @@ function ConsultaTab() {
                       placeholder="—"
                       value={solPersonas}
                       onChange={(e) => setSolPersonas(e.target.value)}
-                      disabled={solLoading || solOk}
+                      disabled={solLoading}
                       className="bg-background"
                     />
                   </>
@@ -658,7 +660,7 @@ function ConsultaTab() {
                       placeholder="—"
                       value={solPrestadores}
                       onChange={(e) => setSolPrestadores(e.target.value)}
-                      disabled={solLoading || solOk}
+                      disabled={solLoading}
                       className="bg-background"
                     />
                   </>
@@ -669,11 +671,6 @@ function ConsultaTab() {
               {solError && (
                 <div className="flex items-center gap-2 text-xs text-destructive">
                   <AlertCircle className="h-4 w-4 shrink-0" />{solError}
-                </div>
-              )}
-              {solOk && (
-                <div className="flex items-center gap-2 text-xs font-medium text-[#15803d]">
-                  <CheckCircle2 className="h-4 w-4" />Solicitud enviada correctamente
                 </div>
               )}
 
@@ -689,12 +686,12 @@ function ConsultaTab() {
                 </Button>
                 <Button
                   onClick={handleSolicitar}
-                  disabled={solLoading || solOk || !solVigInicio || !solVigFin}
+                  disabled={solLoading || !solVigInicio || !solVigFin}
                   className="gap-2 px-5 py-2.5 h-auto"
                   style={{ backgroundColor: MORADO, color: "#fff" }}
                 >
                   {solLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  {solLoading ? "Enviando…" : "Enviar solicitud"}
+                  {solLoading ? "Enviando…" : "Solicitar"}
                 </Button>
               </div>
             </div>
@@ -770,26 +767,20 @@ function AdministracionTab() {
     if (!user) return
     setProcesando(sol.id)
     try {
-      // 1. Crear la nueva solicitud
       const res = await fetch("/api/catalogo-justificaciones/procesar", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ catalogo_solicitud_id: sol.id, admin_usuario_id: user.id }),
       })
       const body = await res.json()
-
-      // Si ya fue procesada, solo refrescamos la tabla para mostrar el estado real
       if (res.status === 409) {
         await fetchData()
         return
       }
 
       if (!res.ok) throw new Error(body.error ?? "Error al procesar")
-
       const { solicitud_id, folio } = body
-
-      // 2. Generar y descargar el PDF con los datos actualizados
-      const pdfRes = await fetch(`/api/pdf/justificacion?id=${solicitud_id}`)
+      const pdfRes = await fetch(`/api/pdf/justificacion?id=${solicitud_id}&sinFirmas=true`)
       if (pdfRes.ok) {
         const blob = await pdfRes.blob()
         const url  = URL.createObjectURL(blob)
@@ -996,7 +987,7 @@ function AdministracionTab() {
                                 {procesando === sol.id
                                   ? <Loader2 className="h-3 w-3 animate-spin" />
                                   : <Send className="h-3 w-3" />}
-                                {procesando === sol.id ? "Procesando…" : "Generar solicitud"}
+                                {procesando === sol.id ? "Generando…" : "Generar PDF"}
                               </Button>
                             )}
                           </td>
