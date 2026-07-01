@@ -101,7 +101,7 @@ interface AdminRecord extends CatalogoRecord {
 
 const C_VERDE: string = "#2d4a3e"
 const C_BEIGE: string = "#f0ede4"
-const C_VINO: string  = "#" + "7b2d5e"
+const C_VINO: string  = "#7b2d5e"
 
 
 function fmt(val: string | null | undefined) {
@@ -148,7 +148,6 @@ function ConsultaTab() {
   const [solPrestadores, setSolPrestadores] = useState("")
   const [solLoading, setSolLoading]   = useState(false)
   const [solError, setSolError]       = useState<string | null>(null)
-
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -184,7 +183,6 @@ function ConsultaTab() {
         })
       })()
     : allRecords
-
   useEffect(() => { setPage(1) }, [q])
   useEffect(() => {
     if (!showView || !viewRec) return
@@ -206,7 +204,6 @@ function ConsultaTab() {
       controller.abort()
     }
   }, [showView, viewRec])
-
   const openView = (rec: CatalogoRecord) => { setViewRec(rec); setShowView(true) }
   const openSol  = (rec: CatalogoRecord) => {
     setSolRec(rec)
@@ -229,7 +226,6 @@ function ConsultaTab() {
       const npNum = isParaestatal(solRec) ? (solPersonas ? Number(solPersonas) : null) : null
       const nprNum = !isParaestatal(solRec) ? (solPrestadores ? Number(solPrestadores) : null) : null
 
-      // Registrar quién generó (para que aparezca en administración)
       await fetch("/api/catalogo-justificaciones/solicitar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -285,41 +281,34 @@ function ConsultaTab() {
   const MORADO = C_VINO
   return (
     <>
-      <div
-        className="rounded-2xl overflow-hidden mb-5 shadow-lg"
-        style={{ background: `linear-gradient(140deg, ${VERDE} 0%, #1a3028 100%)` }}
-      >
-        <div className="px-8 pt-8 pb-4 text-center">
-          <h2 className="text-xl font-bold text-white tracking-wide leading-snug">
-            Catálogo de Justificaciones Dictaminadas
-          </h2>
-          <p className="mt-1.5 text-sm" style={{ color: "rgba(255,255,255,.65)" }}>
-            Consulta los dictámenes vigentes y solicita reutilización de justificaciones
-          </p>
-        </div>
-        <div className="flex justify-center px-6 pb-5">
-          <div
-            className="flex items-center gap-1 rounded-xl p-1"
-            style={{ backgroundColor: "rgba(0,0,0,.22)" }}
-          >
+      <div className="mb-6 flex w-full flex-col items-center text-center">
+        <h2 className="text-2xl font-bold tracking-wide leading-snug text-[#1F2937]">
+          Catálogo de Justificaciones Dictaminadas
+        </h2>
+        <p className="mt-1.5 text-sm text-[#6B7280]">
+          Consulta los dictámenes vigentes y solicita reutilización de justificaciones
+        </p>
+
+        <div className="mt-5 flex w-full flex-col items-center gap-4">
+          <div className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white p-1.5">
             <button
               type="button"
               onClick={() => { setTipoTab("honorarios"); setPage(1) }}
-              className="flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold transition-all duration-150"
+              className="flex items-center gap-2 rounded-md px-6 py-2.5 text-sm font-semibold transition-all duration-150"
               style={
                 tipoTab === "honorarios"
-                  ? { backgroundColor: "#fff", color: VERDE, boxShadow: "0 1px 4px rgba(0,0,0,.2)" }
-                  : { color: "rgba(255,255,255,.75)" }
+                  ? { backgroundColor: "#e4e3d6", border: "1px solid #c2d4a8", color: "#3a4a2a" }
+                  : { color: "#6B7280", border: "1px solid transparent" }
               }
             >
-              <BookOpen className="h-3.5 w-3.5" />
+              <BookOpen className="h-4 w-4" />
               Honorarios
               <span
-                className="ml-0.5 inline-flex items-center justify-center rounded-full w-4 h-4 text-[10px] font-bold"
+                className="ml-0.5 inline-flex items-center justify-center rounded-full w-5 h-5 text-[11px] font-bold"
                 style={
                   tipoTab === "honorarios"
-                    ? { backgroundColor: "rgba(45,74,62,.12)", color: VERDE }
-                    : { backgroundColor: "rgba(255,255,255,.2)", color: "#fff" }
+                    ? { backgroundColor: "#f3f4f6", color: "#1f1f1f" }
+                    : { backgroundColor: "#F3F4F6", color: "#6B7280" }
                 }
               >
                 {honorarios.length}
@@ -329,50 +318,48 @@ function ConsultaTab() {
             <button
               type="button"
               onClick={() => { setTipoTab("nombramiento"); setPage(1) }}
-              className="flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold transition-all duration-150"
+              className="flex items-center gap-2 rounded-md px-6 py-2.5 text-sm font-semibold transition-all duration-150"
               style={
                 tipoTab === "nombramiento"
-                  ? { backgroundColor: "#fff", color: VERDE, boxShadow: "0 1px 4px rgba(0,0,0,.2)" }
-                  : { color: "rgba(255,255,255,.75)" }
+                  ? { backgroundColor: "#e4e3d6", border: "1px solid #c2d4a8", color: "#3a4a2a" }
+                  : { color: "#6B7280", border: "1px solid transparent" }
               }
             >
-              <ListChecks className="h-3.5 w-3.5" />
+              <ListChecks className="h-4 w-4" />
               Nombramiento / Paraestatal
               <span
-                className="ml-0.5 inline-flex items-center justify-center rounded-full w-4 h-4 text-[10px] font-bold"
+                className="ml-0.5 inline-flex items-center justify-center rounded-full w-5 h-5 text-[11px] font-bold"
                 style={
                   tipoTab === "nombramiento"
-                    ? { backgroundColor: "rgba(45,74,62,.12)", color: VERDE }
-                    : { backgroundColor: "rgba(255,255,255,.2)", color: "#fff" }
+                    ? { backgroundColor: "#f3f4f6", color: "#1f1f1f" }
+                    : { backgroundColor: "#F3F4F6", color: "#6B7280" }
                 }
               >
                 {nombramiento.length}
               </span>
             </button>
           </div>
-        </div>
 
-        <div className="px-6 pb-7">
           <div
-            className="flex items-center gap-2 max-w-2xl mx-auto rounded-2xl px-4 py-1.5"
-            style={{ backgroundColor: "#fff", boxShadow: "0 4px 16px rgba(0,0,0,.18)" }}
+            className="flex items-center gap-2 w-full max-w-5xl rounded-full pl-6 pr-2 py-2 shadow-sm border-2 border-transparent transition-colors focus-within:border-[#2D3B2D]"
+            style={{ backgroundColor: "#fff" }}
           >
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar por dependencia, programa, denominación…"
-              className="flex-1 border-0 bg-transparent text-sm shadow-none focus-visible:ring-0 h-9 px-0"
+              className="flex-1 border-0 bg-transparent text-base shadow-none focus-visible:ring-0 h-11 px-0"
             />
             <button
               type="button"
               onClick={fetchData}
               disabled={loading}
-              className="flex items-center justify-center rounded-full w-9 h-9 shrink-0 transition-opacity hover:opacity-85 disabled:opacity-50"
-              style={{ backgroundColor: VERDE }}
+              className="flex items-center justify-center rounded-full w-11 h-11 shrink-0 transition-opacity hover:opacity-85 disabled:opacity-50"
+              style={{ backgroundColor: MORADO }}
             >
               {loading
-                ? <Loader2 className="h-4 w-4 animate-spin text-white" />
-                : <Search className="h-4 w-4 text-white" />}
+                ? <Loader2 className="h-5 w-5 animate-spin text-white" />
+                : <Search className="h-5 w-5 text-white" />}
             </button>
           </div>
         </div>
@@ -387,7 +374,7 @@ function ConsultaTab() {
           onClick={fetchData}
           disabled={loading}
           className="flex items-center justify-center rounded-lg w-7 h-7 border transition-colors hover:bg-muted/30 disabled:opacity-40"
-          style={{ borderColor: "#d4cfc8" }}
+          style={{ borderColor: "rgb(120 5 84 / 0.62)" }}
         >
           {loading
             ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
