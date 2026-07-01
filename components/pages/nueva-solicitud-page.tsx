@@ -3258,7 +3258,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
         </CardContent>
       </Card>
       <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-        <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Cancelar</Button>
+        <Button variant="outline" onClick={onBack} className="border" style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", borderColor: "#f0b0d0" }}><ArrowLeft className="mr-1.5 h-4 w-4" />Cancelar</Button>
         <Button onClick={handleSubmit} disabled={!canSubmit} className="gap-1.5">
           {subTipo === "regularizacion" ? <Clock className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
           {subTipo === "regularizacion" ? "Registrar Regularización" : "Registrar Excepción DO"}
@@ -4208,7 +4208,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             </CardContent>
             <CardContent className="flex justify-end px-4 pb-3 pt-2">
               <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
-                className="disabled:opacity-50">
+                className="disabled:opacity-50"
+                style={{ backgroundColor: "#7b2d5e", color: "#fff" }}>
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
             </CardContent>
@@ -4445,7 +4446,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   (esRenovacion === "si" && !folioSeleccionado) ||
                   (esRenovacion === "si" && folioSeleccionado && condicionRenovacion !== "mismas")
                 }
-               
+                style={{ backgroundColor: "#7b2d5e", color: "#fff" }}
               >
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
@@ -4562,7 +4563,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   <div className="flex items-center gap-3">
                     {isEditingBorrador ? (
                       <Button className="min-w-[160px]"
-                        disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}>
+                        disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}
+                        style={{ backgroundColor: "#7b2d5e", color: "#fff" }}>
                         {guardandoBorrador
                           ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Guardando...</>
                           : <><Save className="mr-1.5 h-4 w-4" />Guardar Cambios</>
@@ -4570,14 +4572,16 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                       </Button>
                     ) : (
                       <>
-                        <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador} className="gap-1.5">
+                        <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}
+                          className="gap-1.5" style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", borderColor: "#7b2d5e" }}>
                           {guardandoBorrador
                             ? <><Clock className="h-4 w-4 animate-spin" />Guardando...</>
                             : <><Save className="mr-1.5 h-4 w-4" />Guardar Borrador</>
                           }
                         </Button>
                         <Button className="min-w-[160px]"
-                          disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
+                          disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}
+                          style={{ backgroundColor: "#7b2d5e", color: "#fff" }}>
                           {enviando
                             ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
                             : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validación</>

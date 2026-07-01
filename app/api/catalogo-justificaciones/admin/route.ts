@@ -50,6 +50,38 @@ export async function GET(req: NextRequest) {
       }),
     ])
 
+    // El cliente Prisma puede estar cacheado y no devolver los campos nuevos
+    // (procesado, procesado_en, solicitud_nueva_id). Los obtenemos via raw y los mergeamos.
+    const solIds = records.flatMap((r: any) => r.catalogo_solicitudes.map((s: any) => s.id as number))
+    if (solIds.length > 0) {
+      const idList = solIds.join(",")
+      // Traemos también el folio de la solicitud nueva para mostrarlo en la UI
+      const extras = await prisma.$queryRawUnsafe<
+        { id: number; procesado: boolean; procesado_en: Date | null; solicitud_nueva_id: number | null; folio_nueva: string | null }[]
+      >(`
+        SELECT cs.id,
+               cs.procesado,
+               cs.procesado_en,
+               cs.solicitud_nueva_id,
+               s.folio_justificacion AS folio_nueva
+        FROM   catalogo_solicitud cs
+        LEFT   JOIN solicitud s ON s.id = cs.solicitud_nueva_id
+        WHERE  cs.id IN (${idList})
+      `)
+      const extrasMap = new Map(extras.map((e) => [e.id, e]))
+      for (const rec of records as any[]) {
+        for (const sol of rec.catalogo_solicitudes) {
+          const extra = extrasMap.get(sol.id)
+          if (extra) {
+            sol.procesado           = extra.procesado
+            sol.procesado_en        = extra.procesado_en
+            sol.solicitud_nueva_id  = extra.solicitud_nueva_id
+            sol.folio_nueva         = extra.folio_nueva
+          }
+        }
+      }
+    }
+
     return NextResponse.json({ records, total, page, limit })
   } catch (e) {
     console.error("[GET /api/catalogo-justificaciones/admin]", e)

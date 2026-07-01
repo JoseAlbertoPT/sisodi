@@ -1216,7 +1216,8 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#5c2844]"
+              className="gap-1.5 text-white rounded-full hover:opacity-90"
+              style={{ backgroundColor: "#7b2d5e" }}
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Aprobar y asignar
