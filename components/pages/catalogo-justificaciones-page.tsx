@@ -256,12 +256,10 @@ function ConsultaTab() {
       setSolLoading(false)
     }
   }
-
   const isParaestatal = (rec: CatalogoRecord) => {
     const t = rec.solicitud.tipo_solicitud.toLowerCase()
     return t.includes("paraestatal") || t.includes("nombramiento")
   }
-
   const [tipoTab, setTipoTab] = useState<"honorarios" | "nombramiento">("honorarios")
   useEffect(() => { setPage(1) }, [tipoTab])
   const honorarios    = records.filter((r) => !isParaestatal(r))
