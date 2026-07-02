@@ -74,6 +74,20 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+    const organo = await prisma.organo_centralizado.findUnique({
+      where: { id },
+      include: { children: { select: { id: true } } },
+    })
+    if (!organo) return err("No encontrado", 404)
+
+    if (organo.parent_id === null && organo.children.length > 0) {
+      const n = organo.children.length
+      return NextResponse.json(
+        { error: `No se puede eliminar: tiene ${n} unidad${n !== 1 ? "es" : ""} administrativa${n !== 1 ? "s" : ""} asignada${n !== 1 ? "s" : ""}. Elimina o reasigna las unidades primero.` },
+        { status: 400 }
+      )
+    }
+
     const allIds = await collectDescendantIds(id)
     const usuariosCount = await prisma.usuario.count({
       where: { secretaria_id: { in: allIds } },

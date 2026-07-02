@@ -209,6 +209,10 @@ function SecretariaRow({
   }
 
   const handleDeleteSec = async () => {
+    if (uas.length > 0) {
+      setFormError(`No se puede eliminar: tiene ${uas.length} unidad${uas.length !== 1 ? "es" : ""} administrativa${uas.length !== 1 ? "s" : ""} asignada${uas.length !== 1 ? "s" : ""}. Elimina o reasigna las unidades primero.`)
+      return
+    }
     setSaving(true)
     try { await deleteOrganoCentralizado(node.id); setDeleteSecOpen(false); onRefresh() }
     catch (e) { setFormError(e instanceof Error ? e.message : "Error") }
@@ -512,7 +516,11 @@ function SecretariaRow({
             onConfirm={handleDeleteSec}
             variant="eliminar"
             title="Eliminar Secretaría"
-            description={<>Se eliminará <strong>{node.nombre}</strong> y sus <strong>{uas.length}</strong> unidades. Esta acción no se puede deshacer.</>}
+            description={
+              uas.length > 0
+                  ? <>No se puede eliminar <strong>{node.nombre}</strong> mientras tenga <strong>{uas.length}</strong> unidad{uas.length !== 1 ? "es" : ""} administrativa{uas.length !== 1 ? "s" : ""} asignada{uas.length !== 1 ? "s" : ""}. Elimina o reasigna las unidades primero.</>
+                  : <>Se eliminará <strong>{node.nombre}</strong>. Esta acción no se puede deshacer.</>
+            }
             confirmLabel="Sí, Eliminar"
             loading={saving}
             error={formError || undefined}
