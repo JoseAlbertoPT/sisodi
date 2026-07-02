@@ -1313,7 +1313,7 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
             style={{
               border: "none",
               borderRadius: 9999,
-              background: "#6B7280",
+              background: "#773357",
               padding: "10px 24px",
               fontSize: 14,
               fontWeight: 600,

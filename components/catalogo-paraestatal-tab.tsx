@@ -33,6 +33,7 @@ import {
 const VINO = "#773357"
 const VINO_HOVER = "#5c2844"
 const AREA_PAGE_SIZE = 10
+const BTN_CANCEL: React.CSSProperties = { backgroundColor: "#fce4f0", color: "#7c2d5e", borderColor: "#f0b0d0" }
 
 function reorder<T>(list: T[], from: number, to: number): T[] {
   const result = [...list]
@@ -380,9 +381,11 @@ function OrganoRow({
             </div>
             {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
           </div>
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button onClick={handleAddArea} disabled={saving || !areaNombre.trim()}>
+          <DialogFooter className="gap-3 py-5">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" style={BTN_CANCEL}>Cancelar</Button>
+            </DialogClose>
+            <Button variant="vino" onClick={handleAddArea} disabled={saving || !areaNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Agregar
             </Button>
           </DialogFooter>
@@ -399,9 +402,11 @@ function OrganoRow({
             </div>
             {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
           </div>
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button onClick={handleEditOrg} disabled={saving || !orgNombre.trim()}>
+          <DialogFooter className="gap-3 py-5">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" style={BTN_CANCEL}>Cancelar</Button>
+            </DialogClose>
+            <Button variant="vino" onClick={handleEditOrg} disabled={saving || !orgNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
             </Button>
           </DialogFooter>
@@ -430,9 +435,11 @@ function OrganoRow({
             </div>
             {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
           </div>
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button onClick={handleEditArea} disabled={saving || !areaNombre.trim()}>
+          <DialogFooter className="gap-3 py-5">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" style={BTN_CANCEL}>Cancelar</Button>
+            </DialogClose>
+            <Button variant="vino" onClick={handleEditArea} disabled={saving || !areaNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
             </Button>
           </DialogFooter>
@@ -582,9 +589,11 @@ export function CatalogoParaestatalTab() {
             </div>
             {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
           </div>
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
+          <DialogFooter className="gap-3 py-5">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" style={BTN_CANCEL}>Cancelar</Button>
+            </DialogClose>
+            <Button variant="vino" onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Crear
             </Button>
           </DialogFooter>

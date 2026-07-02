@@ -238,7 +238,6 @@ function ConsultaTab() {
         }),
       })
 
-      // Descargar el PDF
       const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
       const params = new URLSearchParams({
         id: String(solRec.solicitud.id),

@@ -41,19 +41,19 @@ export async function GET(req: NextRequest) {
       prisma.solicitud.findMany({
         where: { ...baseWhere, numero_prestadores: { gt: 0 } },
         select: {
-          secretaria:         true,
-          numero_prestadores: true,
-          usuario:            { select: { secretaria_id: true } },
+          secretaria:          true,
+          numero_prestadores:  true,
+          tipo_administracion: true,
         },
       }),
-      
+
       prisma.solicitud.aggregate({
-        where: { ...baseWhere, usuario: { secretaria_id: { not: null } } },
+        where: { ...baseWhere, tipo_administracion: { not: "paraestatal" } },
         _sum:  { numero_prestadores: true },
       }),
-      
+
       prisma.solicitud.aggregate({
-        where: { ...baseWhere, usuario: { secretaria_id: null } },
+        where: { ...baseWhere, tipo_administracion: "paraestatal" },
         _sum:  { numero_prestadores: true },
       }),
       
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
         by:    ["secretaria"],
         where: {
           ...baseWhere,
-          usuario: { secretaria_id: { not: null } },
+          tipo_administracion: { not: "paraestatal" },
         },
         _count: { id: true },
         orderBy: { _count: { id: "desc" } },
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
         by:    ["secretaria"],
         where: {
           ...baseWhere,
-          usuario: { secretaria_id: null },
+          tipo_administracion: "paraestatal",
         },
         _count: { id: true },
         orderBy: { _count: { id: "desc" } },
@@ -121,8 +121,8 @@ export async function GET(req: NextRequest) {
         estado: { nombre: { equals: "Emitido", mode: "insensitive" } },
       },
       select: {
-        secretaria: true,
-        usuario:    { select: { secretaria_id: true } },
+        secretaria:          true,
+        tipo_administracion: true,
       },
     })
 
@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
       const sec = row.secretaria ?? "Sin especificar"
       if (!emisionMap.has(sec)) emisionMap.set(sec, { dictamenes: 0, opiniones: 0 })
       const entry = emisionMap.get(sec)!
-      if (row.usuario.secretaria_id == null) {
+      if (row.tipo_administracion === "paraestatal") {
         entry.opiniones += 1
       } else {
         entry.dictamenes += 1
@@ -146,7 +146,7 @@ export async function GET(req: NextRequest) {
     const secMap = new Map<string, { secretaria: string; prestadores: number; tipo: "Centralizada" | "Paraestatal" }>()
     for (const row of prestadoresSecretariaRows) {
       const sec  = row.secretaria ?? "Sin especificar"
-      const tipo = row.usuario.secretaria_id != null ? "Centralizada" : "Paraestatal"
+      const tipo = row.tipo_administracion === "paraestatal" ? "Paraestatal" : "Centralizada"
       const key  = `${sec}::${tipo}`
       const prev = secMap.get(key)
       if (!prev) {
