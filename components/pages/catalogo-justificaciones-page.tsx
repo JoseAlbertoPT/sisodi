@@ -1,5 +1,4 @@
 "use client"
-
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import Image from "next/image"
 import { useAuth } from "@/lib/auth-context"
@@ -56,7 +55,6 @@ const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => 
   ),
 })
 
-
 interface CatalogoRecord {
   id: number
   solicitud_id: number
@@ -83,7 +81,6 @@ interface CatalogoRecord {
   }
   _count: { catalogo_solicitudes: number }
 }
-
 interface AdminRecord extends CatalogoRecord {
   catalogo_solicitudes: {
     id: number
@@ -102,7 +99,6 @@ interface AdminRecord extends CatalogoRecord {
 const C_VERDE: string = "#2d4a3e"
 const C_BEIGE: string = "#f0ede4"
 const C_VINO: string  = "#7b2d5e"
-
 
 function fmt(val: string | null | undefined) {
   return val ?? "—"
@@ -125,10 +121,8 @@ function entidadNombre(rec: CatalogoRecord) {
     ?? "—"
 }
 
-
 function ConsultaTab() {
   const { user } = useAuth()
-
   const [q, setQ]               = useState("")
   const [page, setPage]         = useState(1)
   const [allRecords, setAllRecords] = useState<CatalogoRecord[]>([])
@@ -313,7 +307,6 @@ function ConsultaTab() {
                 {honorarios.length}
               </span>
             </button>
-
             <button
               type="button"
               onClick={() => { setTipoTab("nombramiento"); setPage(1) }}
@@ -358,7 +351,7 @@ function ConsultaTab() {
             >
               {loading
                 ? <Loader2 className="h-5 w-5 animate-spin text-white" />
-                : <Search className="h-5 w-5 text-white" />}
+                : <Search className="h-5 w-5 text-white" strokeWidth={2.75} />}
             </button>
           </div>
         </div>
@@ -720,7 +713,6 @@ function AdministracionTab() {
     const t = setTimeout(() => { setDebouncedQ(q); setPage(1) }, 400)
     return () => clearTimeout(t)
   }, [q])
-
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -787,7 +779,6 @@ function AdministracionTab() {
   }
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
-
   return (
     <>
       <div className="flex items-center gap-3 mb-5">
@@ -802,7 +793,6 @@ function AdministracionTab() {
         </Button>
         <span className="text-sm text-muted-foreground">{total} registro{total !== 1 ? "s" : ""}</span>
       </div>
-
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3 mb-4">
           <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
@@ -920,7 +910,6 @@ function AdministracionTab() {
                       }
                     </td>
                   </tr>
-                  {/* Reutilizaciones sub-rows — solo visibles cuando expandido */}
                   {hasSols && isExpanded && (
                     <>
                       {rec.catalogo_solicitudes.map((sol) => (
@@ -971,7 +960,6 @@ function AdministracionTab() {
           </table>
         </div>
       </div>
-
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
     </>
   )
@@ -981,7 +969,6 @@ function AdministracionTab() {
 export function CatalogoJustificacionesPage() {
   const { user } = useAuth()
   const isAdmin = user?.rol === "Administrador"
-
   return (
     <PageLayout
       title="Catálogo "
