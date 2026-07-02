@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireRol } from "@/lib/api-guard"
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
+    const guardError = await requireRol(searchParams.get("userId"), ["Administrador"])
+    if (guardError) return guardError
+
     const q     = searchParams.get("q")?.trim() ?? ""
     const page  = Math.max(1, Number(searchParams.get("page") ?? "1"))
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "20")))

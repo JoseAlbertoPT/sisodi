@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireRol } from "@/lib/api-guard"
 
 export async function PATCH(
   req: NextRequest,
@@ -8,7 +9,10 @@ export async function PATCH(
   try {
     const { id } = await params
     const body  = await req.json()
-    const { activo } = body
+    const { activo, userId } = body
+
+    const guardError = await requireRol(userId ?? null, ["Administrador"])
+    if (guardError) return guardError
 
     if (typeof activo !== "boolean") {
       return NextResponse.json({ error: "Se requiere el campo 'activo' (boolean)" }, { status: 400 })

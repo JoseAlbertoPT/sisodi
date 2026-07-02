@@ -354,7 +354,6 @@ function ConsultaTab() {
           </div>
         </div>
       </div>
-
       <div className="flex items-center justify-end gap-2 mb-4">
         <span className="text-xs text-muted-foreground">
           {allVisible.length} registro{allVisible.length !== 1 ? "s" : ""}{q.trim() ? ` de ${allRecords.length}` : ""}
@@ -538,7 +537,6 @@ function ConsultaTab() {
           )}
         </div>
       </div>
-
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       <Dialog open={showView} onOpenChange={setShowView}>
         <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl h-[90vh] flex flex-col gap-0 p-0 overflow-hidden bg-white">
@@ -715,7 +713,7 @@ function AdministracionTab() {
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ q: debouncedQ, page: String(page), limit: String(limit) })
+      const params = new URLSearchParams({ q: debouncedQ, page: String(page), limit: String(limit), userId: user?.id ?? "" })
       const res = await fetch(`/api/catalogo-justificaciones/admin?${params}`)
       if (!res.ok) throw new Error((await res.json()).error ?? "Error al cargar datos")
       const data = await res.json()
@@ -726,7 +724,7 @@ function AdministracionTab() {
     } finally {
       setLoading(false)
     }
-  }, [debouncedQ, page])
+  }, [debouncedQ, page, user?.id])
 
   useEffect(() => { void fetchData() }, [fetchData])
   const handleToggle = async (rec: AdminRecord) => {
@@ -735,7 +733,7 @@ function AdministracionTab() {
       const res = await fetch(`/api/catalogo-justificaciones/${rec.id}`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activo: !rec.activo }),
+        body: JSON.stringify({ activo: !rec.activo, userId: user?.id }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? "Error")
       setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, activo: !r.activo } : r))
@@ -972,28 +970,28 @@ export function CatalogoJustificacionesPage() {
       title="Catálogo "
       description="Consulta y reutilización de justificaciones dictaminadas previamente."
     >
-      <Tabs defaultValue="consulta" className="w-full">
-        <TabsList>
-          <TabsTrigger value="consulta" className="gap-1.5">
-            <Search className="h-4 w-4" />
-            Consulta
-          </TabsTrigger>
-          {isAdmin && (
+      {isAdmin ? (
+        <Tabs defaultValue="consulta" className="w-full">
+          <TabsList>
+            <TabsTrigger value="consulta" className="gap-1.5">
+              <Search className="h-4 w-4" />
+              Consulta
+            </TabsTrigger>
             <TabsTrigger value="administracion" className="gap-1.5">
               <ListChecks className="h-4 w-4" />
               Administración
             </TabsTrigger>
-          )}
-        </TabsList>
-        <TabsContent value="consulta" className="mt-6">
-          <ConsultaTab />
-        </TabsContent>
-        {isAdmin && (
+          </TabsList>
+          <TabsContent value="consulta" className="mt-6">
+            <ConsultaTab />
+          </TabsContent>
           <TabsContent value="administracion" className="mt-6">
             <AdministracionTab />
           </TabsContent>
-        )}
-      </Tabs>
+        </Tabs>
+      ) : (
+        <ConsultaTab />
+      )}
     </PageLayout>
   )
 }
