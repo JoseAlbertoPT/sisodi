@@ -14,31 +14,11 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "20")))
     const skip  = (page - 1) * limit
 
-    // Solo se listan registros de la secretaría del administrador que consulta.
-    // Se compara por el nombre de la secretaría de nivel superior (antes del " > ")
-    // porque el id/texto snapshot de la solicitud varía según si se creó como
-    // "centralizada" (secretaria_id_snapshot) o "paraestatal" (secretaria_txt_snapshot
-    // con sub-ruta), pero la columna plana `secretaria` siempre trae el nombre limpio.
-    const viewer = await prisma.usuario.findUnique({
-      where:  { id: userId! },
-      select: {
-        secretaria_texto: true,
-        organo_centralizado: { select: { nombre: true } },
-      },
-    })
-    const viewerSecretaria = (viewer?.secretaria_texto ?? viewer?.organo_centralizado?.nombre ?? "")
-      .split(">")[0]
-      .trim()
-
+    // El rol Administrador ve todos los registros del catálogo, sin restringir
+    // por secretaría (a diferencia de la pestaña de Consulta, que sí se limita
+    // a la secretaría de cada usuario).
     const conditions: string[] = []
     const params: any[] = []
-
-    if (viewerSecretaria) {
-      params.push(viewerSecretaria)
-      conditions.push(`lower(trim(split_part(s.secretaria, '>', 1))) = lower($${params.length})`)
-    } else {
-      return NextResponse.json({ records: [], total: 0, page, limit })
-    }
 
     if (q) {
       params.push(`%${q}%`)
@@ -52,7 +32,7 @@ export async function GET(req: NextRequest) {
       )`)
     }
 
-    const whereClause = `WHERE ${conditions.join(" AND ")}`
+    const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""
 
     // Raw SQL para evitar el cliente Prisma cacheado
     const countSql = `

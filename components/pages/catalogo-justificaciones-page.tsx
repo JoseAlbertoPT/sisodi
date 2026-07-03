@@ -229,7 +229,6 @@ function ConsultaTab() {
           nuevos_numero_prestadores: nprNum,
         }),
       })
-
       const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
       const params = new URLSearchParams({
         id: String(solRec.solicitud.id),
@@ -351,7 +350,6 @@ function ConsultaTab() {
           </div>
         </div>
       </div>
-
       <div className="flex items-center justify-end gap-2 mb-4">
         <span className="text-xs text-muted-foreground">
           {allVisible.length} registro{allVisible.length !== 1 ? "s" : ""}{q.trim() ? ` de ${allRecords.length}` : ""}
@@ -534,6 +532,7 @@ function ConsultaTab() {
           )}
         </div>
       </div>
+
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       <Dialog open={showView} onOpenChange={setShowView}>
         <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl h-[90vh] flex flex-col gap-0 p-0 overflow-hidden bg-white">
@@ -598,7 +597,7 @@ function ConsultaTab() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
-                  Nueva vigencia <span className="text-destructive">*</span>
+                  Nueva vigencia <span className="text-destructive"></span>
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
