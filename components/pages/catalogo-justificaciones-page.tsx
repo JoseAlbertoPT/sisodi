@@ -739,7 +739,6 @@ function AdministracionTab() {
       setLoading(false)
     }
   }, [debouncedQ, page, user?.id])
-
   useEffect(() => { void fetchData() }, [fetchData])
   useRealtime(["catalogo"], fetchData)
   const handleToggle = async (rec: AdminRecord) => {
@@ -758,7 +757,6 @@ function AdministracionTab() {
       setToggling(null)
     }
   }
-
   const handleProcesar = async (rec: AdminRecord, sol: AdminRecord["catalogo_solicitudes"][0]) => {
     setProcesando(sol.id)
     try {
@@ -788,7 +786,6 @@ function AdministracionTab() {
       setProcesando(null)
     }
   }
-
   const totalPages = Math.max(1, Math.ceil(total / limit))
   return (
     <>
@@ -810,7 +807,6 @@ function AdministracionTab() {
           <span className="text-sm text-destructive">{error}</span>
         </div>
       )}
-
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden mb-5">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -981,8 +977,6 @@ function AdministracionTab() {
     </>
   )
 }
-
-
 export function CatalogoJustificacionesPage() {
   const { user } = useAuth()
   const isAdmin = user?.rol === "Administrador"
