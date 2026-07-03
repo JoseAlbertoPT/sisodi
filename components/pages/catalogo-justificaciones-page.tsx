@@ -327,7 +327,6 @@ function ConsultaTab() {
               </span>
             </button>
           </div>
-
           <div
             className="flex items-center gap-2 w-full max-w-5xl rounded-full pl-6 pr-2 py-2 shadow-sm border-2 border-transparent transition-colors focus-within:border-[#2D3B2D]"
             style={{ backgroundColor: "#fff" }}
