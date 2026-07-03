@@ -5,7 +5,8 @@ import { requireRol } from "@/lib/api-guard"
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const guardError = await requireRol(searchParams.get("userId"), ["Administrador"])
+    const userId = searchParams.get("userId")
+    const guardError = await requireRol(userId, ["Administrador"])
     if (guardError) return guardError
 
     const q     = searchParams.get("q")?.trim() ?? ""
@@ -13,25 +14,57 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "20")))
     const skip  = (page - 1) * limit
 
+    // Solo se listan registros de la secretaría del administrador que consulta.
+    // Se compara por el nombre de la secretaría de nivel superior (antes del " > ")
+    // porque el id/texto snapshot de la solicitud varía según si se creó como
+    // "centralizada" (secretaria_id_snapshot) o "paraestatal" (secretaria_txt_snapshot
+    // con sub-ruta), pero la columna plana `secretaria` siempre trae el nombre limpio.
+    const viewer = await prisma.usuario.findUnique({
+      where:  { id: userId! },
+      select: {
+        secretaria_texto: true,
+        organo_centralizado: { select: { nombre: true } },
+      },
+    })
+    const viewerSecretaria = (viewer?.secretaria_texto ?? viewer?.organo_centralizado?.nombre ?? "")
+      .split(">")[0]
+      .trim()
+
+    const conditions: string[] = []
+    const params: any[] = []
+
+    if (viewerSecretaria) {
+      params.push(viewerSecretaria)
+      conditions.push(`lower(trim(split_part(s.secretaria, '>', 1))) = lower($${params.length})`)
+    } else {
+      return NextResponse.json({ records: [], total: 0, page, limit })
+    }
+
+    if (q) {
+      params.push(`%${q}%`)
+      const qIdx = params.length
+      conditions.push(`(
+        cj.programa_proyecto        ILIKE $${qIdx} OR
+        cj.tipo_actividad           ILIKE $${qIdx} OR
+        cj.denominacion_nombramiento ILIKE $${qIdx} OR
+        cj.vigencia                 ILIKE $${qIdx} OR
+        cj.regimen_contratacion     ILIKE $${qIdx}
+      )`)
+    }
+
+    const whereClause = `WHERE ${conditions.join(" AND ")}`
+
     // Raw SQL para evitar el cliente Prisma cacheado
-    const searchClause = q
-      ? `AND (
-          cj.programa_proyecto        ILIKE $3 OR
-          cj.tipo_actividad           ILIKE $3 OR
-          cj.denominacion_nombramiento ILIKE $3 OR
-          cj.vigencia                 ILIKE $3 OR
-          cj.regimen_contratacion     ILIKE $3
-        )`
-      : ""
-
-    const countParams: any[] = q ? [`%${q}%`] : []
-    const queryParams: any[] = q ? [`%${q}%`, limit, skip] : [limit, skip]
-
     const countSql = `
       SELECT COUNT(*) AS total
       FROM catalogo_justificacion cj
-      ${q ? `WHERE cj.programa_proyecto ILIKE $1 OR cj.tipo_actividad ILIKE $1 OR cj.denominacion_nombramiento ILIKE $1 OR cj.vigencia ILIKE $1 OR cj.regimen_contratacion ILIKE $1` : ""}
+      LEFT JOIN solicitud s ON s.id = cj.solicitud_id
+      ${whereClause}
     `
+
+    const listParams = [...params, limit, skip]
+    const limitIdx  = params.length + 1
+    const offsetIdx = params.length + 2
 
     const listSql = `
       SELECT
@@ -59,14 +92,14 @@ export async function GET(req: NextRequest) {
         s.secretaria_txt_snapshot AS sol_secretaria_txt
       FROM catalogo_justificacion cj
       LEFT JOIN solicitud s ON s.id = cj.solicitud_id
-      ${q ? `WHERE cj.programa_proyecto ILIKE $1 OR cj.tipo_actividad ILIKE $1 OR cj.denominacion_nombramiento ILIKE $1 OR cj.vigencia ILIKE $1 OR cj.regimen_contratacion ILIKE $1` : ""}
+      ${whereClause}
       ORDER BY cj.creado_en DESC
-      LIMIT $${q ? 2 : 1} OFFSET $${q ? 3 : 2}
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `
 
     const [countRows, rows] = await Promise.all([
-      prisma.$queryRawUnsafe<{ total: bigint }[]>(countSql, ...countParams),
-      prisma.$queryRawUnsafe<any[]>(listSql, ...queryParams),
+      prisma.$queryRawUnsafe<{ total: bigint }[]>(countSql, ...params),
+      prisma.$queryRawUnsafe<any[]>(listSql, ...listParams),
     ])
 
     const total = Number(countRows[0]?.total ?? 0)

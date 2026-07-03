@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
         nuevos_numero_prestadores: nuevos_numero_prestadores ? Number(nuevos_numero_prestadores) : null,
       },
     })
+
+    broadcastUpdate(["catalogo"])
 
     return NextResponse.json({ record }, { status: 201 })
   } catch (e) {

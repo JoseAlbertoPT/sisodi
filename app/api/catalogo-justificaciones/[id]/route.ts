@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireRol } from "@/lib/api-guard"
+import { broadcastUpdate } from "@/lib/sse-manager"
 
 export async function PATCH(
   req: NextRequest,
@@ -22,6 +23,8 @@ export async function PATCH(
       where: { id: Number(id) },
       data:  { activo },
     })
+
+    broadcastUpdate(["catalogo"])
 
     return NextResponse.json({ record })
   } catch (e: any) {

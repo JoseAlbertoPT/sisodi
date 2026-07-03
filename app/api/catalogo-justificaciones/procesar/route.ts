@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
 
 function parseDate(val: string | null | undefined): Date | null {
   if (!val) return null
@@ -157,6 +158,8 @@ export async function POST(req: NextRequest) {
       SET procesado_en = NOW(), solicitud_nueva_id = ${nueva.id}
       WHERE id = ${id}
     `
+
+    broadcastUpdate(["catalogo"])
 
     return NextResponse.json({ ok: true, solicitud_id: nueva.id, folio: folioJustificacion }, { status: 201 })
   } catch (e: any) {

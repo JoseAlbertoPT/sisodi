@@ -1,7 +1,8 @@
 "use client"
-import React, { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Image from "next/image"
 import { useAuth } from "@/lib/auth-context"
+import { useRealtime } from "@/hooks/use-realtime"
 import { PageLayout } from "@/components/page-layout"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -15,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { TablePagination } from "@/components/ui/table-pagination"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { SearchInput } from "@/components/ui/search-input"
 import { StatusBadge } from "@/components/ui/status-badge"
 import {
@@ -31,7 +32,6 @@ import {
   ListChecks,
   Send,
   AlertCircle,
-  CheckCircle2,
   MoreVertical,
   Power,
   PowerOff,
@@ -99,7 +99,6 @@ interface AdminRecord extends CatalogoRecord {
 const C_VERDE: string = "#2d4a3e"
 const C_BEIGE: string = "#f0ede4"
 const C_VINO: string  = "#7b2d5e"
-
 function fmt(val: string | null | undefined) {
   return val ?? "—"
 }
@@ -146,7 +145,8 @@ function ConsultaTab() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/catalogo-justificaciones?page=1&limit=1000")
+      const params = new URLSearchParams({ page: "1", limit: "1000", userId: user?.id ?? "" })
+      const res = await fetch(`/api/catalogo-justificaciones?${params}`)
       if (!res.ok) throw new Error((await res.json()).error ?? "Error al cargar catálogo")
       const data = await res.json()
       setAllRecords(data.records)
@@ -155,8 +155,7 @@ function ConsultaTab() {
     } finally {
       setLoading(false)
     }
-  }, [])
-
+  }, [user?.id])
   useEffect(() => { void fetchData() }, [fetchData])
   const norm = (s: string | null | undefined) =>
     (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
@@ -208,7 +207,6 @@ function ConsultaTab() {
     setSolError(null)
     setShowSol(true)
   }
-
   const handleSolicitar = async () => {
     if (!solRec || !user) return
     if (!solVigInicio || !solVigFin) { setSolError("La vigencia es requerida"); return }
@@ -316,7 +314,7 @@ function ConsultaTab() {
               }
             >
               <ListChecks className="h-4 w-4" />
-              Nombramiento / Paraestatal
+              Nombramiento por Tiempo Determinado
               <span
                 className="ml-0.5 inline-flex items-center justify-center rounded-full w-5 h-5 text-[11px] font-bold"
                 style={
@@ -354,6 +352,7 @@ function ConsultaTab() {
           </div>
         </div>
       </div>
+
       <div className="flex items-center justify-end gap-2 mb-4">
         <span className="text-xs text-muted-foreground">
           {allVisible.length} registro{allVisible.length !== 1 ? "s" : ""}{q.trim() ? ` de ${allRecords.length}` : ""}
@@ -439,7 +438,6 @@ function ConsultaTab() {
                             className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted"
                             aria-label="Acciones"
                           >
-
                             <MoreVertical className="h-4 w-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
@@ -483,7 +481,7 @@ function ConsultaTab() {
                 {!loading && visibleRows.length === 0 && (
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                      Sin registros de nombramiento / paraestatal
+                      Sin registros de nombramiento por tiempo determinado
                     </td>
                   </tr>
                 )}
@@ -695,22 +693,40 @@ function AdministracionTab() {
   const [error, setError]       = useState<string | null>(null)
   const [toggling, setToggling]         = useState<number | null>(null)
   const [procesando, setProcesando]     = useState<number | null>(null)
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
   const { user } = useAuth()
-  const toggleRow = (id: number) =>
-    setExpandedRows((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
   const limit = 10
+  const hasDataRef = useRef(false)
+
+  const [viewRec, setViewRec]                     = useState<AdminRecord | null>(null)
+  const [showReutilizaciones, setShowReutilizaciones] = useState(false)
+  const [reutilizacionesPage, setReutilizacionesPage] = useState(1)
+  const [reutilizacionesQuery, setReutilizacionesQuery] = useState("")
+  const openReutilizaciones = (rec: AdminRecord) => {
+    setViewRec(rec)
+    setReutilizacionesPage(1)
+    setReutilizacionesQuery("")
+    setShowReutilizaciones(true)
+  }
+  const reutilizacionesFiltradas = (viewRec?.catalogo_solicitudes ?? []).filter((sol) => {
+    const q = reutilizacionesQuery.trim().toLowerCase()
+    if (!q) return true
+    return sol.usuario.nombre.toLowerCase().includes(q)
+      || sol.usuario.rfc.toLowerCase().includes(q)
+      || sol.nueva_vigencia.toLowerCase().includes(q)
+  })
+  const reutilizacionesTotalPages = Math.max(1, Math.ceil(reutilizacionesFiltradas.length / ITEMS_PER_PAGE))
+  const reutilizacionesVisibles = reutilizacionesFiltradas.slice(
+    (reutilizacionesPage - 1) * ITEMS_PER_PAGE,
+    reutilizacionesPage * ITEMS_PER_PAGE,
+  )
+  useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery])
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedQ(q); setPage(1) }, 400)
     return () => clearTimeout(t)
   }, [q])
   const fetchData = useCallback(async () => {
-    setLoading(true)
+    if (!hasDataRef.current) setLoading(true)
     setError(null)
     try {
       const params = new URLSearchParams({ q: debouncedQ, page: String(page), limit: String(limit), userId: user?.id ?? "" })
@@ -719,6 +735,7 @@ function AdministracionTab() {
       const data = await res.json()
       setRecords(data.records)
       setTotal(data.total)
+      hasDataRef.current = true
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar datos")
     } finally {
@@ -727,6 +744,7 @@ function AdministracionTab() {
   }, [debouncedQ, page, user?.id])
 
   useEffect(() => { void fetchData() }, [fetchData])
+  useRealtime(["catalogo"], fetchData)
   const handleToggle = async (rec: AdminRecord) => {
     setToggling(rec.id)
     try {
@@ -827,75 +845,58 @@ function AdministracionTab() {
                 </tr>
               )}
               {!loading && records.map((rec) => {
-                const hasSols   = rec.catalogo_solicitudes.length > 0
-                const isExpanded = expandedRows.has(rec.id)
+                const hasSols = rec.catalogo_solicitudes.length > 0
                 return (
-                <React.Fragment key={rec.id}>
-                  <tr className="border-b border-border hover:bg-muted/10 transition-colors">
-                    {/* Chevron + Entidad en la misma celda */}
-                    <td className="px-4 py-3 text-xs max-w-[140px]">
-                      <div className="flex items-center gap-1.5">
-                        {hasSols ? (
-                          <button
-                            type="button"
-                            onClick={() => toggleRow(rec.id)}
-                            className="shrink-0 flex items-center justify-center h-5 w-5 rounded hover:bg-muted transition-colors"
-                            aria-label={isExpanded ? "Colapsar" : "Expandir"}
-                          >
-                            <img
-                              src="/iconos2/addPlus.svg"
-                              alt=""
-                              width={14}
-                              height={14}
-                              className={`transition-transform duration-200${isExpanded ? " rotate-45" : ""}`}
-                            />
-                          </button>
-                        ) : (
-                          <span className="w-5 shrink-0" />
-                        )}
-                        <span className="truncate" title={entidadNombre(rec)}>{entidadNombre(rec)}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.programa_proyecto}>{fmt(rec.programa_proyecto)}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(rec.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-center">
-                      {hasSols ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleRow(rec.id)}
-                          className="inline-flex items-center justify-center rounded-full w-6 h-6 text-xs font-semibold transition-colors"
-                          style={isExpanded
-                            ? { backgroundColor: `${C_VINO}18`, color: C_VINO }
-                            : { backgroundColor: "var(--secondary)", opacity: 0.5 }}
+                <tr key={rec.id} className="border-b border-border hover:bg-muted/10 transition-colors">
+                  <td className="px-4 py-3 text-xs max-w-[140px] truncate" title={entidadNombre(rec)}>
+                    {entidadNombre(rec).split(" > ")[0]}
+                  </td>
+                  <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.programa_proyecto}>{fmt(rec.programa_proyecto)}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} />
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(rec.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-center">
+                    {hasSols ? (
+                      <span
+                        className="inline-flex items-center justify-center rounded-full w-6 h-6 text-xs font-semibold"
+                        style={{ backgroundColor: "var(--secondary)", opacity: 0.5 }}
+                      >
+                        {rec._count.catalogo_solicitudes}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center justify-center rounded-full w-6 h-6 text-xs font-semibold bg-muted/30 text-muted-foreground">
+                        0
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const c = rec.activo ? "#15803d" : "#773357"
+                      return (
+                        <span
+                          className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
+                          style={{ backgroundColor: `${c}18`, color: c }}
                         >
-                          {rec._count.catalogo_solicitudes}
-                        </button>
-                      ) : (
-                        <span className="inline-flex items-center justify-center rounded-full w-6 h-6 text-xs font-semibold bg-muted/30 text-muted-foreground">
-                          0
+                          {rec.activo ? "Activo" : "Inactivo"}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {(() => {
-                        const c = rec.activo ? "#15803d" : "#773357"
-                        return (
-                          <span
-                            className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
-                            style={{ backgroundColor: `${c}18`, color: c }}
-                          >
-                            {rec.activo ? "Activo" : "Inactivo"}
-                          </span>
-                        )
-                      })()}
-                    </td>
-                    <td className="px-4 py-3">
+                      )
+                    })()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openReutilizaciones(rec)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground"
+                        aria-label="Ver"
+                        title="Ver"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                       {toggling === rec.id
                         ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                         : <Switch
@@ -904,52 +905,9 @@ function AdministracionTab() {
                             disabled={toggling === rec.id}
                           />
                       }
-                    </td>
-                  </tr>
-                  {hasSols && isExpanded && (
-                    <>
-                      {rec.catalogo_solicitudes.map((sol) => (
-                        <tr key={`sol-${sol.id}`} className="bg-muted/5 border-b border-dashed border-border/50 animate-in fade-in-0 duration-150">
-                          <td className="px-4 py-2 pl-10" colSpan={2}>
-                            <span className="text-xs text-muted-foreground">
-                              ↳ {sol.usuario.nombre} ({sol.usuario.rfc})
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 text-xs text-muted-foreground" colSpan={2}>{sol.nueva_vigencia}</td>
-                          <td className="px-4 py-2 text-xs text-muted-foreground">
-                            {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
-                          </td>
-                          <td className="px-4 py-2">
-                            {sol.procesado ? (
-                              <div className="flex flex-col gap-0.5">
-                                <span
-                                  className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-light w-fit"
-                                  style={{ backgroundColor: "#15803d18", color: "#15803d" }}
-                                >
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  Procesada
-                                </span>
-                                {sol.folio_nueva && (
-                                  <span className="text-[10px] text-muted-foreground pl-1">
-                                    Folio: <span className="font-medium text-foreground">{sol.folio_nueva}</span>
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <span
-                                className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-light"
-                                style={{ backgroundColor: "#15803d18", color: "#15803d" }}
-                              >
-                                Realizada
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2" colSpan={2} />
-                        </tr>
-                      ))}
-                    </>
-                  )}
-                </React.Fragment>
+                    </div>
+                  </td>
+                </tr>
                 )
               })}
             </tbody>
@@ -957,6 +915,72 @@ function AdministracionTab() {
         </div>
       </div>
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+      <Dialog open={showReutilizaciones} onOpenChange={setShowReutilizaciones}>
+        <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl bg-white p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-5 py-4 border-b border-[#E5E7EB]">
+            <DialogTitle className="text-base font-semibold text-[#1F2937]">
+              Reutilizaciones{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[80vh] overflow-y-auto p-4">
+            {viewRec && viewRec.catalogo_solicitudes.length > 0 ? (
+              <>
+                <SearchInput
+                  value={reutilizacionesQuery}
+                  onChange={(e) => setReutilizacionesQuery(e.target.value)}
+                  placeholder="Buscar por usuario o vigencia…"
+                  containerClassName="mb-3"
+                />
+                <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-fixed text-sm">
+                      <colgroup>
+                        <col className="w-[40%]" />
+                        <col className="w-[35%]" />
+                        <col className="w-[25%]" />
+                      </colgroup>
+                      <thead>
+                        <tr className="bg-muted/30 border-b border-border">
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reutilizacionesVisibles.length === 0 && (
+                          <tr>
+                            <td colSpan={3} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                              Sin resultados para la búsqueda
+                            </td>
+                          </tr>
+                        )}
+                        {reutilizacionesVisibles.map((sol) => (
+                          <tr key={sol.id} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
+                            <td className="px-4 py-3 text-xs font-medium text-card-foreground truncate text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
+                              {sol.usuario.nombre}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">{sol.nueva_vigencia}</td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
+                              {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <TablePagination
+                  currentPage={reutilizacionesPage}
+                  totalPages={reutilizacionesTotalPages}
+                  onPageChange={setReutilizacionesPage}
+                />
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-6">Sin reutilizaciones registradas.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

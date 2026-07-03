@@ -4,29 +4,61 @@ import { prisma } from "@/lib/prisma"
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const q     = searchParams.get("q")?.trim() ?? ""
-    const page  = Math.max(1, Number(searchParams.get("page") ?? "1"))
-    const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? "20")))
-    const skip  = (page - 1) * limit
+    const q      = searchParams.get("q")?.trim() ?? ""
+    const page   = Math.max(1, Number(searchParams.get("page") ?? "1"))
+    const limit  = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? "20")))
+    const skip   = (page - 1) * limit
+    const userId = searchParams.get("userId")
 
-    const searchWhere = q
-      ? `AND (
-          cj.programa_proyecto         ILIKE $1 OR
-          cj.tipo_actividad            ILIKE $1 OR
-          cj.denominacion_nombramiento ILIKE $1 OR
-          cj.vigencia                  ILIKE $1 OR
-          cj.regimen_contratacion      ILIKE $1
-        )`
-      : ""
+    // Solo se listan registros de la secretaría del usuario que consulta.
+    // Se compara por el nombre de la secretaría de nivel superior (antes del " > ")
+    // ya que la columna plana `secretaria` siempre trae el nombre limpio, sin
+    // depender de si la solicitud original se creó como centralizada o paraestatal.
+    const viewer = userId
+      ? await prisma.usuario.findUnique({
+          where:  { id: userId },
+          select: {
+            secretaria_texto: true,
+            organo_centralizado: { select: { nombre: true } },
+          },
+        })
+      : null
+    const viewerSecretaria = (viewer?.secretaria_texto ?? viewer?.organo_centralizado?.nombre ?? "")
+      .split(">")[0]
+      .trim()
 
-    const countParams: any[] = q ? [`%${q}%`] : []
-    const queryParams: any[] = q ? [`%${q}%`, limit, skip] : [limit, skip]
+    if (!viewerSecretaria) {
+      return NextResponse.json({ records: [], total: 0, page, limit })
+    }
+
+    const conditions = ["cj.activo = true"]
+    const params: any[] = [viewerSecretaria]
+    conditions.push(`lower(trim(split_part(s.secretaria, '>', 1))) = lower($1)`)
+
+    if (q) {
+      params.push(`%${q}%`)
+      const qIdx = params.length
+      conditions.push(`(
+        cj.programa_proyecto         ILIKE $${qIdx} OR
+        cj.tipo_actividad            ILIKE $${qIdx} OR
+        cj.denominacion_nombramiento ILIKE $${qIdx} OR
+        cj.vigencia                  ILIKE $${qIdx} OR
+        cj.regimen_contratacion      ILIKE $${qIdx}
+      )`)
+    }
+
+    const whereClause = `WHERE ${conditions.join(" AND ")}`
 
     const countSql = `
       SELECT COUNT(*) AS total
       FROM catalogo_justificacion cj
-      WHERE cj.activo = true ${searchWhere}
+      LEFT JOIN solicitud s ON s.id = cj.solicitud_id
+      ${whereClause}
     `
+
+    const listParams = [...params, limit, skip]
+    const limitIdx  = params.length + 1
+    const offsetIdx = params.length + 2
 
     const listSql = `
       SELECT
@@ -54,14 +86,14 @@ export async function GET(req: NextRequest) {
         (SELECT COUNT(*) FROM catalogo_solicitud cs2 WHERE cs2.catalogo_justificacion_id = cj.id) AS sol_count
       FROM catalogo_justificacion cj
       LEFT JOIN solicitud s ON s.id = cj.solicitud_id
-      WHERE cj.activo = true ${searchWhere}
+      ${whereClause}
       ORDER BY cj.creado_en DESC
-      LIMIT $${q ? 2 : 1} OFFSET $${q ? 3 : 2}
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `
 
     const [countRows, rows] = await Promise.all([
-      prisma.$queryRawUnsafe<{ total: bigint }[]>(countSql, ...countParams),
-      prisma.$queryRawUnsafe<any[]>(listSql, ...queryParams),
+      prisma.$queryRawUnsafe<{ total: bigint }[]>(countSql, ...params),
+      prisma.$queryRawUnsafe<any[]>(listSql, ...listParams),
     ])
 
     const total = Number(countRows[0]?.total ?? 0)
