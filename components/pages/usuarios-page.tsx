@@ -1894,45 +1894,44 @@ export function UsuariosPage() {
         />
       )}
 
-      <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">
-        <button
-          onClick={() => setTabEstatus("activos")}
-          className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-            tabEstatus === "activos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-card-foreground"
-          }`}
-        >
-          <Power className="h-3 w-3" />
-          Activos
-          <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "activos" ? "bg-white/20" : "bg-muted"}`}>
-            {activos.length}
-          </span>
-        </button>
-        <button
-          onClick={() => setTabEstatus("deshabilitados")}
-          className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-            tabEstatus === "deshabilitados" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-card-foreground"
-          }`}
-        >
-          <PowerOff className="h-3 w-3" />
-          Deshabilitados
-          {deshabilitados.length > 0 && (
-            <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "deshabilitados" ? "bg-white/20" : "bg-muted"}`}>
-              {deshabilitados.length}
+      <div className="flex w-full justify-center">
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">
+          <button
+            onClick={() => setTabEstatus("activos")}
+            className={`rounded-md px-5 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+              tabEstatus === "activos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-card-foreground"
+            }`}
+          >
+            <Power className="h-3.5 w-3.5" />
+            Activos
+            <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "activos" ? "bg-white/20" : "bg-muted"}`}>
+              {activos.length}
             </span>
-          )}
-        </button>
+          </button>
+          <button
+            onClick={() => setTabEstatus("deshabilitados")}
+            className={`rounded-md px-5 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+              tabEstatus === "deshabilitados" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-card-foreground"
+            }`}
+          >
+            <PowerOff className="h-3.5 w-3.5" />
+            Deshabilitados
+            {deshabilitados.length > 0 && (
+              <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "deshabilitados" ? "bg-white/20" : "bg-muted"}`}>
+                {deshabilitados.length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative max-w-sm flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre, correo, RFC..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-card"
-          />
-        </div>
+        <SearchInput
+          placeholder="Buscar por nombre, correo, RFC..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          containerClassName="flex-1 max-w-sm"
+        />
         <div className="flex items-center gap-6 rounded-lg border border-border bg-card p-2">
           <RadioGroup
     value={filtroAdmin}

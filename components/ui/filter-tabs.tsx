@@ -16,14 +16,19 @@ interface FilterTabsProps {
   items: FilterTabItem[]
   sectionLabel?: string
   className?: string
+  /** Distribuye las tabs ocupando todo el ancho disponible (flex-1 por tab) en vez de agruparlas a su tamaño natural. */
+  fullWidth?: boolean
+  /** Sobreescribe el color de la tab activa (por defecto bg-primary text-primary-foreground). */
+  activeClassName?: string
 }
 
-export function FilterTabs({ value, onValueChange, items, sectionLabel, className }: FilterTabsProps) {
+export function FilterTabs({ value, onValueChange, items, sectionLabel, className, fullWidth, activeClassName }: FilterTabsProps) {
   return (
     <div className="flex w-full justify-center">
     <div
       className={cn(
-        "flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit",
+        "flex items-center gap-1 rounded-lg border border-border bg-card p-1",
+        fullWidth ? "w-full" : "w-fit",
         className
       )}
       role="tablist"
@@ -41,9 +46,10 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel, classNam
             id={`tab-${item.value}`}
             onClick={() => onValueChange(item.value)}
             className={cn(
-              "rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5",
+              "rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5",
+              fullWidth && "flex-1",
               isActive
-                ? "bg-primary text-primary-foreground"
+                ? (activeClassName ?? "bg-primary text-primary-foreground")
                 : "text-muted-foreground hover:text-card-foreground"
             )}
           >

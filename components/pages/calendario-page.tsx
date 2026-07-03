@@ -291,10 +291,17 @@ export function CalendarioPage() {
               )
             ) : (
               <div className="flex items-center gap-1.5 rounded-lg border border-secondary/30 bg-secondary/5 p-1">
-                <Button size="sm" className="gap-1.5 text-xs h-7 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/90" onClick={handleSaveEdit} disabled={saving}>
+                <Button size="sm" className="gap-1.5 text-xs h-7 rounded-full shadow-sm bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0" onClick={handleSaveEdit} disabled={saving}>
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}Guardar
                 </Button>
-                <Button variant="ghost" size="sm" className="gap-1.5 text-xs h-7 rounded-md text-muted-foreground hover:text-card-foreground" onClick={handleCancelEdit} disabled={saving}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs h-7 rounded-full border-[1.5px] shadow-sm hover:!bg-[#f7cde5]"
+                  style={{ backgroundColor: "#fce4f0", color: "#832B56", borderColor: "#832B56" }}
+                  onClick={handleCancelEdit}
+                  disabled={saving}
+                >
                   <X className="h-3 w-3" />Cancelar
                 </Button>
               </div>
@@ -343,6 +350,7 @@ export function CalendarioPage() {
                 { value: "asimilados", label: "Honorarios asimilados a salarios", count: filledCount.asimilados || undefined },
                 { value: "nombramiento", label: "Nombramiento por tiempo determinado", count: filledCount.nombramiento || undefined },
               ]}
+              fullWidth
             />
 
             {editing && (
@@ -355,23 +363,27 @@ export function CalendarioPage() {
             )}
 
             {tabRecepcion === "honorarios" && (
-              <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto overflow-y-hidden rounded-[8px] border border-[#E5E7EB]">
+                <table className="w-full min-w-[640px] text-sm table-fixed">
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
-                      <th className="px-5 py-3 text-left font-semibold">Mes de aplicación</th>
-                      <th className="px-5 py-3 text-center font-semibold">Fecha límite de recepción de solicitudes de<br />dictámen/opiniónes técnicas funcionales (DGDO)</th>
-                      <th className="px-5 py-3 text-center font-semibold">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
+                      <th className="px-5 py-3 text-left font-semibold align-middle w-1/5">Mes de aplicación</th>
+                      <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
+                        Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)
+                      </th>
+                      <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
+                        Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
 
                   {honorariosSorted.map((row, idx) => (
                       <tr key={row.mes} className={`border-t border-border/60 transition-colors ${idx % 2 === 0 ? "bg-card" : "bg-muted/20"} ${!editing && row.limiteDO && !row.limiteDO.startsWith("/") ? "hover:bg-muted/40" : ""}`}>
-                        <td className="px-5 py-3"><span className="font-medium text-card-foreground">{row.mes}</span></td>
+                        <td className="px-5 py-3 align-middle"><span className="font-medium text-card-foreground">{row.mes}</span></td>
                         {editing ? (
                           <>
-                            <td className="px-3 py-2 text-center">
+                            <td className="px-3 py-2 text-center align-middle">
                               <DatePickerHabil
                                 value={dmyToDate(row.limiteDO)}
                                 defaultMonth={new Date(ejercicio, MESES.indexOf(row.mes), 1)}
@@ -380,7 +392,7 @@ export function CalendarioPage() {
                                 compact
                               />
                             </td>
-                            <td className="px-3 py-2 text-center">
+                            <td className="px-3 py-2 text-center align-middle">
                               <DatePickerHabil
                                 value={dmyToDate(row.limiteDGRH)}
                                 defaultMonth={new Date(ejercicio, MESES.indexOf(row.mes), 1)}
@@ -392,8 +404,8 @@ export function CalendarioPage() {
                           </>
                         ) : (
                           <>
-                            <td className="px-5 py-3 text-center"><DateCell value={row.limiteDO} /></td>
-                            <td className="px-5 py-3 text-center"><DateCell value={row.limiteDGRH} /></td>
+                            <td className="px-5 py-3 text-center align-middle"><DateCell value={row.limiteDO} /></td>
+                            <td className="px-5 py-3 text-center align-middle"><DateCell value={row.limiteDGRH} /></td>
                           </>
                         )}
                       </tr>
@@ -404,24 +416,28 @@ export function CalendarioPage() {
             )}
 
             {(tabRecepcion === "asimilados" || tabRecepcion === "nombramiento") && (
-              <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto overflow-y-hidden rounded-[8px] border border-[#E5E7EB]">
+                <table className="w-full min-w-[640px] text-sm table-fixed">
 
                   <thead>
                     <tr className="bg-secondary text-secondary-foreground">
-                      <th className="px-5 py-3 text-left font-semibold w-48">Quincena de Aplicacion</th>
-                      <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de<br />dictámen/opiniónes técnicas funcionales (DGDO)</th>
-                      <th className="px-5 py-3 text-center font-semibold w-56">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</th>
+                      <th className="px-5 py-3 text-left font-semibold align-middle w-1/5">Quincena de Aplicacion</th>
+                      <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
+                        Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)
+                      </th>
+                      <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
+                        Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {(tabRecepcion === "asimilados" ? asimiladosSorted : nombramientoSorted).map((row, idx) => (
                       <tr key={row.quincena} className={`border-t border-border/60 transition-colors ${idx % 2 === 0 ? "bg-card" : "bg-muted/20"} ${!editing && row.limiteDO && !row.limiteDO.startsWith("/") ? "hover:bg-muted/40" : ""}`}>
-                        <td className="px-5 py-3"><span className="font-medium text-card-foreground">{row.quincena}</span></td>
+                        <td className="px-5 py-3 align-middle"><span className="font-medium text-card-foreground">{row.quincena}</span></td>
                         {editing ? (
                           <>
-                            <td className="px-3 py-2 text-center">
+                            <td className="px-3 py-2 text-center align-middle">
                               <DatePickerHabil
                                 value={dmyToDate(row.limiteDO)}
                                 defaultMonth={new Date(ejercicio, MESES.indexOf(mesDeQuincena(row.quincena)), 1)}
@@ -430,7 +446,7 @@ export function CalendarioPage() {
                                 compact
                               />
                             </td>
-                            <td className="px-3 py-2 text-center">
+                            <td className="px-3 py-2 text-center align-middle">
                               <DatePickerHabil
                                 value={dmyToDate(row.limiteDGRH)}
                                 defaultMonth={new Date(ejercicio, MESES.indexOf(mesDeQuincena(row.quincena)), 1)}
@@ -442,8 +458,8 @@ export function CalendarioPage() {
                           </>
                         ) : (
                           <>
-                            <td className="px-5 py-3 text-center"><DateCell value={row.limiteDO} /></td>
-                            <td className="px-5 py-3 text-center"><DateCell value={row.limiteDGRH} /></td>
+                            <td className="px-5 py-3 text-center align-middle"><DateCell value={row.limiteDO} /></td>
+                            <td className="px-5 py-3 text-center align-middle"><DateCell value={row.limiteDGRH} /></td>
                           </>
                         )}
                       </tr>
