@@ -15,7 +15,7 @@
   --popover-foreground: #1a2419;
 
   /* ── Primario (vino) ─────────────────────────────────────────────────── */
-  --primary: #773357;
+  --primary: #2e3b2b;
   --primary-foreground: #ffffff;
 
   /* ── Secundario (olivo) ──────────────────────────────────────────────── */
@@ -601,5 +601,39 @@ table.w-full.conditions-table tbody td:not(:first-child) {
     font-weight: 300;
     line-height: 1.4;
   }
+}
+
+.ds-calendar-popover .rdp-day_button {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 8px !important;
+  background-color: transparent !important;
+  color: #1a2419 !important;
+}
+
+.ds-calendar-popover .rdp-day_button:hover {
+  background-color: #f3f2ee !important;
+  color: #1a2419 !important;
+}
+
+.ds-calendar-popover [data-selected="true"] .rdp-day_button {
+  background-color: #8a1f52 !important;
+  color: #ffffff !important;
+}
+
+.ds-calendar-popover [data-selected="true"] .rdp-day_button:hover {
+  background-color: #8a1f52 !important;
+  color: #ffffff !important;
+}
+
+.ds-calendar-popover [data-disabled="true"] .rdp-day_button {
+  background-color: transparent !important;
+  color: #d1d5db !important;
+  text-decoration: none !important;
+}
+
+.ds-calendar-popover .rdp-day_button:focus-visible {
+  outline: 2px solid #d9a300 !important;
+  outline-offset: 2px !important;
 }
 /* ──────────────────────────────────────────────────────────────────────── */

@@ -159,7 +159,7 @@ export function DatePickerHabil({
           <span className="truncate">{label}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="ds-calendar-popover relative w-auto rounded-xl border border-stone-200 bg-white p-2 shadow-lg" align="start">
         <DayPicker
           mode="single"
           locale={es}
@@ -181,32 +181,38 @@ export function DatePickerHabil({
           }}
           modifiers={{ inhabil: INHABILES }}
           modifiersClassNames={{
-            inhabil: "text-muted-foreground/40 bg-muted/30 cursor-not-allowed line-through",
+            inhabil: "cursor-not-allowed",
           }}
           classNames={{
-            root:          "p-3 select-none",
+            root: "p-3 select-none",
+
             months:        "flex flex-col gap-4",
             month:         "flex flex-col gap-3",
-            month_caption: "flex items-center justify-between h-8 px-1",
+            month_caption: "flex h-4 items-center justify-center px-10",
             caption_label: "text-sm font-semibold capitalize text-card-foreground",
-            nav:           "flex items-center gap-1",
+            nav:            "absolute left-3 right-3 top-3 flex items-center justify-between",
             button_previous: cn(
-              "h-7 w-7 p-0 border border-input rounded-md flex items-center justify-center",
-              "opacity-70 hover:opacity-100 hover:bg-accent transition-opacity",
+              "flex h-7 w-7 items-center justify-center rounded-md border border-stone-200 p-0 text-foreground",
+              "hover:bg-stone-100 hover:text-foreground transition-colors",
             ),
             button_next: cn(
-              "h-7 w-7 p-0 border border-input rounded-md flex items-center justify-center",
-              "opacity-70 hover:opacity-100 hover:bg-accent transition-opacity",
+              "flex h-7 w-7 items-center justify-center rounded-md border border-stone-200 p-0 text-foreground",
+              "hover:bg-stone-100 hover:text-foreground transition-colors",
             ),
             weekdays:    "flex mt-1",
             weekday:     "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center pb-1",
             week:        "flex w-full mt-1",
-            day:         "relative p-0 text-center w-9 h-9",
-            day_button:  "w-full h-full rounded-md text-sm font-normal hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring",
-            selected:    "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground",
-            today:       "[&>button]:font-bold [&>button]:underline",
-            outside:     "opacity-40",
-            disabled:    "opacity-30 pointer-events-none",
+           day:
+  "relative p-0 text-center w-9 h-9 [&>button]:h-8 [&>button]:w-8 [&>button]:rounded-md [&>button]:bg-transparent [&>button]:text-[#1A2419] [&>button]:text-sm [&>button]:font-normal [&>button]:transition-colors [&>button:hover]:bg-[#F3F2EE] [&>button:hover]:text-[#1A2419]",
+
+selected:
+  "[&>button]:!bg-[#8A1F52] [&>button]:!text-white [&>button:hover]:!bg-[#8A1F52] [&>button:hover]:!text-white",
+
+today:
+  "[&>button]:font-semibold",
+
+disabled:
+  "opacity-40 pointer-events-none [&>button]:!bg-transparent [&>button]:!text-[#A8A8A8] [&>button]:no-underline",
           }}
           components={{
             Chevron: ({ orientation }) =>

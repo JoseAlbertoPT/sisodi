@@ -23,7 +23,7 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel, classNam
     <div className="flex w-full justify-center">
     <div
       className={cn(
-        "inline-flex w-fit items-center gap-0.5 rounded-lg border border-gray-200 bg-white p-[3px]",
+        "flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit",
         className
       )}
       role="tablist"
@@ -41,18 +41,18 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel, classNam
             id={`tab-${item.value}`}
             onClick={() => onValueChange(item.value)}
             className={cn(
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-[5px] text-[13px] whitespace-nowrap transition-colors focus-visible:outline-none",
+              "rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5",
               isActive
-                ? "bg-[#e4e3d6] border border-[#c2d4a8] rounded-lg text-[#3a4a2a] font-medium px-4 py-1.5"
-                : "bg-transparent border-none text-gray-500 font-normal hover:text-gray-900"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-card-foreground"
             )}
           >
             <span>{item.label}</span>
             {item.count !== undefined && (
               <span
                 className={cn(
-                  "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold leading-none",
-                  isActive ? "bg-gray-100 text-[#1f1f1f]" : "bg-gray-100 text-gray-500"
+                  "ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono",
+                  isActive ? "bg-white/20" : "bg-muted"
                 )}
               >
                 {item.count}
