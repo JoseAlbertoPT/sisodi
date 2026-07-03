@@ -695,7 +695,6 @@ function AdministracionTab() {
   const { user } = useAuth()
   const limit = 10
   const hasDataRef = useRef(false)
-
   const [viewRec, setViewRec]                     = useState<AdminRecord | null>(null)
   const [showReutilizaciones, setShowReutilizaciones] = useState(false)
   const [reutilizacionesPage, setReutilizacionesPage] = useState(1)

@@ -49,33 +49,35 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, data: [] })
     }
 
-    let organoFilter: any = {}
+    // Solo el rol Capturista se restringe a su propia secretaría. Administrador,
+    // Emisor, Validador, Revisor y UEFA ven todos los dictámenes emitidos.
+    // Se compara por el nombre de la secretaría de nivel superior (antes del " > ")
+    // porque el snapshot id/texto de cada solicitud varía según si se creó como
+    // centralizada o paraestatal, pero la columna plana `secretaria` siempre trae
+    // el nombre limpio.
+    let capturistaSecretaria: string | null = null
     if (userId) {
       const viewer = await prisma.usuario.findUnique({
         where:  { id: userId },
         select: {
-          secretaria_id:    true,
-          secretaria_texto: true,
-          rol:              { select: { nombre: true } },
+          secretaria_texto:    true,
+          organo_centralizado: { select: { nombre: true } },
+          rol:                 { select: { nombre: true } },
         },
       })
-      if (viewer) {
-        const rolNombre = viewer.rol?.nombre?.toLowerCase() ?? ""
-        const esCapturista = rolNombre === "capturista"
-        if (esCapturista) {
-          if (viewer.secretaria_id) {
-            organoFilter = { secretaria_id_snapshot: viewer.secretaria_id }
-          } else if (viewer.secretaria_texto) {
-            organoFilter = { secretaria_txt_snapshot: viewer.secretaria_texto }
-          } else {
-            return NextResponse.json({ ok: true, data: [] })
-          }
+      if (viewer && (viewer.rol?.nombre?.toLowerCase() ?? "") === "capturista") {
+        capturistaSecretaria = (viewer.secretaria_texto ?? viewer.organo_centralizado?.nombre ?? "")
+          .split(">")[0]
+          .trim()
+          .toLowerCase()
+        if (!capturistaSecretaria) {
+          return NextResponse.json({ ok: true, data: [] })
         }
       }
     }
 
-    const solicitudes = await prisma.solicitud.findMany({
-      where: { estado_id: estadoEmitido.id, ...organoFilter },
+    const solicitudesTodas = await prisma.solicitud.findMany({
+      where: { estado_id: estadoEmitido.id },
       include: {
         estado:   true,
         periodo:  true,
@@ -100,6 +102,12 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { fecha_emision: "desc" },
     })
+
+    const solicitudes = capturistaSecretaria
+      ? solicitudesTodas.filter(
+          (sol) => ((sol as any).secretaria ?? "").split(">")[0].trim().toLowerCase() === capturistaSecretaria
+        )
+      : solicitudesTodas
 
     const data = solicitudes.map((sol) => {
       const historial = sol.historial_solicitud
