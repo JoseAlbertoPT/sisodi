@@ -342,7 +342,7 @@ function SecretariaTreeSelector({
               <div className="ml-7">
                 {(level.options.length > 5 || idx === 0) && (
                   <div className="relative mb-1.5">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       placeholder={idx === 0 ? "Escribir para buscar Secretaría o Unidad..." : `Buscar ${level.label.toLowerCase()}...`}
                       value={query}
@@ -643,7 +643,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             if (key === "correo" && form.correo.trim() && /\S+@\S+\.\S+/.test(form.correo))
               checkUnico("correo", form.correo)
           }}
-          className={`bg-background h-9 py-2 text-xs ${hasError ? "border-destructive" : ""}`}
+          className={`bg-background rounded-full h-9 px-4 text-xs ${hasError ? "border-destructive" : ""}`}
         />
         {isChecking && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
         {!isChecking && hint && !hasError && <span className="text-[10px] text-muted-foreground">{hint}</span>}
@@ -829,7 +829,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     onBlur={() => {
                       if (form.rfc.trim()) checkUnico("rfc", form.rfc)
                     }}
-                    className={`bg-background h-9 py-2 text-xs font-mono tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
+                    className={`bg-background h-9 py-2 rounded-full px-4 pr-9 text-xs font-mono tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
                     maxLength={13}
                   />
                   {checking.rfc && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
@@ -1248,13 +1248,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               {usuario.estatus}
             </Badge>
             {usuario.tipoAdministracion === "centralizada" ? (
-              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: "#16653418", color: "#166534" }}>
-                <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: "#166534" }} />
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: "#16653418", color: "#166534" }}>
                 Centralizada
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
-                <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: "#7b1d3d" }} />
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
                 Paraestatal
               </span>
             )}
@@ -1793,7 +1791,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
           )}
         </div>
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
-          <Button variant="default" size="sm" className="text-xs h-9" onClick={requestClose}>Cerrar</Button>
+          <Button variant="outline" size="sm" className="text-xs h-9" onClick={requestClose}>Cerrar</Button>
         </div>
       </div>
     </div>
@@ -1912,7 +1910,7 @@ export function UsuariosPage() {
         <button
           onClick={() => setTabEstatus("deshabilitados")}
           className={`rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-            tabEstatus === "deshabilitados" ? "bg-[#7b1d3d] text-white" : "text-muted-foreground hover:text-card-foreground"
+            tabEstatus === "deshabilitados" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-card-foreground"
           }`}
         >
           <PowerOff className="h-3 w-3" />
@@ -2042,7 +2040,7 @@ export function UsuariosPage() {
                     <td className="px-4 py-3">
   <div className="flex items-center justify-end">
     <DropdownMenu>
-      <Tooltip>
+                        <Tooltip>
                           <TooltipTrigger asChild>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="hover:bg-stone-200 hover:text-foreground" aria-label="Acciones">

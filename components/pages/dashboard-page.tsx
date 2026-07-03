@@ -43,6 +43,11 @@ const C_VERDE_MEDIO   = "#3a5c3a"
 const C_AMBAR         = "#c57a2a"
 const C_GRIS_VERDE    = "#5a5c4a"
 const C_BURDEOS       = "#832b56"
+const C_MORA10       = "#3c0126"
+const C_MORA50       = "#ab5e84"
+const C_MORA90       = "#ffd8e7"
+const C_PIEDRA40    = "#3f80ff"
+const C_PIEDRA70    = "#79a6ff"
 const MESES = [
 
   { value: "01", label: "Enero" },
@@ -119,10 +124,11 @@ function GraficaBarrasVertical({
             data={data}
             margin={{ top: 20, right: 12, left: -4, bottom: 64 }}
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8e7e2" />
+            <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#ECEBE7" />
             <XAxis
               dataKey={nameKey}
-              tick={{ fontSize: 10, fill: "#6b6960" }}
+              //tick={{ fontSize: 11, fill: "#6b6960" }}
+              tick={false}
               interval={0}
               tickFormatter={(v) => truncate(v)}
               angle={-38}
@@ -131,15 +137,15 @@ function GraficaBarrasVertical({
               axisLine={{ stroke: "#d6d5cf" }}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "#9a9890" }}
+              tick={{ fontSize: 11, fill: "#8D8A84" }}
               allowDecimals={false}
               width={30}
               tickLine={false}
               axisLine={false}
               domain={[0, Math.ceil(maxVal * 1.18)]}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-            <Bar dataKey={dataKey} fill={color} radius={[5, 5, 0, 0]} barSize={24} name="Solicitudes">
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
+            <Bar dataKey={dataKey} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} name="Solicitudes">
               <LabelList
                 dataKey={dataKey}
                 position="top"
@@ -154,11 +160,11 @@ function GraficaBarrasVertical({
   )
 }
 
-function GraficaEmisiones({ data, title, barKey, barColor }: {
+function GraficaEmisiones({ data, title, barKey, color }: {
   data: { secretaria: string; dictamenes: number; opiniones: number }[]
   title: string
   barKey: "dictamenes" | "opiniones"
-  barColor: string
+  color: string
 }) {
   const truncate = (s: string, n = 13) => s.length > n ? s.slice(0, n) + "…" : s
   const maxVal = Math.max(...data.map(d => d[barKey] ?? 0), 0)
@@ -178,13 +184,7 @@ function GraficaEmisiones({ data, title, barKey, barColor }: {
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-1">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: barColor }} />
-            {barKey === "dictamenes" ? "Dictámenes" : "Opiniones"}
-          </span>
-        </div>
+        
       </CardHeader>
 
       <CardContent className="pt-2">
@@ -194,10 +194,11 @@ function GraficaEmisiones({ data, title, barKey, barColor }: {
             margin={{ top: 20, right: 12, left: -4, bottom: 64 }}
             barGap={3}
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8e7e2" />
+            <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#ECEBE7" />
             <XAxis
               dataKey="secretaria"
-              tick={{ fontSize: 10, fill: "#6b6960" }}
+              //tick={{ fontSize: 11, fill: "#6b6960" }}
+              tick={false}
               interval={0}
               tickFormatter={(v) => truncate(v)}
               angle={-38}
@@ -206,19 +207,33 @@ function GraficaEmisiones({ data, title, barKey, barColor }: {
               axisLine={{ stroke: "#d6d5cf" }}
                />
                <YAxis
-               tick={{ fontSize: 10, fill: "#9a9890" }}
+               tick={{ fontSize: 11, fill: "#8D8A84" }}
                allowDecimals={false}
                width={30}
                tickLine={false}
                axisLine={false}
                 domain={[0, Math.ceil(maxVal * 1.18)]}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-                <Bar dataKey={barKey} name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"} fill={barColor} radius={[5, 5, 0, 0]} barSize={24}>
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
+                  <Legend
+                    verticalAlign="bottom"
+                    align="left"
+                    iconType="circle"
+                    iconSize={8}
+                      formatter={(value) => (
+                        <span className="text-black font-medium">{value}</span>
+                      )}
+                    wrapperStyle={{
+                      fontSize: "12px",
+                      paddingTop: "10px",
+                      paddingLeft: "12px",
+                    }}
+                  />
+                <Bar dataKey={barKey} name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14}>
                 <LabelList
                 dataKey={barKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: barColor }}
+                style={{ fontSize: 10, fontWeight: 600, fill: color }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -249,47 +264,89 @@ const COLORES_SECRETARIA = [
   "#6a3a5a", "#5a7a4a", "#7a5a3a", "#3a6a5a", "#6a4a7a",
 ]
 const COLORES_TIPO: Record<string, string> = {
-  Centralizada: C_VERDE_OSCURO,
+  Centralizada: C_MORA10,
 
-  Paraestatal:  C_DORADO,
+  Paraestatal:  C_MORA50,
 }
 function DonutSimple({ items, subLabel }: {
   items: { name: string; value: number; color: string }[]
   subLabel: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const total = items.reduce((s, d) => s + d.value, 0)
   return (
-    <ResponsiveContainer width="100%" height={380}>
-      <PieChart>
-        <Pie
-          data={items}
-          cx="50%"
-          cy="44%"
-          innerRadius={72}
-          outerRadius={118}
-          paddingAngle={3}
-          dataKey="value"
-          strokeWidth={0}
-        >
-          {items.map((entry, i) => (
-            <Cell key={i} fill={entry.color} />
-          ))}
-          <Label content={<CenterLabel total={total} label={subLabel} />} position="center" />
-        </Pie>
-        <Tooltip content={<CustomTooltip />} />
-        <Legend
-          verticalAlign="bottom"
-          iconSize={9}
-          iconType="circle"
-          wrapperStyle={{ fontSize: "11px", paddingTop: "10px", color: "#52504a" }}
-          formatter={(v, entry: any) => (
-            <span style={{ color: "#52504a" }}>
-              {v} <strong style={{ color: entry.color }}>({entry.payload.value})</strong>
+    <div className="mx-auto grid min-h-[250px] max-w-[720px] items-center gap-4 md:grid-cols-[300px_260px]">
+      <div className="relative flex h-[230px] w-full items-center justify-center">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={items}
+              cx="50%"
+              cy="50%"
+              innerRadius={80}
+              outerRadius={110}
+              cornerRadius={7}
+              paddingAngle={1}
+              dataKey="value"
+              stroke="#fff"
+              strokeWidth={3}
+              onMouseEnter={(_, index) => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
+            >
+              {items.map((entry, i) => (
+                <Cell
+                  key={i}
+                  fill={entry.color}
+                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.18}
+                  className="transition-opacity duration-200"
+                />
+              ))}
+            </Pie>
+
+            <Label
+              content={<CenterLabel total={total} label={subLabel} />}
+              position="center"
+            />
+
+           
+          </PieChart>
+        </ResponsiveContainer>
+
+        {activeIndex !== null && total > 0 && (
+          <div className="absolute left-[calc(50%-118px)] top-1/2 -translate-y-1/2 rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-[#283c2a] shadow-md">
+            {((items[activeIndex].value / total) * 100).toFixed(1)}%
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col justify-center gap-1.5">
+        {items.map((item, index) => (
+          <button
+            key={item.name}
+            type="button"
+            onMouseEnter={() => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(null)}
+            className={[
+              "flex items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors",
+              activeIndex === index ? "bg-muted" : "hover:bg-muted/70",
+            ].join(" ")}
+          >
+            <span
+              className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: item.color }}
+            />
+            <span className="flex min-w-0 flex-col">
+              <span className="text-xs font-medium leading-tight text-card-foreground">
+                {item.name}
+              </span>
+              <span className="text-xs font-bold text-card-foreground">
+                {item.value.toLocaleString("es-MX")}
+              </span>
             </span>
-          )}
-        />
-      </PieChart>
-    </ResponsiveContainer>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -316,10 +373,11 @@ function BarrasPrestadoresPorTipo({
       <p className="text-xs font-medium text-muted-foreground text-center mb-1">{title}</p>
       <ResponsiveContainer width="100%" height={360}>
         <BarChart data={barData} margin={{ top: 20, right: 8, left: -4, bottom: 72 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e8e7e2" />
+          <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#ECEBE7" />
           <XAxis
             dataKey="secretaria"
-            tick={{ fontSize: 10, fill: "#6b6960" }}
+            //tick={{ fontSize: 11, fill: "#6b6960" }}
+            tick={false}
             interval={0}
             tickFormatter={(v) => truncate(v)}
             angle={-38}
@@ -328,15 +386,15 @@ function BarrasPrestadoresPorTipo({
             axisLine={{ stroke: "#d6d5cf" }}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: "#9a9890" }}
+            tick={{ fontSize: 11, fill: "#8D8A84" }}
             allowDecimals={false}
             width={30}
             tickLine={false}
             axisLine={false}
             domain={[0, Math.ceil(maxVal * 1.18)]}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
-          <Bar dataKey="prestadores" name="Prestadores" fill={color} radius={[5, 5, 0, 0]} barSize={22} isAnimationActive={false}>
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
+          <Bar dataKey="prestadores" name="Prestadores" fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} isAnimationActive={false}>
             <LabelList
               dataKey="prestadores"
               position="top"
@@ -351,9 +409,9 @@ function BarrasPrestadoresPorTipo({
 }
 
 const COLORES_REGIMEN: Record<string, string> = {
-  "Honorarios":           C_VERDE_OSCURO,
-  "Honorarios Asimilados": C_DORADO,
-  "Nombramiento":         C_BURDEOS,
+  "Honorarios":           C_MORA90,
+  "Honorarios Asimilados": C_MORA50,
+  "Nombramiento":         C_MORA10,
 }
 
 function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prestadores: number }[] }) {
@@ -372,7 +430,8 @@ function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prest
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
-          <ResponsiveContainer width="100%" height={272}>
+          <DonutSimple items={items} subLabel="prestadores" />
+          /*<ResponsiveContainer width="100%" height={272}>
             <PieChart>
               <Pie
                 data={items}
@@ -402,7 +461,7 @@ function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prest
                 )}
               />
             </PieChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>*/
         )}
       </CardContent>
     </Card>
@@ -435,12 +494,12 @@ function GraficaPrestadores({
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Centralizada"
               items={centralizadas}
-              color={C_VERDE_OSCURO}
+              color={C_MORA10}
             />
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Paraestatal"
               items={paraestatales}
-              color={C_DORADO}
+              color={C_MORA50}
             />
           </div>
         )}
@@ -457,8 +516,8 @@ function GraficaSolicitudesTipo({
   const totalC = centralizada.reduce((s, d) => s + d.count, 0)
   const totalP = paraestatal.reduce((s, d)  => s + d.count, 0)
   const items = [
-    { name: "Centralizada", value: totalC, color: C_VERDE_OSCURO },
-    { name: "Paraestatal",  value: totalP, color: C_DORADO       },
+    { name: "Centralizada", value: totalC, color: C_MORA10 },
+    { name: "Paraestatal",  value: totalP, color: C_MORA50       },
   ].filter(d => d.value > 0)
   const total = items.reduce((s, d) => s + d.value, 0)
   return (
@@ -470,7 +529,8 @@ function GraficaSolicitudesTipo({
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
-          <ResponsiveContainer width="100%" height={272}>
+          <DonutSimple items={items} subLabel="solicitudes" />
+          /*<ResponsiveContainer width="100%" height={272}>
             <PieChart>
               <Pie
                 data={items}
@@ -500,7 +560,7 @@ function GraficaSolicitudesTipo({
                 )}
               />
             </PieChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>*/
         )}
       </CardContent>
     </Card>
@@ -778,6 +838,9 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
     : MESES.find(m => m.value === mes)?.label ?? mes
   const periodoLabel = mes === "todos" ? anio : `${mesFiltroLabel}-${anio}`
   const periodoSlug  = mes === "todos" ? anio : `${anio}-${mes}`
+  const [reporteSeleccionado, setReporteSeleccionado] =useState<typeof REPORTES[number] | null>(null)
+
+  const [confirmarDescarga, setConfirmarDescarga] = useState(false)
 
   const handleDescargar = (reporte: typeof REPORTES[number]) => {
     if (!data) return
@@ -852,7 +915,10 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
             {REPORTES.map(r => (
               <button
                 key={r.id}
-                onClick={() => handleDescargar(r)}
+                onClick={() => {
+                     setReporteSeleccionado(r)
+                      setConfirmarDescarga(true)
+                }} 
                 disabled={descargando === r.id}
                 className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left hover:bg-accent/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
@@ -875,7 +941,49 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
           </p>
         </DialogContent>
       </Dialog>
+      <Dialog open={confirmarDescarga} onOpenChange={setConfirmarDescarga}>
+  <DialogContent className="max-w-sm">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-2 text-base">
+        <FileSpreadsheet className="h-5 w-5 text-secondary" />
+        Confirmar descarga
+      </DialogTitle>
+      <p className="text-sm text-muted-foreground pt-1">
+        ¿Está seguro de descargar el reporte{" "}
+        <strong className="text-card-foreground">
+          {reporteSeleccionado?.titulo}
+        </strong>
+        ?
+      </p>
+    </DialogHeader>
 
+    <div className="flex justify-end gap-2 pt-3">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setConfirmarDescarga(false)}
+      >
+        Cancelar
+      </Button>
+
+      <Button
+        type="button"
+        disabled={!reporteSeleccionado || descargando === reporteSeleccionado.id}
+        onClick={() => {
+          if (!reporteSeleccionado) return
+
+          handleDescargar(reporteSeleccionado)
+          setConfirmarDescarga(false)
+          setModalAbierto(false)
+        }}
+      >
+        {reporteSeleccionado && descargando === reporteSeleccionado.id
+          ? "Descargando..."
+          : "Descargar"}
+      </Button>
+    </div>
+  </DialogContent>
+       </Dialog>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {kpis.map(kpi => (
           <KpiCard key={kpi.label} {...kpi} loading={loading} />
@@ -901,13 +1009,13 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 <GraficaBarrasVertical
                   title="Administración Centralizada"
                   data={data?.porSecretariaCentralizada ?? []}
-                  color={C_VERDE_OSCURO}
+                  color={C_MORA10}
                   emptyMsg="Sin solicitudes centralizadas en el periodo."
                 />
                 <GraficaBarrasVertical
                   title="Administración Paraestatal"
                   data={data?.porSecretariaParaestatal ?? []}
-                  color={C_DORADO}
+                  color={C_MORA50}
                   emptyMsg="Sin solicitudes paraestatales en el periodo."
                 />
               </div>
@@ -928,13 +1036,13 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 title="Administración Centralizada — Dictámenes"
                 data={emisionesCentralizada}
                 barKey="dictamenes"
-                barColor={C_VERDE_OSCURO}
+                color={C_MORA10}
               />
               <GraficaEmisiones
                 title="Administración Paraestatal — Opiniones"
                 data={emisionesParaestatal}
                 barKey="opiniones"
-                barColor={C_AMBAR}
+                color={C_MORA50}
               />
             </div>
           </AccordionContent>
