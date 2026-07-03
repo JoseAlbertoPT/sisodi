@@ -573,21 +573,27 @@ function KpiCard({
   label: string; value: number; icon: React.ElementType; color: string; loading: boolean
 }) {
   return (
-    <Card className="shadow-sm border-border">
-      <CardContent className="flex items-center gap-4 p-4">
+    <Card className="rounded-xl border border-border bg-card shadow-sm">
+      <CardContent className="flex h-[35px] items-center gap-3 px-5 py-3">
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: color }}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+          style={{ backgroundColor: `${color}18` }}
         >
-          <Icon className="h-5 w-5 text-white" />
+          <Icon className="h-4 w-4" style={{ color }} />
         </div>
-        <div className="flex flex-col min-w-0">
+
+        <div className="flex min-w-0 flex-col">
           {loading ? (
-            <div className="h-7 w-12 animate-pulse rounded bg-muted mb-1" />
+            <div className="mb-1 h-7 w-12 animate-pulse rounded bg-muted" />
           ) : (
-            <span className="text-2xl font-bold text-card-foreground tabular-nums">{value.toLocaleString("es-MX")}</span>
+            <span className="text-[20px] font-bold leading-none text-card-foreground tabular-nums">
+              {value.toLocaleString("es-MX")}
+            </span>
           )}
-          <span className="text-xs text-muted-foreground leading-snug">{label}</span>
+
+          <span className="mt-1 text-xs leading-snug text-muted-foreground">
+            {label}
+          </span>
         </div>
       </CardContent>
     </Card>
@@ -984,7 +990,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
     </div>
   </DialogContent>
        </Dialog>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map(kpi => (
           <KpiCard key={kpi.label} {...kpi} loading={loading} />
         ))}
