@@ -972,7 +972,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               onClick={() => setActivePanel("revision")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
                 activePanel === "revision"
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-[#e4e3d6] text-[#3a4a2a]"
                   : "bg-card text-muted-foreground hover:bg-muted"
               }`}
             >
@@ -997,7 +997,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               onClick={() => setActivePanel("historial")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
                 activePanel === "historial"
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-[#e4e3d6] text-[#3a4a2a]"
                   : "bg-card text-muted-foreground hover:bg-muted"
               }`}
               >

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PageLayout } from "@/components/page-layout"
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   FileText, Briefcase, FileQuestion, UserCheck,
   FileOutput, Users, Clock, RefreshCw, Loader2,
@@ -907,51 +907,53 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       </div>
 
       <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <FileSpreadsheet className="h-5 w-5 text-secondary" />
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <FileSpreadsheet className="h-6 w-6 text-secondary" />
               Reportes disponibles
             </DialogTitle>
-            <p className="text-xs text-muted-foreground pt-0.5">
+            <p className="text-sm text-muted-foreground pt-0.5">
               Periodo: <strong>{periodoLabel}</strong>
             </p>
           </DialogHeader>
-          <div className="flex flex-col gap-2 pt-1">
+          <div className="flex flex-col gap-3 pt-1 px-6">
             {REPORTES.map(r => (
               <button
                 key={r.id}
                 onClick={() => {
                      setReporteSeleccionado(r)
                       setConfirmarDescarga(true)
-                }} 
+                }}
                 disabled={descargando === r.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left hover:bg-accent/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="group flex items-center gap-4 rounded-lg border border-border bg-card px-5 py-4 text-left hover:bg-accent/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary/10">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-secondary/10">
                   {descargando === r.id
-                    ? <Loader2 className="h-4 w-4 text-secondary animate-spin" />
-                    : <FileSpreadsheet className="h-4 w-4 text-secondary" />
+                    ? <Loader2 className="h-5 w-5 text-secondary animate-spin" />
+                    : <FileSpreadsheet className="h-5 w-5 text-secondary" />
                   }
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-sm font-medium text-card-foreground">{r.titulo}</span>
-                  <span className="text-xs text-muted-foreground leading-snug">{r.descripcion}</span>
+                  <span className="text-base font-medium text-card-foreground">{r.titulo}</span>
+                  <span className="text-sm text-muted-foreground leading-snug transition-colors group-hover:text-[#5C4A2E] group-active:text-[#5C4A2E] dark:group-hover:text-[#F0DCC0] dark:group-active:text-[#F0DCC0]">
+                    {r.descripcion}
+                  </span>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-muted-foreground pt-1">
+          <p className="text-xs text-muted-foreground px-6 pt-1 pb-6">
             Los archivos se generan con los datos del periodo seleccionado en el tablero.
           </p>
         </DialogContent>
       </Dialog>
       <Dialog open={confirmarDescarga} onOpenChange={setConfirmarDescarga}>
-  <DialogContent className="max-w-sm">
+  <DialogContent className="max-w-md">
     <DialogHeader>
-      <DialogTitle className="flex items-center gap-2 text-base">
-        <FileSpreadsheet className="h-5 w-5 text-secondary" />
+      <DialogTitle className="flex items-center gap-2 text-lg">
+        <FileSpreadsheet className="h-6 w-6 text-secondary" />
         Confirmar descarga
       </DialogTitle>
       <p className="text-sm text-muted-foreground pt-1">
@@ -963,10 +965,12 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       </p>
     </DialogHeader>
 
-    <div className="flex justify-end gap-2 pt-3">
+    <DialogFooter className="gap-6 bg-muted/20">
       <Button
         type="button"
         variant="outline"
+        className="rounded-full border-[1.5px] shadow-sm hover:!bg-[#f7d9e6]"
+        style={{ backgroundColor: "#FBEAF0", color: "#72243E", borderColor: "#72243E" }}
         onClick={() => setConfirmarDescarga(false)}
       >
         Cancelar
@@ -974,6 +978,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
 
       <Button
         type="button"
+        className="rounded-full shadow-sm bg-[#72243E] hover:bg-[#72243E]/90 text-white border-0"
         disabled={!reporteSeleccionado || descargando === reporteSeleccionado.id}
         onClick={() => {
           if (!reporteSeleccionado) return
@@ -987,7 +992,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
           ? "Descargando..."
           : "Descargar"}
       </Button>
-    </div>
+    </DialogFooter>
   </DialogContent>
        </Dialog>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

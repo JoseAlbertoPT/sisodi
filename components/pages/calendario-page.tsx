@@ -350,7 +350,6 @@ export function CalendarioPage() {
                 { value: "asimilados", label: "Honorarios asimilados a salarios", count: filledCount.asimilados || undefined },
                 { value: "nombramiento", label: "Nombramiento por tiempo determinado", count: filledCount.nombramiento || undefined },
               ]}
-              fullWidth
             />
 
             {editing && (

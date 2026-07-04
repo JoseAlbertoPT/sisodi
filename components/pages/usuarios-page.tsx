@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -311,9 +310,9 @@ function SecretariaTreeSelector({
               <div className={`
                 flex items-center justify-center h-5 w-5 rounded-full text-[10px] font-bold shrink-0
                 ${level.selected
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-[#7A1E3A] text-white"
                   : idx === levels.length - 1 && !level.selected
-                    ? "bg-primary/20 text-primary border border-primary/30"
+                    ? "bg-[#7A1E3A]/15 text-[#7A1E3A] border border-[#7A1E3A]/30"
                     : "bg-muted text-muted-foreground"
                 }
               `}>
@@ -336,7 +335,7 @@ function SecretariaTreeSelector({
               )}
             </div>
             {idx < levels.length - 1 && level.selected && (
-              <div className="ml-2.5 h-2 border-l-2 border-primary/20" />
+              <div className="ml-2.5 h-2 border-l-2 border-[#7A1E3A]/25" />
             )}
             {!level.selected && (
               <div className="ml-7">
@@ -740,7 +739,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 gap-1.5"
+              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#72243E] hover:bg-[#72243E]/90 text-white border-0"
               onClick={handleSubmit}
               disabled={loading}
             >
@@ -806,8 +805,8 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </div>
           )}
           {step === 1 && (
-            <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
                 <User className="h-3.5 w-3.5 text-primary/70" />
                 <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
               </div>
@@ -841,8 +840,8 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </div>
           )}
           {step === 2 && (
-            <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
                 <Lock className="h-3.5 w-3.5 text-amber-600/70" />
                 <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Acceso y permisos</span>
               </div>
@@ -945,8 +944,8 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
                   <Building2 className="h-3.5 w-3.5 text-blue-600/70" />
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
                 </div>
@@ -1016,12 +1015,18 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-9 rounded-full border-[1.5px] shadow-sm hover:!bg-[#f7d9e6]"
+              style={{ backgroundColor: "#FBEAF0", color: "#72243E", borderColor: "#72243E" }}
+              onClick={onClose}
+            >
               Cancelar
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 gap-1.5"
+              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#72243E] hover:bg-[#72243E]/90 text-white border-0"
               onClick={handleNext}
               disabled={step === 4 && permTreeLoading}
             >
@@ -1267,8 +1272,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           )}
 
-          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+          <div className="flex flex-col gap-3 mb-6">
+            <div className="flex items-center gap-2">
               <User className="h-3.5 w-3.5 text-primary/70" />
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
             </div>
@@ -1361,10 +1366,18 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-              <Building2 className="h-3.5 w-3.5 text-blue-600/70" />
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
+          <div className="flex flex-col gap-3 mb-6">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-3.5 w-3.5 text-blue-600/70 shrink-0" />
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Secretaría / Unidad perteneciente</span>
+              {form.secretaria && (
+                <span className="ml-auto min-w-0 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-medium">
+                  <CheckCircle2 className="h-3 w-3 shrink-0" />
+                  <span className="truncate">
+                    {form.secretariaPath.length > 0 ? form.secretariaPath.join(" › ") : form.secretaria}
+                  </span>
+                </span>
+              )}
             </div>
             <SecretariaTreeSelector
               tree={tree}
@@ -1382,8 +1395,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             />
           </div>
 
-          <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
               <Lock className="h-3.5 w-3.5 text-amber-600/70" />
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cambiar contraseña</span>
               <span className="ml-auto text-[10px] text-muted-foreground italic">opcional</span>
@@ -1439,12 +1452,19 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
           <span className="text-[11px] text-muted-foreground hidden sm:block">Los campos requeridos están marcados en rojo</span>
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" size="sm" className="text-xs h-9" onClick={onClose} disabled={loading}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-9 rounded-full border-[1.5px] shadow-sm hover:!bg-[#f7cde5]"
+              style={{ backgroundColor: "#fce4f0", color: "#832B56", borderColor: "#832B56" }}
+              onClick={onClose}
+              disabled={loading}
+            >
               Cancelar
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 gap-1.5"
+              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0"
               onClick={handleSubmit}
               disabled={loading}
               >
@@ -1799,12 +1819,40 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   )
 }
 
+type FiltroTipoAdmin = "todos" | "centralizada" | "paraestatal"
+const FILTRO_TIPO_ADMIN_LABEL: Record<FiltroTipoAdmin, string> = {
+  todos: "Todos",
+  centralizada: "Centralizada",
+  paraestatal: "Paraestatal",
+}
+
+function TipoAdminSelect({
+  value,
+  onChange,
+}: {
+  value: FiltroTipoAdmin
+  onChange: (next: FiltroTipoAdmin) => void
+}) {
+  return (
+    <Select value={value} onValueChange={(v) => onChange(v as FiltroTipoAdmin)}>
+      <SelectTrigger className="w-44 bg-card">
+        <SelectValue>{FILTRO_TIPO_ADMIN_LABEL[value]}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="todos">Todos</SelectItem>
+        <SelectItem value="centralizada">Centralizada</SelectItem>
+        <SelectItem value="paraestatal">Paraestatal</SelectItem>
+      </SelectContent>
+    </Select>
+  )
+}
+
 export function UsuariosPage() {
   const [usuarios,      setUsuarios]      = useState<Usuario[]>([])
   const [loading,       setLoading]       = useState(true)
   const [loadError,     setLoadError]     = useState("")
   const [searchTerm,    setSearchTerm]    = useState("")
-  const [filtroAdmin,   setFiltroAdmin]   = useState<"todos" | "centralizada" | "paraestatal">("todos")
+  const [filtroAdmin,   setFiltroAdmin]   = useState<FiltroTipoAdmin>("todos")
   const [tabEstatus,    setTabEstatus]    = useState<"activos" | "deshabilitados">("activos")
   const [currentPage,   setCurrentPage]   = useState(1)
   const [permisoUserId,         setPermisoUserId]         = useState<string | null>(null)
@@ -1898,26 +1946,26 @@ export function UsuariosPage() {
         <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">
           <button
             onClick={() => setTabEstatus("activos")}
-            className={`rounded-md px-5 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-              tabEstatus === "activos" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-card-foreground"
+            className={`rounded-md px-5 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 border ${
+              tabEstatus === "activos" ? "bg-[#e4e3d6] border-[#c2d4a8] text-[#3a4a2a]" : "border-transparent text-muted-foreground hover:text-card-foreground"
             }`}
           >
             <Power className="h-3.5 w-3.5" />
             Activos
-            <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "activos" ? "bg-white/20" : "bg-muted"}`}>
+            <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "activos" ? "bg-[#f3f4f6] text-[#1f1f1f]" : "bg-muted"}`}>
               {activos.length}
             </span>
           </button>
           <button
             onClick={() => setTabEstatus("deshabilitados")}
-            className={`rounded-md px-5 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-              tabEstatus === "deshabilitados" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-card-foreground"
+            className={`rounded-md px-5 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 border ${
+              tabEstatus === "deshabilitados" ? "bg-[#e4e3d6] border-[#c2d4a8] text-[#3a4a2a]" : "border-transparent text-muted-foreground hover:text-card-foreground"
             }`}
           >
             <PowerOff className="h-3.5 w-3.5" />
             Deshabilitados
             {deshabilitados.length > 0 && (
-              <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "deshabilitados" ? "bg-white/20" : "bg-muted"}`}>
+              <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "deshabilitados" ? "bg-[#f3f4f6] text-[#1f1f1f]" : "bg-muted"}`}>
                 {deshabilitados.length}
               </span>
             )}
@@ -1932,35 +1980,7 @@ export function UsuariosPage() {
           onChange={(e) => setSearchTerm(e.target.value)}
           containerClassName="flex-1 max-w-sm"
         />
-        <div className="flex items-center gap-6 rounded-lg border border-border bg-card p-2">
-          <RadioGroup
-    value={filtroAdmin}
-    onValueChange={(value) =>
-      setFiltroAdmin(value as "todos" | "centralizada" | "paraestatal")
-    }
-    className="flex items-center gap-6"
-  >
-    {(["todos", "centralizada", "paraestatal"] as const).map((op) => (
-      <div key={op} className="flex items-center gap-1.5">
-        <RadioGroupItem
-          value={op}
-          id={`filtro-admin-${op}`}
-        />
-
-        <label
-          htmlFor={`filtro-admin-${op}`}
-          className="text-sm text-muted-foreground cursor-pointer font-normal"
-        >
-          {op === "todos"
-            ? "Todos"
-            : op === "centralizada"
-              ? "Centralizada"
-              : "Paraestatal"}
-        </label>
-      </div>
-    ))}
-  </RadioGroup>
-        </div>
+        <TipoAdminSelect value={filtroAdmin} onChange={setFiltroAdmin} />
       </div>
 
       <Card className="shadow-sm border-border">

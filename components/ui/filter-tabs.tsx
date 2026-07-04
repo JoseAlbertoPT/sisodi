@@ -18,11 +18,16 @@ interface FilterTabsProps {
   className?: string
   /** Distribuye las tabs ocupando todo el ancho disponible (flex-1 por tab) en vez de agruparlas a su tamaño natural. */
   fullWidth?: boolean
-  /** Sobreescribe el color de la tab activa (por defecto bg-primary text-primary-foreground). */
+  /** Sobreescribe el color de la tab activa (por defecto el esquema de catálogo: bg-[#e4e3d6] border-[#c2d4a8] text-[#3a4a2a]). */
   activeClassName?: string
+  /** Sobreescribe el color del contador de la tab activa (por defecto bg-[#f3f4f6] text-[#1f1f1f]). */
+  activeCountClassName?: string
 }
 
-export function FilterTabs({ value, onValueChange, items, sectionLabel, className, fullWidth, activeClassName }: FilterTabsProps) {
+const DEFAULT_ACTIVE_TAB_CLASS = "bg-[#e4e3d6] border border-[#c2d4a8] text-[#3a4a2a]"
+const DEFAULT_ACTIVE_COUNT_CLASS = "bg-[#f3f4f6] text-[#1f1f1f]"
+
+export function FilterTabs({ value, onValueChange, items, sectionLabel, className, fullWidth, activeClassName, activeCountClassName }: FilterTabsProps) {
   return (
     <div className="flex w-full justify-center">
     <div
@@ -49,7 +54,7 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel, classNam
               "rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5",
               fullWidth && "flex-1",
               isActive
-                ? (activeClassName ?? "bg-primary text-primary-foreground")
+                ? (activeClassName ?? DEFAULT_ACTIVE_TAB_CLASS)
                 : "text-muted-foreground hover:text-card-foreground"
             )}
           >
@@ -58,7 +63,7 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel, classNam
               <span
                 className={cn(
                   "ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono",
-                  isActive ? "bg-white/20" : "bg-muted"
+                  isActive ? (activeCountClassName ?? DEFAULT_ACTIVE_COUNT_CLASS) : "bg-muted"
                 )}
               >
                 {item.count}
