@@ -2,29 +2,32 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 // ─── Mapa de estados → color hexadecimal ─────────────────────────────────────
+const C_AMARILLO = "#D97706"
+const C_ROSA_VINO = "#9D174D"
+
 const STATUS_COLOR: Record<string, string> = {
   // Solicitud flow
   borrador:           "#94a3b8",
   "en captura":       "#94a3b8",
-  "en aprobación":    "#2563EB",
-  "en aprobacion":    "#2563EB",
-  "en revisión":      "#0F766E",
-  "en revision":      "#0F766E",
-  "en validación":    "#7C3AED",
-  "en validacion":    "#7C3AED",
-  "en emisión":       "#0891B2",
-  "en emision":       "#0891B2",
-  "en proceso dgdo":  "#4F46E5",
-  "pendiente firma":  "#6D28D9",
-  "obs. uefa":        "#832B56",
-  "obs. revisión":    "#9D174D",
-  "obs. revision":    "#9D174D",
-  "obs. validación":  "#BE185D",
-  "obs. validacion":  "#BE185D",
-  "obs. emisión":     "#DB2777",
-  "obs. emision":     "#DB2777",
-  observada:          "#832B56",
-  "devuelta por do":  "#EA580C",
+  "en aprobación":    "#15803d",
+  "en aprobacion":    "#15803d",
+  "en revisión":      C_AMARILLO,
+  "en revision":      C_AMARILLO,
+  "en validación":    C_AMARILLO,
+  "en validacion":    C_AMARILLO,
+  "en emisión":       C_AMARILLO,
+  "en emision":       C_AMARILLO,
+  "en proceso dgdo":  C_AMARILLO,
+  "pendiente firma":  C_AMARILLO,
+  "obs. uefa":        C_ROSA_VINO,
+  "obs. revisión":    C_ROSA_VINO,
+  "obs. revision":    C_ROSA_VINO,
+  "obs. validación":  C_ROSA_VINO,
+  "obs. validacion":  C_ROSA_VINO,
+  "obs. emisión":     C_ROSA_VINO,
+  "obs. emision":     C_ROSA_VINO,
+  observada:          C_ROSA_VINO,
+  "devuelta por do":  C_ROSA_VINO,
   emitido:            "#15803d",
   // Usuarios
   activo:             "#15803d",
@@ -51,14 +54,14 @@ function resolveColor(label: string, fallback = "#64748b"): string {
   if (key.includes("activo"))              return "#15803d"
   if (key.includes("inactivo"))            return "#87090c"
   if (key.includes("borrador") || key.includes("en captura")) return "#94a3b8"
-  if (key.includes("en aprobac"))          return "#2563EB"
-  if (key.includes("obs"))                 return "#832B56"
-  if (key.includes("devuelta") || key.includes("regreso")) return "#EA580C"
-  if (key.includes("emision") || key.includes("emisión")) return "#0891B2"
-  if (key.includes("revision") || key.includes("revisión")) return "#0F766E"
-  if (key.includes("validaci"))            return "#7C3AED"
-  if (key.includes("firma"))               return "#6D28D9"
-  if (key.includes("dgdo") || key.includes("proceso do")) return "#4F46E5"
+  if (key.includes("en aprobac"))          return "#15803d"
+  if (key.includes("obs"))                 return C_ROSA_VINO
+  if (key.includes("devuelta") || key.includes("regreso")) return C_ROSA_VINO
+  if (key.includes("emision") || key.includes("emisión")) return C_AMARILLO
+  if (key.includes("revision") || key.includes("revisión")) return C_AMARILLO
+  if (key.includes("validaci"))            return C_AMARILLO
+  if (key.includes("firma"))               return C_AMARILLO
+  if (key.includes("dgdo") || key.includes("proceso do")) return C_AMARILLO
   if (key.includes("dictamen"))            return "#2d4a3e"
   if (key.includes("opini"))               return "#7C3AED"
   if (key.includes("electr"))              return "#0891B2"
@@ -79,8 +82,8 @@ interface StatusBadgeProps {
 
 const C_VERDE = "#15803d"
 
-export function StatusBadge({ label, className }: StatusBadgeProps) {
-  const c = C_VERDE
+export function StatusBadge({ label, color, className }: StatusBadgeProps) {
+  const c = color ?? C_VERDE
   return (
     <span
       className={cn(
@@ -140,23 +143,23 @@ export function estadoBadge(estado: string): React.ReactElement {
 
   if (n === "borrador" || n === "en captura")                           { label = "Borrador";         color = "#94a3b8" }
   else if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion") || n.includes("pendiente firma justificacion"))
-                                                                         { label = "En Aprobación";    color = "#2563EB" }
-  else if (n.includes("observado por revisor"))                          { label = "Obs. Revisión";    color = "#9D174D" }
-  else if (n.includes("observado por validacion final"))                 { label = "Obs. Validación";  color = "#BE185D" }
-  else if (n.includes("observado por emisor"))                          { label = "Obs. Emisión";     color = "#DB2777" }
+                                                                         { label = "En Aprobación";    color = "#15803d" }
+  else if (n.includes("observado por revisor"))                          { label = "Obs. Revisión";    color = C_ROSA_VINO }
+  else if (n.includes("observado por validacion final"))                 { label = "Obs. Validación";  color = C_ROSA_VINO }
+  else if (n.includes("observado por emisor"))                          { label = "Obs. Emisión";     color = C_ROSA_VINO }
   else if (n.includes("observado por uefa") || (n.includes("observado por validacion") && !n.includes("final")))
-                                                                         { label = "Obs. UEFA";        color = "#832B56" }
+                                                                         { label = "Obs. UEFA";        color = C_ROSA_VINO }
   else if (n.includes("devuelta por do") || n.includes("observado do filtro") || n.includes("observado por do"))
-                                                                         { label = "Devuelta por DO";  color = "#EA580C" }
+                                                                         { label = "Devuelta por DO";  color = C_ROSA_VINO }
   else if (n.includes("en revision revisor") || n === "aprobado por revisor" || n === "aceptado por revisor")
-                                                                         { label = "En Revisión";      color = "#0F766E" }
-  else if (n.includes("en validacion final") || n === "aprobado")       { label = "En Validación";    color = "#7C3AED" }
-  else if (n.includes("en revision emisor"))                            { label = "En Emisión";       color = "#0891B2" }
+                                                                         { label = "En Revisión";      color = C_AMARILLO }
+  else if (n.includes("en validacion final") || n === "aprobado")       { label = "En Validación";    color = C_AMARILLO }
+  else if (n.includes("en revision emisor"))                            { label = "En Emisión";       color = C_AMARILLO }
   else if (n.includes("pendiente firma dictamen") || n.includes("pendiente firma"))
-                                                                         { label = "Pendiente Firma";  color = "#6D28D9" }
+                                                                         { label = "Pendiente Firma";  color = C_AMARILLO }
   else if (n.includes("en revision do") || n === "en proceso do" || n === "pendiente do")
-                                                                         { label = "En Proceso DGDO";  color = "#4F46E5" }
+                                                                         { label = "En Proceso DGDO";  color = C_AMARILLO }
   else if (n === "emitido" || n.includes("emitido"))                    { label = "Emitido";          color = "#15803d" }
 
-  return <StatusBadge label={label} />
+  return <StatusBadge label={label} color={color} />
 }

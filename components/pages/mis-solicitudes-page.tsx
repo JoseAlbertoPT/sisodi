@@ -568,7 +568,6 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
   )
 }
 
-
 function DevolucionObs({ comentario }: { comentario: string }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
@@ -981,6 +980,7 @@ function DetalleView({
   const [newPeriodo,         setNewPeriodo]         = useState(sol.periodoAplicacion)
   const [guardandoReenvio,   setGuardandoReenvio]   = useState(false)
   const [showConfirmPeriodo, setShowConfirmPeriodo] = useState(false)
+  const [showDescargarConfirm, setShowDescargarConfirm] = useState(false)
   const [periodoConfirmado,  setPeriodoConfirmado]  = useState(false)
   const hasObs = sol.todasObservaciones.length > 0 || !!sol.observacionMotivo
   const [rightTab, setRightTab] = useState<"historial" | "bitacora" | "observaciones">(
@@ -988,7 +988,6 @@ function DetalleView({
   )
 
   const regimenLabel = formatRegimen(sol.regimen)
-
   const periodoOptions =
     sol.regimen === "honorarios"
       ? CAP_3000.map((r) => r.mes)
@@ -1073,7 +1072,7 @@ function DetalleView({
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
-            onClick={() => generateJustificacionPDF(sol.id, sol.folioJustificacion || sol.folio)}>
+            onClick={() => setShowDescargarConfirm(true)}>
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           {canEdit && !periodoConfirmado && (
@@ -1224,6 +1223,14 @@ function DetalleView({
               {" "}Esta acción no se puede deshacer.</>
         }
         confirmLabel="Sí, actualizar periodo"
+      />
+      <ConfirmDialog
+        open={showDescargarConfirm}
+        onClose={() => setShowDescargarConfirm(false)}
+        onConfirm={() => { setShowDescargarConfirm(false); generateJustificacionPDF(sol.id, sol.folioJustificacion || sol.folio) }}
+        title="¿Descargar justificación en PDF?"
+        description={`Se descargará el PDF de la justificación ${sol.folioJustificacion || sol.folio}.`}
+        confirmLabel="Sí, descargar"
       />
 
       {(n === "borrador" || n === "en captura") && periodoCheck.vigente && tipoCompatible && !isBorradorFueraDeTiempo && (

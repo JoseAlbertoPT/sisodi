@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -268,12 +268,40 @@ const COLORES_TIPO: Record<string, string> = {
 
   Paraestatal:  C_MORA50,
 }
+const DONUT_INNER_RADIUS = 80
+const DONUT_OUTER_RADIUS = 110
+const DONUT_PADDING_ANGLE = 1
+const RADIAN = Math.PI / 180
+
 function DonutSimple({ items, subLabel }: {
   items: { name: string; value: number; color: string }[]
   subLabel: string
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const total = items.reduce((s, d) => s + d.value, 0)
+
+  const activeMidAngle = useMemo(() => {
+    if (activeIndex === null || total <= 0) return null
+    const realTotalAngle = 360 - items.length * DONUT_PADDING_ANGLE
+    let cur = 0
+    for (let i = 0; i < items.length; i++) {
+      const start = i === 0 ? 0 : cur + DONUT_PADDING_ANGLE
+      const end = start + (items[i].value / total) * realTotalAngle
+      if (i === activeIndex) return (start + end) / 2
+      cur = end
+    }
+    return null
+  }, [activeIndex, items, total])
+
+  const tooltipOffset = useMemo(() => {
+    if (activeMidAngle === null) return null
+    const radius = DONUT_OUTER_RADIUS + 20
+    return {
+      dx: radius * Math.cos(-activeMidAngle * RADIAN),
+      dy: radius * Math.sin(-activeMidAngle * RADIAN),
+    }
+  }, [activeMidAngle])
+
   return (
     <div className="mx-auto grid min-h-[250px] max-w-[720px] items-center gap-4 md:grid-cols-[300px_260px]">
       <div className="relative flex h-[230px] w-full items-center justify-center">
@@ -283,10 +311,10 @@ function DonutSimple({ items, subLabel }: {
               data={items}
               cx="50%"
               cy="50%"
-              innerRadius={80}
-              outerRadius={110}
+              innerRadius={DONUT_INNER_RADIUS}
+              outerRadius={DONUT_OUTER_RADIUS}
               cornerRadius={7}
-              paddingAngle={1}
+              paddingAngle={DONUT_PADDING_ANGLE}
               dataKey="value"
               stroke="#fff"
               strokeWidth={3}
@@ -312,8 +340,15 @@ function DonutSimple({ items, subLabel }: {
           </PieChart>
         </ResponsiveContainer>
 
-        {activeIndex !== null && total > 0 && (
-          <div className="absolute left-[calc(50%-118px)] top-1/2 -translate-y-1/2 rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-[#283c2a] shadow-md">
+        {activeIndex !== null && total > 0 && tooltipOffset && (
+          <div
+            className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-white px-2 py-1 text-[11px] font-semibold shadow-md"
+            style={{
+              left: `calc(50% + ${tooltipOffset.dx}px)`,
+              top: `calc(50% + ${tooltipOffset.dy}px)`,
+              color: items[activeIndex].color,
+            }}
+          >
             {((items[activeIndex].value / total) * 100).toFixed(1)}%
           </div>
         )}
@@ -521,6 +556,7 @@ function GraficaSolicitudesTipo({
   ].filter(d => d.value > 0)
   const total = items.reduce((s, d) => s + d.value, 0)
   return (
+
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold text-card-foreground">Solicitudes por Administración</CardTitle>
@@ -530,6 +566,7 @@ function GraficaSolicitudesTipo({
           <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
           <DonutSimple items={items} subLabel="solicitudes" />
+
           /*<ResponsiveContainer width="100%" height={272}>
             <PieChart>
               <Pie
@@ -561,6 +598,7 @@ function GraficaSolicitudesTipo({
               />
             </PieChart>
           </ResponsiveContainer>*/
+
         )}
       </CardContent>
     </Card>

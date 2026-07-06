@@ -350,7 +350,14 @@ const DictamenViewModal = React.memo(({
               {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               {isDownloading ? "Generando..." : "Descargar"}
             </Button>
-            <Button variant="outline" size="sm" onClick={onClose}>Cerrar</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
+            >
+              Cerrar
+            </Button>
           </div>
         </CardHeader>
 
@@ -643,7 +650,7 @@ export function DictamenesPage() {
                       <td className="px-4 py-3">
                         <StatusBadge
                           label={d.tipoDoc === "dictamen" ? "Dictamen" : "Opinión"}
-                          color={d.tipoDoc === "dictamen" ? "#2d4a3e" : "#7C3AED"}
+                          color="#15803d"
                         />
                       </td>
 
@@ -660,7 +667,7 @@ export function DictamenesPage() {
                       <td className="px-4 py-3">
                         <StatusBadge
                           label={d.tipoFirma === "electronica" ? "Electrónica" : "Autógrafa"}
-                          color={d.tipoFirma === "electronica" ? "#0891B2" : "#64748b"}
+                          color={d.tipoFirma === "electronica" ? "#0891B2" : "#15803d"}
                         />
                       </td>
 

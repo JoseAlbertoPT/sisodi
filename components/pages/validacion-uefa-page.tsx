@@ -423,7 +423,14 @@ function DictamenModal({
             >
               <Printer className="h-4 w-4" />Imprimir
             </Button>
-            <Button variant="ghost" size="sm" onClick={onClose}>Cerrar</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
+            >
+              Cerrar
+            </Button>
           </div>
         </CardHeader>
         <ScrollArea className="flex-1 px-6 pb-6">
@@ -994,6 +1001,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
   const [showFirmarConfirm,  setShowFirmarConfirm]  = useState(false)
   const [showDictamen,       setShowDictamen]       = useState(false)
   const [showAprobarConfirm, setShowAprobarConfirm] = useState(false)
+  const [showDescargarConfirm, setShowDescargarConfirm] = useState(false)
   const tab                = getTabForEstado(solicitud.estado)
   const _n                 = norm(solicitud.estado)
   const isNueva            = tab === "Nuevas"
@@ -1045,7 +1053,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         <div className="flex items-center gap-3">
           <Button
             size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
-            onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
+            onClick={() => setShowDescargarConfirm(true)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
@@ -1089,7 +1097,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                 size="sm"
                 onClick={() => setShowDictamen(true)}
                 className="gap-1.5 rounded-2xl font-medium hover:opacity-90"
-                style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
+                style={{ backgroundColor: "#722F37", color: "#ffffff", border: "1px solid #5a252c" }}
               >
                 <FileCheck className="h-4 w-4" />Ver Dictamen
               </Button>
@@ -1278,6 +1286,14 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         title="¿Firmar Justificación?"
         description={`Se firmará la justificación ${solicitud.folioJustificacion} y pasará a Validación Final.`}
         confirmLabel="Sí, firmar"
+      />
+      <ConfirmModal
+        open={showDescargarConfirm}
+        onClose={() => setShowDescargarConfirm(false)}
+        onConfirm={() => { setShowDescargarConfirm(false); generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion) }}
+        title="¿Descargar justificación en PDF?"
+        description={`Se descargará el PDF de la justificación ${solicitud.folioJustificacion}.`}
+        confirmLabel="Sí, descargar"
       />
     </div>
   )

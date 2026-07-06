@@ -34,6 +34,7 @@ import { ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
+import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { useRealtime } from "@/hooks/use-realtime"
 
 interface FiltroSolicitud {
@@ -207,21 +208,21 @@ const TAB_CONFIG_REVISION: TabCfg = {
   nuevas:          { label: "Asignadas",          icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" } },
   revision:        { label: "En revisión",         icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
   observadas:      { label: "Observadas",          icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
-  pendientes_firma:{ label: "Pendiente de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#6D28D9", color: "#FFFFFF" } },
+  pendientes_firma:{ label: "Pendiente de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
   todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 const TAB_CONFIG_EMISION: TabCfg = {
   nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" } },
-  revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#0891B2", color: "#FFFFFF" } },
+  revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
   observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
-  pendientes_firma:{ label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#6D28D9", color: "#FFFFFF" } },
+  pendientes_firma:{ label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
   todas:           { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 const TAB_CONFIG_DO: TabCfg = {
   pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600",      badgeStyle: { backgroundColor: "#C2410C", color: "#FFFFFF" } },
-  en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary",         badgeStyle: { backgroundColor: "#7C3AED", color: "#FFFFFF" } },
+  en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary",         badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
   observadas:            { label: "Observadas",               icon: <AlertTriangle className="h-3.5 w-3.5" />,  activeBg: "bg-destructive/10", activeText: "text-destructive",     badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
-  pendientes_firma:      { label: "Pendientes de firma",      icon: <Stamp className="h-3.5 w-3.5" />,          activeBg: "bg-secondary/10",   activeText: "text-secondary",       badgeStyle: { backgroundColor: "#6D28D9", color: "#FFFFFF" } },
+  pendientes_firma:      { label: "Pendientes de firma",      icon: <Stamp className="h-3.5 w-3.5" />,          activeBg: "bg-secondary/10",   activeText: "text-secondary",       badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
   todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 
@@ -785,6 +786,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
 }) {
   const { user } = useAuth()
   const [showAprobarModal,        setShowAprobarModal]        = useState(false)
+  const [showDescargarConfirm,    setShowDescargarConfirm]    = useState(false)
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
   const [showObservarModal,       setShowObservarModal]       = useState(false)
   const [activePanel,             setActivePanel]             = useState<"revision" | "observaciones" | "historial">("revision")
@@ -878,9 +880,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         usuario:    h.usuario?.nombre ?? "Sistema",
         comentario: h.comentario as string,
       }))
-
   const denominacion = raw?.denominacion || raw?.tipo_solicitud || solicitud.denominacion || solicitud.tipo || "—"
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -912,7 +912,10 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         </div>
         <div className="flex items-center gap-3">
           <SlaIndicator diasRestantes={solicitud.slaRestante} />
-          <Button size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0">
+          <Button
+            size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
+            onClick={() => setShowDescargarConfirm(true)}
+          >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
           {onEditSolicitud && (
@@ -948,7 +951,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           </Button>
         </div>
       </div>
-
 
       {observacionesUefaActiva && (
         <Card className="border-2 border-[#832B56]/30 shadow-sm">
@@ -1120,6 +1122,14 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         description={`La solicitud ${folioFormateado} avanzará al siguiente paso del proceso.`}
         confirmLabel="Sí, aprobar"
         />
+      <ConfirmModal
+        open={showDescargarConfirm}
+        onClose={() => setShowDescargarConfirm(false)}
+        onConfirm={() => { setShowDescargarConfirm(false); generateJustificacionPDF(solicitud.id, solicitud.folioSolicitud ?? undefined) }}
+        title="¿Descargar justificación en PDF?"
+        description={`Se descargará el PDF de la justificación ${folioFormateado}.`}
+        confirmLabel="Sí, descargar"
+      />
       <ObservarModal
         open={showObservarModal}
         onClose={() => setShowObservarModal(false)}

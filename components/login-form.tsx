@@ -586,7 +586,7 @@ export function LoginForm() {
             : "Iniciar"}
     </button>
 
-    {!mustChangePassword && (
+    {/* {!mustChangePassword && (
       <button
         type="button"
         onClick={() => setMostrarModalRecuperar(true)}
@@ -594,7 +594,7 @@ export function LoginForm() {
       >
         ¿Olvidaste tu contraseña?
       </button>
-    )}
+    )} */}
 
     {mustChangePassword && (
       <button

@@ -20,7 +20,7 @@ import {
   FilePlus, Upload, ArrowLeft, ArrowRight, Plus, Trash2,
   FileText, ClipboardList, Save, SendHorizonal, AlertCircle,
   ShieldAlert, CheckCircle2, Clock, Lock, X, Search, Loader2,
-  Edit3, RotateCcw,
+  Edit3, RotateCcw, Megaphone,
 
 } from "lucide-react"
 import { useSolicitudes, type TipoAdministracion } from "@/lib/solicitudes-store"
@@ -419,9 +419,10 @@ function OficioUpload({
       )}
 
       <FileDropZone
-        hint="PDF, DOC, XLSX, PPT, imágenes, ZIP · máx. 10 MB c/u"
+        hint="PDF, DOC, XLSX, PPT, imágenes, ZIP · máx. 10 MB · 1 archivo"
         files={archivos}
         onFilesChange={handleFilesChange}
+        multiple={false}
       />
     </div>
   )
@@ -753,7 +754,7 @@ function syncLength(arr: string[], count: number): string[] {
 
 function DynamicList({
   label, items, onChange, max = 100, readonly = false,
-  minRequired, nivelTabulador, forbiddenTexts, onBlurItem,
+  minRequired, nivelTabulador, forbiddenTexts, onBlurItem, matchCountLabel = false,
   }: {
   label: string
   items: string[]
@@ -764,6 +765,7 @@ function DynamicList({
   nivelTabulador?: string
   forbiddenTexts?: Set<string>
   onBlurItem?: (value: string) => string
+  matchCountLabel?: boolean
   }) {
   const minEfectivo = useMemo(() => {
     if (minRequired !== undefined) return minRequired
@@ -894,7 +896,11 @@ function DynamicList({
       {!readonly && (
         <p className={`text-xs flex items-center gap-1 mt-0.5 ${belowMin || hasDups ? "text-destructive" : "text-muted-foreground"}`}>
           <AlertCircle className="h-3 w-3 shrink-0" />
-          {hasDups ? "Elimine los textos duplicados antes de continuar." : `Se requieren al menos ${minEfectivo} elementos. Llevas ${filledCount}.`}
+          {hasDups
+            ? "Elimine los textos duplicados antes de continuar."
+            : matchCountLabel
+              ? `Se requieren el mismo número, ${minEfectivo} elementos. Llevas ${filledCount}.`
+              : `Se requieren al menos ${minEfectivo} elementos. Llevas ${filledCount}.`}
         </p>
       )}
     </div>
@@ -1758,7 +1764,7 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.I ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.I ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
              I. Datos Generales
           </CardTitle>
         </CardHeader>
@@ -2064,7 +2070,7 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.II ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
@@ -2093,7 +2099,7 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.III ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
@@ -2126,7 +2132,7 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.IV ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.IV ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
             Responsabilidades
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
@@ -2138,28 +2144,23 @@ function FormularioPrestacion({
               setResponsabilidades(newItems)
             }}
             readonly={bloqueadoPorRenovacion}
-            nivelTabulador={nivelTabulador}
+            minRequired={actividades.length}
+            matchCountLabel
             max={10}
             forbiddenTexts={forbiddenTextsPS.responsabilidades}
           />
-          {!bloqueadoPorRenovacion && actividades.length !== responsabilidades.length && (
-            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
-              <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
-              <span className="text-sm text-[#374151]">
-                <strong>Actividades a Realizar</strong> tiene <strong>{actividades.length}</strong> {actividades.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
-              </span>
-            </div>
-          )}
-          <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#3B82F6] bg-[#EFF6FF] px-4 py-3">
-            <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
-            <span className="text-sm font-semibold text-[#374151]">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
+
+          <div className="flex flex-col items-start gap-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#2563EB] bg-[#EFF6FF] px-3 py-1.5 text-sm font-medium text-[#2563EB]">
+              <Megaphone className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas.
+            </span>
           </div>
         </CardContent>
       </Card>
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.V ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>V</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.V ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>V</span>
             Perfil
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
@@ -2206,18 +2207,11 @@ function FormularioPrestacion({
                   setter(newItems)
                 }}
                 readonly={bloqueadoPorRenovacion}
-                minRequired={5}
+                minRequired={actividades.length}
+                matchCountLabel
                 max={10}
                 forbiddenTexts={forbiddenTextsPS[fKey]}
               />
-              {!bloqueadoPorRenovacion && actividades.length !== items.length && (
-                <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
-                  <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
-                  <span className="text-sm text-[#374151]">
-                    <strong>Actividades a Realizar</strong> tiene <strong>{actividades.length}</strong> {actividades.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
-                  </span>
-                </div>
-              )}
             </div>
           ))}
         </CardContent>
@@ -2512,7 +2506,7 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.I ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.I ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
             Datos Generales
           </CardTitle>
         </CardHeader>
@@ -2819,7 +2813,7 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.II ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto del Nombramiento
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
@@ -2848,7 +2842,7 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.III ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
@@ -2880,7 +2874,7 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.IV ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.IV ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
             Responsabilidades
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
@@ -2892,21 +2886,15 @@ function FormularioNombramiento({
               setResponsabilidades(newItems)
             }}
             readonly={bloqueadoPorRenovacion}
-            nivelTabulador={nivelTabulador}
+            minRequired={funciones.length}
+            matchCountLabel
             max={10}
             forbiddenTexts={forbiddenTextsNom.responsabilidades}
           />
-          {!bloqueadoPorRenovacion && funciones.length !== responsabilidades.length && (
-            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
-              <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
-              <span className="text-sm text-[#374151]">
-                <strong>Actividades / Funciones</strong> tiene <strong>{funciones.length}</strong> {funciones.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
-              </span>
-            </div>
-          )}
-          <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#3B82F6] bg-[#EFF6FF] px-4 py-3">
-            <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
-            <span className="text-sm font-semibold text-[#374151]">Las responsabilidades deberán ser congruentes con las actividades registradas.</span>
+          <div className="flex flex-col items-start gap-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#2563EB] bg-[#EFF6FF] px-3 py-1.5 text-sm font-medium text-[#2563EB]">
+              <Megaphone className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -2918,10 +2906,12 @@ function FormularioNombramiento({
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary text-primary ml-1">Siempre editable</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-2">
-          <DynamicList
-            label="" items={marcoNormativo} onChange={handleMarcoNormativoChange}
-            readonly={false} minRequired={0}
+        <CardContent className="px-4 pb-3 pt-0">
+          <Textarea
+            value={marcoNormativo.join("\n")}
+            onChange={(e) => handleMarcoNormativoChange(e.target.value.split("\n"))}
+            placeholder="Describa el marco normativo aplicable..."
+            className="min-h-24 bg-background"
           />
         </CardContent>
       </Card>
@@ -3083,7 +3073,7 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.VIII ? "bg-secondary" : "bg-primary"} text-xs font-bold text-primary-foreground`}>VIII</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.VIII ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>VIII</span>
             Perfil
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
@@ -3129,18 +3119,11 @@ function FormularioNombramiento({
                   setter(newItems)
                 }}
                 readonly={bloqueadoPorRenovacion}
-                minRequired={5}
+                minRequired={funciones.length}
+                matchCountLabel
                 max={10}
                 forbiddenTexts={forbiddenTextsNom[fKey]}
               />
-              {!bloqueadoPorRenovacion && funciones.length !== items.length && (
-                <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
-                  <AlertCircle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
-                  <span className="text-sm text-[#374151]">
-                    <strong>Actividades / Funciones</strong> tiene <strong>{funciones.length}</strong> {funciones.length === 1 ? "ítem" : "ítems"} — escribe el mismo número en este apartado.
-                  </span>
-                </div>
-              )}
             </div>
           ))}
         </CardContent>

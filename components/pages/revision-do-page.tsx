@@ -1252,6 +1252,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [sinObservacion,     setSinObservacion]     = useState(false)
   const [showEmitConfirm,         setShowEmitConfirm]         = useState(false)
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
+  const [showDescargarConfirm,    setShowDescargarConfirm]    = useState(false)
   const [showConfirmacion,        setShowConfirmacion]        = useState<string | null>(null)
   const [checklistErrors,    setChecklistErrors]    = useState<Record<string, boolean>>({})
   const [errorToast, setErrorToast] = useState<{ key: number; title: string; description?: string } | null>(null)
@@ -1709,7 +1710,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         </div>
         <div className="flex items-center gap-3">
           <Button size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
-            onClick={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion)}
+            onClick={() => setShowDescargarConfirm(true)}
           >
             <Download className="h-4 w-4" />Justificación (PDF)
           </Button>
@@ -2250,6 +2251,16 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         onFinalizar={async () => { handleEmitir() }}
         guardandoFinal={guardando}
         selladoEtapa="emision"
+      />
+    )}
+    {solicitud && (
+      <ConfirmDialog
+        open={showDescargarConfirm}
+        onClose={() => setShowDescargarConfirm(false)}
+        onConfirm={() => { setShowDescargarConfirm(false); generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion) }}
+        title="¿Descargar justificación en PDF?"
+        description={`Se descargará el PDF de la justificación ${solicitud.folioJustificacion}.`}
+        confirmLabel="Sí, descargar"
       />
     )}
     </PageLayout>
