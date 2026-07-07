@@ -203,14 +203,6 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
     if (!menuTree) return { allLeaves: [] }
     const leaves = collectLeafNodes(menuTree)
       .filter((n) => n.key && n.route !== null && n.key !== "revision-do")
-      .sort((a, b) => a.orden - b.orden)
-
-    const dashIdx = leaves.findIndex((n) => n.key === "dashboard")
-    const catIdx  = leaves.findIndex((n) => n.key === "catalogo-justificaciones")
-    if (dashIdx !== -1 && catIdx !== -1 && catIdx !== dashIdx + 1) {
-      const [cat] = leaves.splice(catIdx, 1)
-      leaves.splice(dashIdx + 1, 0, cat)
-    }
 
     return { allLeaves: leaves }
   }, [menuTree])

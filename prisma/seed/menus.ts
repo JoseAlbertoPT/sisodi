@@ -16,21 +16,21 @@ type MenuRow = {
 export const MENUS: MenuRow[] = [
   { id: 1,  nombre: "JUSTIFICACIONES",  key: null,                icono: null,              ruta: null,                orden: 1, parent_id: null },
   { id: 2,  nombre: "Tablero",           key: "dashboard",         icono: "LayoutDashboard", ruta: "/dashboard",         orden: 1, parent_id: 1 },
-  { id: 3,  nombre: "Nueva solicitud",   key: "nueva-solicitud",   icono: "FilePlus",        ruta: "/nueva-solicitud",   orden: 2, parent_id: 1 },
-  { id: 4,  nombre: "Mis solicitudes",   key: "mis-solicitudes",   icono: "FileText",        ruta: "/mis-solicitudes",   orden: 3, parent_id: 1 },
-  { id: 5,  nombre: "Validación UEFA",   key: "validacion-uefa",   icono: "FileCheck",       ruta: "/validacion-uefa",   orden: 4, parent_id: 1 },
+  { id: 15, nombre: "Catálogo",          key: "catalogo-justificaciones", icono: "BookOpen", ruta: "/catalogo-justificaciones", orden: 2, parent_id: 1 },
+  { id: 3,  nombre: "Nueva solicitud",   key: "nueva-solicitud",   icono: "FilePlus",        ruta: "/nueva-solicitud",   orden: 3, parent_id: 1 },
+  { id: 4,  nombre: "Mis solicitudes",   key: "mis-solicitudes",   icono: "FileText",        ruta: "/mis-solicitudes",   orden: 4, parent_id: 1 },
+  { id: 5,  nombre: "Validación UEFA",   key: "validacion-uefa",   icono: "FileCheck",       ruta: "/validacion-uefa",   orden: 5, parent_id: 1 },
 
   { id: 6,  nombre: "GESTIÓN DGDO",      key: null,                icono: null,              ruta: null,                orden: 2, parent_id: null },
-  { id: 7,  nombre: "Revision",          key: "bandeja-filtro1",   icono: "Filter",          ruta: "/bandeja-filtro1",   orden: 1, parent_id: 6 },
-  { id: 8,  nombre: "Validacion",        key: "bandeja-filtro2",   icono: "Filter",          ruta: "/bandeja-filtro2",   orden: 2, parent_id: 6 },
+  { id: 8,  nombre: "Validacion",        key: "bandeja-filtro2",   icono: "Filter",          ruta: "/bandeja-filtro2",   orden: 1, parent_id: 6 },
+  { id: 7,  nombre: "Revision",          key: "bandeja-filtro1",   icono: "Filter",          ruta: "/bandeja-filtro1",   orden: 2, parent_id: 6 },
   { id: 9,  nombre: "Emision",           key: "bandeja-filtro3",   icono: "Filter",          ruta: "/bandeja-filtro3",   orden: 3, parent_id: 6 },
   { id: 10, nombre: "Dictámenes",        key: "dictamenes",        icono: "ShieldCheck",     ruta: "/dictamenes",        orden: 4, parent_id: 6 },
 
   { id: 11, nombre: "CONFIGURACIÓN",     key: null,                icono: null,              ruta: null,                orden: 3, parent_id: null },
   { id: 12, nombre: "Calendario",        key: "calendario",        icono: "CalendarDays",    ruta: "/calendario",        orden: 1, parent_id: 11 },
   { id: 13, nombre: "Usuarios",          key: "usuarios",          icono: "Users",           ruta: "/usuarios",          orden: 2, parent_id: 11 },
-  { id: 14, nombre: "Entidades",          key: "entidades",         icono: "Building2",       ruta: "/entidades",         orden: 3, parent_id: 11 },
-  { id: 15, nombre: "Catálogo",          key: "catalogo-justificaciones", icono: "BookOpen", ruta: "/catalogo-justificaciones", orden: 5, parent_id: 1 },
+  { id: 14, nombre: "Entidades",         key: "entidades",         icono: "Building2",       ruta: "/entidades",         orden: 3, parent_id: 11 },
 ]
 
 const safeDelete = async (label: string, fn: () => Promise<unknown>) => {

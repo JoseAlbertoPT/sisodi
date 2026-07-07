@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { prisma } from "../lib/prisma"
 import { seedRoles } from "./seed/roles"
 import { seedAcciones } from "./seed/acciones"

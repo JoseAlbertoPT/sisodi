@@ -603,6 +603,58 @@ table.w-full.conditions-table tbody td:not(:first-child) {
   }
 }
 
+/* ── Botones vino/guinda — bloquear fondo y texto en TODOS los estados ── */
+/* Solo aplica a botones con FONDO vino (bg-[#...]), excluye select-triggers
+   que solo tienen text-[#...] en su clase */
+button[class*="bg-\[#773357\]"]:not([data-slot="select-trigger"]):hover,
+button[class*="bg-\[#773357\]"]:not([data-slot="select-trigger"]):active,
+button[class*="bg-\[#773357\]"]:not([data-slot="select-trigger"]):focus {
+  background-color: #773357 !important;
+  color: #ffffff !important;
+  filter: none !important;
+}
+button[class*="bg-\[#7b2d5e\]"]:not([data-slot="select-trigger"]):hover,
+button[class*="bg-\[#7b2d5e\]"]:not([data-slot="select-trigger"]):active,
+button[class*="bg-\[#7b2d5e\]"]:not([data-slot="select-trigger"]):focus,
+button[class*="bg-\[#7B2D5E\]"]:not([data-slot="select-trigger"]):hover,
+button[class*="bg-\[#7B2D5E\]"]:not([data-slot="select-trigger"]):active,
+button[class*="bg-\[#7B2D5E\]"]:not([data-slot="select-trigger"]):focus {
+  background-color: #7b2d5e !important;
+  color: #ffffff !important;
+  filter: none !important;
+}
+button[class*="bg-\[#8a1f52\]"]:not([data-slot="select-trigger"]):hover,
+button[class*="bg-\[#8a1f52\]"]:not([data-slot="select-trigger"]):active,
+button[class*="bg-\[#8a1f52\]"]:not([data-slot="select-trigger"]):focus,
+button[class*="bg-\[#8A1F52\]"]:not([data-slot="select-trigger"]):hover,
+button[class*="bg-\[#8A1F52\]"]:not([data-slot="select-trigger"]):active,
+button[class*="bg-\[#8A1F52\]"]:not([data-slot="select-trigger"]):focus {
+  background-color: #8a1f52 !important;
+  color: #ffffff !important;
+  filter: none !important;
+}
+button[class*="bg-\[#832B56\]"]:not([data-slot="select-trigger"]):hover,
+button[class*="bg-\[#832B56\]"]:not([data-slot="select-trigger"]):active,
+button[class*="bg-\[#832B56\]"]:not([data-slot="select-trigger"]):focus,
+button[class*="bg-\[#832b56\]"]:not([data-slot="select-trigger"]):hover,
+button[class*="bg-\[#832b56\]"]:not([data-slot="select-trigger"]):active,
+button[class*="bg-\[#832b56\]"]:not([data-slot="select-trigger"]):focus {
+  background-color: #832b56 !important;
+  color: #ffffff !important;
+  filter: none !important;
+}
+button[class*="bg-\[#72243E\]"]:not([data-slot="select-trigger"]):hover,
+button[class*="bg-\[#72243E\]"]:not([data-slot="select-trigger"]):active,
+button[class*="bg-\[#72243E\]"]:not([data-slot="select-trigger"]):focus,
+button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):hover,
+button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):active,
+button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):focus {
+  background-color: #72243e !important;
+  color: #ffffff !important;
+  filter: none !important;
+}
+/* ──────────────────────────────────────────────────────────────────────── */
+
 .ds-calendar-popover .rdp-day_button {
   width: 34px !important;
   height: 34px !important;

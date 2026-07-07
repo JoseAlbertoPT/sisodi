@@ -31,9 +31,13 @@ import {
 } from "@/lib/catalogo-api"
 
 const VINO = "#773357"
-const VINO_HOVER = "#5c2844"
+const VINO_HOVER = "#773357"
 const AREA_PAGE_SIZE = 10
-const BTN_CANCEL: React.CSSProperties = { backgroundColor: "#fce4f0", color: "#7c2d5e", borderColor: "#f0b0d0" }
+const BTN_CANCEL: React.CSSProperties = { backgroundColor: "#fce4f0", color: VINO, borderColor: VINO }
+const BTN_CANCEL_CLASS =
+  "rounded-full h-10 px-6 font-medium border-[1.5px] shadow-sm transition-colors hover:!bg-[#f7cde5]"
+const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-medium shadow-sm"
+const DIALOG_FOOTER_CLASS = "gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]"
 
 function reorder<T>(list: T[], from: number, to: number): T[] {
   const result = [...list]
@@ -373,19 +377,19 @@ function OrganoRow({
       <Dialog open={addAreaOpen} onOpenChange={setAddAreaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Agregar Área</DialogTitle></DialogHeader>
-          <p className="text-xs text-muted-foreground -mt-2">Organismo: <strong>{node.nombre}</strong></p>
-          <div className="flex flex-col gap-3 py-1">
+          <p className="text-xs text-muted-foreground px-6 pt-1">Organismo: <strong>{node.nombre}</strong></p>
+          <div className="flex flex-col gap-3 px-6 pt-2 pb-1">
             <div className="flex flex-col gap-1.5">
               <Label>Nombre del área <span className="text-destructive">*</span></Label>
-              <Input value={areaNombre} onChange={(e) => setAreaNombre(e.target.value)} placeholder="Ej. Subdirección de Finanzas" onKeyDown={(e) => e.key === "Enter" && handleAddArea()} autoFocus />
+              <Input value={areaNombre} onChange={(e) => setAreaNombre(e.target.value)} placeholder="Ej. Subdirección de Finanzas" onKeyDown={(e) => e.key === "Enter" && handleAddArea()} autoFocus className="h-9 text-sm" />
             </div>
             {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
           </div>
-          <DialogFooter className="gap-3 py-5">
+          <DialogFooter className={DIALOG_FOOTER_CLASS}>
             <DialogClose asChild>
-              <Button type="button" variant="outline" style={BTN_CANCEL}>Cancelar</Button>
+              <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
             </DialogClose>
-            <Button variant="vino" onClick={handleAddArea} disabled={saving || !areaNombre.trim()}>
+            <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddArea} disabled={saving || !areaNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Agregar
             </Button>
           </DialogFooter>
@@ -395,18 +399,18 @@ function OrganoRow({
       <Dialog open={editOrgOpen} onOpenChange={setEditOrgOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Organismo</DialogTitle></DialogHeader>
-          <div className="flex flex-col gap-3 py-1">
+          <div className="flex flex-col gap-3 px-6 pt-4 pb-1">
             <div className="flex flex-col gap-1.5">
               <Label>Nombre <span className="text-destructive">*</span></Label>
               <Input value={orgNombre} onChange={(e) => setOrgNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditOrg()} autoFocus />
             </div>
             {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
           </div>
-          <DialogFooter className="gap-3 py-5">
+          <DialogFooter className={DIALOG_FOOTER_CLASS}>
             <DialogClose asChild>
-              <Button type="button" variant="outline" style={BTN_CANCEL}>Cancelar</Button>
+              <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
             </DialogClose>
-            <Button variant="vino" onClick={handleEditOrg} disabled={saving || !orgNombre.trim()}>
+            <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleEditOrg} disabled={saving || !orgNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
             </Button>
           </DialogFooter>
@@ -428,18 +432,18 @@ function OrganoRow({
       <Dialog open={editAreaOpen} onOpenChange={setEditAreaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Área</DialogTitle></DialogHeader>
-          <div className="flex flex-col gap-3 py-1">
+          <div className="flex flex-col gap-3 px-6 pt-4 pb-1">
             <div className="flex flex-col gap-1.5">
               <Label>Nombre <span className="text-destructive">*</span></Label>
               <Input value={areaNombre} onChange={(e) => setAreaNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditArea()} autoFocus />
             </div>
             {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
           </div>
-          <DialogFooter className="gap-3 py-5">
+          <DialogFooter className={DIALOG_FOOTER_CLASS}>
             <DialogClose asChild>
-              <Button type="button" variant="outline" style={BTN_CANCEL}>Cancelar</Button>
+              <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
             </DialogClose>
-            <Button variant="vino" onClick={handleEditArea} disabled={saving || !areaNombre.trim()}>
+            <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleEditArea} disabled={saving || !areaNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
             </Button>
           </DialogFooter>
@@ -529,10 +533,7 @@ export function CatalogoParaestatalTab() {
           </div>
           <Button
             size="sm"
-            className="shrink-0 rounded-full text-white font-medium gap-1.5"
-            style={{ backgroundColor: VINO }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = VINO_HOVER)}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = VINO)}
+            className="shrink-0 rounded-full text-white font-medium gap-1.5 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white border-0"
             onClick={() => { setNewOrgNombre(""); setFormError(""); setAddOrgOpen(true) }}
           >
             <Plus className="h-4 w-4" /> Agregar Organismo
@@ -582,18 +583,18 @@ export function CatalogoParaestatalTab() {
       <Dialog open={addOrgOpen} onOpenChange={setAddOrgOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nuevo Organismo Paraestatal</DialogTitle></DialogHeader>
-          <div className="flex flex-col gap-3 py-1">
+          <div className="flex flex-col gap-3 px-6 pt-4 pb-1">
             <div className="flex flex-col gap-1.5">
               <Label>Nombre <span className="text-destructive">*</span></Label>
               <Input value={newOrgNombre} onChange={(e) => setNewOrgNombre(e.target.value)} placeholder="Ej. Instituto Morelense de la Vivienda" onKeyDown={(e) => e.key === "Enter" && handleAddOrg()} autoFocus />
             </div>
             {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
           </div>
-          <DialogFooter className="gap-3 py-5">
+          <DialogFooter className={DIALOG_FOOTER_CLASS}>
             <DialogClose asChild>
-              <Button type="button" variant="outline" style={BTN_CANCEL}>Cancelar</Button>
+              <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
             </DialogClose>
-            <Button variant="vino" onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
+            <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Crear
             </Button>
           </DialogFooter>

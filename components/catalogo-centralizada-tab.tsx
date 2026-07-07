@@ -27,7 +27,7 @@ import {
 } from "@/lib/catalogo-api"
 
 const VINO = "#773357"
-const VINO_HOVER = "#5c2844"
+const VINO_HOVER = "#773357"
 const UA_PAGE_SIZE = 10
 
 // ---- Estilo estándar de botones de modal (usado en toda la app) ----
@@ -634,10 +634,7 @@ export function CatalogoCentralizadaTab() {
             </div>
             <Button
                 size="sm"
-                className="shrink-0 rounded-full text-white font-medium gap-1.5"
-                style={{ backgroundColor: VINO }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = VINO_HOVER)}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = VINO)}
+                className="shrink-0 rounded-full text-white font-medium gap-1.5 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white border-0"
                 onClick={() => { setNewSecNombre(""); setFormError(""); setAddSecOpen(true) }}
             >
               <Plus className="h-4 w-4" /> Agregar Secretaría

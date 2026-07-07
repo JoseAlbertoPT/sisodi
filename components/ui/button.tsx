@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
          primary:
-          "bg-[#773357] text-white border border-[#773357] hover:bg-[#773357]",
+          "bg-[#773357] text-white border border-[#773357] hover:bg-[#773357] hover:text-white active:bg-[#773357] active:text-white focus:bg-[#773357] focus:text-white",
 
         default:
           "bg-white text-[#6B7280] border border-[#E5E7EB] hover:bg-[#F3F4F6] hover:text-[#374151]",
@@ -27,7 +27,7 @@ const buttonVariants = cva(
           'text-[#5d5e5f] hover:bg-secondary/10 hover:text-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
         vino:
-          'bg-[#7b2d5e] text-white hover:bg-[#5c2044]',
+          'bg-[#7b2d5e] text-white hover:bg-[#7b2d5e] hover:text-white active:bg-[#7b2d5e] active:text-white focus:bg-[#7b2d5e] focus:text-white',
       },
       size: {
         default: "h-10 px-6",

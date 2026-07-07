@@ -45,7 +45,8 @@ export async function GET(req: NextRequest) {
           `SELECT DISTINCT m.id, m.nombre, m.ruta, m.orden, m.activo, m.icono, m.key, m.parent_id
            FROM menu m
            INNER JOIN usuario_menu um ON um.menu_id = m.id
-           WHERE um.usuario_id = $1 AND m.activo = true`,
+           WHERE um.usuario_id = $1 AND m.activo = true
+           ORDER BY m.orden ASC`,
           [userId]
         )
         userMenuRows = userMenuRes.rows
@@ -108,6 +109,11 @@ export async function GET(req: NextRequest) {
       } else if (!roots.some((r) => r.id === node.id)) {
         roots.push(node)
       }
+    }
+
+    roots.sort((a, b) => a.orden - b.orden)
+    for (const node of nodeMap.values()) {
+      node.children.sort((a, b) => a.orden - b.orden)
     }
 
     return NextResponse.json(roots)

@@ -35,7 +35,7 @@ function SelectTrigger({
       className={cn(
         'flex w-full items-center justify-between gap-2 whitespace-nowrap outline-none',
         'rounded-xl border border-gray-300 bg-white px-[14px] py-[10px]',
-        'text-sm text-[#773357] transition-[color,background-color,border-color] duration-150',
+        'text-sm text-[#1a2419] transition-[color,background-color,border-color] duration-150',
         'data-[placeholder]:text-muted-foreground data-[placeholder]:text-muted-foreground/80',
         'disabled:cursor-not-allowed disabled:opacity-50',
         'aria-invalid:border-[#D32F2F]',

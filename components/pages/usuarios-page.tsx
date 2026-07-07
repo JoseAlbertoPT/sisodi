@@ -739,7 +739,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#72243E] hover:bg-[#72243E]/90 text-white border-0"
+              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#72243E] hover:bg-[#72243E] active:bg-[#72243E] active:text-white text-white border-0"
               onClick={handleSubmit}
               disabled={loading}
             >
@@ -1026,7 +1026,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#72243E] hover:bg-[#72243E]/90 text-white border-0"
+              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#72243E] hover:bg-[#72243E] active:bg-[#72243E] active:text-white text-white border-0"
               onClick={handleNext}
               disabled={step === 4 && permTreeLoading}
             >

@@ -982,7 +982,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
             <Button
               onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
               disabled={!seleccionado || cargando}
-              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#5c2844]"
+              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#773357] hover:text-white"
             >
               Confirmar
             </Button>

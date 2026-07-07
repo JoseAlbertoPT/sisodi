@@ -262,7 +262,7 @@ export function CalendarioPage() {
               </SelectContent>
             </Select>
             {!editing && !showNewYearInput && (
-              <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0" onClick={() => setShowNewYearInput(true)}>
+              <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#832B56] hover:bg-[#832B56] active:bg-[#832B56] active:text-white text-white border-0" onClick={() => setShowNewYearInput(true)}>
                 <Plus className="h-3.5 w-3.5" />Nuevo año
               </Button>
             )}
@@ -285,13 +285,13 @@ export function CalendarioPage() {
                   <CalendarPlus className="h-3.5 w-3.5" />Crear año {ejercicio}
                 </Button>
               ) : (
-                <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0" onClick={handleStartEdit} disabled={loading}>
+                <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#832B56] hover:bg-[#832B56] active:bg-[#832B56] active:text-white text-white border-0" onClick={handleStartEdit} disabled={loading}>
                   <Pencil className="h-3.5 w-3.5" />Editar fechas
                 </Button>
               )
             ) : (
               <div className="flex items-center gap-1.5 rounded-lg border border-secondary/30 bg-secondary/5 p-1">
-                <Button size="sm" className="gap-1.5 text-xs h-7 rounded-full shadow-sm bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0" onClick={handleSaveEdit} disabled={saving}>
+                <Button size="sm" className="gap-1.5 text-xs h-7 rounded-full shadow-sm bg-[#832B56] hover:bg-[#832B56] active:bg-[#832B56] active:text-white text-white border-0" onClick={handleSaveEdit} disabled={saving}>
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}Guardar
                 </Button>
                 <Button
@@ -334,7 +334,7 @@ export function CalendarioPage() {
                   Cree el calendario para generar automáticamente los 12 meses y 24 quincenas. Solo deberá completar el día de cada fecha límite.
                 </p>
               </div>
-              <Button className="gap-2 bg-[#832B56] hover:bg-[#832B56]/90 text-white" onClick={handleCreateYear}>
+              <Button className="gap-2 bg-[#832B56] hover:bg-[#832B56] active:bg-[#832B56] active:text-white text-white" onClick={handleCreateYear}>
                 <CalendarPlus className="h-4 w-4" />Crear calendario {ejercicio}
               </Button>
             </CardContent>
