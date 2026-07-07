@@ -33,9 +33,9 @@ import {
 const VINO = "#773357"
 const VINO_HOVER = "#773357"
 const AREA_PAGE_SIZE = 10
-const BTN_CANCEL: React.CSSProperties = { backgroundColor: "#fce4f0", color: VINO, borderColor: VINO }
+const BTN_CANCEL: React.CSSProperties = {}
 const BTN_CANCEL_CLASS =
-  "rounded-full h-10 px-6 font-medium border-[1.5px] shadow-sm transition-colors hover:!bg-[#f7cde5]"
+  "rounded-full h-10 px-6 font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
 const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-medium shadow-sm"
 const DIALOG_FOOTER_CLASS = "gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]"
 
@@ -387,7 +387,7 @@ function OrganoRow({
           </div>
           <DialogFooter className={DIALOG_FOOTER_CLASS}>
             <DialogClose asChild>
-              <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
+              <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
             </DialogClose>
             <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddArea} disabled={saving || !areaNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Agregar
@@ -408,7 +408,7 @@ function OrganoRow({
           </div>
           <DialogFooter className={DIALOG_FOOTER_CLASS}>
             <DialogClose asChild>
-              <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
+              <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
             </DialogClose>
             <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleEditOrg} disabled={saving || !orgNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
@@ -441,7 +441,7 @@ function OrganoRow({
           </div>
           <DialogFooter className={DIALOG_FOOTER_CLASS}>
             <DialogClose asChild>
-              <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
+              <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
             </DialogClose>
             <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleEditArea} disabled={saving || !areaNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
@@ -592,7 +592,7 @@ export function CatalogoParaestatalTab() {
           </div>
           <DialogFooter className={DIALOG_FOOTER_CLASS}>
             <DialogClose asChild>
-              <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
+              <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
             </DialogClose>
             <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Crear

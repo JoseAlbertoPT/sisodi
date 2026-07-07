@@ -32,9 +32,9 @@ const UA_PAGE_SIZE = 10
 
 // ---- Estilo estándar de botones de modal (usado en toda la app) ----
 // Cancelar: fondo rosa claro, texto y borde vino
-const BTN_CANCEL: React.CSSProperties = { backgroundColor: "#fce4f0", color: VINO, borderColor: VINO }
+const BTN_CANCEL: React.CSSProperties = {}
 const BTN_CANCEL_CLASS =
-    "rounded-full h-10 px-6 font-medium border-[1.5px] shadow-sm transition-colors hover:!bg-[#f7cde5]"
+    "rounded-full h-10 px-6 font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
 
 // Crear / Guardar / Agregar: fondo vino sólido, texto blanco
 const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-medium shadow-sm"
@@ -480,7 +480,7 @@ function SecretariaRow({
             </div>
             <DialogFooter className={DIALOG_FOOTER_CLASS}>
               <DialogClose asChild>
-                <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
+                <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
               <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddUa} disabled={saving || !uaNombre.trim() || uaClave.replace(/\D/g, "").length < 7}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Agregar
@@ -501,7 +501,7 @@ function SecretariaRow({
             </div>
             <DialogFooter className={DIALOG_FOOTER_CLASS}>
               <DialogClose asChild>
-                <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
+                <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
               <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleEditSec} disabled={saving || !secNombre.trim()}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
@@ -542,7 +542,7 @@ function SecretariaRow({
             </div>
             <DialogFooter className={DIALOG_FOOTER_CLASS}>
               <DialogClose asChild>
-                <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
+                <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
               <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleEditUa} disabled={saving || !uaNombre.trim()}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
@@ -693,7 +693,7 @@ export function CatalogoCentralizadaTab() {
             </div>
             <DialogFooter className={DIALOG_FOOTER_CLASS}>
               <DialogClose asChild>
-                <Button type="button" variant="outline" className={BTN_CANCEL_CLASS} style={BTN_CANCEL}>Cancelar</Button>
+                <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
               <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddSec} disabled={saving || !newSecNombre.trim()}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Crear
