@@ -127,7 +127,6 @@ function GraficaBarrasVertical({
             <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#ECEBE7" />
             <XAxis
               dataKey={nameKey}
-              //tick={{ fontSize: 11, fill: "#6b6960" }}
               tick={false}
               interval={0}
               tickFormatter={(v) => truncate(v)}
@@ -197,7 +196,7 @@ function GraficaEmisiones({ data, title, barKey, color }: {
             <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#ECEBE7" />
             <XAxis
               dataKey="secretaria"
-              //tick={{ fontSize: 11, fill: "#6b6960" }}
+
               tick={false}
               interval={0}
               tickFormatter={(v) => truncate(v)}
@@ -927,9 +926,8 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
         </Select>
 
         <Button
-          variant="outline"
           size="sm"
-          className="gap-2 ml-auto rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
+          className="gap-2 ml-auto rounded-full bg-[#773357] hover:bg-[#773357] active:bg-[#773357] text-white active:text-white border-0"
           disabled={!data || loading}
           onClick={() => setModalAbierto(true)}
         >
@@ -1003,20 +1001,16 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       </p>
     </DialogHeader>
 
-    <DialogFooter className="gap-6 bg-muted/20">
+    <DialogFooter className="gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]">
       <Button
         type="button"
-        variant="outline"
-        className="rounded-full border-[1.5px] shadow-sm hover:!bg-[#f7d9e6]"
-        style={{ backgroundColor: "#FBEAF0", color: "#72243E", borderColor: "#72243E" }}
-        onClick={() => setConfirmarDescarga(false)}
-      >
+        className="rounded-full h-10 px-6 font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
+        onClick={() => setConfirmarDescarga(false)} >
         Cancelar
       </Button>
-
       <Button
         type="button"
-        className="rounded-full shadow-sm bg-[#72243E] hover:bg-[#72243E]/90 text-white border-0"
+        className="rounded-full h-10 px-6 font-medium shadow-sm bg-[#773357] hover:bg-[#773357] active:bg-[#773357] text-white active:text-white border-0"
         disabled={!reporteSeleccionado || descargando === reporteSeleccionado.id}
         onClick={() => {
           if (!reporteSeleccionado) return

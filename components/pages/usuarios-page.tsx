@@ -1016,17 +1016,15 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
           </div>
           <div className="flex gap-2">
             <Button
-              variant="outline"
               size="sm"
-              className="text-xs h-9 rounded-full border-[1.5px] shadow-sm hover:!bg-[#f7d9e6]"
-              style={{ backgroundColor: "#FBEAF0", color: "#72243E", borderColor: "#72243E" }}
+              className="text-xs h-9 rounded-full border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
               onClick={onClose}
             >
               Cancelar
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#72243E] hover:bg-[#72243E] active:bg-[#72243E] active:text-white text-white border-0"
+              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white border-0"
               onClick={handleNext}
               disabled={step === 4 && permTreeLoading}
             >
@@ -1453,10 +1451,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           <span className="text-[11px] text-muted-foreground hidden sm:block">Los campos requeridos están marcados en rojo</span>
           <div className="flex gap-2 ml-auto">
             <Button
-              variant="outline"
               size="sm"
-              className="text-xs h-9 rounded-full border-[1.5px] shadow-sm hover:!bg-[#f7cde5]"
-              style={{ backgroundColor: "#fce4f0", color: "#832B56", borderColor: "#832B56" }}
+              className="text-xs h-9 rounded-full border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
               onClick={onClose}
               disabled={loading}
             >
@@ -1464,7 +1460,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#832B56] hover:bg-[#832B56]/90 text-white border-0"
+              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white border-0"
               onClick={handleSubmit}
               disabled={loading}
               >
