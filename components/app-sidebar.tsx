@@ -172,6 +172,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
   const [menusLoading, setMenusLoading] = useState(true)
   const [menusError, setMenusError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+ 
 
   useEffect(() => {
     if (!user?.rol) return

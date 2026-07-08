@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState,useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { AppSidebar, type PageKey } from "@/components/app-sidebar"
 import { SidebarProvider } from "@/lib/sidebar-context"
@@ -19,6 +19,7 @@ import { EntidadesPage } from "@/components/pages/entidades-page"
 import { CatalogoJustificacionesPage } from "@/components/pages/catalogo-justificaciones-page"
 import { ProgresoFirmadoPage } from "@/components/pages/progreso-firmado-page"
 import { WelcomePage } from "@/components/welcome-splash"
+import { SidebarContext } from '@/context/sidebar-context';
 
 const PAGE_KEY    = "sdtf_current_page"
 const SIDEBAR_KEY = "sdtf_sidebar_collapsed"
@@ -36,6 +37,8 @@ export function AppShell() {
   const [prevPage, setPrevPage] = useState<PageKey>("dashboard")
   const [misSolicitudesRefreshKey, setMisSolicitudesRefreshKey] = useState(0)
   const [misSolicitudesInitialTab, setMisSolicitudesInitialTab] = useState<string | undefined>(undefined)
+   const [collapsed, setCollapsed] = useState(false);
+   const toggle = useCallback(() => setCollapsed((c) => !c), []);
 
   useEffect(() => {
     const storedPage = localStorage.getItem(PAGE_KEY) as PageKey | null
@@ -159,12 +162,12 @@ export function AppShell() {
       : currentPage
 
   return (
-    <SidebarProvider value={{ collapsed: sidebarCollapsed, onToggle: () => setSidebarCollapsed((c) => !c) }}>
+    <SidebarContext.Provider value={{ collapsed , toggle }}>
       <div className="flex h-screen overflow-hidden bg-background">
         <AppSidebar
           currentPage={sidebarCurrentPage}
           onNavigate={handleNavigate}
-          collapsed={sidebarCollapsed}
+          collapsed={collapsed}
           onMenuReady={setMenuReady}
         />
         <main className={`flex flex-1 flex-col overflow-y-auto ${showSplash ? "" : "p-6"}`}>
@@ -174,6 +177,6 @@ export function AppShell() {
           }
         </main>
       </div>
-    </SidebarProvider>
+    </SidebarContext.Provider>
   )
 }

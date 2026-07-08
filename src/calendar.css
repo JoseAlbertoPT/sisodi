@@ -1,0 +1,23 @@
+.rdp-day_button {
+   background: red !important;
+  color: white !important;
+  border: 3px solid blue !important;
+}
+
+.rdp-day_button:hover {
+  background: #F2F2F2;
+}
+
+.rdp-selected .rdp-day_button {
+  background: #8A1F52 !important;
+  color: white !important;
+}
+
+.rdp-today .rdp-day_button {
+  font-weight: 700;
+}
+
+.rdp-disabled .rdp-day_button {
+  background: #F5F5F5;
+  color: #A0A0A0;
+}
