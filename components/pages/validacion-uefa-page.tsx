@@ -424,10 +424,9 @@ function DictamenModal({
               <Printer className="h-4 w-4" />Imprimir
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={onClose}
-              className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
             >
               Cerrar
             </Button>
@@ -1052,31 +1051,31 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         </div>
         <div className="flex items-center gap-3">
           <Button
-            size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
+            variant="default"
+            size="sm" className="gap-1.5"
             onClick={() => setShowDescargarConfirm(true)}
           >
-            <Download className="h-4 w-4" />Justificación (PDF)
+            Descargar Justificación
           </Button>
           {isNueva && (
             <>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => onObservar(solicitud.id)}
+                disabled={guardando}
+              >
+                Observar
+              </Button>
               <Button
                 onClick={() => setShowAprobarConfirm(true)}
                 disabled={guardando}
                 className="gap-1.5"
                 size="sm"
-                style={{ backgroundColor: "#7b2d5e", color: "#fff" }}
+                style={{ backgroundColor: "#773357", color: "#fff" }}
               >
-                {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
                 Aprobar
-              </Button>
-              <Button
-                size="sm"
-                className="rounded-2xl font-medium hover:opacity-90"
-                style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
-                onClick={() => onObservar(solicitud.id)}
-                disabled={guardando}
-              >
-                Observar
               </Button>
             </>
           )}
@@ -1084,10 +1083,11 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
             <Button
               onClick={() => setShowFirmarConfirm(true)}
               disabled={guardando}
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-1.5"
+              className="gap-1.5"
               size="sm"
+              style={{ backgroundColor: "#773357", color: "#fff" }}
             >
-              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
+              {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
               Firmar Justificación
             </Button>
           )}

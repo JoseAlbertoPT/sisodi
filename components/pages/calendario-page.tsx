@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
-  CalendarDays, Pencil, Plus, Loader2, Check, X,
+  CalendarDays, Pencil, Loader2, Check, X,
   CalendarPlus, ChevronDown,
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
@@ -261,9 +261,36 @@ export function CalendarioPage() {
                 {availableYears.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
             </Select>
+            {!editing ? (
+              isEmpty ? (
+                <Button size="sm" className="gap-1.5 text-xs h-9" onClick={handleCreateYear} disabled={loading}>
+                  <CalendarPlus className="h-3.5 w-3.5" />Crear año {ejercicio}
+                </Button>
+              ) : (
+                <Button variant="default" size="sm" className="text-xs h-9" onClick={handleStartEdit} disabled={loading}>
+                  Editar fechas
+                </Button>
+              )
+            ) : (
+              <div className="flex items-center gap-1.5 rounded-lg border border-secondary/30 bg-secondary/5 p-1">
+                <Button size="sm" className="gap-1.5 text-xs h-7 rounded-full shadow-sm bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white border-0" onClick={handleSaveEdit} disabled={saving}>
+                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}Guardar
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-1.5 text-xs h-7"
+                  onClick={handleCancelEdit}
+                  disabled={saving}
+                >
+                  <X className="h-3 w-3" />Cancelar
+                </Button>
+              </div>
+            )}
+            {!editing && !showNewYearInput && <div className="h-5 w-px bg-border" />}
             {!editing && !showNewYearInput && (
-              <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#832B56] hover:bg-[#832B56] active:bg-[#832B56] active:text-white text-white border-0" onClick={() => setShowNewYearInput(true)}>
-                <Plus className="h-3.5 w-3.5" />Nuevo año
+              <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white border-0" onClick={() => setShowNewYearInput(true)}>
+                Nuevo año
               </Button>
             )}
             {showNewYearInput && (
@@ -276,34 +303,6 @@ export function CalendarioPage() {
                 />
                 <Button size="sm" className="h-7 w-7 p-0 rounded-md" onClick={handleAddYear}><Check className="h-3 w-3" /></Button>
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => setShowNewYearInput(false)}><X className="h-3 w-3" /></Button>
-              </div>
-            )}
-            {!editing && !showNewYearInput && <div className="h-5 w-px bg-border" />}
-            {!editing ? (
-              isEmpty ? (
-                <Button size="sm" className="gap-1.5 text-xs h-9" onClick={handleCreateYear} disabled={loading}>
-                  <CalendarPlus className="h-3.5 w-3.5" />Crear año {ejercicio}
-                </Button>
-              ) : (
-                <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#832B56] hover:bg-[#832B56] active:bg-[#832B56] active:text-white text-white border-0" onClick={handleStartEdit} disabled={loading}>
-                  <Pencil className="h-3.5 w-3.5" />Editar fechas
-                </Button>
-              )
-            ) : (
-              <div className="flex items-center gap-1.5 rounded-lg border border-secondary/30 bg-secondary/5 p-1">
-                <Button size="sm" className="gap-1.5 text-xs h-7 rounded-full shadow-sm bg-[#832B56] hover:bg-[#832B56] active:bg-[#832B56] active:text-white text-white border-0" onClick={handleSaveEdit} disabled={saving}>
-                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}Guardar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs h-7 rounded-full border-[1.5px] shadow-sm hover:!bg-[#f7cde5]"
-                  style={{ backgroundColor: "#fce4f0", color: "#832B56", borderColor: "#832B56" }}
-                  onClick={handleCancelEdit}
-                  disabled={saving}
-                >
-                  <X className="h-3 w-3" />Cancelar
-                </Button>
               </div>
             )}
           </div>
@@ -334,7 +333,7 @@ export function CalendarioPage() {
                   Cree el calendario para generar automáticamente los 12 meses y 24 quincenas. Solo deberá completar el día de cada fecha límite.
                 </p>
               </div>
-              <Button className="gap-2 bg-[#832B56] hover:bg-[#832B56] active:bg-[#832B56] active:text-white text-white" onClick={handleCreateYear}>
+              <Button className="gap-2 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white" onClick={handleCreateYear}>
                 <CalendarPlus className="h-4 w-4" />Crear calendario {ejercicio}
               </Button>
             </CardContent>

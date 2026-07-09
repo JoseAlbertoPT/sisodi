@@ -888,7 +888,8 @@ function DynamicList({
         </div>
       ))}
       {!readonly && items.length < maxEfectivo && (
-        <Button type="button" variant="outline" size="sm" className="w-fit mt-1"
+        <Button type="button" variant="outline" size="sm"
+          className="w-fit mt-1 bg-transparent text-[#773357] hover:bg-transparent hover:text-[#773357] active:bg-transparent active:text-[#773357] focus:bg-transparent focus:text-[#773357]"
           onClick={() => { internalAddRef.current = true; onChange([...items, ""]) }}>
           <Plus className="mr-1 h-4 w-4" />Agregar
         </Button>
@@ -4113,8 +4114,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                     if (nuevo === "nombramiento") setTipo("nombramiento")
                     else setTipo("prestacion")
                   }}>
-                    <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
+                    <SelectContent className="vino-force">
                       <SelectItem value="honorarios">Honorarios</SelectItem>
                       <SelectItem value="asimilados">Honorarios asimilados a Salarios</SelectItem>
                       <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado</SelectItem>
@@ -4125,8 +4126,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   <div className="flex flex-col gap-2">
                     <Label className="text-sm font-medium">Mes de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
-                      <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione mes" /></SelectTrigger>
-                      <SelectContent>{calHonorarios.map((r) => <SelectItem key={r.mes} value={r.mes}>{r.mes}</SelectItem>)}</SelectContent>
+                      <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione mes" /></SelectTrigger>
+                      <SelectContent className="vino-force">{calHonorarios.map((r) => <SelectItem key={r.mes} value={r.mes}>{r.mes}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
@@ -4134,8 +4135,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   <div className="flex flex-col gap-2">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
-                      <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
-                      <SelectContent>{calAsimilados.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
+                      <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
+                      <SelectContent className="vino-force">{calAsimilados.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
@@ -4143,8 +4144,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   <div className="flex flex-col gap-2">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
-                      <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
-                      <SelectContent>{calNombramiento.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
+                      <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
+                      <SelectContent className="vino-force">{calNombramiento.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
@@ -4191,7 +4192,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             <CardContent className="flex justify-end px-4 pb-3 pt-2">
               <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
                 className="disabled:opacity-50"
-                style={{ backgroundColor: "#7b2d5e", color: "#fff" }}>
+                style={{ backgroundColor: "#773357", color: "#fff" }}>
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
             </CardContent>
@@ -4420,7 +4421,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             )}
 
             <div className="flex items-center justify-between pt-2">
-              <Button variant="outline" onClick={handleBack} className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"><ArrowLeft className="mr-1.5 h-4 w-4" />Anterior</Button>
+              <Button variant="default" onClick={handleBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Anterior</Button>
               <Button
                 onClick={handleContinueToFormulario}
                 disabled={
@@ -4428,7 +4429,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   (esRenovacion === "si" && !folioSeleccionado) ||
                   (esRenovacion === "si" && folioSeleccionado && condicionRenovacion !== "mismas")
                 }
-                style={{ backgroundColor: "#7b2d5e", color: "#fff" }}
+                style={{ backgroundColor: "#773357", color: "#fff" }}
               >
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
@@ -4443,7 +4444,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
        {isEditMode ? null : (
          <div className="flex flex-col gap-2">
            <div>
-             <Button variant="outline" size="sm" onClick={handleBack} className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent">
+             <Button variant="default" size="sm" onClick={handleBack} className="gap-1.5">
                <ArrowLeft className="h-4 w-4" />Anterior
              </Button>
              {prefilled && datosRenovacion && (
@@ -4539,34 +4540,34 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   </div>
                 )}
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-                  <Button variant="outline" onClick={handleBack} disabled={enviando || guardandoBorrador} className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent">
-                    <ArrowLeft className="mr-1.5 h-4 w-4" />Anterior
+                  <Button variant="default" onClick={handleBack} disabled={enviando || guardandoBorrador}>
+                    Anterior
                   </Button>
                   <div className="flex items-center gap-3">
                     {isEditingBorrador ? (
                       <Button className="min-w-[160px]"
                         disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}
-                        style={{ backgroundColor: "#7b2d5e", color: "#fff" }}>
+                        style={{ backgroundColor: "#773357", color: "#fff" }}>
                         {guardandoBorrador
                           ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Guardando...</>
-                          : <><Save className="mr-1.5 h-4 w-4" />Guardar Cambios</>
+                          : "Guardar Cambios"
                         }
                       </Button>
                     ) : (
                       <>
                         <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}
-                          className="gap-1.5" style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", borderColor: "#7b2d5e" }}>
+                          className="gap-1.5 bg-[#F3F4F6] text-[#4B5563] border-[#D1D5DB] hover:bg-[#F3F4F6] hover:text-[#4B5563] active:bg-[#F3F4F6] active:text-[#4B5563] focus:bg-[#F3F4F6] focus:text-[#4B5563]">
                           {guardandoBorrador
                             ? <><Clock className="h-4 w-4 animate-spin" />Guardando...</>
-                            : <><Save className="mr-1.5 h-4 w-4" />Guardar Borrador</>
+                            : "Guardar Borrador"
                           }
                         </Button>
                         <Button className="min-w-[160px]"
                           disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}
-                          style={{ backgroundColor: "#7b2d5e", color: "#fff" }}>
+                          style={{ backgroundColor: "#773357", color: "#fff" }}>
                           {enviando
                             ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
-                            : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validación</>
+                            : "Enviar a Validación"
                           }
                         </Button>
                       </>

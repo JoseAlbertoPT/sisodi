@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
-import { LogOut, PanelLeftClose, PanelLeft, Bell } from "lucide-react"
+import { PanelLeftClose, PanelLeft, Bell } from "lucide-react"
 
 interface HeaderProps {
   onToggleSidebar: () => void
@@ -83,8 +83,7 @@ export function AppHeader({ onToggleSidebar, sidebarCollapsed }: HeaderProps) {
           onClick={logout}
           className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-lg"
         >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline text-xs">Salir</span>
+          <span className="text-xs">Salir</span>
         </Button>
       </div>
     </header>

@@ -249,8 +249,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
               <Button variant="outline" onClick={() => window.close()}>Cancelar</Button>
               <Button onClick={handleAcceder} disabled={accediendo}
                 className="gap-1.5">
-                {accediendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-                Acceder y comenzar
+                {accediendo ? "Accediendo..." : "Acceder y comenzar"}
               </Button>
             </div>
           </CardContent>
@@ -401,8 +400,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                 {error && <p className="text-xs text-destructive">{error}</p>}
                 <Button type="submit" disabled={trabajando}
                   className="gap-1.5 self-end mt-2">
-                  {trabajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-                  Firmar ahora
+                  {trabajando ? "Firmando..." : "Firmar ahora"}
                 </Button>
               </form>
             </CardContent>

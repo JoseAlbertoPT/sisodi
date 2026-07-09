@@ -108,10 +108,13 @@ export function FileDropZone({
     borderColor = '#773357'; bgColor = '#fdf5f8'
   }
 
+  const showDropZone = multiple || files.length === 0
+
   return (
     <div className={cn('flex flex-col gap-2', className)}>
 
       {/* ── Drop zone ─────────────────────────────────────── */}
+      {showDropZone && (
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
@@ -179,6 +182,7 @@ export function FileDropZone({
           <p className="text-xs text-gray-400">{hint}</p>
         )}
       </div>
+      )}
 
       {/* ── Archivos seleccionados ─────────────────────────── */}
       {files.length > 0 && (
@@ -188,6 +192,7 @@ export function FileDropZone({
               key={`${file.name}-${i}`}
               className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5"
             >
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
               <FileTypeIcon name={file.name} size="sm" />
               <div className="flex flex-col flex-1 min-w-0">
                 <span className="text-sm font-medium text-gray-800 truncate leading-snug">{file.name}</span>

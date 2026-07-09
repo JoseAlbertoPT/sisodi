@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, Upload, CheckCircle2, Loader2, AlertCircle, X } from "lucide-react"
+import { Download, Upload, Loader2, AlertCircle, X } from "lucide-react"
 import { FileDropZone, FileTypeIcon } from "@/components/ui/file-drop-zone"
 
 interface FirmaProceso {
@@ -115,7 +115,7 @@ export function FirmaAutografaPanel({
             onClick={() => onGenerarPdf()}
             className="gap-1.5"
           >
-            <Download className="h-4 w-4" /> Descargar PDF ({folioJustificacion})
+            Descargar PDF ({folioJustificacion})
           </Button>
         </CardContent>
       </Card>
@@ -172,10 +172,9 @@ export function FirmaAutografaPanel({
           onClick={() => onFinalizar()}
           disabled={!archivoSubido || guardandoFinal}
           className="gap-1.5 px-5 py-2"
-          style={{ backgroundColor: "#7b2d5e", color: "#fff", border: "none" }}
+          style={{ backgroundColor: "#773357", color: "#fff", border: "none" }}
         >
-          {guardandoFinal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-          Enviar a Emisor
+          {guardandoFinal ? "Enviando..." : "Enviar a Emisor"}
         </Button>
       </div>
     </div>

@@ -14,7 +14,7 @@ import { SearchInput } from "@/components/ui/search-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  Download, FileCheck, Stamp, Printer,
+  Download, FileCheck, Stamp, Printer, FileText,
   Loader2, AlertTriangle, RefreshCw, MoreHorizontal, Eye,
 } from "lucide-react"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
@@ -144,47 +144,6 @@ const DictamenViewModal = React.memo(({
 
   const folioRecepcionFormateado = formatearFolio(dictamen.folioRecepcion)
 
-  const tipoSolicitudLabel = (() => {
-    const t = (dictamen.tipoSolicitud ?? "").toLowerCase()
-    const r = (dictamen.regimen ?? "").toLowerCase()
-    if (!t || t === "—") return null
-    if (t.includes("nombramiento")) return "Nombramiento"
-    if (t.includes("paraestatal")) return "Paraestatal"
-    if (t.includes("honorario") || r.includes("honorario") || r.includes("asimilado")) {
-      if (r.includes("asimilado")) return "Honorarios asimilados a salarios"
-      return "Honorarios"
-    }
-    return dictamen.tipoSolicitud.charAt(0).toUpperCase() + dictamen.tipoSolicitud.slice(1)
-  })()
-
-  const esHonorarios =
-    (dictamen.tipoSolicitud ?? "").toLowerCase().includes("honorario") ||
-    (dictamen.regimen ?? "").toLowerCase().includes("honorario") ||
-    (dictamen.regimen ?? "").toLowerCase().includes("asimilado")
-
-  const parseDateLocal = (iso: string) => {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-      const [y, m, dd] = iso.split("-").map(Number)
-      return new Date(y, m - 1, dd)
-    }
-    return new Date(iso)
-  }
-  const formatearFecha = (iso: string | null) => {
-    if (!iso) return null
-    try {
-      return parseDateLocal(iso).toLocaleDateString("es-MX", {
-        day: "2-digit", month: "long", year: "numeric",
-      })
-    } catch { return null }
-  }
-  const formatearFechaCorta = (iso: string | null) => {
-    if (!iso) return null
-    try { return parseDateLocal(iso).toLocaleDateString("es-MX") } catch { return null }
-  }
-  const fechaEmisionLabel = formatearFecha(dictamen.fechaEmision)
-  const vigenciaInicioLabel = formatearFechaCorta(dictamen.vigenciaInicio)
-  const vigenciaFinLabel = formatearFechaCorta(dictamen.vigenciaFin)
-
   const [firmaElaboroNombre, setFirmaElaboroNombre] = useState("")
   const [firmaRevisoNombre, setFirmaRevisoNombre] = useState("")
   const [firmaVoBoJuridicoNombre, setFirmaVoBoJuridicoNombre] = useState("")
@@ -194,7 +153,6 @@ const DictamenViewModal = React.memo(({
   const [showFirmas, setShowFirmas] = useState(false)
 
   const formato: 'fisico' | 'en_linea' = dictamen.tipoFirma === 'electronica' ? 'en_linea' : 'fisico'
-  const modalidadLabel = dictamen.tipoFirma === 'electronica' ? 'Firma electrónica' : 'Firma autógrafa'
 
   const esNombramiento = dictamen.tipoSolicitud?.toLowerCase().includes("nombramiento")
 
@@ -293,70 +251,40 @@ const DictamenViewModal = React.memo(({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
-      <Card className="w-full max-w-5xl max-h-[90vh] flex flex-col shadow-xl border-2 border-primary/20">
-        <CardHeader className="flex flex-row items-start justify-between pb-3 shrink-0 gap-4">
-          <div className="min-w-0 flex-1">
-            <CardTitle className="text-base font-semibold text-card-foreground">
-              {titulo}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Número: {dictamen.folioDictamen ?? "—"} | Folio Recepción: {folioRecepcionFormateado}
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              <Badge variant="outline" className="text-[10px] font-normal">
-                {modalidadLabel}
-              </Badge>
-              {tipoSolicitudLabel && (
-                <Badge className="bg-primary/10 text-primary border-0 text-[10px] font-normal">
-                  Tipo: {tipoSolicitudLabel}
-                </Badge>
-              )}
-              <Badge className="bg-secondary/10 text-secondary border-0 text-[10px] font-normal">
-                {dictamen.tipoDoc === "dictamen" ? "Dictamen Técnico" : "Opinión Técnica"}
-              </Badge>
-              {fechaEmisionLabel && (
-                <Badge variant="outline" className="text-[10px] font-normal">
-                  Emitido: {fechaEmisionLabel}
-                </Badge>
-              )}
-              {esHonorarios && vigenciaInicioLabel && vigenciaFinLabel && (
-                <Badge className="bg-accent/30 text-accent-foreground border-0 text-[10px] font-normal">
-                  Vigencia: {vigenciaInicioLabel} — {vigenciaFinLabel}
-                </Badge>
-              )}
-              {dictamen.importeBruto && (
-                <Badge variant="outline" className="text-[10px] font-normal">
-                  Importe: {dictamen.importeBruto}
-                </Badge>
-              )}
+      <Card className="w-[75vw] max-w-[75vw] h-[92vh] max-h-[92vh] flex flex-col shadow-xl border-2 border-primary/20">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0 gap-4">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <FileText className="h-5 w-5 text-primary" />
             </div>
-            {dictamen.denominacion && (
-              <p className="text-[11px] text-muted-foreground mt-1.5 line-clamp-1" title={dictamen.denominacion}>
-                <span className="font-medium text-card-foreground">Denominación:</span> {dictamen.denominacion}
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base font-semibold text-card-foreground truncate">
+                {titulo}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                Número: {dictamen.folioDictamen ?? "—"} | Folio Recepción: {folioRecepcionFormateado}
               </p>
-            )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={onClose}
+            >
+              Cerrar
+            </Button>
+            <Button variant="default" size="sm" onClick={handleDownload} disabled={isDownloading} className="gap-1.5 min-w-[130px]">
+              {isDownloading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isDownloading ? "Generando..." : "Descargar"}
+            </Button>
             <Button
               size="sm"
               onClick={() => setShowFirmas(!showFirmas)}
               className="gap-1.5 font-medium hover:opacity-90"
-              style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
+              style={{ backgroundColor: "#773357", color: "#ffffff", border: "1px solid #773357" }}
             >
-              <Printer className="h-4 w-4" />
               {showFirmas ? "Ocultar Firmas" : "Editar Firmas"}
-            </Button>
-            <Button variant="default" size="sm" onClick={handleDownload} disabled={isDownloading} className="gap-1.5 min-w-[130px]">
-              {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {isDownloading ? "Generando..." : "Descargar"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
-            >
-              Cerrar
             </Button>
           </div>
         </CardHeader>
@@ -406,8 +334,8 @@ const DictamenViewModal = React.memo(({
             </div>
           )}
 
-          <div className="flex-1 px-4 pb-4">
-            <div className="w-full h-[75vh] border border-border rounded-md overflow-hidden">
+          <div className="flex-1 min-h-0 p-3 bg-[#1F2937]">
+            <div className="w-full h-full rounded-md overflow-hidden">
               <PdfPreview
                 fileUrl={pdfBlobUrl}
                 refreshing={pdfRefreshing}

@@ -1071,9 +1071,10 @@ function DetalleView({
           {estadoBadge(sol.estado)}
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
+          <Button size="sm" className="gap-1.5 rounded-full"
+            style={{ backgroundColor: "#773357", color: "#fff" }}
             onClick={() => setShowDescargarConfirm(true)}>
-            <Download className="h-4 w-4" />Justificación (PDF)
+           Descagar Justificacion
           </Button>
           {canEdit && !periodoConfirmado && (
             <>

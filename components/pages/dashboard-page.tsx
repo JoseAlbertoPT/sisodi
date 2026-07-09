@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import {
   FileText, Briefcase, FileQuestion, UserCheck,
   FileOutput, Users, Clock, RefreshCw, Loader2,
-  BarChart2, TrendingUp, Download, FileSpreadsheet, ChevronRight,
+  BarChart2, TrendingUp, FileSpreadsheet, ChevronRight,
 } from "lucide-react"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -931,7 +931,6 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
           disabled={!data || loading}
           onClick={() => setModalAbierto(true)}
         >
-          <Download className="h-4 w-4" />
           Descargar reportes
         </Button>
 

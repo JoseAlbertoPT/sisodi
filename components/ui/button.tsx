@@ -13,7 +13,7 @@ const buttonVariants = cva(
           "bg-[#773357] text-white border border-[#773357] hover:bg-[#773357] hover:text-white active:bg-[#773357] active:text-white focus:bg-[#773357] focus:text-white",
 
         default:
-          "bg-white text-[#6B7280] border border-[#E5E7EB] hover:bg-[#F3F4F6] hover:text-[#374151]",
+          "bg-[#f5f4f2] text-[#2e3b2b] border border-[#e4e3d6] hover:bg-[#eeece7] dark:bg-[#26261e] dark:text-[#f1f1f0] dark:border-white/10 dark:hover:bg-[#2e2e24]",
 
         destructive:
           'bg-destructive text-white hover:bg-[#b82a2e] focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
@@ -24,10 +24,10 @@ const buttonVariants = cva(
         secondary:
           'bg-secondary text-secondary-foreground hover:bg-[#5a6047]',
         ghost:
-          'text-[#5d5e5f] hover:bg-secondary/10 hover:text-foreground',
+          'bg-transparent text-[#5d5e5f] hover:bg-secondary/10 hover:text-foreground dark:text-[#b8b9b9]',
         link: 'text-primary underline-offset-4 hover:underline',
         vino:
-          'bg-[#7b2d5e] text-white hover:bg-[#7b2d5e] hover:text-white active:bg-[#7b2d5e] active:text-white focus:bg-[#7b2d5e] focus:text-white',
+          'bg-[#773357] text-white hover:bg-[#773357] hover:text-white active:bg-[#773357] active:text-white focus:bg-[#773357] focus:text-white',
       },
       size: {
         default: "h-10 px-6",

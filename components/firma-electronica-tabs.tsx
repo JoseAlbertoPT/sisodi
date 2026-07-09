@@ -11,8 +11,8 @@ import {
   AlertDialogTitle, AlertDialogDescription, AlertDialogAction,
 } from "@/components/ui/alert-dialog"
 import {
-  CheckCircle2, Loader2, Copy, Link as LinkIcon, Shield,
-  RefreshCw, AlertCircle, Users, Lock, Play, Briefcase, FileKey, KeyRound, AlertTriangle, X, History,
+  CheckCircle2, Loader2, Link as LinkIcon, Shield,
+  AlertCircle, Users, Lock, Briefcase, FileKey, KeyRound, AlertTriangle, X, History,
 } from "lucide-react"
 import { SelladoDocumentoSection, type SelladoEtapa } from "@/components/sellado-documento-section"
 
@@ -270,8 +270,7 @@ export function FirmaElectronicaTabs({
             {error && <p className="text-xs text-destructive">{error}</p>}
             <Button onClick={handleIniciar} disabled={iniciando}
               className="gap-1.5 self-end">
-              {iniciando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              Iniciar proceso
+              {iniciando ? "Iniciando..." : "Iniciar proceso"}
             </Button>
           </CardContent>
         </Card>
@@ -406,8 +405,7 @@ export function FirmaElectronicaTabs({
                     <Button variant="outline" onClick={resetFirmandoInline} disabled={firmandoTrabajo}>Cancelar</Button>
                     <Button onClick={() => handleFirmarInline(f.id)} disabled={firmandoTrabajo}
                       className="gap-1.5">
-                      {firmandoTrabajo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-                      Firmar
+                      {firmandoTrabajo ? "Firmando..." : "Firmar"}
                     </Button>
                   </div>
                 </div>
@@ -442,8 +440,7 @@ export function FirmaElectronicaTabs({
           disabled={!puedeContinuar || guardandoFinal || (!!selladoEtapa && !selladoSubido)}
           className="gap-1.5 px-5 py-2"
         >
-          {guardandoFinal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-          Enviar
+          {guardandoFinal ? "Enviando..." : "Enviar"}
         </Button>
       </div>
 
@@ -520,11 +517,10 @@ function FirmanteRow({
           <div className="flex items-center gap-2">
             <Input readOnly value={link} className="text-[10px] font-mono" />
             <Button size="sm" variant="outline" onClick={() => onCopiar?.(link)} className="gap-1.5 shrink-0">
-              <Copy className="h-3.5 w-3.5" />{copiadoId === firmante.id ? "Copiado" : "Copiar"}
+              {copiadoId === firmante.id ? "Copiado" : "Copiar"}
             </Button>
             <Button size="sm" variant="outline" onClick={onRegenerar} disabled={regenerando === firmante.id} className="gap-1.5 shrink-0">
-              {regenerando === firmante.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              Regenerar
+              {regenerando === firmante.id ? "Regenerando..." : "Regenerar"}
             </Button>
           </div>
           {esperandoTurno && (
@@ -535,7 +531,7 @@ function FirmanteRow({
 
       {modo === "interno" && !firmante.firmado && esCurrent && esSuTurno && (
         <Button size="sm" onClick={onFirmar} className="self-start gap-1.5">
-          <Shield className="h-4 w-4" /> Firmar mi parte
+          Firmar mi parte
         </Button>
       )}
     </div>

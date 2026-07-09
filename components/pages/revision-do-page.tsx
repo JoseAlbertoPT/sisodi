@@ -1217,7 +1217,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
               className="gap-1.5 text-white rounded-full hover:opacity-90"
-              style={{ backgroundColor: "#7b2d5e" }}
+              style={{ backgroundColor: "#773357" }}
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Aprobar y asignar
@@ -1654,7 +1654,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 <Button variant="outline" className="flex-1" onClick={() => setShowEmitConfirm(false)}
                   style={{ backgroundColor: "#fce4f0", color: "#7b2d5e", borderColor: "#f0b0d0" }}>Cancelar</Button>
                 <Button className="flex-1" onClick={handleConfirmEmit} disabled={guardando}
-                  style={{ backgroundColor: "#7b2d5e", color: "#fff", border: "none" }}>
+                  style={{ backgroundColor: "#773357", color: "#fff", border: "none" }}>
                   {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y aprobar"}
                 </Button>
               </div>
@@ -1709,16 +1709,16 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button size="sm" variant="outline" className="gap-1.5 rounded-full border-gray-300 text-gray-700 hover:bg-gray-100 bg-transparent"
+          <Button variant="default" size="sm" className="gap-1.5"
             onClick={() => setShowDescargarConfirm(true)}
           >
-            <Download className="h-4 w-4" />Justificación (PDF)
+            Descagar Justificacion
           </Button>
           {onEditSolicitud && !isEnTabObservadas && (
-            <Button size="sm" className="gap-1.5"
+            <Button variant="default" size="sm" className="gap-1.5"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
             >
-              <Pencil className="h-4 w-4" />Editar
+              Editar
             </Button>
           )}
           {!isEmitido && <SlaIndicatorLarge diasRestantes={solicitud.slaRestante} />}
@@ -2047,15 +2047,13 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {isAceptadoPorRevisor ? (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
-                      <Button size="sm" onClick={handleObservar}
-                        disabled={!canObservar || observarBlocked || guardando}
-                        className="rounded-2xl font-medium hover:opacity-90"
-                        style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}>
+                      <Button variant="default" size="sm" onClick={handleObservar}
+                        disabled={!canObservar || observarBlocked || guardando}>
                         Observar
                       </Button>
                       <Button size="sm" variant="vino" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
                         className="gap-1.5">
-                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
                         Aprobar
                       </Button>
                     </CardContent>
@@ -2063,15 +2061,13 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 ) : (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
-                      <Button size="sm" onClick={handleObservar}
-                        disabled={!canObservar || observarBlocked || guardando}
-                        className="rounded-2xl font-medium hover:opacity-90"
-                        style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}>
+                      <Button variant="default" size="sm" onClick={handleObservar}
+                        disabled={!canObservar || observarBlocked || guardando}>
                         Observar
                       </Button>
                       <Button size="sm" variant="vino" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
                         className="gap-1.5">
-                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
                         Aprobar
                       </Button>
                     </CardContent>

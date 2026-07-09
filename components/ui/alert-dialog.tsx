@@ -125,8 +125,8 @@ function AlertDialogAction({
     <AlertDialogPrimitive.Action
       className={cn(
         'inline-flex items-center justify-center rounded-full px-6 py-2.5 text-sm font-medium',
-        'bg-[#7B2D5E] text-white border-0 transition-colors',
-        'hover:bg-[#7B2D5E] hover:text-white active:bg-[#7B2D5E] active:text-white focus:bg-[#7B2D5E] focus:text-white focus-visible:outline-2 focus-visible:outline-[#F5A800] focus-visible:outline-offset-2',
+        'bg-[#773357] text-white border-0 transition-colors',
+        'hover:bg-[#773357] hover:text-white active:bg-[#773357] active:text-white focus:bg-[#773357] focus:text-white focus-visible:outline-2 focus-visible:outline-[#F5A800] focus-visible:outline-offset-2',
         'disabled:pointer-events-none disabled:opacity-50',
         className,
       )}
