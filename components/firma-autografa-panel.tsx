@@ -24,7 +24,6 @@ interface Props {
   onFinalizar: () => Promise<void> | void
   guardandoFinal: boolean
 }
-
 export function FirmaAutografaPanel({
   solicitudId,
   folioJustificacion,
@@ -55,7 +54,6 @@ export function FirmaAutografaPanel({
   }, [solicitudId])
 
   useEffect(() => { cargar() }, [cargar])
-
   const handleUpload = async (file: File) => {
     setUploading(true); setError(null)
     try {
@@ -73,7 +71,6 @@ export function FirmaAutografaPanel({
       setUploading(false)
     }
   }
-
   const handleClear = async () => {
     setClearing(true); setError(null)
     try {
@@ -93,7 +90,6 @@ export function FirmaAutografaPanel({
   }
 
   const archivoSubido = Boolean(firma?.archivo_firmado)
-
   return (
     <div className="flex flex-col gap-3">
       <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 flex items-start gap-2">
@@ -103,11 +99,10 @@ export function FirmaAutografaPanel({
           Descarga el PDF, recolecta las firmas manuscritas y vuelve a subirlo escaneado.
         </p>
       </div>
-
       <Card className="border-border py-4 gap-3">
         <CardHeader className="px-5 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Download className="h-4 w-4 text-secondary" /> Paso 1 — Descargar justificación
+            <Download className="h-4 w-4 text-secondary" /> Paso 1 — Descargar Justificacion
           </CardTitle>
         </CardHeader>
         <CardContent className="px-5 pb-1 pt-0">
@@ -121,11 +116,10 @@ export function FirmaAutografaPanel({
           </Button>
         </CardContent>
       </Card>
-
       <Card className="border-border py-4 gap-3">
         <CardHeader className="px-5 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Upload className="h-4 w-4 text-secondary" /> Paso 2 — Subir PDF firmado
+            <Upload className="h-4 w-4 text-secondary" /> Paso 2 — Subir PDF Firmado
           </CardTitle>
         </CardHeader>
         <CardContent className="px-5 pb-1 pt-0 flex flex-col gap-2">
@@ -137,11 +131,9 @@ export function FirmaAutografaPanel({
             <>
               {archivoSubido ? (
                 <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
-                  <div className="relative shrink-0">
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
                     <FileTypeIcon name={firma?.archivo_firmado?.split("/").pop() ?? "archivo.pdf"} size="sm" />
-                    <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                    </span>
                   </div>
                   <span className="flex-1 truncate text-sm font-medium text-gray-800 leading-snug">{firma?.archivo_firmado?.split("/").pop()}</span>
                   <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs font-medium text-[#773357] hover:underline shrink-0">Ver</a>

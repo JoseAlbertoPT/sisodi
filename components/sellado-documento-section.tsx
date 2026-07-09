@@ -1,12 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { FileDropZone, FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
-  Stamp, Download, Upload, CheckCircle2, Loader2, AlertCircle, FileText, RefreshCw,
+  Stamp, Download, Upload, CheckCircle2, Loader2, AlertCircle, X,
 } from "lucide-react"
 
 export type SelladoEtapa = "uefa" | "emision"
@@ -45,7 +45,6 @@ export function SelladoDocumentoSection({
   const [descargado, setDescargado] = useState(false)
   const [subiendo, setSubiendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   const titulo = etapa === "emision" ? "Sellado del dictamen" : "Sellado del documento firmado"
   const labelDescargar = etapa === "emision" ? "Descargar dictamen para sellar" : "Descargar para sellar"
@@ -109,7 +108,6 @@ export function SelladoDocumentoSection({
       setError("Error de conexión al subir")
     } finally {
       setSubiendo(false)
-      if (inputRef.current) inputRef.current.value = ""
     }
   }
 
@@ -169,11 +167,13 @@ export function SelladoDocumentoSection({
 
             <div className="flex items-center gap-2 flex-wrap">
               <Button
-                variant={sellado ? "outline" : "default"}
                 size="sm"
                 onClick={handleDescargar}
                 disabled={descargando}
-                className={`gap-1.5 ${!sellado ? "" : ""}`}
+                className="gap-1.5"
+                style={sellado
+                  ? { backgroundColor: "#fff", color: "#773357", border: "1.5px solid #773357" }
+                  : { backgroundColor: "#773357", color: "#fff", border: "none" }}
               >
                 {descargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 {labelDescargar}
@@ -185,62 +185,61 @@ export function SelladoDocumentoSection({
               )}
             </div>
 
-            <div className={`flex flex-col gap-2 rounded-[12px] border-2 border-dashed p-3 transition-colors
-              ${!habilitarSubida ? "border-[#ddd] bg-[#f0f0f0]" : subiendo ? "border-[#ccc] bg-[#f5f5f5]" : "border-[#ccc] bg-[#fafafa]"}`}>
+            <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                {subiendo
-                  ? <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
-                  : <Upload className={`h-3.5 w-3.5 ${habilitarSubida ? "text-muted-foreground" : "text-[#aaa]"}`} />}
+                <Upload className={`h-3.5 w-3.5 ${habilitarSubida ? "text-muted-foreground" : "text-[#aaa]"}`} />
                 <span className={`text-xs font-medium ${!habilitarSubida ? "text-[#aaa]" : ""}`}>{labelSubir}</span>
                 {!habilitarSubida && (
                   <Badge variant="outline" className="text-[10px] ml-auto">Descarga primero</Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  ref={inputRef}
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  disabled={!habilitarSubida || subiendo}
-                  onChange={e => {
-                    const f = e.target.files?.[0]
-                    if (f) handleSubir(f)
-                  }}
-                  className="text-xs"
-                />
-                {sellado && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
+
+              {sellado ? (
+                <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
+                    <FileTypeIcon name={sellado.nombre_original ?? "documento.pdf"} size="sm" />
+                  </div>
+                  <div className="flex flex-1 min-w-0 flex-col">
+                    <span className="truncate text-sm font-medium leading-snug text-gray-800">
+                      {sellado.nombre_original ?? "documento.pdf"}
+                    </span>
+                    <span className="mt-0.5 text-xs text-gray-400">
+                      {fechaSubida}{sellado.uploader?.nombre ? ` · por ${sellado.uploader.nombre}` : ""}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
                     onClick={handleEliminar}
                     disabled={subiendo}
-                    className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                    aria-label="Quitar archivo"
+                    className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors disabled:opacity-40"
                   >
-                    <RefreshCw className="h-3.5 w-3.5" /> Reemplazar
-                  </Button>
-                )}
-              </div>
-              {sellado && (
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                  <FileText className="h-3 w-3" />
-                  <span className="truncate">{sellado.nombre_original ?? "documento.pdf"}</span>
-                  <span>·</span>
-                  <span>{fechaSubida}</span>
-                  {sellado.uploader?.nombre && (
-                    <>
-                      <span>·</span>
-                      <span>por {sellado.uploader.nombre}</span>
-                    </>
-                  )}
+                    {subiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                  </button>
                 </div>
+              ) : null}
+              {sellado && error && (
+                <p className="flex items-center gap-1.5 text-xs text-destructive">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {error}
+                </p>
+              )}
+              {!sellado && (
+                <FileDropZone
+                  accept="application/pdf,.pdf"
+                  hint="Solo PDF"
+                  selectLabel="Seleccionar PDF"
+                  multiple={false}
+                  files={[]}
+                  onFilesChange={(fs) => { if (fs[0]) handleSubir(fs[0]) }}
+                  disabled={!habilitarSubida}
+                  loading={subiendo}
+                  loadingText="Subiendo archivo..."
+                  error={error}
+                  compact
+                />
               )}
             </div>
-
-            {error && (
-              <p className="text-xs text-destructive flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> {error}
-              </p>
-            )}
           </>
         )}
       </CardContent>

@@ -100,7 +100,6 @@ const MESES = [
 
 function mapearDictamen(raw: any): DictamenEmitido {
   const esParaestatal = (raw.tipoAdministracion ?? "centralizada") === "paraestatal"
-
   return {
     id:             String(raw.id),
     folioDictamen:  raw.folioDictamen ??  null ,
@@ -149,11 +148,8 @@ const DictamenViewModal = React.memo(({
   const [firmaDictVerificoNombre, setFirmaDictVerificoNombre] = useState("")
   const [firmaDictEmitioNombre, setFirmaDictEmitioNombre] = useState("")
   const [showFirmas, setShowFirmas] = useState(false)
-
   const formato: 'fisico' | 'en_linea' = dictamen.tipoFirma === 'electronica' ? 'en_linea' : 'fisico'
-
   const esNombramiento = dictamen.tipoSolicitud?.toLowerCase().includes("nombramiento")
-
   const [debouncedFirmas, setDebouncedFirmas] = useState({
     firmaElaboroNombre: "",
     firmaRevisoNombre: "",
@@ -203,7 +199,6 @@ const DictamenViewModal = React.memo(({
     if (debouncedFirmas.firmaDictVerificoNombre) params.set("firmaDictVerificoNombre", debouncedFirmas.firmaDictVerificoNombre)
     if (debouncedFirmas.firmaDictEmitioNombre) params.set("firmaDictEmitioNombre", debouncedFirmas.firmaDictEmitioNombre)
     params.set("formato", formato)
-
     fetch(`/api/pdf/justificacion?${params.toString()}`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error("Error al generar preview PDF")
@@ -286,7 +281,6 @@ const DictamenViewModal = React.memo(({
             </Button>
           </div>
         </CardHeader>
-
         <div className="flex flex-1 overflow-hidden">
           {showFirmas && (
             <div className="w-72 shrink-0 border-r border-border p-4 overflow-y-auto space-y-4 bg-muted/30">

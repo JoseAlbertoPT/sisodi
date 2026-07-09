@@ -131,6 +131,7 @@ interface SolicitudDetalle {
   observacionesPrevias: { fecha: string; usuario: string; estado: string; comentario: string }[]
   observacionesTodas: { fecha: string; usuario: string; estado: string; comentario: string }[]
   checklistDO: Record<string, { valor: "si" | "no" | "noAplica" | null; observacion: string }>
+  modalidadFirma: "electronica" | "autografa" | null
   _raw: any
 }
 type ChecklistValor = "si" | "no" | "noAplica" | null
@@ -373,6 +374,7 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
         comentario: h.comentario as string,
       })),
     checklistDO:          {},
+    modalidadFirma:       item.modalidad_firma ?? null,
     _raw:                 item,
   }
 }
@@ -459,6 +461,7 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
     </Card>
   )
 }
+
 function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
   const condiciones = [
     { label: "Cambio de domicilio", value: raw?.condicion_cambio_domicilio },
@@ -1312,8 +1315,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   }, [solicitud, calData])
   const [modalidadFirma,        setModalidadFirma]        = useState<"electronica" | "autografa">("electronica")
   const [selectedDestinatarios, setSelectedDestinatarios] = useState<string[]>([])
-  const [archivoSubido,         setArchivoSubido]         = useState(false)
-  const [autografaDescargado,   setAutografaDescargado]   = useState(false)
   const [selladoEmisionSubido,  setSelladoEmisionSubido]  = useState(false)
   const [firmaEmisionAbierta,   setFirmaEmisionAbierta]   = useState(false)
 
@@ -1368,6 +1369,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   }, [solicitudId, filtro])
   useEffect(() => { cargar() }, [cargar])
   useRealtime(["revision"], cargar)
+  useEffect(() => {
+    if (solicitud?.modalidadFirma) setModalidadFirma(solicitud.modalidadFirma)
+  }, [solicitud?.modalidadFirma])
   const updateChecklist = useCallback((key: string, valor: ChecklistValor, obs?: string) => {
     setSolicitud(prev => {
       if (!prev) return prev
@@ -1466,7 +1470,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   , [solicitud])
   const handleAprobar = async (revisorId?: string) => {
     if (filtro === 3) {
-      const modalidadExistente = (solicitud as any)?.modalidadFirma as "electronica" | "autografa" | null | undefined
+      const modalidadExistente = solicitud?.modalidadFirma
       if (modalidadExistente === "electronica" || modalidadExistente === "autografa") {
         if (revisorId) { await patchEstado("aprobar", undefined, undefined, modalidadExistente); return }
         setAprobarPending({ modalidad: modalidadExistente })
@@ -1600,7 +1604,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
     (modalidadFirma === "electronica"
       ? true
-      : (autografaDescargado && archivoSubido))
+      : selladoEmisionSubido)
 
   if (loading) return (
     <div className="flex items-center justify-center py-24 gap-3">
@@ -1657,7 +1661,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 </p>
               </div>
               <RadioGroup value={modalidadFirma}
-                onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } else { setSelladoEmisionSubido(false) } }}
+                onValueChange={v => { setModalidadFirma(v as any); if (v !== "electronica") setSelladoEmisionSubido(false) }}
                 className="flex flex-col gap-3 w-full">
                 {[
                   { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
@@ -2173,7 +2177,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                     <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-card-foreground">Modalidad de Firma</CardTitle></CardHeader>
                     <CardContent>
                       <RadioGroup value={modalidadFirma}
-                        onValueChange={v => { setModalidadFirma(v as any); if (v === "electronica") { setAutografaDescargado(false); setArchivoSubido(false) } else { setSelladoEmisionSubido(false) } }}
+                        onValueChange={v => { setModalidadFirma(v as any); if (v !== "electronica") setSelladoEmisionSubido(false) }}
                         className="flex flex-col gap-3">
                         {[
                           { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
@@ -2191,6 +2195,24 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       </RadioGroup>
                     </CardContent>
                   </Card>
+                  {modalidadFirma === "autografa" && solicitud && (
+                    <SelladoDocumentoSection
+                      solicitudId={solicitud.id}
+                      etapa="emision"
+                      usuarioId={(user as any)?.id ?? null}
+                      nombreDescarga={`Dictamen_${solicitud.folioJustificacion ?? solicitud.id}`}
+                      onDescargar={async () => {
+                        const res = await fetch("/api/pdf/justificacion", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ solicitudId: solicitud.id }),
+                        })
+                        if (!res.ok) throw new Error("No se pudo generar el PDF del dictamen")
+                        return res.blob()
+                      }}
+                      onCambio={(subido) => setSelladoEmisionSubido(subido)}
+                    />
+                  )}
                   <Card className="shadow-sm border-border">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">

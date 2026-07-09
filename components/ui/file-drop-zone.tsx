@@ -243,11 +243,9 @@ export function UploadedFileRow({
 }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
-      <div className="relative shrink-0">
+      <div className="flex shrink-0 items-center gap-1.5">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
         <FileTypeIcon name={nombre} size="sm" />
-        <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white">
-          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-        </span>
       </div>
       <span className="text-sm font-medium text-gray-800 truncate flex-1 leading-snug">{nombre}</span>
       {(ruta || onVer) && (

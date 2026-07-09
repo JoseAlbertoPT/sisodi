@@ -648,6 +648,11 @@ export async function PATCH(req: NextRequest) {
         const estadoActual = solicitud.estado.nombre.toLowerCase()
         if (estadoActual.includes("pendiente firma dictamen")) {
           nombreEstadoNuevo = "Emitido"
+        } else if (modalidadFirma === "autografa") {
+          // Firma autógrafa: todo se resuelve dentro de Emisión (descarga/sube el
+          // dictamen sellado ahí mismo) — no pasa por "Pendiente Firma Justificacion"
+          // ni por la bandeja de Validación UEFA.
+          nombreEstadoNuevo = "Pendiente Firma Dictamen"
         } else {
           nombreEstadoNuevo = "Pendiente Firma Justificacion"
         }

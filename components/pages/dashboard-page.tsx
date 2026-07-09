@@ -975,7 +975,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
     <DialogFooter className="gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]">
       <Button
         type="button"
-        className="rounded-full h-10 px-6 font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
+        className="rounded-full h-10 px-6 font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb] hover:text-[#4b5563] active:bg-[#f3f4f6] active:text-[#4b5563] focus:bg-[#f3f4f6] focus:text-[#4b5563]"
         onClick={() => setConfirmarDescarga(false)} >
         Cancelar
       </Button>

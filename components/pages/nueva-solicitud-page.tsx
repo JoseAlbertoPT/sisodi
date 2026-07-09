@@ -925,12 +925,12 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
         const circleStyle: React.CSSProperties = isDone
           ? { width: 32, height: 32, flexShrink: 0, position: 'relative', zIndex: 1 }
           : isActive
-          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
+          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#2563EB', border: '2px solid #2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
           : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
 
         /* Label style */
         const labelStyle: React.CSSProperties = isActive
-          ? { fontSize: 12, fontWeight: 600, color: '#773357', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          ? { fontSize: 12, fontWeight: 600, color: '#2563EB', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : isDone
           ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
@@ -951,13 +951,12 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
               }} />
             )}
 
-            {/* ── Circle + label ────────────────────────── */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               <div style={circleStyle}>
                 {isDone ? (
                   <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
                 ) : (
-                  <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#773357' : '#9CA3AF', lineHeight: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#ffffff' : '#9CA3AF', lineHeight: 1 }}>
                     {i + 1}
                   </span>
                 )}
