@@ -35,7 +35,7 @@ function SelectTrigger({
       className={cn(
         'flex w-full items-center justify-between gap-2 whitespace-nowrap outline-none',
         'rounded-xl border border-gray-300 bg-white px-[14px] py-[10px]',
-        'text-sm text-[#1a2419] transition-[color,background-color,border-color] duration-150',
+        'text-sm text-[#57183c] transition-[color,background-color,border-color] duration-150',
         'data-[placeholder]:text-muted-foreground data-[placeholder]:text-muted-foreground/80',
         'disabled:cursor-not-allowed disabled:opacity-50',
         'aria-invalid:border-[#D32F2F]',
@@ -47,7 +47,7 @@ function SelectTrigger({
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-4 shrink-0 text-[#773357] transition-transform duration-200" />
+        <ChevronDownIcon className="size-6 shrink-0 text-[#773357] transition-transform duration-200" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
@@ -110,14 +110,14 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "focus:bg-[#f0ede6] focus:text-[#2A3B29] data-[state=checked]:bg-[#f0ede6] data-[state=checked]:text-[#2A3B29] [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "focus:bg-[#f0ede6] focus:text-[#57183c] data-[state=checked]:bg-[#f0ede6] data-[state=checked]:text-[#57183c] [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className,
       )}
       {...props}
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
+          
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText data-slot="select-item-text">{children}</SelectPrimitive.ItemText>

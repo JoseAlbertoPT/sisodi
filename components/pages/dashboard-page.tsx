@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { PageLayout } from "@/components/page-layout"
+import { PageHeader } from '@/components/page-header';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
@@ -102,7 +103,7 @@ function GraficaBarrasVertical({
     return (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
+          <CardTitle className="text-sm text-card-foreground">{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground py-8 text-center">{emptyMsg ?? "Sin datos para el periodo seleccionado."}</p>
@@ -171,7 +172,7 @@ function GraficaEmisiones({ data, title, barKey, color }: {
     return (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
+          <CardTitle className="text-sm text-card-foreground">{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground py-8 text-center">Sin emisiones en el periodo seleccionado.</p>
@@ -458,44 +459,13 @@ function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prest
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold text-card-foreground">Prestadores por Régimen</CardTitle>
+        <CardTitle className="text-sm font-light text-card-foreground">Prestadores por Régimen</CardTitle>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
           <DonutSimple items={items} subLabel="prestadores" />
-          /*<ResponsiveContainer width="100%" height={272}>
-            <PieChart>
-              <Pie
-                data={items}
-                cx="50%"
-                cy="45%"
-                innerRadius={60}
-                outerRadius={95}
-                paddingAngle={3}
-                dataKey="value"
-                strokeWidth={0}
-                >
-                {items.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-                <Label content={<CenterLabel total={total} label="prestadores" />} position="center" />
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                verticalAlign="bottom"
-                iconSize={9}
-                iconType="circle"
-                wrapperStyle={{ fontSize: "11px", paddingTop: "10px", color: "#52504a" }}
-                formatter={(v, entry: any) => (
-                  <span style={{ color: "#52504a" }}>
-                    {v} <strong style={{ color: entry.color }}>({entry.payload.value})</strong>
-                  </span>
-                )}
-              />
-            </PieChart>
-          </ResponsiveContainer>*/
         )}
       </CardContent>
     </Card>
@@ -518,7 +488,7 @@ function GraficaPrestadores({
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold text-card-foreground">Número de Prestadores de Servicio</CardTitle>
+        <CardTitle className="text-sm text-card-foreground">Número de Prestadores de Servicio</CardTitle>
       </CardHeader>
       <CardContent>
         {sinDatos ? (
@@ -558,46 +528,13 @@ function GraficaSolicitudesTipo({
 
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold text-card-foreground">Solicitudes por Administración</CardTitle>
+        <CardTitle className="text-sm text-card-foreground">Solicitudes por Administración</CardTitle>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
           <DonutSimple items={items} subLabel="solicitudes" />
-
-          /*<ResponsiveContainer width="100%" height={272}>
-            <PieChart>
-              <Pie
-                data={items}
-                cx="50%"
-                cy="45%"
-                innerRadius={60}
-                outerRadius={95}
-                paddingAngle={3}
-                dataKey="value"
-                strokeWidth={0}
-              >
-                {items.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-                <Label content={<CenterLabel total={total} label="solicitudes" />} position="center" />
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
-                verticalAlign="bottom"
-                iconSize={9}
-                iconType="circle"
-                wrapperStyle={{ fontSize: "11px", paddingTop: "10px", color: "#52504a" }}
-                formatter={(v, entry: any) => (
-                  <span style={{ color: "#52504a" }}>
-                    {v} <strong style={{ color: entry.color }}>({entry.payload.value})</strong>
-                  </span>
-                )}
-              />
-            </PieChart>
-          </ResponsiveContainer>*/
-
         )}
       </CardContent>
     </Card>
@@ -611,26 +548,26 @@ function KpiCard({
 }) {
   return (
     <Card className="rounded-xl border border-border bg-card shadow-sm">
-      <CardContent className="flex h-[35px] items-center gap-3 px-5 py-3">
+      <CardContent className="relative h-[96px]">
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: `${color}18` }}
+          className="absolute right-4 top flex h-6 w-6 items-center justify-center rounded-lg"
         >
-          <Icon className="h-4 w-4" style={{ color }} />
+          <Icon  strokeWidth={1.2}/>
         </div>
 
-        <div className="flex min-w-0 flex-col">
+        <div className="pr-10">
+          <p className="text-sm font-light leading-tight text-card-foreground">
+            {label}
+          </p>
+
           {loading ? (
-            <div className="mb-1 h-7 w-12 animate-pulse rounded bg-muted" />
+            <div className="mt-3 h-7 w-12 animate-pulse rounded bg-muted" />
           ) : (
-            <span className="text-[20px] font-bold leading-none text-card-foreground tabular-nums">
+            <p className="mt-3 text-5xl font-bold leading-none text-card-foreground tabular-nums">
               {value.toLocaleString("es-MX")}
-            </span>
+            </p>
           )}
 
-          <span className="mt-1 text-xs leading-snug text-muted-foreground">
-            {label}
-          </span>
         </div>
       </CardContent>
     </Card>
@@ -884,6 +821,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
   const [reporteSeleccionado, setReporteSeleccionado] =useState<typeof REPORTES[number] | null>(null)
 
   const [confirmarDescarga, setConfirmarDescarga] = useState(false)
+  
 
   const handleDescargar = (reporte: typeof REPORTES[number]) => {
     if (!data) return
@@ -897,10 +835,12 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
   }
 
   return (
-    <PageLayout
+    <div className="flex flex-col h-full min-h-screen bg-bg-base">
+    <PageHeader
       title="Tablero Informativo"
-      description={`Indicadores y Gráficas del Sistema · Periodo  ${anio}${mes !== "Todos" ? ` — ${mesFiltroLabel}` : ""}`}
-    >
+      subtitle={`Indicadores y Gráficas del Sistema · Periodo  ${anio}${mes !== "Todos" ? ` — ${mesFiltroLabel}` : ""}`}
+    />
+      <div className="p-8 flex flex-col flex-1 gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <Select value={anio} onValueChange={setAnio}>
           <SelectTrigger className="w-28 bg-card">
@@ -914,7 +854,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
         </Select>
 
         <Select value={mes} onValueChange={setMes}>
-          <SelectTrigger className="w-40 bg-card">
+          <SelectTrigger className="w-50 bg-card">
             <SelectValue placeholder="Mes" />
           </SelectTrigger>
           <SelectContent>
@@ -1026,27 +966,22 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
     </DialogFooter>
   </DialogContent>
        </Dialog>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {kpis.map(kpi => (
           <KpiCard key={kpi.label} {...kpi} loading={loading} />
         ))}
       </div>
 
-      <Accordion type="multiple" defaultValue={["solicitudes", "Emisiones", "Prestadores"]} className="flex flex-col gap-3">
-
-        <AccordionItem value="solicitudes" className="rounded-lg border border-border bg-card shadow-sm px-4">
-          <AccordionTrigger className="text-sm font-semibold text-card-foreground hover:no-underline py-4">
-            <span className="flex items-center gap-2">
-              <BarChart2 className="h-4 w-4 text-secondary" />
-              Solicitudes por Secretaría
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pb-4">
-            <div className="flex flex-col gap-4">
+            <div className="grid gap-4 lg:grid-cols-2">
               <GraficaSolicitudesTipo
                 centralizada={data?.porSecretariaCentralizada ?? []}
                 paraestatal={data?.porSecretariaParaestatal ?? []}
               />
+              <GraficaPrestadores
+                porSecretaria={data?.prestadoresPorSecretaria ?? []}
+                porTipo={data?.prestadoresPorTipo ?? []}
+              />
+            </div>
               <div className="grid gap-4 lg:grid-cols-2">
                 <GraficaBarrasVertical
                   title="Administración Centralizada"
@@ -1061,18 +996,8 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                   emptyMsg="Sin solicitudes paraestatales en el periodo."
                 />
               </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+             
 
-        <AccordionItem value="Emisiones" className="rounded-lg border border-border bg-card shadow-sm px-4">
-          <AccordionTrigger className="text-sm font-semibold text-card-foreground hover:no-underline py-4">
-            <span className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-secondary" />
-              Emisiones por Administración
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pb-4">
             <div className="grid gap-4 lg:grid-cols-2">
               <GraficaEmisiones
                 title="Administración Centralizada — Dictámenes"
@@ -1087,27 +1012,12 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 color={C_MORA50}
               />
             </div>
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="Prestadores" className="rounded-lg border border-border bg-card shadow-sm px-4">
-          <AccordionTrigger className="text-sm font-semibold text-card-foreground hover:no-underline py-4">
-            <span className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-secondary" />
-              Número de Prestadores de Servicio
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="pb-4">
+
             <div className="flex flex-col gap-4">
               <GraficaPrestadoresPorRegimen data={data?.prestadoresPorRegimen ?? []} />
-              <GraficaPrestadores
-                porSecretaria={data?.prestadoresPorSecretaria ?? []}
-                porTipo={data?.prestadoresPorTipo ?? []}
-              />
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-      </Accordion>
-    </PageLayout>
+              
+            </div> 
+    </div>
+    </div>
   )
 }

@@ -4,12 +4,12 @@ import { createContext, useContext } from "react"
 
 interface SidebarContextValue {
   collapsed: boolean
-  onToggle: () => void
+  toggle: () => void
 }
 
 const SidebarContext = createContext<SidebarContextValue>({
   collapsed: false,
-  onToggle: () => {},
+  toggle: () => {},
 })
 
 export const SidebarProvider = SidebarContext.Provider
