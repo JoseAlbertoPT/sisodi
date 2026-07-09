@@ -10,9 +10,10 @@ import { SearchInput } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
 
-  Search, UserPlus, KeyRound, MoreVertical, Pencil, X, PowerOff, Power,
+  Search, KeyRound, MoreVertical, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
   Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
   Landmark, Factory,
@@ -306,9 +307,9 @@ function SecretariaTreeSelector({
         const treeMatches = query && filtered.length === 0 ? filteredNodes : []
         return (
           <div key={idx} className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div className={`
-                flex items-center justify-center h-5 w-5 rounded-full text-[10px] font-bold shrink-0
+                flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold shrink-0
                 ${level.selected
                   ? "bg-[#7A1E3A] text-white"
                   : idx === levels.length - 1 && !level.selected
@@ -316,17 +317,17 @@ function SecretariaTreeSelector({
                     : "bg-muted text-muted-foreground"
                 }
               `}>
-                {level.selected ? <Check className="h-3 w-3" /> : idx + 1}
+                {level.selected ? <Check className="h-3.5 w-3.5" /> : idx + 1}
               </div>
-              <span className="text-xs font-medium text-muted-foreground">{level.label}</span>
+              <span className="text-sm font-medium text-muted-foreground">{level.label}</span>
               {level.selected && (
                   <>
-                  <span className="text-xs font-semibold text-foreground">
+                  <span className="text-sm font-semibold text-foreground">
                     {level.selected.nombre}
                   </span>
                   <button
                     type="button"
-                    className="text-[10px] text-muted-foreground hover:text-destructive ml-auto"
+                    className="text-xs text-muted-foreground hover:text-destructive ml-auto"
                     onClick={() => handleClearFromLevel(idx)}
                      >
                     Cambiar
@@ -349,12 +350,12 @@ function SecretariaTreeSelector({
                         setSearchAtLevel(idx, e.target.value)
                         setAutocompleteQuery(e.target.value)
                       }}
-                      className={`pl-8 h-8 rounded-full px-4 text-xs bg-background ${error && idx === 0 ? "border-destructive" : ""}`}
+                      className={`pl-8 h-7 rounded-full px-4 text-xs bg-background ${error && idx === 0 ? "border-destructive" : ""}`}
                       autoFocus={idx !== 0}
                     />
                   </div>
                 )}
-                <div className="rounded-lg border border-border bg-card max-h-44 overflow-y-auto">
+                <div className="rounded-lg border border-border bg-card max-h-36 overflow-y-auto">
                   {filtered.length === 0 && treeMatches.length === 0 && (
                     <div className="flex flex-col items-center py-4 text-center">
                       <Search className="h-4 w-4 text-muted-foreground/30 mb-1" />
@@ -369,18 +370,15 @@ function SecretariaTreeSelector({
                           <button
                             key={node.id}
                             type="button"
-                            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-primary/[0.05] transition-colors group"
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-primary/[0.05] transition-colors group"
                             onClick={() => handlePickAtLevel(idx, node)}
                             >
                             <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 group-hover:bg-primary shrink-0 transition-colors" />
-                            <span className="text-xs font-medium text-foreground flex-1 truncate">
+                            <span className="text-xs font-medium text-foreground flex-1 truncate min-w-0">
                               {query ? <HighlightText text={node.nombre} query={query} /> : node.nombre}
                             </span>
                             {hasChildren && (
-                              <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-0.5">
-                                {node.children!.length} sub
-                                <ChevronRight className="h-3 w-3" />
-                              </span>
+                              <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
                             )}
                           </button>
                         )
@@ -393,7 +391,7 @@ function SecretariaTreeSelector({
                         <button
                           key={node.id}
                           type="button"
-                          className="w-full flex flex-col px-3 py-2 text-left hover:bg-primary/[0.05] transition-colors"
+                          className="w-full flex flex-col px-2.5 py-1.5 text-left hover:bg-primary/[0.05] transition-colors"
                           onClick={() => {
                             setSteps(path)
                             const pathNames = path.map((n) => n.nombre)
@@ -654,7 +652,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const secretariaDisplay = form.secretariaPath.length > 0
     ? form.secretariaPath.join(" › ")
     : form.secretaria || "—"
-
   return (
     <>
     <ConfirmDialog
@@ -708,7 +705,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </div>
             <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
               <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
-                <Lock className="h-3 w-3 text-amber-600/70" />
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Acceso y permisos</span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
@@ -757,45 +753,53 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       >
-      <div className={`w-full mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[96vh] flex flex-col overflow-hidden transition-all duration-200 ${step === 4 ? "max-w-3xl" : "max-w-xl"}`}>
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <UserPlus className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-card-foreground">Registrar Nuevo Usuario</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{NUEVO_STEPS[step - 1]}</p>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-0 px-6 py-3 border-b border-border/50 bg-muted/20 shrink-0">
+      <div className="w-full max-w-[720px] mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[96vh] flex flex-col overflow-hidden">
+        <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
+          <div className="flex items-start w-full">
           {NUEVO_STEPS.map((label, idx) => {
             const n = idx + 1
             const done = step > n
             const active = step === n
+            const circleStyle = done
+              ? { width: 32, height: 32, flexShrink: 0, position: 'relative' as const, zIndex: 1 }
+              : active
+              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
+              : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
+
+            const labelStyle = active
+              ? { fontSize: 12, fontWeight: 600, color: '#773357', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
+              : done
+              ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
+              : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
             return (
-              <div key={n} className="flex items-center flex-1 last:flex-none">
-                <div className="flex items-center gap-1.5">
-                  <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors ${
-                    done ? "bg-primary text-primary-foreground" : active ? "bg-primary/20 text-primary border border-primary/40" : "bg-muted text-muted-foreground"
-                  }`}>
-                    {done ? <Check className="h-3 w-3" /> : n}
-                  </div>
-                  <span className={`text-[11px] font-medium hidden sm:block ${active ? "text-primary" : done ? "text-primary/70" : "text-muted-foreground"}`}>
-                    {label}
-                  </span>
-                </div>
-                {idx < NUEVO_STEPS.length - 1 && (
-                  <div className={`flex-1 mx-2 h-px ${step > n ? "bg-primary/40" : "bg-border"}`} />
+              <div key={n} className="flex flex-1 flex-col items-center" style={{ position: 'relative' }}>
+                {idx > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 16,
+                    left: '-50%',
+                    width: '100%',
+                    height: 2,
+                    backgroundColor: done ? '#2A3B29' : '#D1D5DB',
+                    zIndex: 0,
+                  }} />
                 )}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <div style={circleStyle}>
+                    {done ? (
+                      <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
+                    ) : (
+                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#773357' : '#9CA3AF', lineHeight: 1 }}>
+                        {n}
+                      </span>
+                    )}
+                  </div>
+                  <span style={labelStyle}>{label}</span>
+                </div>
               </div>
             )
           })}
+          </div>
         </div>
 
         <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
@@ -806,15 +810,13 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
           )}
           {step === 1 && (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <User className="h-3.5 w-3.5 text-primary/70" />
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
-              </div>
-              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
-                <div className="sm:col-span-2">
+              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
+                <div>
                   {field("nombre", "Nombre Completo", "text", "Ej. Juan Pérez García")}
                 </div>
-                {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx", undefined, "email")}
+                <div>
+                  {field("correo", "Correo electrónico", "email", "usuario@gobierno.gob.mx", undefined, "email")}
+                </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">RFC / Usuario</Label>
                   <Input
@@ -841,11 +843,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
           )}
           {step === 2 && (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <Lock className="h-3.5 w-3.5 text-amber-600/70" />
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Acceso y permisos</span>
-              </div>
-              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Contraseña</Label>
                   <div className="relative">
@@ -861,7 +859,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                       type="button"
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setShowPassword((v) => !v)}
-                    >
+                       >
                       {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
                   </div>
@@ -898,48 +896,34 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             <>
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Tipo de Administración</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-6">
                   {(esAdministrador || tipoAdminFijo === "centralizada") && (
-                    <button
-                      type="button"
-                      disabled={!esAdministrador}
-                      onClick={() => {
-                        setTipoAdmin("centralizada")
-                        setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
-                      }}
-                      className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                        tipoAdmin === "centralizada"
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-background hover:border-primary/40 hover:bg-muted/40"
-                      }`}
-                    >
-                      <Landmark className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "centralizada" ? "text-primary" : "text-muted-foreground"}`} />
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "centralizada" ? "text-primary" : "text-card-foreground"}`}>Centralizada</span>
-                        <span className="text-[10px] text-muted-foreground leading-tight">Dependencias del gobierno federal</span>
-                      </div>
-                    </button>
+                    <label className={`flex items-center gap-2.5 ${esAdministrador ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}>
+                      <Checkbox
+                        className="size-5"
+                        checked={tipoAdmin === "centralizada"}
+                        disabled={!esAdministrador}
+                        onCheckedChange={() => {
+                          setTipoAdmin("centralizada")
+                          setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
+                        }}
+                      />
+                      <span className="text-sm font-medium text-card-foreground">Centralizada</span>
+                    </label>
                   )}
                   {(esAdministrador || tipoAdminFijo === "paraestatal") && (
-                    <button
-                      type="button"
-                      disabled={!esAdministrador}
-                      onClick={() => {
-                        setTipoAdmin("paraestatal")
-                        setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
-                      }}
-                      className={`flex items-start gap-2.5 rounded-lg border-2 p-3 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                        tipoAdmin === "paraestatal"
-                          ? "border-secondary bg-secondary/5"
-                          : "border-border bg-background hover:border-secondary/40 hover:bg-muted/40"
-                      }`}
-                    >
-                      <Factory className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-muted-foreground"}`} />
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-card-foreground"}`}>Paraestatal</span>
-                        <span className="text-[10px] text-muted-foreground leading-tight">Organismos y entidades paraestatales</span>
-                      </div>
-                    </button>
+                    <label className={`flex items-center gap-2.5 ${esAdministrador ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}>
+                      <Checkbox
+                        className="size-5"
+                        checked={tipoAdmin === "paraestatal"}
+                        disabled={!esAdministrador}
+                        onCheckedChange={() => {
+                          setTipoAdmin("paraestatal")
+                          setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
+                        }}
+                      />
+                      <span className="text-sm font-medium text-card-foreground">Paraestatal</span>
+                    </label>
                   )}
                 </div>
               </div>
@@ -972,7 +956,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
 
           {step === 4 && (
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2 pb-1 border-b border-border/50">
+              <div className="flex items-center gap-2">
                 <ShieldCheck className="h-3.5 w-3.5 text-primary/70" />
                 <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Acceso al menú para <span className="text-primary normal-case">{form.nombre || "el usuario"}</span>
@@ -1009,15 +993,21 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
         <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
           <div>
             {step > 1 && (
-              <Button variant="outline" size="sm" className="text-xs h-9" onClick={() => { setErrors({}); setStep((s) => s - 1) }}>
+              <Button
+                variant="default"
+                size="sm"
+                className="text-xs h-9"
+                onClick={() => { setErrors({}); setStep((s) => s - 1) }}
+              >
                 Atrás
               </Button>
             )}
           </div>
           <div className="flex gap-2">
             <Button
+              variant="default"
               size="sm"
-              className="text-xs h-9 rounded-full border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
+              className="text-xs h-9"
               onClick={onClose}
             >
               Cancelar
@@ -1028,11 +1018,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               onClick={handleNext}
               disabled={step === 4 && permTreeLoading}
             >
-              {step < 4 ? (
-                <><ChevronRight className="h-3.5 w-3.5" />Siguiente</>
-              ) : (
-                <><CheckCircle2 className="h-3.5 w-3.5" />Confirmar y Guardar</>
-              )}
+              {step < 4 ? "Siguiente" : "Confirmar y Guardar"}
             </Button>
           </div>
         </div>
@@ -1451,8 +1437,9 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           <span className="text-[11px] text-muted-foreground hidden sm:block">Los campos requeridos están marcados en rojo</span>
           <div className="flex gap-2 ml-auto">
             <Button
+              variant="default"
               size="sm"
-              className="text-xs h-9 rounded-full border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
+              className="text-xs h-9"
               onClick={onClose}
               disabled={loading}
             >
@@ -1467,7 +1454,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               {loading ? (
                 <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
               ) : (
-                <><CheckCircle2 className="h-3.5 w-3.5" />Guardar cambios</>
+                "Guardar cambios"
               )}
             </Button>
           </div>
@@ -1637,7 +1624,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10">
               <Shield className="h-5 w-5 text-primary" />
-            </div>GESTIÓN DGDO
+            </div>
             <div>
               <h2 className="text-base font-semibold text-card-foreground">
                 Permisos de menús
@@ -1785,29 +1772,35 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
                   </div>
                 )}
               </div>
-
-              <div className="flex items-center gap-3 pt-3 border-t border-border shrink-0">
+            </>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
+          <Button
+            variant="default"
+            size="sm"
+            className="text-xs h-9"
+            onClick={requestClose}
+          >
+            Cerrar
+          </Button>
+          <div className="flex items-center gap-3">
+            {!permisosLoading && permisos != null && (
+              <>
                 <Button variant="primary"
                   onClick={() => void handleSavePermisos()}
                   disabled={permisosSaveLoading}
                   className="min-w-[140px]"
                   >
-                  {permisosSaveLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                  )}
+                  {permisosSaveLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   Guardar permisos
                 </Button>
                 {permisosSaveError && (
                   <span className="text-sm text-destructive">{permisosSaveError}</span>
                 )}
-              </div>
-            </>
-          )}
-        </div>
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
-          <Button variant="outline" size="sm" className="text-xs h-9" onClick={requestClose}>Cerrar</Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1909,8 +1902,7 @@ export function UsuariosPage() {
     >
       {}
       <div className="flex items-center justify-end">
-        <Button className="bg-[#832B56] hover:bg-[#832B56]/90 text-white gap-2" onClick={() => setShowNewForm(true)}>
-          <UserPlus className="h-4 w-4" />
+        <Button className="bg-[#773357] hover:bg-[#773357]/90 text-white gap-2" onClick={() => setShowNewForm(true)}>
           Nuevo Usuario
         </Button>
       </div>

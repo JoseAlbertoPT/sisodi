@@ -20,6 +20,7 @@ import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-paginatio
 import { SearchInput } from "@/components/ui/search-input"
 import { StatusBadge } from "@/components/ui/status-badge"
 import {
+
   Search,
   Loader2,
   Eye,
@@ -35,6 +36,7 @@ import {
   MoreVertical,
   Power,
   PowerOff,
+  FileText,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -98,7 +100,7 @@ interface AdminRecord extends CatalogoRecord {
 
 const C_VERDE: string = "#2d4a3e"
 const C_BEIGE: string = "#f0ede4"
-const C_VINO: string  = "#7b2d5e"
+const C_VINO: string  = "#773357"
 function fmt(val: string | null | undefined) {
   return val ?? "—"
 }
@@ -535,15 +537,25 @@ function ConsultaTab() {
 
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       <Dialog open={showView} onOpenChange={setShowView}>
-        <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl h-[90vh] flex flex-col gap-0 p-0 overflow-hidden bg-white">
-          <DialogHeader className="px-5 py-4 border-b border-[#E5E7EB]">
-            <DialogTitle className="text-base font-semibold text-[#1F2937]">
-              Documento de justificación
-            </DialogTitle>
+        <DialogContent showCloseButton={false} className="w-[75vw] max-w-[75vw] sm:max-w-[75vw] h-[92vh] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden bg-white">
+          <DialogHeader className="flex flex-row items-center gap-3 px-5 py-4 border-b border-border shrink-0 space-y-0">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1 text-left">
+              <DialogTitle className="text-base font-semibold text-card-foreground truncate">
+                Documento de justificación
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {(viewRec?.solicitud.secretaria || viewRec?.solicitud.secretaria_txt_snapshot) ?? "—"}
+                {" · "}{viewRec?.solicitud.tipo_solicitud ?? "—"}
+                {" · "}{viewRec ? new Date(viewRec.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+              </p>
+            </div>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden p-4">
+          <div className="flex-1 overflow-hidden bg-[#1F2937] p-3">
             {pdfLoading ? (
-              <div className="flex items-center justify-center h-full gap-2 text-muted-foreground">
+              <div className="flex items-center justify-center h-full gap-2 text-gray-300">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span className="text-sm">Cargando documento…</span>
               </div>
@@ -551,23 +563,22 @@ function ConsultaTab() {
               <PdfPreview fileUrl={pdfBlobUrl} />
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-3">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#E5E7EB]">
-                  <AlertCircle className="h-7 w-7" style={{ color: MORADO }} />
+                <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/20">
+                  <AlertCircle className="h-7 w-7 text-white/70" />
                 </div>
-                <p className="text-sm font-semibold text-[#1F2937]">Sin archivo PDF disponible</p>
-                <p className="text-xs text-center max-w-xs text-[#6B7280]">
+                <p className="text-sm font-semibold text-white">Sin archivo PDF disponible</p>
+                <p className="text-xs text-center max-w-xs text-white/60">
                   No se pudo generar el documento para este registro.
                 </p>
               </div>
             )}
           </div>
-          <div className="px-4 pb-4 pt-3 flex justify-end border-t border-[#E5E7EB]">
+          <div className="px-4 pb-4 pt-3 flex justify-end border-t border-border shrink-0">
             <Button
               onClick={() => { if (viewRec) { setShowView(false); openSol(viewRec) } }}
               className="gap-2 px-5 py-2.5 h-auto rounded-2xl hover:opacity-90 font-medium"
               style={{ backgroundColor: MORADO, color: "#fff" }}
             >
-              <Send className="h-4 w-4" />
               Solicitar
             </Button>
           </div>
@@ -656,10 +667,10 @@ function ConsultaTab() {
               )}
               <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#E5E7EB]">
                 <Button
+                  variant="default"
                   onClick={() => setShowSol(false)}
                   disabled={solLoading}
-                  className="px-5 py-2.5 h-auto hover:opacity-90"
-                  style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
+                  className="px-5 py-2.5 h-auto"
                 >
                   Cancelar
                 </Button>
@@ -669,7 +680,7 @@ function ConsultaTab() {
                   className="gap-2 px-5 py-2.5 h-auto"
                   style={{ backgroundColor: MORADO, color: "#fff" }}
                 >
-                  {solLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {solLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {solLoading ? "Generando…" : "Generar"}
                 </Button>
               </div>

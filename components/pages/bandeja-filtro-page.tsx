@@ -25,6 +25,7 @@ import {
   ArrowLeft, ChevronDown, ChevronRight,
   FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil, X,
 } from "lucide-react"
+
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
@@ -497,7 +498,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
               className="gap-1.5 text-white rounded-full hover:opacity-90"
-              style={{ backgroundColor: "#7b2d5e" }}
+              style={{ backgroundColor: "#773357" }}
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Aprobar y asignar
@@ -577,14 +578,20 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
             )}
           </div>
           <div className="flex justify-between pt-1">
-            <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
+            <Button
+              size="sm"
+              onClick={onClose}
+              disabled={guardando}
+              className="rounded-full h-10 px-6 min-w-[120px] font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
+            >
               Cancelar
             </Button>
             <Button
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              style={{ backgroundColor: "#773357", color: "white", borderRadius: "999px", border: "none" }}
+              className="rounded-full h-10 px-6 min-w-[120px] font-medium gap-1.5"
+              style={{ backgroundColor: "#773357", color: "white", border: "none" }}
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Asignar
@@ -913,18 +920,20 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         <div className="flex items-center gap-3">
           <SlaIndicator diasRestantes={solicitud.slaRestante} />
           <Button
-            size="sm" className="gap-1.5 bg-[#C4A882] hover:bg-[#A0845C] text-white border-0"
+            variant="default"
+            size="sm" className="gap-1.5"
             onClick={() => setShowDescargarConfirm(true)}
           >
-            <Download className="h-4 w-4" />Justificación (PDF)
+            Descagar Justificacion
           </Button>
           {onEditSolicitud && (
             <Button
+              variant="default"
               size="sm"
               onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
               className="gap-1.5"
             >
-              <Pencil className="h-4 w-4" />Editar
+              Editar
             </Button>
           )}
           <Button
@@ -935,17 +944,16 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             disabled={guardando}
             className="gap-1.5"
             size="sm"
-            style={{ backgroundColor: "#7b2d5e", color: "#fff" }}
+            style={{ backgroundColor: "#773357", color: "#fff" }}
             >
-            {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
             {labelAprobar}
           </Button>
           <Button
+            variant="default"
             size="sm"
             onClick={() => setShowObservarModal(true)}
             disabled={guardando}
-            className="rounded-2xl font-medium hover:opacity-90"
-            style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
           >
             Observar
           </Button>

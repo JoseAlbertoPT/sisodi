@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import {
 
-  FilePlus, Upload, ArrowLeft, ArrowRight, Plus, Trash2,
+  FilePlus, ArrowLeft, ArrowRight, Plus, Trash2,
   FileText, ClipboardList, Save, SendHorizonal, AlertCircle, Info,
   ShieldAlert, CheckCircle2, Clock, Calendar, Lock, X, Search, Loader2,
 
@@ -426,7 +426,9 @@ function OficioUpload({ vigenciaInicio, onFileChange }: { vigenciaInicio: string
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1 text-center">
-            <Upload className="h-5 w-5 text-muted-foreground" />
+            <div className="relative">
+              <img src="/iconos2/CargaDoc-black.svg" alt="Cargar documento" className="h-9 w-9 opacity-60" />
+            </div>
             <p className="text-xs text-muted-foreground">PDF, DOC (máx. 10 MB) — Clic (para buscar ) o Arrastra</p>
           </div>
         )}
@@ -858,9 +860,10 @@ function DynamicList({
         </div>
       ))}
       {!readonly && items.length < maxEfectivo && (
-        <Button type="button" variant="outline" size="sm" className="w-fit mt-1"
+        <Button type="button" variant="outline" size="sm"
+          className="w-fit mt-1 bg-transparent text-[#773357] hover:bg-transparent hover:text-[#773357] active:bg-transparent active:text-[#773357] focus:bg-transparent focus:text-[#773357]"
           onClick={() => onChange([...items, ""])}>
-          <Plus className="mr-1 h-4 w-4" />Agregar
+          Agregar
         </Button>
       )}
       {!readonly && belowMin && (
@@ -1210,7 +1213,7 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
         </div>
         <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/20">
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onAccept}>
-            <CheckCircle2 className="mr-1.5 h-4 w-4" />Entendido, continuar
+            Entendido, continuar
           </Button>
         </div>
       </div>
@@ -2716,7 +2719,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
               </Badge>
             )}
             <div className="flex gap-3">
-              <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Volver</Button>
+              <Button variant="outline" onClick={onBack}>Volver</Button>
               <Button onClick={() => { setSubmitted(false); setTipoSolicitud(""); setSecretaria(""); setUnidad(""); setDenominacion(""); setVigenciaInicio(""); setVigenciaFin(""); setImporteBruto(""); setFolioManual(""); setFechaRecepcion(""); setFolioSolicitud(""); setAssignedFolio("") }}
                 className="bg-primary text-primary-foreground hover:bg-primary/90">Registrar Otra</Button>
             </div>
@@ -2728,7 +2731,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col gap-3 max-w-4xl mx-auto w-full">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5"><ArrowLeft className="h-4 w-4" />Volver</Button>
+        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">Volver</Button>
         <Separator orientation="vertical" className="h-6" />
         <div>
           <h2 className="text-xl font-semibold text-foreground">Excepción DO</h2>
@@ -2761,9 +2764,8 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
         </CardContent>
       </Card>
       <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
-        <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Cancelar</Button>
+        <Button variant="outline" onClick={onBack}>Cancelar</Button>
         <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5">
-          {subTipo === "regularizacion" ? <Clock className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
           {subTipo === "regularizacion" ? "Registrar Regularización" : "Registrar Excepción DO"}
         </Button>
       </div>
@@ -3384,7 +3386,7 @@ export function NuevaSolicitudPage({
             )}
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={handleReset}>
-                <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
+                Nueva Solicitud
               </Button>
             </div>
           </CardContent>
@@ -3409,7 +3411,7 @@ export function NuevaSolicitudPage({
             )}
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={handleReset}>
-                <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
+                Nueva Solicitud
               </Button>
             </div>
           </CardContent>
@@ -3652,7 +3654,7 @@ export function NuevaSolicitudPage({
               <div className="flex justify-end pt-2">
                 <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
                   className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-                  Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
+                  Continuar
                 </Button>
               </div>
             </CardContent>
@@ -3789,7 +3791,7 @@ export function NuevaSolicitudPage({
                             <Button variant="outline" onClick={() => setShowModalMismasCondiciones(false)}>Cancelar</Button>
                             <Button className="bg-primary text-primary-foreground hover:bg-primary/90"
                               onClick={() => { setCondicionRenovacion("mismas"); setShowModalMismasCondiciones(false) }}>
-                              <CheckCircle2 className="mr-1.5 h-4 w-4" />Sí, confirmar
+                              Sí, confirmar
                             </Button>
                           </div>
                         </div>
@@ -3801,7 +3803,7 @@ export function NuevaSolicitudPage({
             )}
 
             <div className="flex items-center justify-between pt-2">
-              <Button variant="outline" onClick={handleBack}><ArrowLeft className="mr-1.5 h-4 w-4" />Anterior</Button>
+              <Button variant="outline" onClick={handleBack}>Anterior</Button>
               <Button
                 onClick={handleContinueToFormulario}
                 disabled={
@@ -3811,7 +3813,7 @@ export function NuevaSolicitudPage({
                 }
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
+                Continuar
               </Button>
             </div>
           </CardContent>
@@ -3918,7 +3920,7 @@ export function NuevaSolicitudPage({
                 {editSolicitud?.fromRevision ? (
                   <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
                     <Button variant="outline" onClick={onBackToRevision} disabled={guardandoMod}>
-                      <ArrowLeft className="mr-1.5 h-4 w-4" />Volver sin guardar
+                      Volver sin guardar
                     </Button>
                     <div className="flex items-center gap-3">
                       {errorMod && (
@@ -3929,31 +3931,22 @@ export function NuevaSolicitudPage({
                         onClick={handleGuardarModificaciones}
                         disabled={guardandoMod}
                       >
-                        {guardandoMod
-                          ? <><Clock className="h-4 w-4 animate-spin" />Guardando...</>
-                          : <><Save className="mr-1.5 h-4 w-4" />Guardar cambios</>
-                        }
+                        {guardandoMod ? "Guardando..." : "Guardar cambios"}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
                     <Button variant="outline" onClick={handleBack} disabled={enviando || guardandoBorrador}>
-                      <ArrowLeft className="mr-1.5 h-4 w-4" />Anterior
+                      Anterior
                     </Button>
                     <div className="flex items-center gap-3">
                       <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador} className="gap-1.5">
-                        {guardandoBorrador
-                          ? <><Clock className="h-4 w-4 animate-spin" />Guardando...</>
-                          : <><Save className="mr-1.5 h-4 w-4" />Guardar Borrador</>
-                        }
+                        {guardandoBorrador ? "Guardando..." : "Guardar Borrador"}
                       </Button>
                       <Button className="bg-primary text-primary-foreground hover:bg-primary/90 min-w-[160px]"
                         disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
-                        {enviando
-                          ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
-                          : <><SendHorizonal className="mr-1.5 h-4 w-4" />Enviar a Validación</>
-                        }
+                        {enviando ? "Enviando..." : "Enviar a Validación"}
                       </Button>
                     </div>
                   </div>

@@ -210,7 +210,6 @@
   box-shadow: none !important;
 }
 /* ──────────────────────────────────────────────────────────────────────── */
-
 /* ── Design System Selects — Global ───────────────────────────────────── */
 
 /* Estado Hover */
@@ -221,6 +220,45 @@
 /* Estado Selected — tiene valor (no placeholder) */
 [data-slot="select-trigger"]:not([data-placeholder]) > svg {
   color: #773357 !important;
+}
+
+/* Texto del valor seleccionado en vino (no afecta al placeholder) */
+[data-slot="select-trigger"]:not([data-placeholder]) [data-slot="select-value"] {
+  color: #773357 !important;
+}
+
+/* Texto en vino: opción seleccionada (check ✓), o cualquier opción en hover/focus */
+[data-slot="select-item"][data-state="checked"] [data-slot="select-item-text"],
+[data-slot="select-item"]:hover [data-slot="select-item-text"],
+[data-slot="select-item"]:focus [data-slot="select-item-text"] {
+  color: #773357 !important;
+}
+
+/* Fuera de hover/focus, las opciones NO seleccionadas vuelven a su color normal */
+[data-slot="select-item"]:not([data-state="checked"]):not(:hover):not(:focus) [data-slot="select-item-text"] {
+  color: #1a2419 !important;
+}
+
+/* Excepción: el formulario de "Nueva Solicitud" conserva el comportamiento original en todos los estados */
+.ns-select [data-slot="select-trigger"]:not(.vino-force):not([data-placeholder]) [data-slot="select-value"] {
+  color: #1a2419 !important;
+}
+.ns-select [data-slot="select-item"] [data-slot="select-item-text"] {
+  color: inherit !important;
+}
+
+/* Selects específicos de "Nueva Solicitud" (ej. Régimen de Contratación, Mes/Quincena de aplicación)
+   marcados con .vino-force: SÍ deben mostrar el valor/opción elegida en vino */
+.ns-select [data-slot="select-trigger"].vino-force:not([data-placeholder]) [data-slot="select-value"] {
+  color: #773357 !important;
+}
+.ns-select [data-slot="select-content"].vino-force [data-slot="select-item"][data-state="checked"] [data-slot="select-item-text"],
+.ns-select [data-slot="select-content"].vino-force [data-slot="select-item"]:hover [data-slot="select-item-text"],
+.ns-select [data-slot="select-content"].vino-force [data-slot="select-item"]:focus [data-slot="select-item-text"] {
+  color: #773357 !important;
+}
+.ns-select [data-slot="select-content"].vino-force [data-slot="select-item"]:not([data-state="checked"]):not(:hover):not(:focus) [data-slot="select-item-text"] {
+  color: #1a2419 !important;
 }
 
 /* Estado Abierto */
@@ -385,8 +423,7 @@ input[type="radio"].cursor-pointer:disabled {
   cursor: not-allowed;
 }
 /* ──────────────────────────────────────────────────────────────────────── */
-
-/* ── DS Tables — Global ─────────────────────────────────────────────────── */
+/* ── DS Tables — Global ────────────────────────────────────────────────── */
 
 /* Header: muted 40% bg, brand-texto-secundario, no bold */
 table.w-full thead tr {

@@ -265,10 +265,8 @@ function SecretariaRow({
               onDragOver={(e) => onDragOver(e, index)}
               onDrop={() => onDrop(index)}
               className={[
-                "flex items-center gap-2 py-3 px-4 rounded-xl border bg-white transition-all",
-                isDragging
-                    ? "opacity-40 border-dashed border-[#773357] bg-[#773357]/5"
-                    : "border-[#e4e3dc] shadow-sm hover:border-[#773357]/30 hover:shadow-md",
+                "flex items-center gap-2 py-3 px-4 rounded-xl border bg-white transition-all border-[#e4e3dc] shadow-sm",
+                isDragging ? "opacity-40 border-dashed" : "",
               ].join(" ")}
           >
             <GripVertical className="h-4 w-4 text-muted-foreground/30 cursor-grab shrink-0 hover:text-muted-foreground/60" />
@@ -366,7 +364,7 @@ function SecretariaRow({
                           className={[
                             "group flex items-center gap-2 py-2 px-3 rounded-lg border transition-all",
                             !uaSearch && uaDragging === globalIdx
-                                ? "opacity-40 border-dashed border-[#773357]"
+                                ? "opacity-40 border-dashed border-[#e4e3dc]"
                                 : "border-transparent hover:border-[#e4e3dc] hover:bg-[#f9f8f5]",
                           ].join(" ")}
                       >
@@ -483,7 +481,7 @@ function SecretariaRow({
                 <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
               <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddUa} disabled={saving || !uaNombre.trim() || uaClave.replace(/\D/g, "").length < 7}>
-                {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Agregar
+                {saving ? "Agregando..." : "Agregar"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -504,7 +502,7 @@ function SecretariaRow({
                 <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
               <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleEditSec} disabled={saving || !secNombre.trim()}>
-                {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
+                {saving ? "Guardando..." : "Guardar"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -545,7 +543,7 @@ function SecretariaRow({
                 <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
               <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleEditUa} disabled={saving || !uaNombre.trim()}>
-                {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Guardar
+                {saving ? "Guardando..." : "Guardar"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -637,7 +635,7 @@ export function CatalogoCentralizadaTab() {
                 className="shrink-0 rounded-full text-white font-medium gap-1.5 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white border-0"
                 onClick={() => { setNewSecNombre(""); setFormError(""); setAddSecOpen(true) }}
             >
-              <Plus className="h-4 w-4" /> Agregar Secretaría
+              Agregar Secretaría
             </Button>
           </div>
 
@@ -696,7 +694,7 @@ export function CatalogoCentralizadaTab() {
                 <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
               <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddSec} disabled={saving || !newSecNombre.trim()}>
-                {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />} Crear
+                {saving ? "Creando..." : "Crear"}
               </Button>
             </DialogFooter>
           </DialogContent>
