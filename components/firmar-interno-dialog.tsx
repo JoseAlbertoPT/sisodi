@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -156,11 +157,10 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
 
   return (
     <>
-    <ConfirmDialog
+    <ConfirmAlertDialog
       open={confirmEmitirAbierto}
-      onClose={() => setConfirmEmitirAbierto(false)}
+      onOpenChange={setConfirmEmitirAbierto}
       onConfirm={handleEmitirDictamen}
-      variant="observar"
       title="Confirmar emisión del dictamen"
       description={<>
         Estás a punto de emitir el dictamen{folio ? <> de la justificación <strong>{folio}</strong></> : null}.
@@ -168,7 +168,6 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
         Esta acción <strong>no se puede revertir</strong>.
       </>}
       confirmLabel="Sí, emitir dictamen"
-      loading={emitiendo}
     />
     <ConfirmDialog
       open={avisoCargoAbierto}

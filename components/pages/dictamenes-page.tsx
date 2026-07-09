@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
-  Download, FileCheck, Stamp, Printer, FileText,
+  Download, FileCheck, Stamp, Printer,
   Loader2, AlertTriangle, RefreshCw, MoreHorizontal, Eye,
 } from "lucide-react"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
@@ -69,15 +70,12 @@ const INICIALES_MES_MAP: Record<string, string> = {
 
 function formatearFolio(folio: string | null | undefined): string {
   if (!folio || folio === "—") return "—"
-
   const matchLegacy = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
   if (matchLegacy) return `${matchLegacy[1]}/${matchLegacy[2].padStart(2, "0")}/${matchLegacy[3]}`
-
   const matchDictamen = folio.match(/^[A-Z]{2,3}-(\d+)-(\d{4})$/)
   if (matchDictamen) {
     return `${matchDictamen[1].padStart(3, "0")}-${matchDictamen[2]}`
   }
-
   return folio
 }
 
@@ -254,8 +252,8 @@ const DictamenViewModal = React.memo(({
       <Card className="w-[75vw] max-w-[75vw] h-[92vh] max-h-[92vh] flex flex-col shadow-xl border-2 border-primary/20">
         <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0 gap-4">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <FileText className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-center shrink-0">
+              <FileTypeIcon name="dictamen.pdf" size="md" />
             </div>
             <div className="min-w-0 flex-1">
               <CardTitle className="text-base font-semibold text-card-foreground truncate">

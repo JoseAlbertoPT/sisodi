@@ -261,6 +261,12 @@
   color: #1a2419 !important;
 }
 
+/* Selects más compactos verticalmente, solo dentro de "Nueva Solicitud" */
+.ns-select [data-slot="select-trigger"] {
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+
 /* Estado Abierto */
 [data-slot="select-trigger"][data-state="open"] {
   border-color: #9CA3AF !important;
@@ -590,7 +596,7 @@ table.w-full.conditions-table tbody td:not(:first-child) {
     font-family: var(--font-sans);
     font-size: 22px;
     font-weight: 400;
-    line-height: 1.3;
+    line-height: 1.2;
   }
   .ds-title-sm {
     font-family: var(--font-sans);

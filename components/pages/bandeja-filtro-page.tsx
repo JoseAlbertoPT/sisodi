@@ -15,7 +15,8 @@ import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ConfirmDialog, ObservarDialog } from "@/components/ui/confirm-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import { SearchInput } from "@/components/ui/search-input"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
@@ -420,7 +421,63 @@ function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLab
 function ObservarModal({ open, onClose, onConfirm, folio }: {
   open: boolean; onClose: () => void; onConfirm: (obs: string) => void; folio: string
 }) {
-  return <ObservarDialog open={open} onClose={onClose} onConfirm={onConfirm} folio={folio} />
+  const [step, setStep] = useState<"confirm" | "write">("confirm")
+  const [obs, setObs] = useState("")
+
+  const handleClose = () => { setStep("confirm"); setObs(""); onClose() }
+
+  if (step === "confirm") {
+    return (
+      <ConfirmAlertDialog
+        open={open}
+        onOpenChange={(v) => { if (!v) handleClose() }}
+        onConfirm={() => setStep("write")}
+        title="¿Estás seguro de observar?"
+        description={<>Vas a marcar <strong className="font-semibold">{folio}</strong> con observaciones. Se devolverá a la URG.</>}
+        confirmLabel="Sí, continuar"
+      />
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[#e4e3d6] shadow-lg p-6"
+      >
+        <div className="flex flex-col gap-3">
+          <AlertTriangle className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
+          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+            Observar — {folio}
+          </DialogTitle>
+          <p className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">
+            Escriba las observaciones que se enviarán a la URG.
+          </p>
+          <Textarea
+            placeholder="Describa las observaciones..."
+            value={obs}
+            onChange={e => setObs(e.target.value)}
+            className="min-h-[120px] bg-card"
+          />
+        </div>
+        <div className="flex gap-3 pt-3">
+          <Button
+            className="h-10 flex-1 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+            onClick={handleClose}
+          >
+            Cancelar
+          </Button>
+          <Button
+            className="h-10 flex-1 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+            onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
+            disabled={!obs.trim()}
+          >
+            Confirmar observación
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 interface RevisorInfo { id: string; nombre: string; correo: string }
@@ -582,7 +639,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               onClick={onClose}
               disabled={guardando}
-              className="rounded-full h-10 px-6 min-w-[120px] font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
+              className="rounded-full h-10 px-6 min-w-[120px] font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb] hover:text-[#4b5563] active:bg-[#f3f4f6] active:text-[#4b5563] focus:bg-[#f3f4f6] focus:text-[#4b5563]"
             >
               Cancelar
             </Button>
@@ -590,8 +647,8 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="rounded-full h-10 px-6 min-w-[120px] font-medium gap-1.5"
-              style={{ backgroundColor: "#773357", color: "white", border: "none" }}
+              className="rounded-2xl h-11 px-6 min-w-[120px] font-medium gap-1.5 hover:opacity-90"
+              style={{ backgroundColor: "#773357", color: "#fff", border: "none" }}
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Asignar
@@ -796,6 +853,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
   const [showDescargarConfirm,    setShowDescargarConfirm]    = useState(false)
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
   const [showObservarModal,       setShowObservarModal]       = useState(false)
+  const [showEditarConfirm,       setShowEditarConfirm]       = useState(false)
   const [activePanel,             setActivePanel]             = useState<"revision" | "observaciones" | "historial">("revision")
   const [folioDictamen,           setFolioDictamen]           = useState<string | null>(
     solicitud._raw?.folio_dictamen ?? solicitud._raw?.dictamen?.folio ?? null
@@ -930,7 +988,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             <Button
               variant="default"
               size="sm"
-              onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
+              onClick={() => setShowEditarConfirm(true)}
               className="gap-1.5"
             >
               Editar
@@ -1122,14 +1180,14 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         </div>
       </div>
 
-      <ConfirmModal
+      <ConfirmAlertDialog
         open={showAprobarModal}
-        onClose={() => setShowAprobarModal(false)}
+        onOpenChange={setShowAprobarModal}
         onConfirm={() => { setShowAprobarModal(false); onAprobar(solicitud.id) }}
         title={`¿${labelAprobar}?`}
-        description={`La solicitud ${folioFormateado} avanzará al siguiente paso del proceso.`}
+        description={<>La solicitud <strong className="font-semibold">{folioFormateado}</strong> avanzará al siguiente paso del proceso.</>}
         confirmLabel="Sí, aprobar"
-        />
+      />
       <ConfirmModal
         open={showDescargarConfirm}
         onClose={() => setShowDescargarConfirm(false)}
@@ -1151,6 +1209,16 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         folio={folioFormateado}
         guardando={guardando}
       />
+      {onEditSolicitud && (
+        <ConfirmAlertDialog
+          open={showEditarConfirm}
+          onOpenChange={setShowEditarConfirm}
+          onConfirm={() => { setShowEditarConfirm(false); onEditSolicitud(rawToEditPayload(solicitud)) }}
+          title="¿Estás seguro de editar?"
+          description={<>Vas a editar la solicitud <strong className="font-semibold">{folioFormateado}</strong>.</>}
+          confirmLabel="Sí, editar"
+        />
+      )}
     </div>
   )
 }
@@ -1669,9 +1737,9 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       </Card>
       )}
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-      <ConfirmModal
+      <ConfirmAlertDialog
         open={!!aprobarTarget}
-        onClose={() => setAprobarTarget(null)}
+        onOpenChange={(v) => { if (!v) setAprobarTarget(null) }}
         onConfirm={() => { if (aprobarTarget) handleAprobar(aprobarTarget) }}
         title={(() => {
           const sol = solicitudes.find(s => s.id === aprobarTarget)
@@ -1679,7 +1747,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
             return "¿Firmar dictamen y emitir?"
           return "¿Aprobar y avanzar al siguiente paso?"
         })()}
-        description={`La solicitud ${formatearFolio(solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion)} avanzará al siguiente paso del proceso.`}
+        description={<>La solicitud <strong className="font-semibold">{formatearFolio(solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion)}</strong> avanzará al siguiente paso del proceso.</>}
         confirmLabel="Sí, confirmar"
       />
       <ObservarModal

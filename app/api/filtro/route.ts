@@ -206,51 +206,11 @@ export async function GET(req: NextRequest) {
     })
 
     // --- ownership filter --------------------------------------------------
-    // Some estados appear in multiple filtros' lists so they can be "tracked"
-    // across the pipeline. But a solicitud should only appear in a filtro that
-    // currently owns it: a filtro OWNS a solicitud when the solicitud has
-    // previously reached its primary state (or it IS its primary state now).
-    //
-    // filtro=2 primary: "En Validacion Final"
-    // filtro=3 primary: "En Revision Emisor"
-    //
-    // Rules:
-    //  • filtro=2 – "En Revision Revisor" only visible when the solicitud was
-    //    PREVIOUSLY in "En Validacion Final" (DGDO sent it back to Revisor).
-    //  • filtro=3 – all pre-emission intermediate states only visible when the
-    //    solicitud PREVIOUSLY reached "En Revision Emisor" (i.e. Emisor already
-    //    took ownership at some point in a prior cycle).
-    //    "Pendiente DO" is always visible to filtro=3 because it is the entry
-    //    point: a solicitud in that state is arriving for the first time.
-    const FILTRO3_RESTRINGIDOS = new Set([
-      "en revision revisor",
-      "observado por revisor",
-      "aceptado por revisor",
-      "aprobado por revisor",
-      "pendiente firma justificacion",
-      "pendiente firma revision",
-      "pendiente firma validacion",
-      "en validacion final",
-      "observado por validacion final",
-    ])
-
-    const solicitudesFiltradas = filtro === 1
-      ? solicitudes
-      : solicitudes.filter((sol) => {
-          const actual = sol.estado.nombre.toLowerCase()
-          const enHistorial = (nombre: string) =>
-            sol.historial_solicitud.some(
-              (h) => (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase() === nombre
-            )
-
-          // "En Revision Revisor" always belongs to filtro=2: it is only
-          // ever created when filtro=2 assigns a reviewer.
-          if (filtro === 2 && actual === "en revision revisor") return true
-          if (filtro === 3 && FILTRO3_RESTRINGIDOS.has(actual)) {
-            return enHistorial("en revision emisor")
-          }
-          return true
-        })
+    // filtro=3 (Emisión) shows every pre-emission state as a tracking view
+    // ("Estatus de recibidas"), regardless of whether Emisión has handled the
+    // solicitud before — it does not need to have reached "En Revision Emisor"
+    // in a prior cycle to be visible here.
+    const solicitudesFiltradas = solicitudes
     // -----------------------------------------------------------------------
 
     const enriched = solicitudesFiltradas.map((sol) => {

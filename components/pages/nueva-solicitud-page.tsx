@@ -20,7 +20,7 @@ import {
   FilePlus, Upload, ArrowLeft, ArrowRight, Plus, Trash2,
   FileText, ClipboardList, Save, SendHorizonal, AlertCircle,
   ShieldAlert, CheckCircle2, Clock, Lock, X, Search, Loader2,
-  Edit3, RotateCcw, Megaphone,
+  Edit3, RotateCcw, Info, AlertTriangle,
 
 } from "lucide-react"
 import { useSolicitudes, type TipoAdministracion } from "@/lib/solicitudes-store"
@@ -407,7 +407,7 @@ function OficioUpload({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       {/* Archivos existentes ya subidos al servidor */}
       {existingFiles && existingFiles.length > 0 && (
         <div className="flex flex-col gap-1.5 mb-1">
@@ -733,7 +733,7 @@ type FolioExcel = {
 
 function ReadonlyField({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <Label className="text-sm font-medium flex items-center gap-1.5">
         {label}
         <Lock className="h-3 w-3 text-muted-foreground" />
@@ -800,7 +800,7 @@ function DynamicList({
     prevLengthRef.current = items.length
   }, [items.length])
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       {label && (
         <Label className="text-sm font-medium text-card-foreground flex items-center gap-1.5">
           {label}
@@ -895,8 +895,8 @@ function DynamicList({
         </Button>
       )}
       {!readonly && (
-        <p className={`text-xs flex items-center gap-1 mt-0.5 ${belowMin || hasDups ? "text-destructive" : "text-muted-foreground"}`}>
-          <AlertCircle className="h-3 w-3 shrink-0" />
+        <p className={`text-xs font-medium flex items-center gap-1 mt-0.5 ${hasDups ? "text-destructive" : belowMin ? "text-[#936901]" : "text-muted-foreground"}`}>
+          <AlertTriangle className="h-3 w-3 shrink-0" />
           {hasDups
             ? "Elimine los textos duplicados antes de continuar."
             : matchCountLabel
@@ -996,7 +996,7 @@ function TagInput({
     setDraft("")
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       {!readonly && (
         <div className="flex gap-2">
           <Input
@@ -1358,9 +1358,10 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
       >
         {/* ── Header ── */}
         <div className="flex items-start justify-between px-6 py-5">
-          <div className="flex flex-col gap-0.5">
-            <span style={{ fontSize: 18, fontWeight: 700, color: "#111827", lineHeight: 1.3 }}>Fórmula de llenado</span>
-            <span className="text-sm text-[#6B7280]">Guía para redactar correctamente el campo</span>
+          <div className="flex flex-col gap-1.5">
+            <Info className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
+            <span className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">Fórmula de llenado</span>
+            <span className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">Guía para redactar correctamente el campo</span>
           </div>
           <button
             onClick={onClose}
@@ -1386,7 +1387,7 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
                       padding: "12px 16px",
                       backgroundColor: "#F9FAFB",
                       color: "#6B7280",
-                      fontWeight: 500,
+                      fontWeight: 400,
                       borderRight: "1px solid #E5E7EB",
                     }}
                   >
@@ -1397,7 +1398,8 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
                     style={{
                       padding: "12px 16px",
                       backgroundColor: "#ffffff",
-                      color: "#111827",
+                      color: "#5d5e5f",
+                      fontWeight: 400,
                     }}
                   >
                     {fila.ejemplo}
@@ -1410,23 +1412,13 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
 
         {/* ── Footer ── */}
         <div
-          className="flex justify-end px-6 py-4"
+          className="flex justify-center px-6 py-4"
           style={{ borderTop: "1px solid #E5E7EB" }}
         >
           <button
             onClick={onClose}
-            style={{
-              border: "1.5px solid #ccc",
-              borderRadius: 9999,
-              background: "white",
-              padding: "10px 24px",
-              fontSize: 14,
-              fontWeight: 500,
-              color: "#374151",
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F9FAFB")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "white")}
+            className="h-10 min-w-[220px] rounded-full text-sm font-medium text-white hover:opacity-90"
+            style={{ border: "none", background: "#773357", cursor: "pointer" }}
           >
             Cerrar
           </button>
@@ -1769,9 +1761,9 @@ function FormularioPrestacion({
              I. Datos Generales
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="flex flex-col gap-2">
+        <CardContent className="flex flex-col gap-2 px-4 pb-3 pt-0">
+          <div className="grid gap-2 md:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Secretaría / Dependencia / Organismo
                 <Lock className="h-3 w-3 text-muted-foreground" />
@@ -1781,7 +1773,7 @@ function FormularioPrestacion({
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Administrativa de Adscripción
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -1820,7 +1812,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Responsable del Gasto
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -1856,7 +1848,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programas o Proyectos
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -1884,7 +1876,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Régimen de Contratación
                 {regimenBloqueado && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -1912,7 +1904,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Actividad
               </Label>
@@ -1934,7 +1926,7 @@ function FormularioPrestacion({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Número de Prestadores de Servicios
               </Label>
@@ -1948,7 +1940,7 @@ function FormularioPrestacion({
                 className="ns-ds-field bg-background"
               />
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Pago
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -1971,7 +1963,7 @@ function FormularioPrestacion({
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Importe Bruto
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -2152,8 +2144,8 @@ function FormularioPrestacion({
           />
 
           <div className="flex flex-col items-start gap-1.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#2563EB] bg-[#EFF6FF] px-3 py-1.5 text-sm font-medium text-[#2563EB]">
-              <Megaphone className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas.
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#4b5563]">
+              <Info className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas.
             </span>
           </div>
         </CardContent>
@@ -2192,7 +2184,7 @@ function FormularioPrestacion({
             { sub: null,   label: "Áreas de Experiencia",         items: areasExp, setter: setAreasExp, fKey: "areasExp" as const },
             { sub: null,   label: "Valores",                      items: valores,  setter: setValores,  fKey: "valores"  as const },
           ] as const).map(({ sub, label, items, setter, fKey }) => (
-            <div key={label} className="flex flex-col gap-2">
+            <div key={label} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
                 {sub && (
                   <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
@@ -2511,10 +2503,10 @@ function FormularioNombramiento({
             Datos Generales
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
-          <div className="grid gap-3 md:grid-cols-2">
+        <CardContent className="flex flex-col gap-2 px-4 pb-3 pt-0">
+          <div className="grid gap-2 md:grid-cols-2">
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Secretaría / Dependencia / Organismo
                 <Lock className="h-3 w-3 text-muted-foreground" />
@@ -2524,7 +2516,7 @@ function FormularioNombramiento({
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Administrativa de Adscripción
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -2562,7 +2554,7 @@ function FormularioNombramiento({
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Responsable del Gasto
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -2597,7 +2589,7 @@ function FormularioNombramiento({
                 />
               )}
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programa o Proyecto
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -2619,7 +2611,7 @@ function FormularioNombramiento({
             </div>
 
             {/* Régimen de Contratación — readonly, valor del paso 1 */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Régimen de Contratación
                 <Lock className="h-3 w-3 text-muted-foreground" />
@@ -2635,7 +2627,7 @@ function FormularioNombramiento({
             </div>
 
             <>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Denominación del Nombramiento
                   {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -2650,7 +2642,7 @@ function FormularioNombramiento({
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Puesto del Jefe Inmediato
                   {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -2665,7 +2657,7 @@ function FormularioNombramiento({
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Tipo de Actividad
                 </Label>
@@ -2686,7 +2678,7 @@ function FormularioNombramiento({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   Número de Personas a Contratar
                 </Label>
@@ -2702,7 +2694,7 @@ function FormularioNombramiento({
               </div>
             </>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Tipo de Pago
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -2725,7 +2717,7 @@ function FormularioNombramiento({
               )}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Importe Neto
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -2893,8 +2885,8 @@ function FormularioNombramiento({
             forbiddenTexts={forbiddenTextsNom.responsabilidades}
           />
           <div className="flex flex-col items-start gap-1.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#2563EB] bg-[#EFF6FF] px-3 py-1.5 text-sm font-medium text-[#2563EB]">
-              <Megaphone className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#4b5563]">
+              <Info className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas
             </span>
           </div>
         </CardContent>
@@ -3040,7 +3032,7 @@ function FormularioNombramiento({
         <CardContent className="px-4 pb-3 pt-0 flex flex-col gap-3">
           <div className="flex items-start gap-2 rounded-md bg-muted/40 border border-border px-3 py-2.5">
             <img src="/iconos2/Icon.svg" alt="" className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-50" />
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <p className="text-xs text-muted-foreground italic leading-relaxed">
                 <span className="font-semibold not-italic text-card-foreground">Administración Pública Centralizada:</span>{" "}
                 En este caso se estará a lo que establezca el formato de Resguardo Personalizado de Activos de bienes muebles e intangibles,
@@ -3104,7 +3096,7 @@ function FormularioNombramiento({
             { sub: null,     label: "Áreas de Experiencia",         items: areasExp, setter: setAreasExp, fKey: "areasExp" as const },
             { sub: null,     label: "Valores",                      items: valores,  setter: setValores,  fKey: "valores"  as const },
           ] as const).map(({ sub, label, items, setter, fKey }) => (
-            <div key={label} className="flex flex-col gap-2">
+            <div key={label} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
                 {sub && (
                   <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
@@ -4104,9 +4096,9 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               </CardTitle>
               <CardDescription>Seleccione el régimen y período para consultar las fechas límite de recepción</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="flex flex-col gap-2">
+              <CardContent className="flex flex-col gap-2 px-4 pb-3 pt-0">
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
                   <Label className="text-sm font-medium">Régimen de Contratación<span className="text-destructive ml-0.5">*</span></Label>
                   <Select value={regimenPeriodo} onValueChange={(v) => {
                     const nuevo = v as "honorarios" | "asimilados" | "nombramiento"
@@ -4123,7 +4115,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   </Select>
                 </div>
                 {regimenPeriodo === "honorarios" && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Mes de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
                       <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione mes" /></SelectTrigger>
@@ -4132,7 +4124,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   </div>
                 )}
                 {regimenPeriodo === "asimilados" && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
                       <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
@@ -4141,7 +4133,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                   </div>
                 )}
                 {regimenPeriodo === "nombramiento" && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
                       <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
@@ -4206,8 +4198,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
               <FileText className="h-4 w-4 text-secondary" />Renovación
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-0">
-            <div className="flex flex-col gap-2">
+          <CardContent className="flex flex-col gap-2 px-4 pb-3 pt-0">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium">¿Es renovación de un dictamen anterior? *</Label>
               <RadioGroup value={esRenovacion} onValueChange={setEsRenovacion} className="flex gap-6">
                 <div className="flex items-center gap-2">
@@ -4222,7 +4214,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
             </div>
             {esRenovacion === "si" && (
               <div className="flex flex-col gap-5 rounded-lg border border-border bg-card p-4">
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5">
                   <Label className="text-sm font-medium">
                     Folio del Dictamen/Opinión Anterior
                     {hayFoliosReales && (
@@ -4442,7 +4434,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
    {step === "formulario" && (
      <>
        {isEditMode ? null : (
-         <div className="flex flex-col gap-2">
+         <div className="flex flex-col gap-1.5">
            <div>
              <Button variant="default" size="sm" onClick={handleBack} className="gap-1.5">
                <ArrowLeft className="h-4 w-4" />Anterior
@@ -4526,7 +4518,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                     <span className="text-sm text-[#DC2626]">{errorBorrador}</span>
                   </div>
                 )}
-                {esRenovacion !== "si" && camposFaltantes.length > 0 && (
+                {/* {esRenovacion !== "si" && camposFaltantes.length > 0 && (
                   <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
                     <AlertCircle className="h-4 w-4 shrink-0 text-[#D97706] mt-0.5" />
                     <div className="flex flex-col gap-0.5">
@@ -4538,7 +4530,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
                       </span>
                     </div>
                   </div>
-                )}
+                )} */}
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
                   <Button variant="default" onClick={handleBack} disabled={enviando || guardandoBorrador}>
                     Anterior

@@ -35,7 +35,7 @@ const VINO_HOVER = "#773357"
 const AREA_PAGE_SIZE = 10
 const BTN_CANCEL: React.CSSProperties = {}
 const BTN_CANCEL_CLASS =
-  "rounded-full h-10 px-6 font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
+  "rounded-full h-10 px-6 font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb] hover:text-[#4b5563] active:bg-[#f3f4f6] active:text-[#4b5563] focus:bg-[#f3f4f6] focus:text-[#4b5563]"
 const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-medium shadow-sm"
 const DIALOG_FOOTER_CLASS = "gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]"
 
@@ -192,7 +192,7 @@ function OrganoRow({
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[#773357]/10"
+              className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-gray-100"
             >
               <img src="/iconos2/addPlus.svg" alt="" width={16} height={16} className={`transition-transform duration-200${open ? " rotate-45" : ""}`} />
             </button>

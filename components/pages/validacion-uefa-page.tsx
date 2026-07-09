@@ -16,7 +16,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
-import { ConfirmDialog, ObservarDialog } from "@/components/ui/confirm-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
@@ -408,7 +409,7 @@ function DictamenModal({
         <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0">
           <div>
             <CardTitle className="text-base font-semibold text-card-foreground flex items-center gap-2">
-              <Stamp className="h-4 w-4 text-primary" />{titulo}
+              <FileTypeIcon name="dictamen.pdf" size="sm" />{titulo}
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
               Número: {folioDictamenFormateado} | Folio Recepción: {folioRecepcionFormateado}
@@ -899,7 +900,63 @@ function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLab
 function ObservarModal({ open, onClose, onConfirm, folio }: {
   open: boolean; onClose: () => void; onConfirm: (obs: string) => void; folio: string
 }) {
-  return <ObservarDialog open={open} onClose={onClose} onConfirm={onConfirm} folio={folio} />
+  const [step, setStep] = useState<"confirm" | "write">("confirm")
+  const [obs, setObs] = useState("")
+
+  const handleClose = () => { setStep("confirm"); setObs(""); onClose() }
+
+  if (step === "confirm") {
+    return (
+      <ConfirmAlertDialog
+        open={open}
+        onOpenChange={(v) => { if (!v) handleClose() }}
+        onConfirm={() => setStep("write")}
+        title="¿Estás seguro de observar?"
+        description={<>Vas a marcar <strong className="font-semibold">{folio}</strong> con observaciones. Se devolverá a la URG.</>}
+        confirmLabel="Sí, continuar"
+      />
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[#e4e3d6] shadow-lg p-6"
+      >
+        <div className="flex flex-col gap-3">
+          <AlertTriangle className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
+          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+            Observar — {folio}
+          </DialogTitle>
+          <p className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">
+            Escriba las observaciones que se enviarán a la URG.
+          </p>
+          <Textarea
+            placeholder="Describa las observaciones..."
+            value={obs}
+            onChange={e => setObs(e.target.value)}
+            className="min-h-[120px] bg-card"
+          />
+        </div>
+        <div className="flex gap-3 pt-3">
+          <Button
+            className="h-10 flex-1 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+            onClick={handleClose}
+          >
+            Cancelar
+          </Button>
+          <Button
+            className="h-10 flex-1 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+            onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
+            disabled={!obs.trim()}
+          >
+            Confirmar observación
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: {
@@ -977,11 +1034,16 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
             )}
           </div>
           <div className="flex justify-between pt-1">
-            <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+            <Button
+              onClick={handleClose}
+              className="h-10 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+            >
+              Cancelar
+            </Button>
             <Button
               onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
               disabled={!seleccionado || cargando}
-              className="gap-1.5 bg-[#773357] text-white rounded-full hover:bg-[#773357] hover:text-white"
+              className="gap-1.5 h-10 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
             >
               Confirmar
             </Button>
@@ -1271,12 +1333,12 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         </ScrollArea>
       </div>
 
-      <ConfirmModal
+      <ConfirmAlertDialog
         open={showAprobarConfirm}
-        onClose={() => setShowAprobarConfirm(false)}
+        onOpenChange={setShowAprobarConfirm}
         onConfirm={() => { setShowAprobarConfirm(false); onAprobar(solicitud.id) }}
         title="¿Aprobar y enviar a Validación?"
-        description={`La solicitud ${solicitud.folioJustificacion} será enviada a la Bandeja de Validación  (DO).`}
+        description={<>La solicitud <strong className="font-semibold">{solicitud.folioJustificacion}</strong> será enviada a la Bandeja de Validación (DO).</>}
         confirmLabel="Sí, aprobar"
       />
       <ConfirmModal
@@ -1686,12 +1748,12 @@ export function ValidacionUefaPage() {
       </Card>
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
 
-      <ConfirmModal
+      <ConfirmAlertDialog
         open={!!aprobarTargetId}
-        onClose={() => setAprobarTargetId(null)}
+        onOpenChange={(v) => { if (!v) setAprobarTargetId(null) }}
         onConfirm={() => { if (aprobarTargetId) handleAprobar(aprobarTargetId) }}
         title="¿Aprobar y enviar a Validación?"
-        description={`La solicitud ${solicitudes.find(s => s.id === aprobarTargetId)?.folioJustificacion ?? ""} será enviada a la Bandeja de Validación Final (DO).`}
+        description={<>La solicitud <strong className="font-semibold">{solicitudes.find(s => s.id === aprobarTargetId)?.folioJustificacion ?? ""}</strong> será enviada a la Bandeja de Validación Final (DO).</>}
         confirmLabel="Sí, aprobar"
       />
       <ObservarModal

@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { SearchInput } from "@/components/ui/search-input"
 import { StatusBadge } from "@/components/ui/status-badge"
 import {
@@ -36,7 +37,6 @@ import {
   MoreVertical,
   Power,
   PowerOff,
-  FileText,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -342,12 +342,12 @@ function ConsultaTab() {
               type="button"
               onClick={fetchData}
               disabled={loading}
-              className="flex items-center justify-center rounded-full w-11 h-11 shrink-0 transition-opacity hover:opacity-85 disabled:opacity-50"
+              className="flex items-center justify-center rounded-full w-[52px] h-[52px] shrink-0 transition-opacity hover:opacity-85 disabled:opacity-50"
               style={{ backgroundColor: MORADO }}
             >
               {loading
                 ? <Loader2 className="h-5 w-5 animate-spin text-white" />
-                : <Search className="h-5 w-5 text-white" strokeWidth={2.75} />}
+                : <Image src="/search-sparkle.svg" alt="Buscar" width={46} height={46} />}
             </button>
           </div>
         </div>
@@ -539,8 +539,8 @@ function ConsultaTab() {
       <Dialog open={showView} onOpenChange={setShowView}>
         <DialogContent showCloseButton={false} className="w-[75vw] max-w-[75vw] sm:max-w-[75vw] h-[92vh] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden bg-white">
           <DialogHeader className="flex flex-row items-center gap-3 px-5 py-4 border-b border-border shrink-0 space-y-0">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <FileText className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-center shrink-0">
+              <FileTypeIcon name="justificacion.pdf" size="md" />
             </div>
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="text-base font-semibold text-card-foreground truncate">
@@ -573,7 +573,14 @@ function ConsultaTab() {
               </div>
             )}
           </div>
-          <div className="px-4 pb-4 pt-3 flex justify-end border-t border-border shrink-0">
+          <div className="px-4 pb-4 pt-3 flex justify-end gap-3 border-t border-border shrink-0">
+            <Button
+              variant="default"
+              onClick={() => setShowView(false)}
+              className="px-5 py-2.5 h-auto"
+            >
+              Cerrar
+            </Button>
             <Button
               onClick={() => { if (viewRec) { setShowView(false); openSol(viewRec) } }}
               className="gap-2 px-5 py-2.5 h-auto rounded-2xl hover:opacity-90 font-medium"

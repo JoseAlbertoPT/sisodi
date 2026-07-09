@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, Upload, Loader2, AlertCircle, X } from "lucide-react"
+import { Download, Upload, Loader2, AlertCircle, X, CheckCircle2 } from "lucide-react"
 import { FileDropZone, FileTypeIcon } from "@/components/ui/file-drop-zone"
+import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 
 interface FirmaProceso {
   id: number
@@ -37,6 +38,7 @@ export function FirmaAutografaPanel({
   const [uploading, setUploading] = useState(false)
   const [clearing, setClearing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showEnviarConfirm, setShowEnviarConfirm] = useState(false)
 
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
@@ -133,11 +135,16 @@ export function FirmaAutografaPanel({
             </div>
           ) : (
             <>
-              {archivoSubido && (
-                <div className="flex items-center gap-2 rounded-[8px] border border-[#E5E7EB] bg-white px-2 py-2">
-                  <FileTypeIcon name={firma?.archivo_firmado?.split("/").pop() ?? "archivo.pdf"} size="sm" />
-                  <span className="flex-1 truncate text-sm text-[#374151]">{firma?.archivo_firmado?.split("/").pop()}</span>
-                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs text-[#7B2D5E] hover:underline shrink-0">Ver</a>
+              {archivoSubido ? (
+                <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                  <div className="relative shrink-0">
+                    <FileTypeIcon name={firma?.archivo_firmado?.split("/").pop() ?? "archivo.pdf"} size="sm" />
+                    <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                    </span>
+                  </div>
+                  <span className="flex-1 truncate text-sm font-medium text-gray-800 leading-snug">{firma?.archivo_firmado?.split("/").pop()}</span>
+                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs font-medium text-[#773357] hover:underline shrink-0">Ver</a>
                   <button
                     type="button"
                     onClick={handleClear}
@@ -148,20 +155,21 @@ export function FirmaAutografaPanel({
                     {clearing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
                   </button>
                 </div>
+              ) : (
+                <FileDropZone
+                  accept="application/pdf"
+                  hint="Solo PDF · máx. 10 MB"
+                  selectLabel="Seleccionar PDF"
+                  multiple={false}
+                  files={[]}
+                  onFilesChange={(fs) => { if (fs[0]) handleUpload(fs[0]) }}
+                  disabled={uploading}
+                  loading={uploading}
+                  loadingText="Subiendo archivo..."
+                  error={error}
+                  compact
+                />
               )}
-              <FileDropZone
-                accept="application/pdf"
-                hint="Solo PDF · máx. 10 MB"
-                selectLabel={archivoSubido ? "Reemplazar archivo" : "Seleccionar PDF"}
-                multiple={false}
-                files={[]}
-                onFilesChange={(fs) => { if (fs[0]) handleUpload(fs[0]) }}
-                disabled={uploading}
-                loading={uploading}
-                loadingText="Subiendo archivo..."
-                error={error}
-                compact
-              />
             </>
           )}
         </CardContent>
@@ -169,7 +177,7 @@ export function FirmaAutografaPanel({
 
       <div className="flex justify-end px-6 py-4 border-t border-[#E5E7EB]">
         <Button
-          onClick={() => onFinalizar()}
+          onClick={() => setShowEnviarConfirm(true)}
           disabled={!archivoSubido || guardandoFinal}
           className="gap-1.5 px-5 py-2"
           style={{ backgroundColor: "#773357", color: "#fff", border: "none" }}
@@ -177,6 +185,14 @@ export function FirmaAutografaPanel({
           {guardandoFinal ? "Enviando..." : "Enviar a Emisor"}
         </Button>
       </div>
+      <ConfirmAlertDialog
+        open={showEnviarConfirm}
+        onOpenChange={setShowEnviarConfirm}
+        onConfirm={() => { setShowEnviarConfirm(false); onFinalizar() }}
+        title="¿Estás seguro de firmar?"
+        description={<>Vas a enviar la justificación <strong className="font-semibold">{folioJustificacion}</strong> firmada a Emisor. Esta acción no se puede deshacer.</>}
+        confirmLabel="Sí, enviar"
+      />
     </div>
   )
 }

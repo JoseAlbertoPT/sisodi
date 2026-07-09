@@ -96,7 +96,7 @@ function DayMonthInput({
             return <option key={m} value={num}>{MESES_CORTO[num]}</option>
           })}
         </select>
-        <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/50 pointer-events-none" />
+        <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/50 pointer-events-none" strokeWidth={1.25} />
       </div>
       <span className="text-muted-foreground/40">/</span>
       <span className="pr-3 text-xs text-muted-foreground tabular-nums">{year}</span>

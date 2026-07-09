@@ -10,6 +10,7 @@ import './globals.css'
 
 const karolSans = localFont({
   src: [
+    { path: '../public/fonts/fonnts.com-Karol_Sans_Regular.otf', weight: '400', style: 'normal' },
     { path: '../public/fonts/KarolSans-SemiBold.otf', weight: '600', style: 'normal' },
     { path: '../public/fonts/fonnts.com-Karol_Sans_Bold.otf', weight: '700', style: 'normal' },
   ],

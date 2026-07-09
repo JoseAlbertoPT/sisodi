@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PageLayout } from "@/components/page-layout"
@@ -1209,14 +1210,19 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
             )}
           </div>
           <div className="flex justify-between pt-1">
-            <Button variant="outline" size="sm" onClick={onClose} disabled={guardando}>
+            <Button
+              size="sm"
+              onClick={onClose}
+              disabled={guardando}
+              className="h-10 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+            >
               Cancelar
             </Button>
             <Button
               size="sm"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5 text-white rounded-full hover:opacity-90"
+              className="gap-1.5 h-10 rounded-full text-sm font-medium text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
               style={{ backgroundColor: "#773357" }}
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -1254,6 +1260,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
   const [showDescargarConfirm,    setShowDescargarConfirm]    = useState(false)
   const [showConfirmacion,        setShowConfirmacion]        = useState<string | null>(null)
+  const [aprobarPending, setAprobarPending] = useState<{ modalidad?: "electronica" | "autografa" } | null>(null)
+  const [showFirmaSeleccionConfirm, setShowFirmaSeleccionConfirm] = useState(false)
+  const [showObservarConfirm, setShowObservarConfirm] = useState(false)
+  const [obsPendiente,        setObsPendiente]        = useState("")
+  const [showEditarConfirm,   setShowEditarConfirm]   = useState(false)
   const [checklistErrors,    setChecklistErrors]    = useState<Record<string, boolean>>({})
   const [errorToast, setErrorToast] = useState<{ key: number; title: string; description?: string } | null>(null)
   const showToast = (variant: "success" | "error", title: string, description?: string) => {
@@ -1457,7 +1468,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     if (filtro === 3) {
       const modalidadExistente = (solicitud as any)?.modalidadFirma as "electronica" | "autografa" | null | undefined
       if (modalidadExistente === "electronica" || modalidadExistente === "autografa") {
-        await patchEstado("aprobar", undefined, undefined, modalidadExistente)
+        if (revisorId) { await patchEstado("aprobar", undefined, undefined, modalidadExistente); return }
+        setAprobarPending({ modalidad: modalidadExistente })
         return
       }
       setShowEmitConfirm(true); return
@@ -1466,23 +1478,26 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       setShowAprobarAsignarModal(true)
       return
     }
-    await patchEstado("aprobar", undefined, revisorId)
+    if (revisorId) { await patchEstado("aprobar", undefined, revisorId); return }
+    setAprobarPending({})
+  }
+  const executeAprobarPending = async () => {
+    const pending = aprobarPending
+    setAprobarPending(null)
+    if (!pending) return
+    await patchEstado("aprobar", undefined, undefined, pending.modalidad)
   }
   const handleConfirmEmit = async () => {
     setShowEmitConfirm(false)
     const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
     if (nuevoEstado) setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
   }
-  const handleObservar = async () => {
+  const handleObservar = () => {
     if (filtro === 2 || filtro === 3 || (filtro === 1 && checklistYaRealizado)) {
       if (!observacionGeneral.trim()) { setObservacionError("Escribe una observación para devolver el expediente."); return }
       setObservacionError("")
-      const nuevoEstado = await patchEstado("observar", observacionGeneral.trim())
-      if (nuevoEstado) {
-        setObservacionGeneral("")
-        avanzadaRef.current = true
-        setError("__avanzada__observar")
-      }
+      setObsPendiente(observacionGeneral.trim())
+      setShowObservarConfirm(true)
       return
     }
     if (!checklistStats.hasNo && !observacionGeneral.trim()) {
@@ -1502,7 +1517,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       .map(item => `${item.num}. ${item.label}::${solicitud?.checklistDO[item.key]?.observacion}`)
       .join("\n")
     const obs = [observacionGeneral.trim(), resumen].filter(Boolean).join("\n")
-    const nuevoEstado = await patchEstado("observar", obs)
+    setObsPendiente(obs)
+    setShowObservarConfirm(true)
+  }
+  const executeObservar = async () => {
+    setShowObservarConfirm(false)
+    const nuevoEstado = await patchEstado("observar", obsPendiente)
     if (nuevoEstado) {
       setObservacionGeneral("")
       setChecklistErrors({})
@@ -1573,6 +1593,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     solicitud?.estado?.toLowerCase() === "aceptado por revisor" ||
     solicitud?.estado?.toLowerCase() === "aprobado por revisor"
   )
+  const estadoEnRevisionEtapa = filtro === 1 ? "en revision revisor" : filtro === 2 ? "en validacion final" : "en revision emisor"
+  const enTurno = (solicitud?.estado ?? "").toLowerCase() === estadoEnRevisionEtapa
+    || isEnTabObservadas || isAceptadoPorRevisor || checklistYaRealizado
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
     (modalidadFirma === "electronica"
@@ -1651,10 +1674,17 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 ))}
               </RadioGroup>
               <div className="flex items-center gap-3 w-full">
-                <Button variant="outline" className="flex-1" onClick={() => setShowEmitConfirm(false)}
-                  style={{ backgroundColor: "#fce4f0", color: "#7b2d5e", borderColor: "#f0b0d0" }}>Cancelar</Button>
-                <Button className="flex-1" onClick={handleConfirmEmit} disabled={guardando}
-                  style={{ backgroundColor: "#773357", color: "#fff", border: "none" }}>
+                <Button
+                  className="h-10 flex-1 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+                  onClick={() => setShowEmitConfirm(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="h-10 flex-1 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+                  onClick={() => setShowFirmaSeleccionConfirm(true)}
+                  disabled={guardando}
+                >
                   {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y aprobar"}
                 </Button>
               </div>
@@ -1670,6 +1700,40 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         folio={formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}
         guardando={guardando}
       />
+      <ConfirmAlertDialog
+        open={showFirmaSeleccionConfirm}
+        onOpenChange={setShowFirmaSeleccionConfirm}
+        onConfirm={() => { setShowFirmaSeleccionConfirm(false); handleConfirmEmit() }}
+        title="¿Estás seguro de firmar así?"
+        description={<>Vas a firmar con <strong className="font-semibold">{modalidadFirma === "electronica" ? "Firma Electrónica" : "Firma Autógrafa"}</strong>, tal como lo seleccionaste. Esta decisión aplicará a todas las firmas del flujo.</>}
+        confirmLabel="Sí, firmar"
+      />
+      <ConfirmAlertDialog
+        open={!!aprobarPending}
+        onOpenChange={(v) => { if (!v) setAprobarPending(null) }}
+        onConfirm={executeAprobarPending}
+        title="¿Aprobar y avanzar al siguiente paso?"
+        description={<>La solicitud <strong className="font-semibold">{formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}</strong> avanzará al siguiente paso del proceso.</>}
+        confirmLabel="Sí, aprobar"
+      />
+      <ConfirmAlertDialog
+        open={showObservarConfirm}
+        onOpenChange={setShowObservarConfirm}
+        onConfirm={executeObservar}
+        title="¿Estás seguro de observar?"
+        description={<>Vas a marcar la solicitud <strong className="font-semibold">{formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}</strong> con observaciones. Se devolverá a la etapa anterior.</>}
+        confirmLabel="Sí, continuar"
+      />
+      {onEditSolicitud && (
+        <ConfirmAlertDialog
+          open={showEditarConfirm}
+          onOpenChange={setShowEditarConfirm}
+          onConfirm={() => { setShowEditarConfirm(false); onEditSolicitud(rawToEditPayload(solicitud)) }}
+          title="¿Estás seguro de editar?"
+          description={<>Vas a editar la solicitud <strong className="font-semibold">{formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}</strong>.</>}
+          confirmLabel="Sí, editar"
+        />
+      )}
 
 
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1714,9 +1778,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           >
             Descagar Justificacion
           </Button>
-          {onEditSolicitud && !isEnTabObservadas && (
+          {onEditSolicitud && enTurno && !isEnTabObservadas && (
             <Button variant="default" size="sm" className="gap-1.5"
-              onClick={() => onEditSolicitud(rawToEditPayload(solicitud))}
+              onClick={() => setShowEditarConfirm(true)}
             >
               Editar
             </Button>
@@ -2044,7 +2108,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 )}
 
                 {}
-                {isAceptadoPorRevisor ? (
+                {enTurno ? (
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-between p-4">
                       <Button variant="default" size="sm" onClick={handleObservar}
@@ -2059,17 +2123,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card className="shadow-sm border-border sticky bottom-0">
-                    <CardContent className="flex items-center justify-between p-4">
-                      <Button variant="default" size="sm" onClick={handleObservar}
-                        disabled={!canObservar || observarBlocked || guardando}>
-                        Observar
-                      </Button>
-                      <Button size="sm" variant="vino" onClick={() => handleAprobar()} disabled={!canApprove || guardando}
-                        className="gap-1.5">
-                        {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
-                        Aprobar
-                      </Button>
+                  <Card className="shadow-sm border-border bg-muted/30 sticky bottom-0">
+                    <CardContent className="flex items-center gap-3 p-4">
+                      <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <p className="text-xs text-muted-foreground">
+                        Esta solicitud no está actualmente en tu bandeja de acción — solo puedes consultarla.
+                      </p>
                     </CardContent>
                   </Card>
                 )}
