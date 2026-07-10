@@ -39,6 +39,7 @@ import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
 import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
+import { C_VERDE_ESTADO, C_ROSA_VINO, C_AMARILLO } from "@/components/ui/status-badge"
 const COLOR_SI        = "#6E795A"
 const COLOR_SI_TEXT   = "#283c2a"
 const COLOR_NO        = "#832B56"
@@ -288,8 +289,8 @@ function formatEscolaridad(e: string | null | undefined): string {
 
 function getSlaColor(dias: number | null): string {
   if (dias === null) return "#64748b"
-  if (dias <= 0)    return "#832B56"
-  return "#283C2A"
+  if (dias <= 0)    return C_ROSA_VINO
+  return C_VERDE_ESTADO
 }
 function getSlaStyle(dias: number | null): React.CSSProperties {
   const c = getSlaColor(dias)
@@ -386,7 +387,7 @@ function getSlaSubtitle(dias: number | null) {
 }
 
 function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) {
-  const bg = diasRestantes === null ? "#64748b" : diasRestantes <= 7 ? "#832B56" : diasRestantes <= 15 ? "#C69C6D" : "#4a7a55"
+  const bg = diasRestantes === null ? "#64748b" : diasRestantes <= 7 ? C_ROSA_VINO : diasRestantes <= 15 ? C_AMARILLO : C_VERDE_ESTADO
   return (
     <div className="flex items-center gap-2 rounded-lg px-4 py-2.5" style={{ backgroundColor: bg, color: "#FFFFFF" }}>
       <Clock className="h-5 w-5" />

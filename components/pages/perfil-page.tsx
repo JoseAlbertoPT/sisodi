@@ -13,6 +13,7 @@ import {
   User, Mail, Shield, Building2, Landmark, Factory,
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
+import { C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG } from "@/components/ui/status-badge"
 
 function nombreSecretaria(valor: string | null | undefined): string {
   if (!valor) return "—"
@@ -123,8 +124,8 @@ export function PerfilPage() {
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
                 style={esCentralizada
-                  ? { backgroundColor: "#16653418", color: "#166534" }
-                  : { backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}
+                  ? { backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }
+                  : { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}
               >
                 {esCentralizada
                   ? <Landmark className="h-3 w-3" />

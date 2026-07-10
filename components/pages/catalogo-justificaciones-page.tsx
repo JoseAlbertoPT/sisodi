@@ -19,7 +19,7 @@ import {
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { SearchInput, SEARCH_INPUT_MAX_W_MD } from "@/components/ui/search-input"
-import { StatusBadge } from "@/components/ui/status-badge"
+import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG } from "@/components/ui/status-badge"
 import {
 
   Search,
@@ -425,7 +425,7 @@ function ConsultaTab() {
                     </td>
                     <td className="px-4 py-3 text-xs max-w-[200px] truncate text-gray-600">{fmt(rec.tipo_actividad)}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} />
+                      <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 capitalize">{fmt(rec.tipo_pago)}</td>
                     <td className="px-4 py-3 text-xs font-medium" style={{ color: "#2a2a2a" }}>{fmtMoney(rec.importe_bruto)}</td>
@@ -864,7 +864,7 @@ function AdministracionTab() {
                   </td>
                   <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.programa_proyecto}>{fmt(rec.programa_proyecto)}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} />
+                    <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
@@ -885,17 +885,11 @@ function AdministracionTab() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {(() => {
-                      const c = rec.activo ? "#15803d" : "#773357"
-                      return (
-                        <span
-                          className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
-                          style={{ backgroundColor: `${c}18`, color: c }}
-                        >
-                          {rec.activo ? "Activo" : "Inactivo"}
-                        </span>
-                      )
-                    })()}
+                    {rec.activo ? (
+                      <StatusBadge label="Activo" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
+                    ) : (
+                      <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

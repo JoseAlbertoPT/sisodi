@@ -198,10 +198,10 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
 }
 function getSlaColor(dias: number | null): string {
   if (dias === null) return "#64748b"
-  if (dias <= 0)  return "#832B56"
-  if (dias <= 7)  return "#832B56"
-  if (dias <= 15) return "#C69C6D"
-  return "#4a7a55"
+  if (dias <= 0)  return C_ROSA_VINO
+  if (dias <= 7)  return C_ROSA_VINO
+  if (dias <= 15) return C_AMARILLO
+  return C_VERDE_ESTADO
 }
 function getSlaStyle(dias: number | null): React.CSSProperties {
   const c = getSlaColor(dias)

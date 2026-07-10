@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList, Label,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList,
 } from "recharts"
 import * as XLSX from "xlsx"
 
@@ -49,6 +49,20 @@ const C_MORA50       = "#ab5e84"
 const C_MORA90       = "#ffd8e7"
 const C_PIEDRA40    = "#3f80ff"
 const C_PIEDRA70    = "#79a6ff"
+
+// ── Paleta de gráficas (vino) ──────────────────────────────────────────
+const C_VINO_HOVER  = "#6F2C4F"
+const C_ROSA_BASE   = "#C9A3B6"
+const DONUT_PALETTE = ["#4F1E37", "#8A4A6A", "#A56A86", "#C9A3B6"]
+const donutColor = (i: number) => DONUT_PALETTE[i % DONUT_PALETTE.length]
+
+// Ordena de mayor a menor y asigna la paleta en ese orden (rota si hay más categorías que colores)
+function buildDonutItems(raw: { name: string; value: number }[]): { name: string; value: number; color: string }[] {
+  return [...raw]
+    .filter(d => d.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .map((d, i) => ({ ...d, color: donutColor(i) }))
+}
 const MESES = [
 
   { value: "01", label: "Enero" },
@@ -67,8 +81,8 @@ const MESES = [
 
 const ANIOS = [ "2026"]
 const tooltipStyle = {
-  backgroundColor: "#ffffff",
-  border: "1px solid #d6d5cf",
+  backgroundColor: "var(--card)",
+  border: "1px solid #6F2C4F",
   borderRadius: "10px",
   fontSize: "12px",
   boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
@@ -80,9 +94,9 @@ function CustomTooltip({ active, payload, label }: any) {
       {label && <p className="text-xs font-semibold text-foreground mb-2 max-w-[320px] whitespace-normal break-words border-b border-border pb-1.5">{label}</p>}
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-xs mt-1">
-          <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: p.color ?? p.fill }} />
+          <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: "#6F2C4F" }} />
           <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-bold text-foreground ml-auto pl-3">{Number(p.value).toLocaleString("es-MX")}</span>
+          <span className="font-bold ml-auto pl-3" style={{ color: "#6F2C4F" }}>{Number(p.value).toLocaleString("es-MX")}</span>
         </div>
       ))}
     </div>
@@ -90,23 +104,26 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 function GraficaBarrasVertical({
-  title, data, color, dataKey = "count", nameKey = "secretaria", emptyMsg,
+  title, subtitle, data, dataKey = "count", nameKey = "secretaria", emptyMsg,
 }: {
   title: string
+  subtitle?: string
   data: any[]
-  color: string
   dataKey?: string
   nameKey?: string
   emptyMsg?: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+
   if (data.length === 0) {
     return (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="ds-label-lg">{title}</CardTitle>
+          <CardTitle className="text-sm text-card-foreground">{title}</CardTitle>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
         </CardHeader>
         <CardContent>
-          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">{emptyMsg ?? "Sin datos para el periodo seleccionado."}</p>
+          <p className="text-sm text-muted-foreground py-8 text-center">{emptyMsg ?? "Sin datos para el periodo seleccionado."}</p>
         </CardContent>
       </Card>
     )
@@ -118,6 +135,7 @@ function GraficaBarrasVertical({
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-1">
         <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
+        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </CardHeader>
       <CardContent className="pt-2">
         <ResponsiveContainer width="100%" height={300}>
@@ -145,11 +163,27 @@ function GraficaBarrasVertical({
               domain={[0, Math.ceil(maxVal * 1.18)]}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-            <Bar dataKey={dataKey} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} name="Solicitudes">
+            <Bar
+              dataKey={dataKey}
+              radius={[4, 4, 4, 4]}
+              barSize={12}
+              maxBarSize={14}
+              name="Solicitudes"
+              onMouseEnter={(_, i) => setActiveIndex(i)}
+              onMouseLeave={() => setActiveIndex(null)}
+            >
+              {data.map((_, i) => (
+                <Cell
+                  key={i}
+                  fill={activeIndex === i ? C_VINO_HOVER : C_ROSA_BASE}
+                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.5}
+                  className="transition-colors duration-200"
+                />
+              ))}
               <LabelList
                 dataKey={dataKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: color }}
+                style={{ fontSize: 10, fontWeight: 600, fill: C_VINO_HOVER }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -160,22 +194,22 @@ function GraficaBarrasVertical({
   )
 }
 
-function GraficaEmisiones({ data, title, barKey, color }: {
+function GraficaEmisiones({ data, title, barKey }: {
   data: { secretaria: string; dictamenes: number; opiniones: number }[]
   title: string
   barKey: "dictamenes" | "opiniones"
-  color: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const truncate = (s: string, n = 13) => s.length > n ? s.slice(0, n) + "…" : s
   const maxVal = Math.max(...data.map(d => d[barKey] ?? 0), 0)
   if (data.length === 0) {
     return (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="ds-label-lg">{title}</CardTitle>
+          <CardTitle className="text-sm text-card-foreground">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">Sin emisiones en el periodo seleccionado.</p>
+          <p className="text-sm text-muted-foreground py-8 text-center">Sin emisiones en el periodo seleccionado.</p>
         </CardContent>
       </Card>
     )
@@ -184,7 +218,7 @@ function GraficaEmisiones({ data, title, barKey, color }: {
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-1">
-        
+        <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
       </CardHeader>
 
       <CardContent className="pt-2">
@@ -215,25 +249,28 @@ function GraficaEmisiones({ data, title, barKey, color }: {
                 domain={[0, Math.ceil(maxVal * 1.18)]}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-                  <Legend
-                    verticalAlign="bottom"
-                    align="left"
-                    iconType="circle"
-                    iconSize={8}
-                      formatter={(value) => (
-                        <span className="text-black font-medium">{value}</span>
-                      )}
-                    wrapperStyle={{
-                      fontSize: "12px",
-                      paddingTop: "10px",
-                      paddingLeft: "12px",
-                    }}
+                <Bar
+                  dataKey={barKey}
+                  name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"}
+                  fill={C_ROSA_BASE}
+                  radius={[4, 4, 4, 4]}
+                  barSize={12}
+                  maxBarSize={14}
+                  onMouseEnter={(_, i) => setActiveIndex(i)}
+                  onMouseLeave={() => setActiveIndex(null)}
+                >
+                {data.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={activeIndex === i ? C_VINO_HOVER : C_ROSA_BASE}
+                    opacity={activeIndex === null || activeIndex === i ? 1 : 0.5}
+                    className="transition-colors duration-200"
                   />
-                <Bar dataKey={barKey} name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14}>
+                ))}
                 <LabelList
                 dataKey={barKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: color }}
+                style={{ fontSize: 10, fontWeight: 600, fill: C_VINO_HOVER }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -241,20 +278,6 @@ function GraficaEmisiones({ data, title, barKey, color }: {
         </ResponsiveContainer>
       </CardContent>
     </Card>
-  )
-}
-
-function CenterLabel({ viewBox, total, label }: { viewBox?: any; total: number; label: string }) {
-  const { cx, cy } = viewBox ?? { cx: 0, cy: 0 }
-  return (
-    <g>
-      <text x={cx} y={cy - 10} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 26, fontWeight: 700, fill: "#283c2a" }}>
-        {total.toLocaleString("es-MX")}
-      </text>
-      <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 11, fill: "#86857e" }}>
-        {label}
-      </text>
-    </g>
   )
 }
 
@@ -268,115 +291,153 @@ const COLORES_TIPO: Record<string, string> = {
 
   Paraestatal:  C_MORA50,
 }
-const DONUT_INNER_RADIUS = 80
-const DONUT_OUTER_RADIUS = 110
+const DONUT_INNER_RADIUS = 86
+const DONUT_OUTER_RADIUS = 130
 const DONUT_PADDING_ANGLE = 1
+const DONUT_START_ANGLE = 90 // 12 en punto
+const DONUT_SIZE = 290
 const RADIAN = Math.PI / 180
 
-function DonutSimple({ items, subLabel }: {
+function DonutSimple({ items: rawItems, subLabel }: {
   items: { name: string; value: number; color: string }[]
   subLabel: string
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const items = rawItems.filter(d => d.value > 0)
   const total = items.reduce((s, d) => s + d.value, 0)
+  const isSingle = items.length === 1
 
   const activeMidAngle = useMemo(() => {
-    if (activeIndex === null || total <= 0) return null
+    if (activeIndex === null || total <= 0 || items.length < 2) return null
     const realTotalAngle = 360 - items.length * DONUT_PADDING_ANGLE
     let cur = 0
     for (let i = 0; i < items.length; i++) {
       const start = i === 0 ? 0 : cur + DONUT_PADDING_ANGLE
       const end = start + (items[i].value / total) * realTotalAngle
-      if (i === activeIndex) return (start + end) / 2
+      // recharts avanza en sentido horario desde DONUT_START_ANGLE
+      if (i === activeIndex) return DONUT_START_ANGLE - (start + end) / 2
       cur = end
     }
     return null
   }, [activeIndex, items, total])
 
   const tooltipOffset = useMemo(() => {
-    if (activeMidAngle === null) return null
-    const radius = DONUT_OUTER_RADIUS + 20
+    if (activeIndex === null) return null
+    const angle = isSingle ? DONUT_START_ANGLE : activeMidAngle
+    if (angle === null) return null
+    const radius = DONUT_OUTER_RADIUS + 24
     return {
-      dx: radius * Math.cos(-activeMidAngle * RADIAN),
-      dy: radius * Math.sin(-activeMidAngle * RADIAN),
+      dx: radius * Math.cos(-angle * RADIAN),
+      dy: radius * Math.sin(-angle * RADIAN),
     }
-  }, [activeMidAngle])
+  }, [activeIndex, activeMidAngle, isSingle])
+
+  if (items.length === 0) {
+    return (
+      <div className="flex h-[290px] items-center justify-center">
+        <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="mx-auto grid min-h-[250px] max-w-[720px] items-center gap-4 md:grid-cols-[300px_260px]">
-      <div className="relative flex h-[230px] w-full items-center justify-center">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={items}
-              cx="50%"
-              cy="50%"
-              innerRadius={DONUT_INNER_RADIUS}
-              outerRadius={DONUT_OUTER_RADIUS}
-              cornerRadius={7}
-              paddingAngle={DONUT_PADDING_ANGLE}
-              dataKey="value"
-              stroke="#fff"
-              strokeWidth={3}
-              onMouseEnter={(_, index) => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
-            >
-              {items.map((entry, i) => (
-                <Cell
-                  key={i}
-                  fill={entry.color}
-                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.18}
-                  className="transition-opacity duration-200"
-                />
-              ))}
-            </Pie>
-
-            <Label
-              content={<CenterLabel total={total} label={subLabel} />}
-              position="center"
+    <div className="mx-auto flex max-w-[320px] flex-col items-center gap-4">
+      <div className="relative h-[290px] w-[290px]">
+        {isSingle ? (
+          <svg
+            width={DONUT_SIZE}
+            height={DONUT_SIZE}
+            viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`}
+            className="cursor-pointer"
+            onMouseEnter={() => setActiveIndex(0)}
+            onMouseLeave={() => setActiveIndex(null)}
+          >
+            <circle
+              cx={DONUT_SIZE / 2}
+              cy={DONUT_SIZE / 2}
+              r={(DONUT_OUTER_RADIUS + DONUT_INNER_RADIUS) / 2}
+              fill="none"
+              stroke={items[0].color}
+              strokeWidth={DONUT_OUTER_RADIUS - DONUT_INNER_RADIUS}
+              className="transition-opacity duration-200"
             />
+          </svg>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={items}
+                cx="50%"
+                cy="50%"
+                startAngle={DONUT_START_ANGLE}
+                endAngle={DONUT_START_ANGLE - 360}
+                innerRadius={DONUT_INNER_RADIUS}
+                outerRadius={DONUT_OUTER_RADIUS}
+                cornerRadius={4}
+                paddingAngle={DONUT_PADDING_ANGLE}
+                dataKey="value"
+                stroke="#fff"
+                strokeWidth={2}
+                onMouseEnter={(_, index) => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(null)}
+              >
+                {items.map((entry, i) => (
+                  <Cell
+                    key={i}
+                    fill={entry.color}
+                    opacity={activeIndex === null || activeIndex === i ? 1 : 0.25}
+                    className="cursor-pointer transition-opacity duration-200"
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        )}
 
-           
-          </PieChart>
-        </ResponsiveContainer>
-
-        {activeIndex !== null && total > 0 && tooltipOffset && (
+        {activeIndex === null ? (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[26px] font-bold text-card-foreground">{total.toLocaleString("es-MX")}</span>
+            <span className="text-[11px] text-muted-foreground">{subLabel}</span>
+          </div>
+        ) : tooltipOffset && (
           <div
-            className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-white px-2 py-1 text-[11px] font-semibold shadow-md"
+            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md border px-2 py-1 text-[11px] shadow-md"
             style={{
               left: `calc(50% + ${tooltipOffset.dx}px)`,
               top: `calc(50% + ${tooltipOffset.dy}px)`,
-              color: items[activeIndex].color,
+              backgroundColor: "var(--card)",
+              borderColor: items[activeIndex].color,
             }}
           >
-            {((items[activeIndex].value / total) * 100).toFixed(1)}%
+            <span className="font-bold" style={{ color: items[activeIndex].color }}>
+              {((items[activeIndex].value / total) * 100).toFixed(1)}%
+            </span>
           </div>
         )}
       </div>
 
-      <div className="flex flex-col justify-center gap-1.5">
+      <div className="flex w-full flex-col gap-1">
         {items.map((item, index) => (
           <button
             key={item.name}
             type="button"
             onMouseEnter={() => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}
-            className={[
-              "flex items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors",
-              activeIndex === index ? "bg-muted" : "hover:bg-muted/70",
-            ].join(" ")}
+            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left transition-opacity duration-200"
+            style={{ opacity: activeIndex === null || activeIndex === index ? 1 : 0.4 }}
           >
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+            <span className={`min-w-0 flex-1 truncate text-xs text-card-foreground ${activeIndex === index ? "font-bold" : "font-medium"}`}>
+              {item.name}
+            </span>
+            <span className="text-xs font-bold text-card-foreground">
+              {item.value.toLocaleString("es-MX")}
+            </span>
             <span
-              className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: item.color }}
-            />
-            <span className="flex min-w-0 flex-col">
-              <span className="text-xs font-medium leading-tight text-card-foreground">
-                {item.name}
-              </span>
-              <span className="text-xs font-bold text-card-foreground">
-                {item.value.toLocaleString("es-MX")}
-              </span>
+              className="w-12 shrink-0 text-right text-[11px] font-medium text-muted-foreground transition-opacity duration-200"
+              style={{ opacity: activeIndex === index ? 1 : 0 }}
+            >
+              {((item.value / total) * 100).toFixed(1)}%
             </span>
           </button>
         ))}
@@ -386,12 +447,12 @@ function DonutSimple({ items, subLabel }: {
 }
 
 function BarrasPrestadoresPorTipo({
-  title, items, color,
+  title, items,
 }: {
   title: string
   items: { name: string; value: number }[]
-  color: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   if (items.length === 0) {
     return (
       <div className="flex flex-col h-full">
@@ -429,11 +490,29 @@ function BarrasPrestadoresPorTipo({
             domain={[0, Math.ceil(maxVal * 1.18)]}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-          <Bar dataKey="prestadores" name="Prestadores" fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} isAnimationActive={false}>
+          <Bar
+            dataKey="prestadores"
+            name="Prestadores"
+            fill={C_ROSA_BASE}
+            radius={[4, 4, 4, 4]}
+            barSize={12}
+            maxBarSize={14}
+            isAnimationActive={false}
+            onMouseEnter={(_, i) => setActiveIndex(i)}
+            onMouseLeave={() => setActiveIndex(null)}
+          >
+            {barData.map((_, i) => (
+              <Cell
+                key={i}
+                fill={activeIndex === i ? C_VINO_HOVER : C_ROSA_BASE}
+                opacity={activeIndex === null || activeIndex === i ? 1 : 0.5}
+                className="transition-colors duration-200"
+              />
+            ))}
             <LabelList
               dataKey="prestadores"
               position="top"
-              style={{ fontSize: 10, fontWeight: 600, fill: color }}
+              style={{ fontSize: 10, fontWeight: 600, fill: C_VINO_HOVER }}
               formatter={(v: number) => v > 0 ? v : ""}
             />
           </Bar>
@@ -443,30 +522,16 @@ function BarrasPrestadoresPorTipo({
   )
 }
 
-const COLORES_REGIMEN: Record<string, string> = {
-  "Honorarios":           C_MORA90,
-  "Honorarios Asimilados": C_MORA50,
-  "Nombramiento":         C_MORA10,
-}
-
 function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prestadores: number }[] }) {
-  const items = data.map(d => ({
-    name:  d.regimen,
-    value: d.prestadores,
-    color: COLORES_REGIMEN[d.regimen] ?? C_GRIS_VERDE,
-  }))
-  const total = items.reduce((s, d) => s + d.value, 0)
+  const items = buildDonutItems(data.map(d => ({ name: d.regimen, value: d.prestadores })))
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="ds-label-lg">Prestadores por Régimen</CardTitle>
+        <CardTitle className="text-sm font-light text-card-foreground">Prestadores por Régimen</CardTitle>
+        <p className="text-xs text-muted-foreground">Distribución de prestadores por tipo de régimen</p>
       </CardHeader>
       <CardContent>
-        {items.length === 0 ? (
-          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">Sin datos para el periodo seleccionado.</p>
-        ) : (
-          <DonutSimple items={items} subLabel="prestadores" />
-        )}
+        <DonutSimple items={items} subLabel="prestadores" />
       </CardContent>
     </Card>
   )
@@ -488,22 +553,20 @@ function GraficaPrestadores({
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="ds-label-lg">Número de Prestadores de Servicio</CardTitle>
+        <CardTitle className="text-sm text-card-foreground">Número de Prestadores de Servicio</CardTitle>
       </CardHeader>
       <CardContent>
         {sinDatos ? (
-          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">Sin datos para el periodo seleccionado.</p>
+          <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Centralizada"
               items={centralizadas}
-              color={C_MORA10}
             />
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Paraestatal"
               items={paraestatales}
-              color={C_MORA50}
             />
           </div>
         )}
@@ -519,23 +582,18 @@ function GraficaSolicitudesTipo({
 }) {
   const totalC = centralizada.reduce((s, d) => s + d.count, 0)
   const totalP = paraestatal.reduce((s, d)  => s + d.count, 0)
-  const items = [
-    { name: "Centralizada", value: totalC, color: C_MORA10 },
-    { name: "Paraestatal",  value: totalP, color: C_MORA50       },
-  ].filter(d => d.value > 0)
-  const total = items.reduce((s, d) => s + d.value, 0)
+  const items = buildDonutItems([
+    { name: "Centralizada", value: totalC },
+    { name: "Paraestatal",  value: totalP },
+  ])
   return (
-
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="ds-label-lg">Solicitudes por Administración</CardTitle>
+        <CardTitle className="text-sm text-card-foreground">Solicitudes por Administración</CardTitle>
+        <p className="text-xs text-muted-foreground">Distribución de solicitudes por tipo de administración</p>
       </CardHeader>
       <CardContent>
-        {items.length === 0 ? (
-          <p className="ds-label-md py-8 text-center">Sin datos para el periodo seleccionado.</p>
-        ) : (
-          <DonutSimple items={items} subLabel="solicitudes" />
-        )}
+        <DonutSimple items={items} subLabel="solicitudes" />
       </CardContent>
     </Card>
   )
@@ -548,22 +606,22 @@ function KpiCard({
 }) {
   return (
     <Card className="rounded-xl border border-border bg-card shadow-sm">
-      <CardContent className="relative h-[96px]">
+      <CardContent className="relative h-[78px] px-4 py-2.5">
         <div
-          className="absolute right-4 flex h-5 w-5 items-center font-light justify-center rounded-lg"
+          className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-lg"
         >
-          <Icon  strokeWidth={1.2}/>
+          <Icon strokeWidth={1.2} className="h-4 w-4" />
         </div>
 
-        <div className="pr-10">
-          <p className="ds-label-sm">
+        <div className="pr-8">
+          <p className="text-xs font-light leading-tight text-card-foreground truncate">
             {label}
           </p>
 
           {loading ? (
-            <div className="mt-3 h-7 w-12 animate-pulse rounded bg-muted" />
+            <div className="mt-2 h-6 w-10 animate-pulse rounded bg-muted" />
           ) : (
-            <p className="mt-3 text-5xl font-bold leading-none text-card-foreground tabular-nums">
+            <p className="mt-1.5 text-3xl font-bold leading-none text-card-foreground tabular-nums">
               {value.toLocaleString("es-MX")}
             </p>
           )}
@@ -821,7 +879,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
   const [reporteSeleccionado, setReporteSeleccionado] =useState<typeof REPORTES[number] | null>(null)
 
   const [confirmarDescarga, setConfirmarDescarga] = useState(false)
-  
+
 
   const handleDescargar = (reporte: typeof REPORTES[number]) => {
     if (!data) return
@@ -979,41 +1037,41 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
               />
               <div className="flex flex-col gap-4">
                 <GraficaPrestadoresPorRegimen data={data?.prestadoresPorRegimen ?? []} />
-              
-               </div>
+              </div>
             </div>
-               <GraficaPrestadores
-                  porSecretaria={data?.prestadoresPorSecretaria ?? []}
-                  porTipo={data?.prestadoresPorTipo ?? []}
-                />
+            <GraficaPrestadores
+              porSecretaria={data?.prestadoresPorSecretaria ?? []}
+              porTipo={data?.prestadoresPorTipo ?? []}
+            />
               <div className="grid gap-4 lg:grid-cols-2">
                 <GraficaBarrasVertical
                   title="Administración Centralizada"
+                  subtitle="Solicitudes recibidas por secretaría"
                   data={data?.porSecretariaCentralizada ?? []}
-                  color={C_MORA10}
                   emptyMsg="Sin solicitudes centralizadas en el periodo."
                 />
                 <GraficaBarrasVertical
                   title="Administración Paraestatal"
+                  subtitle="Solicitudes recibidas por secretaría"
                   data={data?.porSecretariaParaestatal ?? []}
-                  color={C_MORA50}
                   emptyMsg="Sin solicitudes paraestatales en el periodo."
                 />
               </div>
+
+
             <div className="grid gap-4 lg:grid-cols-2">
               <GraficaEmisiones
                 title="Administración Centralizada — Dictámenes"
                 data={emisionesCentralizada}
                 barKey="dictamenes"
-                color={C_MORA10}
               />
               <GraficaEmisiones
                 title="Administración Paraestatal — Opiniones"
                 data={emisionesParaestatal}
                 barKey="opiniones"
-                color={C_MORA50}
               />
             </div>
+
     </div>
     </div>
   )

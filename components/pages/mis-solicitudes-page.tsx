@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
-import { StatusBadge, estadoBadge } from "@/components/ui/status-badge"
+import { StatusBadge, estadoBadge, C_ROSA_VINO, C_AMARILLO, C_VERDE_ESTADO } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
@@ -1776,7 +1776,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                         {sol.slaRestante == null ? (
                           <span className="text-xs text-muted-foreground">—</span>
                         ) : (() => {
-                          const color = sol.slaRestante <= 0 ? "#832B56" : sol.slaRestante <= 7 ? "#832B56" : sol.slaRestante <= 15 ? "#C69C6D" : "#4a7a55"
+                          const color = sol.slaRestante <= 0 ? C_ROSA_VINO : sol.slaRestante <= 7 ? C_ROSA_VINO : sol.slaRestante <= 15 ? C_AMARILLO : C_VERDE_ESTADO
                           const label = sol.slaRestante <= 0 ? "Cerrada" : `${sol.slaRestante} ${sol.slaRestante === 1 ? "día" : "días"}`
                           return (
                             <span

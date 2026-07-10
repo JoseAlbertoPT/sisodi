@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -33,12 +33,12 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        'flex w-full items-center justify-between gap-2 whitespace-nowrap outline-none',
-        'rounded-xl border border-[var(--sem-border-md)] bg-[var(--sem-bg-base)] px-[14px] py-[5px]',
-        'text-sm text-[var(--sem-content-high)] transition-[color,background-color,border-color] duration-150',
+        'ds-select-trigger flex w-full items-center justify-between gap-2 whitespace-nowrap outline-none',
+        'rounded-xl border border-border bg-background px-[14px] py-[5px]',
+        'text-sm text-foreground transition-[color,background-color,border-color] duration-150',
         'data-[placeholder]:text-muted-foreground data-[placeholder]:text-muted-foreground/80',
         'disabled:cursor-not-allowed disabled:opacity-50',
-        'aria-invalid:border-[#D32F2F]',
+        'aria-invalid:border-destructive',
         '*:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2',
         '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
         className,
@@ -47,7 +47,7 @@ function SelectTrigger({
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-6 shrink-0 text-[#773357] transition-transform duration-200" strokeWidth={1.25} />
+        <ChevronDownIcon className="size-6 shrink-0 text-brand-vino transition-transform duration-200" strokeWidth={1.25} />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
@@ -110,15 +110,11 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "focus:bg-[var(--sem-bg-surface-md)] focus:text-[var(--sem-accent-primary)] data-[state=checked]:bg-[var(--sem-bg-surface-md)] data-[state=checked]:text-[var(--sem-accent-primary)] [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "ds-select-item [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-3 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className,
       )}
       {...props}
     >
-      <span className="absolute right-2 flex size-3.5 items-center justify-center">
-        <SelectPrimitive.ItemIndicator>
-        </SelectPrimitive.ItemIndicator>
-      </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   )

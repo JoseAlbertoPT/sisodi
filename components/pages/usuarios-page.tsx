@@ -4,6 +4,7 @@ import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
@@ -1230,18 +1231,17 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             <p className="text-[11px] text-muted-foreground truncate">{usuario.correo} · {usuario.rol}</p>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <Badge
-              className={`text-[11px] ${usuario.estatus === "Activo" ? "bg-secondary/20 text-secondary-foreground border-secondary/30" : ""}`}
-              variant="outline"
-            >
-              {usuario.estatus}
-            </Badge>
+            {usuario.estatus === "Activo" ? (
+              <StatusBadge label="Activo" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} className="text-[11px]" />
+            ) : (
+              <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} className="text-[11px]" />
+            )}
             {usuario.tipoAdministracion === "centralizada" ? (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: "#16653418", color: "#166534" }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}>
                 Centralizada
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}>
                 Paraestatal
               </span>
             )}
@@ -2015,13 +2015,9 @@ export function UsuariosPage() {
                     <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
                     <td className="px-4 py-3">
                       {row.tipoAdministracion === "centralizada" ? (
-                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: "#16653418", color: "#166534" }}>
-                          Centralizada
-                        </span>
+                        <StatusBadge label="Centralizada" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
                       ) : (
-                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
-                          Paraestatal
-                        </span>
+                        <StatusBadge label="Paraestatal" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px]">
@@ -2029,19 +2025,9 @@ export function UsuariosPage() {
                     </td>
                     <td className="px-4 py-3">
                       {row.estatus === "Activo" ? (
-                        <span
-                          className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
-                          style={{ backgroundColor: "#16653418", color: "#166534" }}
-                        >
-                          Activo
-                        </span>
+                        <StatusBadge label="Activo" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
                       ) : (
-                        <span
-                          className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
-                          style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}
-                        >
-                          Inactivo
-                        </span>
+                        <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
                       )}
                     </td>
                     <td className="px-4 py-3">

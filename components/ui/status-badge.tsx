@@ -31,8 +31,8 @@ const STATUS_COLOR: Record<string, string> = {
   "devuelta por do":  C_ROSA_VINO,
   emitido:            "#15803d",
   // Usuarios
-  activo:             "#15803d",
-  inactivo:           "#87090c",
+  activo:             "#1c7d29",
+  inactivo:           "#773357",
   // Dictamenes tipo
   dictamen:           "#2d4a3e",
   opinión:            "#7C3AED",
@@ -43,8 +43,8 @@ const STATUS_COLOR: Record<string, string> = {
   autógrafa:          "#64748b",
   autografa:          "#64748b",
   // Tipo administración
-  centralizada:       "#166534",
-  paraestatal:        "#7b1d3d",
+  centralizada:       "#1c7d29",
+  paraestatal:        C_ROSA_VINO,
 }
 
 function resolveColor(label: string, fallback = "#64748b"): string {
@@ -52,8 +52,8 @@ function resolveColor(label: string, fallback = "#64748b"): string {
   if (STATUS_COLOR[key]) return STATUS_COLOR[key]
   // fuzzy: emitido, en validación final, etc.
   if (key.includes("emitido"))             return "#15803d"
-  if (key.includes("activo"))              return "#15803d"
-  if (key.includes("inactivo"))            return "#87090c"
+  if (key.includes("inactivo"))            return C_ROSA_VINO
+  if (key.includes("activo"))              return "#1c7d29"
   if (key.includes("borrador") || key.includes("en captura")) return "#94a3b8"
   if (key.includes("en aprobac"))          return "#15803d"
   if (key.includes("obs"))                 return C_ROSA_VINO
@@ -66,8 +66,8 @@ function resolveColor(label: string, fallback = "#64748b"): string {
   if (key.includes("dictamen"))            return "#2d4a3e"
   if (key.includes("opini"))               return "#7C3AED"
   if (key.includes("electr"))              return "#0891B2"
-  if (key.includes("centraliz"))           return "#166534"
-  if (key.includes("paraestatal"))         return "#7b1d3d"
+  if (key.includes("centraliz"))           return "#1c7d29"
+  if (key.includes("paraestatal"))         return C_ROSA_VINO
   return fallback
 }
 

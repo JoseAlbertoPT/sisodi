@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { C_VERDE_ESTADO, C_ROSA_VINO, C_VIOLETA_EMISION } from "@/components/ui/status-badge"
 import {
   Loader2, AlertTriangle, FileText, Info,
 } from "lucide-react"
@@ -56,9 +57,9 @@ function labelEstado(estado: string): string {
 
 function EstadoBadge({ estado, etapa }: { estado: string; etapa: string }) {
   const color =
-    etapa === "emitido"   ? "#15803d"
-    : etapa === "rechazado" ? "#dc2626"
-    : etapa === "emisor"    ? "#0891B2"
+    etapa === "emitido"   ? C_VERDE_ESTADO
+    : etapa === "rechazado" ? C_ROSA_VINO
+    : etapa === "emisor"    ? C_VIOLETA_EMISION
     : "#64748b"
   return (
     <span

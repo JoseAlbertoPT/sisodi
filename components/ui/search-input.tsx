@@ -15,14 +15,23 @@ interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const SEARCH_INPUT_MAX_W_SM = 'max-w-[27rem]'
 export const SEARCH_INPUT_MAX_W_MD = 'max-w-[31.5rem]'
 
-export function SearchInput({ className, containerClassName, ...props }: SearchInputProps) {
+export function SearchInput({ className, containerClassName, onChange, ...props }: SearchInputProps) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const trimmed = e.target.value.trimStart()
+    if (trimmed !== e.target.value) {
+      e.target.value = trimmed
+    }
+    onChange?.(e)
+  }
+
   return (
     <div className={cn('relative w-full', containerClassName)}>
       <input
         type="text"
+        onChange={handleChange}
         className={cn(
-          'w-full rounded-xl border-[1.5px] border-[#E5E7EB] bg-white',
-          'py-[5px] pl-4 pr-10',
+          'w-full rounded-full border border-[#E5E7EB] bg-white shadow-sm',
+          'py-2 pl-4 pr-10',
           'text-sm text-foreground placeholder:text-[#9CA3AF]',
           'outline-none transition-colors',
           'focus:border-[#2D3B2D]',

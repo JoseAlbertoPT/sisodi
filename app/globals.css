@@ -826,3 +826,36 @@ button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):focus {
   outline-offset: 2px !important;
 }
 /* ──────────────────────────────────────────────────────────────────────── */
+
+/* Select trigger atom states (DS Selector) */
+.ds-select-trigger {
+  border-color: var(--border);
+  font-weight: 300;
+}
+.ds-select-trigger:hover:not([disabled]):not([data-state='open']) {
+  background-color: var(--muted);
+}
+.ds-select-trigger[data-state='open'] {
+  border-color: var(--foreground);
+}
+.ds-select-trigger[aria-invalid='true'] {
+  border-color: var(--destructive);
+  color: var(--destructive);
+}
+
+/* Select item states */
+.ds-select-item {
+  font-weight: 300;
+}
+.ds-select-item:hover,
+.ds-select-item[data-highlighted] {
+  background-color: var(--color-core-piedra-95);
+  color: var(--foreground);
+}
+.ds-select-item[data-state='checked'] {
+  color: var(--brand-vino);
+}
+.ds-select-trigger:not([data-placeholder]),
+.ds-select-trigger:not([data-placeholder]) * {
+  color: var(--brand-vino) !important;
+}
