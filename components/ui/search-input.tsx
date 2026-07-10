@@ -15,7 +15,7 @@ export function SearchInput({ className, containerClassName, ...props }: SearchI
         type="text"
         className={cn(
           'w-full rounded-full border-[1.5px] border-[#E5E7EB] bg-white',
-          'py-[10px] pl-4 pr-10',
+          'py-[5px] pl-4 pr-10',
           'text-sm text-foreground placeholder:text-[#9CA3AF]',
           'outline-none transition-colors',
           'focus:border-[#2D3B2D]',

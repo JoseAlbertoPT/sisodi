@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, LabelList,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList, Label,
 } from "recharts"
 import * as XLSX from "xlsx"
 
@@ -89,14 +89,12 @@ function CustomTooltip({ active, payload, label }: any) {
   )
 }
 
-const BARRA_COLOR_NORMAL = "#C9A3B6"
-const BARRA_COLOR_HOVER  = "#6F2C4F"
-
 function GraficaBarrasVertical({
-  title, data, dataKey = "count", nameKey = "secretaria", emptyMsg,
+  title, data, color, dataKey = "count", nameKey = "secretaria", emptyMsg,
 }: {
   title: string
   data: any[]
+  color: string
   dataKey?: string
   nameKey?: string
   emptyMsg?: string
@@ -119,7 +117,7 @@ function GraficaBarrasVertical({
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-1">
-        <CardTitle className="text-sm text-card-foreground">{title}</CardTitle>
+        <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent className="pt-2">
         <ResponsiveContainer width="100%" height={300}>
@@ -147,19 +145,11 @@ function GraficaBarrasVertical({
               domain={[0, Math.ceil(maxVal * 1.18)]}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-            <Bar
-              dataKey={dataKey}
-              fill={BARRA_COLOR_NORMAL}
-              activeBar={{ fill: BARRA_COLOR_HOVER }}
-              radius={[4, 4, 4, 4]}
-              barSize={12}
-              maxBarSize={14}
-              name="Solicitudes"
-            >
+            <Bar dataKey={dataKey} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} name="Solicitudes">
               <LabelList
                 dataKey={dataKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: BARRA_COLOR_HOVER }}
+                style={{ fontSize: 10, fontWeight: 600, fill: color }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -170,10 +160,11 @@ function GraficaBarrasVertical({
   )
 }
 
-function GraficaEmisiones({ data, title, barKey }: {
+function GraficaEmisiones({ data, title, barKey, color }: {
   data: { secretaria: string; dictamenes: number; opiniones: number }[]
   title: string
   barKey: "dictamenes" | "opiniones"
+  color: string
 }) {
   const truncate = (s: string, n = 13) => s.length > n ? s.slice(0, n) + "…" : s
   const maxVal = Math.max(...data.map(d => d[barKey] ?? 0), 0)
@@ -238,19 +229,11 @@ function GraficaEmisiones({ data, title, barKey }: {
                       paddingLeft: "12px",
                     }}
                   />
-                <Bar
-                  dataKey={barKey}
-                  name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"}
-                  fill={BARRA_COLOR_NORMAL}
-                  activeBar={{ fill: BARRA_COLOR_HOVER }}
-                  radius={[4, 4, 4, 4]}
-                  barSize={12}
-                  maxBarSize={14}
-                >
+                <Bar dataKey={barKey} name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14}>
                 <LabelList
                 dataKey={barKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: BARRA_COLOR_HOVER }}
+                style={{ fontSize: 10, fontWeight: 600, fill: color }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -258,6 +241,20 @@ function GraficaEmisiones({ data, title, barKey }: {
         </ResponsiveContainer>
       </CardContent>
     </Card>
+  )
+}
+
+function CenterLabel({ viewBox, total, label }: { viewBox?: any; total: number; label: string }) {
+  const { cx, cy } = viewBox ?? { cx: 0, cy: 0 }
+  return (
+    <g>
+      <text x={cx} y={cy - 10} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 26, fontWeight: 700, fill: "#283c2a" }}>
+        {total.toLocaleString("es-MX")}
+      </text>
+      <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 11, fill: "#86857e" }}>
+        {label}
+      </text>
+    </g>
   )
 }
 
@@ -271,31 +268,10 @@ const COLORES_TIPO: Record<string, string> = {
 
   Paraestatal:  C_MORA50,
 }
-
-const DONUT_SIZE   = 290
-const DONUT_RADIUS = 130
-const DONUT_INNER  = 86
-const DONUT_CX     = DONUT_SIZE / 2
-const DONUT_CY     = DONUT_SIZE / 2
-
-function donutPolar(angle: number, r: number) {
-  return { x: DONUT_CX + r * Math.cos(angle), y: DONUT_CY + r * Math.sin(angle) }
-}
-
-function donutArcPath(start: number, end: number) {
-  const s1 = donutPolar(start, DONUT_RADIUS)
-  const e1 = donutPolar(end, DONUT_RADIUS)
-  const s2 = donutPolar(end, DONUT_INNER)
-  const e2 = donutPolar(start, DONUT_INNER)
-  const large = end - start > Math.PI ? 1 : 0
-  return [
-    `M ${s1.x} ${s1.y}`,
-    `A ${DONUT_RADIUS} ${DONUT_RADIUS} 0 ${large} 1 ${e1.x} ${e1.y}`,
-    `L ${s2.x} ${s2.y}`,
-    `A ${DONUT_INNER} ${DONUT_INNER} 0 ${large} 0 ${e2.x} ${e2.y}`,
-    "Z",
-  ].join(" ")
-}
+const DONUT_INNER_RADIUS = 80
+const DONUT_OUTER_RADIUS = 110
+const DONUT_PADDING_ANGLE = 1
+const RADIAN = Math.PI / 180
 
 function DonutSimple({ items, subLabel }: {
   items: { name: string; value: number; color: string }[]
@@ -304,110 +280,117 @@ function DonutSimple({ items, subLabel }: {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const total = items.reduce((s, d) => s + d.value, 0)
 
-  const segments = useMemo(() => {
-    let acc = -Math.PI / 2
-    return items.map((d) => {
-      const frac = total > 0 ? d.value / total : 0
-      const start = acc
-      const end = acc + frac * Math.PI * 2
-      acc = end
-      return { ...d, start, end, frac }
-    })
-  }, [items, total])
+  const activeMidAngle = useMemo(() => {
+    if (activeIndex === null || total <= 0) return null
+    const realTotalAngle = 360 - items.length * DONUT_PADDING_ANGLE
+    let cur = 0
+    for (let i = 0; i < items.length; i++) {
+      const start = i === 0 ? 0 : cur + DONUT_PADDING_ANGLE
+      const end = start + (items[i].value / total) * realTotalAngle
+      if (i === activeIndex) return (start + end) / 2
+      cur = end
+    }
+    return null
+  }, [activeIndex, items, total])
 
-  const active = activeIndex !== null ? segments[activeIndex] : null
+  const tooltipOffset = useMemo(() => {
+    if (activeMidAngle === null) return null
+    const radius = DONUT_OUTER_RADIUS + 20
+    return {
+      dx: radius * Math.cos(-activeMidAngle * RADIAN),
+      dy: radius * Math.sin(-activeMidAngle * RADIAN),
+    }
+  }, [activeMidAngle])
 
   return (
-    <div className="mx-auto flex flex-col items-center justify-center gap-6">
-      <div className="relative shrink-0" style={{ width: DONUT_SIZE, height: DONUT_SIZE }}>
-        <svg
-          viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`}
-          width={DONUT_SIZE}
-          height={DONUT_SIZE}
-          onMouseLeave={() => setActiveIndex(null)}
-        >
-          {segments.length === 1 ? (
-            <circle
-              cx={DONUT_CX} cy={DONUT_CY} r={(DONUT_RADIUS + DONUT_INNER) / 2} fill="none"
-              style={{ stroke: segments[0].color }} strokeWidth={DONUT_RADIUS - DONUT_INNER}
-              onMouseEnter={() => setActiveIndex(0)} className="cursor-pointer"
+    <div className="mx-auto grid min-h-[250px] max-w-[720px] items-center gap-4 md:grid-cols-[300px_260px]">
+      <div className="relative flex h-[230px] w-full items-center justify-center">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={items}
+              cx="50%"
+              cy="50%"
+              innerRadius={DONUT_INNER_RADIUS}
+              outerRadius={DONUT_OUTER_RADIUS}
+              cornerRadius={7}
+              paddingAngle={DONUT_PADDING_ANGLE}
+              dataKey="value"
+              stroke="#fff"
+              strokeWidth={3}
+              onMouseEnter={(_, index) => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
+            >
+              {items.map((entry, i) => (
+                <Cell
+                  key={i}
+                  fill={entry.color}
+                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.18}
+                  className="transition-opacity duration-200"
+                />
+              ))}
+            </Pie>
+
+            <Label
+              content={<CenterLabel total={total} label={subLabel} />}
+              position="center"
             />
-          ) : segments.map((seg, i) => {
-            const dimmed = activeIndex !== null && activeIndex !== i
-            return (
-              <path
-                key={i}
-                d={donutArcPath(seg.start, seg.end)}
-                onMouseEnter={() => setActiveIndex(i)}
-                className="transition-opacity cursor-pointer"
-                style={{ fill: seg.color, opacity: dimmed ? 0.25 : 1 }}
-              />
-            )
-          })}
-          {active && (() => {
-            const midAngle = (active.start + active.end) / 2
-            const r = (DONUT_RADIUS + DONUT_INNER) / 2
-            const x = DONUT_CX + r * Math.cos(midAngle)
-            const y = DONUT_CY + r * Math.sin(midAngle)
-            return (
-              <g transform={`translate(${x}, ${y})`} pointerEvents="none">
-                <rect x={-24} y={-11} width={48} height={22} rx={4} style={{ fill: "#fff", stroke: active.color }} strokeWidth={1} />
-                <text x={0} y={4} textAnchor="middle" fontSize={11} fontWeight={700} style={{ fill: active.color }}>
-                  {`${(active.frac * 100).toFixed(1)}%`}
-                </text>
-              </g>
-            )
-          })()}
-        </svg>
-        {!active && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-lg font-bold leading-none text-card-foreground">{total.toLocaleString("es-MX")}</p>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">{subLabel}</p>
+
+           
+          </PieChart>
+        </ResponsiveContainer>
+
+        {activeIndex !== null && total > 0 && tooltipOffset && (
+          <div
+            className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-white px-2 py-1 text-[11px] font-semibold shadow-md"
+            style={{
+              left: `calc(50% + ${tooltipOffset.dx}px)`,
+              top: `calc(50% + ${tooltipOffset.dy}px)`,
+              color: items[activeIndex].color,
+            }}
+          >
+            {((items[activeIndex].value / total) * 100).toFixed(1)}%
           </div>
         )}
       </div>
 
-      <div className="flex w-full max-w-[280px] min-w-0 flex-col gap-1.5">
-        {items.map((item, index) => {
-          const seg = segments[index]
-          const isHover = activeIndex === index
-          return (
-            <button
-              key={item.name}
-              type="button"
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
-              className={[
-                "flex items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors",
-                isHover ? "bg-muted" : "hover:bg-muted/70",
-              ].join(" ")}
-            >
-              <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: item.color }} />
-              <span className={`min-w-0 flex-1 truncate text-xs text-card-foreground ${isHover ? "font-bold" : "font-medium"}`}>
+      <div className="flex flex-col justify-center gap-1.5">
+        {items.map((item, index) => (
+          <button
+            key={item.name}
+            type="button"
+            onMouseEnter={() => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(null)}
+            className={[
+              "flex items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors",
+              activeIndex === index ? "bg-muted" : "hover:bg-muted/70",
+            ].join(" ")}
+          >
+            <span
+              className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: item.color }}
+            />
+            <span className="flex min-w-0 flex-col">
+              <span className="text-xs font-medium leading-tight text-card-foreground">
                 {item.name}
               </span>
-              <span className={`shrink-0 text-xs text-card-foreground ${isHover ? "font-bold" : "font-medium"}`}>
+              <span className="text-xs font-bold text-card-foreground">
                 {item.value.toLocaleString("es-MX")}
               </span>
-              <span
-                className="w-8 shrink-0 text-right text-[10px] text-muted-foreground"
-                style={{ visibility: isHover ? "visible" : "hidden" }}
-              >
-                {Math.round(seg.frac * 100)}%
-              </span>
-            </button>
-          )
-        })}
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   )
 }
 
 function BarrasPrestadoresPorTipo({
-  title, items,
+  title, items, color,
 }: {
   title: string
   items: { name: string; value: number }[]
+  color: string
 }) {
   if (items.length === 0) {
     return (
@@ -446,20 +429,11 @@ function BarrasPrestadoresPorTipo({
             domain={[0, Math.ceil(maxVal * 1.18)]}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-          <Bar
-            dataKey="prestadores"
-            name="Prestadores"
-            fill={BARRA_COLOR_NORMAL}
-            activeBar={{ fill: BARRA_COLOR_HOVER }}
-            radius={[4, 4, 4, 4]}
-            barSize={12}
-            maxBarSize={14}
-            isAnimationActive={false}
-          >
+          <Bar dataKey="prestadores" name="Prestadores" fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} isAnimationActive={false}>
             <LabelList
               dataKey="prestadores"
               position="top"
-              style={{ fontSize: 10, fontWeight: 600, fill: BARRA_COLOR_HOVER }}
+              style={{ fontSize: 10, fontWeight: 600, fill: color }}
               formatter={(v: number) => v > 0 ? v : ""}
             />
           </Bar>
@@ -469,23 +443,17 @@ function BarrasPrestadoresPorTipo({
   )
 }
 
-const DONUT_RANK_PALETTE = ["#4F1E37", "#8A4A6A", "#A56A86"]
-
-function colorsByRank<T>(rows: T[], getValue: (r: T) => number): string[] {
-  const order = rows.map((_, i) => i).sort((a, b) => getValue(rows[b]) - getValue(rows[a]))
-  const colors = new Array<string>(rows.length)
-  order.forEach((originalIndex, rank) => {
-    colors[originalIndex] = DONUT_RANK_PALETTE[rank % DONUT_RANK_PALETTE.length]
-  })
-  return colors
+const COLORES_REGIMEN: Record<string, string> = {
+  "Honorarios":           C_MORA90,
+  "Honorarios Asimilados": C_MORA50,
+  "Nombramiento":         C_MORA10,
 }
 
 function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prestadores: number }[] }) {
-  const colors = colorsByRank(data, d => d.prestadores)
-  const items = data.map((d, i) => ({
+  const items = data.map(d => ({
     name:  d.regimen,
     value: d.prestadores,
-    color: colors[i],
+    color: COLORES_REGIMEN[d.regimen] ?? C_GRIS_VERDE,
   }))
   const total = items.reduce((s, d) => s + d.value, 0)
   return (
@@ -530,10 +498,12 @@ function GraficaPrestadores({
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Centralizada"
               items={centralizadas}
+              color={C_MORA10}
             />
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Paraestatal"
               items={paraestatales}
+              color={C_MORA50}
             />
           </div>
         )}
@@ -549,12 +519,10 @@ function GraficaSolicitudesTipo({
 }) {
   const totalC = centralizada.reduce((s, d) => s + d.count, 0)
   const totalP = paraestatal.reduce((s, d)  => s + d.count, 0)
-  const rows = [
-    { name: "Centralizada", value: totalC },
-    { name: "Paraestatal",  value: totalP },
+  const items = [
+    { name: "Centralizada", value: totalC, color: C_MORA10 },
+    { name: "Paraestatal",  value: totalP, color: C_MORA50       },
   ].filter(d => d.value > 0)
-  const rowColors = colorsByRank(rows, d => d.value)
-  const items = rows.map((d, i) => ({ ...d, color: rowColors[i] }))
   const total = items.reduce((s, d) => s + d.value, 0)
   return (
 
@@ -580,7 +548,7 @@ function KpiCard({
 }) {
   return (
     <Card className="rounded-xl border border-border bg-card shadow-sm">
-      <CardContent className="relative h-[68px] py-2">
+      <CardContent className="relative h-[96px]">
         <div
           className="absolute right-4 top flex h-6 w-6 items-center justify-center rounded-lg"
         >
@@ -588,14 +556,14 @@ function KpiCard({
         </div>
 
         <div className="pr-10">
-          <p className="text-xs font-light leading-tight text-[#5d5e5f]">
+          <p className="text-sm font-light leading-tight text-card-foreground">
             {label}
           </p>
 
           {loading ? (
-            <div className="mt-1.5 h-6 w-12 animate-pulse rounded bg-muted" />
+            <div className="mt-3 h-7 w-12 animate-pulse rounded bg-muted" />
           ) : (
-            <p className="mt-1.5 text-3xl font-bold leading-none text-[#2e3b2b] tabular-nums">
+            <p className="mt-3 text-5xl font-bold leading-none text-card-foreground tabular-nums">
               {value.toLocaleString("es-MX")}
             </p>
           )}
@@ -975,7 +943,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
     <DialogFooter className="gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]">
       <Button
         type="button"
-        className="rounded-full h-10 px-6 font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb] hover:text-[#4b5563] active:bg-[#f3f4f6] active:text-[#4b5563] focus:bg-[#f3f4f6] focus:text-[#4b5563]"
+        className="rounded-full h-10 px-6 font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
         onClick={() => setConfirmarDescarga(false)} >
         Cancelar
       </Button>
@@ -998,7 +966,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
     </DialogFooter>
   </DialogContent>
        </Dialog>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {kpis.map(kpi => (
           <KpiCard key={kpi.label} {...kpi} loading={loading} />
         ))}
@@ -1018,11 +986,13 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 <GraficaBarrasVertical
                   title="Administración Centralizada"
                   data={data?.porSecretariaCentralizada ?? []}
+                  color={C_MORA10}
                   emptyMsg="Sin solicitudes centralizadas en el periodo."
                 />
                 <GraficaBarrasVertical
                   title="Administración Paraestatal"
                   data={data?.porSecretariaParaestatal ?? []}
+                  color={C_MORA50}
                   emptyMsg="Sin solicitudes paraestatales en el periodo."
                 />
               </div>
@@ -1033,11 +1003,13 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 title="Administración Centralizada — Dictámenes"
                 data={emisionesCentralizada}
                 barKey="dictamenes"
+                color={C_MORA10}
               />
               <GraficaEmisiones
                 title="Administración Paraestatal — Opiniones"
                 data={emisionesParaestatal}
                 barKey="opiniones"
+                color={C_MORA50}
               />
             </div>
 

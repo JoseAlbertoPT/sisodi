@@ -256,7 +256,7 @@ export function CalendarioPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={String(ejercicio)} onValueChange={(v) => setEjercicio(Number(v))} disabled={editing}>
-              <SelectTrigger className="w-[90px] h-9 py-2 text-xs font-mono"><SelectValue placeholder="Año" /></SelectTrigger>
+              <SelectTrigger className="w-[100px] h-9 py-2 text-xs font-mono"><SelectValue placeholder="Año" /></SelectTrigger>
               <SelectContent>
                 {availableYears.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
