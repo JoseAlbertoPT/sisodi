@@ -44,7 +44,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Switch } from "@/components/ui/switch"
 import dynamic from "next/dynamic"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
@@ -893,23 +892,29 @@ function AdministracionTab() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openReutilizaciones(rec)}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-card-foreground"
-                        aria-label="Ver"
-                        title="Ver"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      {toggling === rec.id
-                        ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        : <Switch
-                            checked={rec.activo}
-                            onCheckedChange={() => handleToggle(rec)}
-                            disabled={toggling === rec.id}
-                          />
-                      }
+                      {toggling === rec.id && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted"
+                            aria-label="Acciones"
+                          >
+                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openReutilizaciones(rec)}>
+                            <Eye className="h-4 w-4" /> Ver
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggle(rec)} disabled={toggling === rec.id}>
+                            {rec.activo
+                              ? <><PowerOff className="h-4 w-4" /> Desactivar</>
+                              : <><Power className="h-4 w-4" /> Activar</>
+                            }
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </tr>

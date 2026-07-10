@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
   Download, FileCheck, Stamp, Printer,
-  Loader2, AlertTriangle, RefreshCw, MoreHorizontal, Eye,
+  Loader2, AlertTriangle, RefreshCw, MoreVertical, Eye,
 } from "lucide-react"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
@@ -618,7 +618,7 @@ export function DictamenesPage() {
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               {downloadingId === d.id
                                 ? <Loader2 className="h-4 w-4 animate-spin" />
-                                : <MoreHorizontal className="h-4 w-4" />}
+                                : <MoreVertical className="h-4 w-4" />}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
