@@ -925,12 +925,12 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
         const circleStyle: React.CSSProperties = isDone
           ? { width: 32, height: 32, flexShrink: 0, position: 'relative', zIndex: 1 }
           : isActive
-          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#2563EB', border: '2px solid #2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
+          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#773357', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
           : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
 
         /* Label style */
         const labelStyle: React.CSSProperties = isActive
-          ? { fontSize: 12, fontWeight: 600, color: '#2563EB', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          ? { fontSize: 12, fontWeight: 400, color: '#374151', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : isDone
           ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
@@ -946,7 +946,7 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
                 left: '-50%',
                 width: '100%',
                 height: 2,
-                backgroundColor: isDone ? '#2A3B29' : '#D1D5DB',
+                backgroundColor: currentIndex >= i ? '#15803d' : '#773357',
                 zIndex: 0,
               }} />
             )}

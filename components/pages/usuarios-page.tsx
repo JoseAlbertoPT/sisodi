@@ -763,11 +763,11 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             const circleStyle = done
               ? { width: 32, height: 32, flexShrink: 0, position: 'relative' as const, zIndex: 1 }
               : active
-              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#2563EB', border: '2px solid #2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
+              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#773357', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
               : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
 
             const labelStyle = active
-              ? { fontSize: 12, fontWeight: 600, color: '#2563EB', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
+              ? { fontSize: 12, fontWeight: 400, color: '#374151', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
               : done
               ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
               : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
@@ -780,7 +780,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     left: '-50%',
                     width: '100%',
                     height: 2,
-                    backgroundColor: done ? '#2A3B29' : '#D1D5DB',
+                    backgroundColor: step >= n ? '#15803d' : step === n - 1 ? '#773357' : '#D1D5DB',
                     zIndex: 0,
                   }} />
                 )}

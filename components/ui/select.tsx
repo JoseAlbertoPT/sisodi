@@ -34,8 +34,8 @@ function SelectTrigger({
       data-slot="select-trigger"
       className={cn(
         'flex w-full items-center justify-between gap-2 whitespace-nowrap outline-none',
-        'rounded-full border border-gray-300 bg-white px-[14px] py-[2px]',
-        'text-sm text-[#57183c] transition-[color,background-color,border-color] duration-150',
+        'rounded-xl border border-[var(--sem-border-md)] bg-[var(--sem-bg-base)] px-[14px] py-[5px]',
+        'text-sm text-[var(--sem-content-high)] transition-[color,background-color,border-color] duration-150',
         'data-[placeholder]:text-muted-foreground data-[placeholder]:text-muted-foreground/80',
         'disabled:cursor-not-allowed disabled:opacity-50',
         'aria-invalid:border-[#D32F2F]',
@@ -110,7 +110,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "focus:bg-[var(--color-core-global-90)] focus:text-[#57183c] data-[state=checked]:bg-[var(--color-core-global-90)] data-[state=checked]:text-[#57183c] [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "focus:bg-[var(--sem-bg-surface-md)] focus:text-[var(--sem-accent-primary)] data-[state=checked]:bg-[var(--sem-bg-surface-md)] data-[state=checked]:text-[var(--sem-accent-primary)] [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className,
       )}
       {...props}

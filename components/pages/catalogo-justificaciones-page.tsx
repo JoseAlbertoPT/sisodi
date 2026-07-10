@@ -272,7 +272,7 @@ function ConsultaTab() {
   return (
     <>
       <div className="mb-6 flex w-full flex-col items-center text-center">
-        <h2 className="text-2xl font-bold tracking-wide leading-snug text-[#1F2937]">
+        <h2 className="text-2xl font-normal tracking-wide leading-snug text-[#4B5563]">
           Catálogo de Justificaciones Dictaminadas
         </h2>
         <p className="mt-1.5 text-sm text-[#6B7280]">

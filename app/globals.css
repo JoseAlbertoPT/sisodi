@@ -99,6 +99,23 @@
   --badge-info-fg: #3266cb;
   --badge-rose-bg: #ffeaea;
   --badge-rose-fg: #87090c;
+
+  /* ── Tokens semánticos (selects y controles de formulario) ────────────── */
+  --sem-bg-base: #ffffff;
+  --sem-border-md: #cbcabe;
+  --sem-bg-surface-md: #ebeade;
+  --sem-content-high: #2e3b2b;
+  --sem-content-low: #5d5e5f;
+  --sem-accent-primary: #773357;
+}
+
+.dark {
+  --sem-bg-base: #1b1c15;
+  --sem-border-md: rgba(255, 255, 255, 0.15);
+  --sem-bg-surface-md: #303129;
+  --sem-content-high: #f1f1f0;
+  --sem-content-low: #b8b9b9;
+  --sem-accent-primary: #e791ba;
 }
 
 @theme inline {
@@ -212,36 +229,46 @@
 /* ──────────────────────────────────────────────────────────────────────── */
 /* ── Design System Selects — Global ───────────────────────────────────── */
 
+/* Texto más delgado, sin negritas, en triggers y opciones */
+[data-slot="select-trigger"],
+[data-slot="select-item"] {
+  font-weight: 300 !important;
+}
+
 /* Estado Hover */
 [data-slot="select-trigger"]:hover:not([data-state="open"]):not([disabled]):not([data-disabled]) {
-  background-color: #f5f5f5 !important;
+  background-color: var(--sem-bg-surface-md) !important;
 }
 
 /* Estado Selected — tiene valor (no placeholder) */
 [data-slot="select-trigger"]:not([data-placeholder]) > svg {
-  color: #773357 !important;
+  color: var(--sem-accent-primary) !important;
 }
 
-/* Texto del valor seleccionado en vino (no afecta al placeholder) */
+/* Texto del valor seleccionado en vino/rosa de acento (no afecta al placeholder) */
 [data-slot="select-trigger"]:not([data-placeholder]) [data-slot="select-value"] {
-  color: #773357 !important;
+  color: var(--sem-accent-primary) !important;
 }
 
-/* Texto en vino: opción seleccionada (check ✓), o cualquier opción en hover/focus */
+/* Opción resaltada (hover/focus) con fondo surface-md; texto en color de acento junto con la seleccionada (check) */
+[data-slot="select-item"]:hover,
+[data-slot="select-item"]:focus {
+  background-color: var(--sem-bg-surface-md) !important;
+}
 [data-slot="select-item"][data-state="checked"] [data-slot="select-item-text"],
 [data-slot="select-item"]:hover [data-slot="select-item-text"],
 [data-slot="select-item"]:focus [data-slot="select-item-text"] {
-  color: #773357 !important;
+  color: var(--sem-accent-primary) !important;
 }
 
 /* Fuera de hover/focus, las opciones NO seleccionadas vuelven a su color normal */
 [data-slot="select-item"]:not([data-state="checked"]):not(:hover):not(:focus) [data-slot="select-item-text"] {
-  color: #1a2419 !important;
+  color: var(--sem-content-high) !important;
 }
 
 /* Excepción: el formulario de "Nueva Solicitud" conserva el comportamiento original en todos los estados */
 .ns-select [data-slot="select-trigger"]:not(.vino-force):not([data-placeholder]) [data-slot="select-value"] {
-  color: #1a2419 !important;
+  color: var(--sem-content-high) !important;
 }
 .ns-select [data-slot="select-item"] [data-slot="select-item-text"] {
   color: inherit !important;
@@ -250,31 +277,31 @@
 /* Selects específicos de "Nueva Solicitud" (ej. Régimen de Contratación, Mes/Quincena de aplicación)
    marcados con .vino-force: SÍ deben mostrar el valor/opción elegida en vino */
 .ns-select [data-slot="select-trigger"].vino-force:not([data-placeholder]) [data-slot="select-value"] {
-  color: #773357 !important;
+  color: var(--sem-accent-primary) !important;
 }
 .ns-select [data-slot="select-content"].vino-force [data-slot="select-item"][data-state="checked"] [data-slot="select-item-text"],
 .ns-select [data-slot="select-content"].vino-force [data-slot="select-item"]:hover [data-slot="select-item-text"],
 .ns-select [data-slot="select-content"].vino-force [data-slot="select-item"]:focus [data-slot="select-item-text"] {
-  color: #773357 !important;
+  color: var(--sem-accent-primary) !important;
 }
 .ns-select [data-slot="select-content"].vino-force [data-slot="select-item"]:not([data-state="checked"]):not(:hover):not(:focus) [data-slot="select-item-text"] {
-  color: #1a2419 !important;
+  color: var(--sem-content-high) !important;
 }
 
-/* Estado Abierto */
+/* Estado Abierto — el borde se oscurece */
 [data-slot="select-trigger"][data-state="open"] {
-  border-color: #9CA3AF !important;
-  background-color: #ffffff !important;
+  border-color: var(--sem-content-low) !important;
+  background-color: var(--sem-bg-base) !important;
 }
 [data-slot="select-trigger"][data-state="open"] > svg {
-  color: #773357 !important;
+  color: var(--sem-accent-primary) !important;
   transform: rotate(180deg);
 }
 
 /* Estado Focus (teclado) */
 [data-slot="select-trigger"]:focus-visible {
-  border-color: #9CA3AF !important;
-  background-color: #ffffff !important;
+  border-color: var(--sem-content-low) !important;
+  background-color: var(--sem-bg-base) !important;
   outline: none !important;
   box-shadow: none !important;
 }
@@ -282,9 +309,9 @@
 /* Estado Disabled */
 [data-slot="select-trigger"]:disabled,
 [data-slot="select-trigger"][data-disabled] {
-  background-color: #f0f0f0 !important;
-  border-color: #ddd !important;
-  color: #aaa !important;
+  background-color: var(--sem-bg-surface-md) !important;
+  border-color: var(--sem-border-md) !important;
+  color: var(--sem-content-low) !important;
   cursor: not-allowed !important;
   opacity: 1 !important;
 }
@@ -588,8 +615,8 @@ table.w-full.conditions-table tbody td:not(:first-child) {
   }
   .ds-title-md {
     font-family: var(--font-sans);
-    font-size: 22px;
-    font-weight: 400;
+    font-size: 14px;
+    font-weight: 300;
     line-height: 1.3;
   }
   .ds-title-sm {

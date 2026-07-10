@@ -49,6 +49,12 @@ const C_MORA50       = "#ab5e84"
 const C_MORA90       = "#ffd8e7"
 const C_PIEDRA40    = "#3f80ff"
 const C_PIEDRA70    = "#79a6ff"
+
+// ── Paleta de gráficas (vino) ──────────────────────────────────────────
+const C_VINO_HOVER  = "#6F2C4F"
+const C_ROSA_BASE   = "#C9A3B6"
+const DONUT_PALETTE = ["#4F1E37", "#8A4A6A", "#A56A86", "#C9A3B6"]
+const donutColor = (i: number) => DONUT_PALETTE[i % DONUT_PALETTE.length]
 const MESES = [
 
   { value: "01", label: "Enero" },
@@ -67,8 +73,8 @@ const MESES = [
 
 const ANIOS = [ "2026"]
 const tooltipStyle = {
-  backgroundColor: "#ffffff",
-  border: "1px solid #d6d5cf",
+  backgroundColor: "var(--card)",
+  border: "1px solid #6F2C4F",
   borderRadius: "10px",
   fontSize: "12px",
   boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
@@ -80,9 +86,9 @@ function CustomTooltip({ active, payload, label }: any) {
       {label && <p className="text-xs font-semibold text-foreground mb-2 max-w-[320px] whitespace-normal break-words border-b border-border pb-1.5">{label}</p>}
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-xs mt-1">
-          <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: p.color ?? p.fill }} />
+          <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: "#6F2C4F" }} />
           <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-bold text-foreground ml-auto pl-3">{Number(p.value).toLocaleString("es-MX")}</span>
+          <span className="font-bold ml-auto pl-3" style={{ color: "#6F2C4F" }}>{Number(p.value).toLocaleString("es-MX")}</span>
         </div>
       ))}
     </div>
@@ -90,15 +96,16 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 function GraficaBarrasVertical({
-  title, data, color, dataKey = "count", nameKey = "secretaria", emptyMsg,
+  title, data, dataKey = "count", nameKey = "secretaria", emptyMsg,
 }: {
   title: string
   data: any[]
-  color: string
   dataKey?: string
   nameKey?: string
   emptyMsg?: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+
   if (data.length === 0) {
     return (
       <Card className="shadow-sm border-border">
@@ -145,11 +152,27 @@ function GraficaBarrasVertical({
               domain={[0, Math.ceil(maxVal * 1.18)]}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-            <Bar dataKey={dataKey} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} name="Solicitudes">
+            <Bar
+              dataKey={dataKey}
+              radius={[4, 4, 4, 4]}
+              barSize={12}
+              maxBarSize={14}
+              name="Solicitudes"
+              onMouseEnter={(_, i) => setActiveIndex(i)}
+              onMouseLeave={() => setActiveIndex(null)}
+            >
+              {data.map((_, i) => (
+                <Cell
+                  key={i}
+                  fill={activeIndex === i ? C_VINO_HOVER : C_ROSA_BASE}
+                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.5}
+                  className="transition-colors duration-200"
+                />
+              ))}
               <LabelList
                 dataKey={dataKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: color }}
+                style={{ fontSize: 10, fontWeight: 600, fill: C_VINO_HOVER }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -160,12 +183,12 @@ function GraficaBarrasVertical({
   )
 }
 
-function GraficaEmisiones({ data, title, barKey, color }: {
+function GraficaEmisiones({ data, title, barKey }: {
   data: { secretaria: string; dictamenes: number; opiniones: number }[]
   title: string
   barKey: "dictamenes" | "opiniones"
-  color: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const truncate = (s: string, n = 13) => s.length > n ? s.slice(0, n) + "…" : s
   const maxVal = Math.max(...data.map(d => d[barKey] ?? 0), 0)
   if (data.length === 0) {
@@ -229,11 +252,28 @@ function GraficaEmisiones({ data, title, barKey, color }: {
                       paddingLeft: "12px",
                     }}
                   />
-                <Bar dataKey={barKey} name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14}>
+                <Bar
+                  dataKey={barKey}
+                  name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"}
+                  fill={C_ROSA_BASE}
+                  radius={[4, 4, 4, 4]}
+                  barSize={12}
+                  maxBarSize={14}
+                  onMouseEnter={(_, i) => setActiveIndex(i)}
+                  onMouseLeave={() => setActiveIndex(null)}
+                >
+                {data.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={activeIndex === i ? C_VINO_HOVER : C_ROSA_BASE}
+                    opacity={activeIndex === null || activeIndex === i ? 1 : 0.5}
+                    className="transition-colors duration-200"
+                  />
+                ))}
                 <LabelList
                 dataKey={barKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: color }}
+                style={{ fontSize: 10, fontWeight: 600, fill: C_VINO_HOVER }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -325,7 +365,7 @@ function DonutSimple({ items, subLabel }: {
                 <Cell
                   key={i}
                   fill={entry.color}
-                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.18}
+                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.25}
                   className="transition-opacity duration-200"
                 />
               ))}
@@ -342,14 +382,16 @@ function DonutSimple({ items, subLabel }: {
 
         {activeIndex !== null && total > 0 && tooltipOffset && (
           <div
-            className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-white px-2 py-1 text-[11px] font-semibold shadow-md"
+            className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-semibold shadow-md"
             style={{
               left: `calc(50% + ${tooltipOffset.dx}px)`,
               top: `calc(50% + ${tooltipOffset.dy}px)`,
+              backgroundColor: "var(--card)",
+              border: `1px solid ${items[activeIndex].color}`,
               color: items[activeIndex].color,
             }}
           >
-            {((items[activeIndex].value / total) * 100).toFixed(1)}%
+            {items[activeIndex].value.toLocaleString("es-MX")}
           </div>
         )}
       </div>
@@ -371,11 +413,16 @@ function DonutSimple({ items, subLabel }: {
               style={{ backgroundColor: item.color }}
             />
             <span className="flex min-w-0 flex-col">
-              <span className="text-xs font-medium leading-tight text-card-foreground">
+              <span className={`text-xs leading-tight text-card-foreground ${activeIndex === index ? "font-bold" : "font-medium"}`}>
                 {item.name}
               </span>
               <span className="text-xs font-bold text-card-foreground">
                 {item.value.toLocaleString("es-MX")}
+                {activeIndex === index && total > 0 && (
+                  <span className="ml-1 font-medium text-muted-foreground">
+                    ({((item.value / total) * 100).toFixed(1)}%)
+                  </span>
+                )}
               </span>
             </span>
           </button>
@@ -386,12 +433,12 @@ function DonutSimple({ items, subLabel }: {
 }
 
 function BarrasPrestadoresPorTipo({
-  title, items, color,
+  title, items,
 }: {
   title: string
   items: { name: string; value: number }[]
-  color: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   if (items.length === 0) {
     return (
       <div className="flex flex-col h-full">
@@ -429,11 +476,29 @@ function BarrasPrestadoresPorTipo({
             domain={[0, Math.ceil(maxVal * 1.18)]}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-          <Bar dataKey="prestadores" name="Prestadores" fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} isAnimationActive={false}>
+          <Bar
+            dataKey="prestadores"
+            name="Prestadores"
+            fill={C_ROSA_BASE}
+            radius={[4, 4, 4, 4]}
+            barSize={12}
+            maxBarSize={14}
+            isAnimationActive={false}
+            onMouseEnter={(_, i) => setActiveIndex(i)}
+            onMouseLeave={() => setActiveIndex(null)}
+          >
+            {barData.map((_, i) => (
+              <Cell
+                key={i}
+                fill={activeIndex === i ? C_VINO_HOVER : C_ROSA_BASE}
+                opacity={activeIndex === null || activeIndex === i ? 1 : 0.5}
+                className="transition-colors duration-200"
+              />
+            ))}
             <LabelList
               dataKey="prestadores"
               position="top"
-              style={{ fontSize: 10, fontWeight: 600, fill: color }}
+              style={{ fontSize: 10, fontWeight: 600, fill: C_VINO_HOVER }}
               formatter={(v: number) => v > 0 ? v : ""}
             />
           </Bar>
@@ -443,17 +508,11 @@ function BarrasPrestadoresPorTipo({
   )
 }
 
-const COLORES_REGIMEN: Record<string, string> = {
-  "Honorarios":           C_MORA90,
-  "Honorarios Asimilados": C_MORA50,
-  "Nombramiento":         C_MORA10,
-}
-
 function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prestadores: number }[] }) {
-  const items = data.map(d => ({
+  const items = data.map((d, i) => ({
     name:  d.regimen,
     value: d.prestadores,
-    color: COLORES_REGIMEN[d.regimen] ?? C_GRIS_VERDE,
+    color: donutColor(i),
   }))
   const total = items.reduce((s, d) => s + d.value, 0)
   return (
@@ -498,12 +557,10 @@ function GraficaPrestadores({
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Centralizada"
               items={centralizadas}
-              color={C_MORA10}
             />
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Paraestatal"
               items={paraestatales}
-              color={C_MORA50}
             />
           </div>
         )}
@@ -520,8 +577,8 @@ function GraficaSolicitudesTipo({
   const totalC = centralizada.reduce((s, d) => s + d.count, 0)
   const totalP = paraestatal.reduce((s, d)  => s + d.count, 0)
   const items = [
-    { name: "Centralizada", value: totalC, color: C_MORA10 },
-    { name: "Paraestatal",  value: totalP, color: C_MORA50       },
+    { name: "Centralizada", value: totalC, color: donutColor(0) },
+    { name: "Paraestatal",  value: totalP, color: donutColor(1) },
   ].filter(d => d.value > 0)
   const total = items.reduce((s, d) => s + d.value, 0)
   return (
@@ -986,13 +1043,11 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 <GraficaBarrasVertical
                   title="Administración Centralizada"
                   data={data?.porSecretariaCentralizada ?? []}
-                  color={C_MORA10}
                   emptyMsg="Sin solicitudes centralizadas en el periodo."
                 />
                 <GraficaBarrasVertical
                   title="Administración Paraestatal"
                   data={data?.porSecretariaParaestatal ?? []}
-                  color={C_MORA50}
                   emptyMsg="Sin solicitudes paraestatales en el periodo."
                 />
               </div>
@@ -1003,13 +1058,11 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 title="Administración Centralizada — Dictámenes"
                 data={emisionesCentralizada}
                 barKey="dictamenes"
-                color={C_MORA10}
               />
               <GraficaEmisiones
                 title="Administración Paraestatal — Opiniones"
                 data={emisionesParaestatal}
                 barKey="opiniones"
-                color={C_MORA50}
               />
             </div>
 
