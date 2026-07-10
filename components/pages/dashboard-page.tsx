@@ -532,7 +532,7 @@ function GraficaSolicitudesTipo({
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">Sin datos para el periodo seleccionado.</p>
+          <p className="ds-label-md py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
           <DonutSimple items={items} subLabel="solicitudes" />
         )}
@@ -977,11 +977,15 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 centralizada={data?.porSecretariaCentralizada ?? []}
                 paraestatal={data?.porSecretariaParaestatal ?? []}
               />
-              <GraficaPrestadores
-                porSecretaria={data?.prestadoresPorSecretaria ?? []}
-                porTipo={data?.prestadoresPorTipo ?? []}
-              />
+              <div className="flex flex-col gap-4">
+                <GraficaPrestadoresPorRegimen data={data?.prestadoresPorRegimen ?? []} />
+              
+               </div>
             </div>
+               <GraficaPrestadores
+                  porSecretaria={data?.prestadoresPorSecretaria ?? []}
+                  porTipo={data?.prestadoresPorTipo ?? []}
+                />
               <div className="grid gap-4 lg:grid-cols-2">
                 <GraficaBarrasVertical
                   title="Administración Centralizada"
@@ -996,8 +1000,6 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                   emptyMsg="Sin solicitudes paraestatales en el periodo."
                 />
               </div>
-             
-
             <div className="grid gap-4 lg:grid-cols-2">
               <GraficaEmisiones
                 title="Administración Centralizada — Dictámenes"
@@ -1012,11 +1014,6 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 color={C_MORA50}
               />
             </div>
-
-            <div className="flex flex-col gap-4">
-              <GraficaPrestadoresPorRegimen data={data?.prestadoresPorRegimen ?? []} />
-              
-            </div> 
     </div>
     </div>
   )

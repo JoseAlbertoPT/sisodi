@@ -18,7 +18,7 @@ const { toggle } = useSidebar()
           type="button"
           onClick={toggle}
           aria-label="Alternar sidebar"
-          className="relative z-50 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-content-low transition-colors hover:bg-muted hover:text-content-high"
+          className="p-1.5 rounded-md hover:bg-gray-200 text-gray-500 transition-colors"
 
         >
           <PanelLeft className="h-5 w-5"  />
@@ -28,7 +28,7 @@ const { toggle } = useSidebar()
             {title}
           </h1>
           {subtitle && (
-            <p className="ds-title-md">
+            <p className="ds-body-sm text-[var(--color-core-piedra-40)]">
               {subtitle}
             </p>
           )}

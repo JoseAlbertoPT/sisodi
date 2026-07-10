@@ -1984,23 +1984,23 @@ export function UsuariosPage() {
             </div>
           )}
           <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr className="bg-secondary text-secondary-foreground">
-                  <th className="px-4 py-3 text-left font-semibold">Nombre</th>
-                  <th className="px-4 py-3 text-left font-semibold">Correo</th>
-                  <th className="px-4 py-3 text-left font-semibold">RFC</th>
-                  <th className="px-4 py-3 text-left font-semibold">Rol</th>
-                  <th className="px-4 py-3 text-left font-semibold">Administracion</th>
-                  <th className="px-4 py-3 text-left font-semibold">Secretaría</th>
-                  <th className="px-4 py-3 text-left font-semibold">Estatus</th>
-                  <th className="px-4 py-3 text-left font-semibold">Acciones</th>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>RFC</th>
+                  <th>Rol</th>
+                  <th>Administracion</th>
+                  <th>Secretaría</th>
+                  <th>Estatus</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {paginated.map((row) => (
                   <tr key={row.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-card-foreground">
+                    <td className="px-4 py-3 font-bold text-card-foreground">
                       <div className="flex items-center gap-2">
                         {row.nombre}
                         {hasActivePermiso(row.id) && (

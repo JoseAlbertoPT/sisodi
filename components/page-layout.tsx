@@ -1,7 +1,8 @@
 "use client"
 
 import { PanelLeft } from "lucide-react"
-import { useSidebar } from "@/lib/sidebar-context"
+//import { useSidebar } from "@/lib/sidebar-context"
+import { useSidebar } from "@/context/sidebar-context"
 
 interface PageLayoutProps {
   title?: React.ReactNode
@@ -11,7 +12,7 @@ interface PageLayoutProps {
 }
 
 export function PageLayout({ title, description, children, noContainer = false }: PageLayoutProps) {
-  const { onToggle } = useSidebar()
+  const { toggle } = useSidebar()
 
   return (
     <div className="flex flex-1 flex-col bg-white">
@@ -25,7 +26,7 @@ export function PageLayout({ title, description, children, noContainer = false }
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={onToggle}
+                    onClick={toggle}
                     aria-label="Toggle menú"
                     className="p-1.5 rounded-md hover:bg-gray-200 text-gray-500 transition-colors"
                   >

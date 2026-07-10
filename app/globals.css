@@ -519,7 +519,7 @@ table.w-full thead tr {
 }
 table.w-full thead th {
   background-color: rgba(243,242,238,0.4) !important;
-  color: #5c6158 !important;
+  color: var(--color-core-verde-tierra-20) !important;
   font-weight: 500 !important;
   font-size: 14px !important;
   padding: 10px 16px !important;
@@ -539,8 +539,11 @@ table.w-full tbody tr:hover {
 table.w-full tbody td {
   border-bottom: 1px solid #e4e3dc;
   padding: 12px 16px !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
+  font-family: var(--font-sans) !important;
+    font-size: 13px !important;
+    font-weight: 300 !important;
+    line-height: 1.2 !important;
+    color: var(--color-core-piedra-20) !important;
 }
 table.w-full tbody tr:last-child td {
   border-bottom: none !important;
@@ -678,12 +681,10 @@ table.w-full.conditions-table tbody td:not(:first-child) {
     font-size: 14px;
     font-weight: 300;
     line-height: 1.2;
-    color: #5c6158;
-
   }
   .ds-title-sm {
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 300;
     line-height: 1.2;
   }
@@ -720,6 +721,7 @@ table.w-full.conditions-table tbody td:not(:first-child) {
     font-size: 14px;
     font-weight: 300;
     line-height: 1.2;
+    color: var(--color-core-piedra-40);
   }
   .ds-label-sm {
     font-family: var(--font-sans);
@@ -728,6 +730,14 @@ table.w-full.conditions-table tbody td:not(:first-child) {
     line-height: 1.2;
     color: #5c6158;
   }
+
+  .ds-table-header {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 120%;
+  color: var(--color-core-global-0);
+}
 }
 
 /* ── Botones vino/guinda — bloquear fondo y texto en TODOS los estados ── */
