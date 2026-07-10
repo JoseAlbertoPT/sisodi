@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList, Label,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList,
 } from "recharts"
 import * as XLSX from "xlsx"
 
@@ -55,6 +55,14 @@ const C_VINO_HOVER  = "#6F2C4F"
 const C_ROSA_BASE   = "#C9A3B6"
 const DONUT_PALETTE = ["#4F1E37", "#8A4A6A", "#A56A86", "#C9A3B6"]
 const donutColor = (i: number) => DONUT_PALETTE[i % DONUT_PALETTE.length]
+
+// Ordena de mayor a menor y asigna la paleta en ese orden (rota si hay más categorías que colores)
+function buildDonutItems(raw: { name: string; value: number }[]): { name: string; value: number; color: string }[] {
+  return [...raw]
+    .filter(d => d.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .map((d, i) => ({ ...d, color: donutColor(i) }))
+}
 const MESES = [
 
   { value: "01", label: "Enero" },
@@ -284,20 +292,6 @@ function GraficaEmisiones({ data, title, barKey }: {
   )
 }
 
-function CenterLabel({ viewBox, total, label }: { viewBox?: any; total: number; label: string }) {
-  const { cx, cy } = viewBox ?? { cx: 0, cy: 0 }
-  return (
-    <g>
-      <text x={cx} y={cy - 10} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 26, fontWeight: 700, fill: "#283c2a" }}>
-        {total.toLocaleString("es-MX")}
-      </text>
-      <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 11, fill: "#86857e" }}>
-        {label}
-      </text>
-    </g>
-  )
-}
-
 const COLORES_SECRETARIA = [
   C_VERDE_OSCURO, C_OLIVA, C_DORADO, C_VERDE_MEDIO, C_AMBAR,
   C_GRIS_VERDE, C_BURDEOS, "#4a7a6a", "#8a6a3a", "#3a5a7a",
@@ -308,122 +302,153 @@ const COLORES_TIPO: Record<string, string> = {
 
   Paraestatal:  C_MORA50,
 }
-const DONUT_INNER_RADIUS = 80
-const DONUT_OUTER_RADIUS = 110
+const DONUT_INNER_RADIUS = 86
+const DONUT_OUTER_RADIUS = 130
 const DONUT_PADDING_ANGLE = 1
+const DONUT_START_ANGLE = 90 // 12 en punto
+const DONUT_SIZE = 290
 const RADIAN = Math.PI / 180
 
-function DonutSimple({ items, subLabel }: {
+function DonutSimple({ items: rawItems, subLabel }: {
   items: { name: string; value: number; color: string }[]
   subLabel: string
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const items = rawItems.filter(d => d.value > 0)
   const total = items.reduce((s, d) => s + d.value, 0)
+  const isSingle = items.length === 1
 
   const activeMidAngle = useMemo(() => {
-    if (activeIndex === null || total <= 0) return null
+    if (activeIndex === null || total <= 0 || items.length < 2) return null
     const realTotalAngle = 360 - items.length * DONUT_PADDING_ANGLE
     let cur = 0
     for (let i = 0; i < items.length; i++) {
       const start = i === 0 ? 0 : cur + DONUT_PADDING_ANGLE
       const end = start + (items[i].value / total) * realTotalAngle
-      if (i === activeIndex) return (start + end) / 2
+      // recharts avanza en sentido horario desde DONUT_START_ANGLE
+      if (i === activeIndex) return DONUT_START_ANGLE - (start + end) / 2
       cur = end
     }
     return null
   }, [activeIndex, items, total])
 
   const tooltipOffset = useMemo(() => {
-    if (activeMidAngle === null) return null
-    const radius = DONUT_OUTER_RADIUS + 20
+    if (activeIndex === null) return null
+    const angle = isSingle ? DONUT_START_ANGLE : activeMidAngle
+    if (angle === null) return null
+    const radius = DONUT_OUTER_RADIUS + 24
     return {
-      dx: radius * Math.cos(-activeMidAngle * RADIAN),
-      dy: radius * Math.sin(-activeMidAngle * RADIAN),
+      dx: radius * Math.cos(-angle * RADIAN),
+      dy: radius * Math.sin(-angle * RADIAN),
     }
-  }, [activeMidAngle])
+  }, [activeIndex, activeMidAngle, isSingle])
+
+  if (items.length === 0) {
+    return (
+      <div className="flex h-[290px] items-center justify-center">
+        <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="mx-auto grid min-h-[250px] max-w-[720px] items-center gap-4 md:grid-cols-[300px_260px]">
-      <div className="relative flex h-[230px] w-full items-center justify-center">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={items}
-              cx="50%"
-              cy="50%"
-              innerRadius={DONUT_INNER_RADIUS}
-              outerRadius={DONUT_OUTER_RADIUS}
-              cornerRadius={7}
-              paddingAngle={DONUT_PADDING_ANGLE}
-              dataKey="value"
-              stroke="#fff"
-              strokeWidth={3}
-              onMouseEnter={(_, index) => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
-            >
-              {items.map((entry, i) => (
-                <Cell
-                  key={i}
-                  fill={entry.color}
-                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.25}
-                  className="transition-opacity duration-200"
-                />
-              ))}
-            </Pie>
-
-            <Label
-              content={<CenterLabel total={total} label={subLabel} />}
-              position="center"
+    <div className="mx-auto flex max-w-[320px] flex-col items-center gap-4">
+      <div className="relative h-[290px] w-[290px]">
+        {isSingle ? (
+          <svg
+            width={DONUT_SIZE}
+            height={DONUT_SIZE}
+            viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`}
+            className="cursor-pointer"
+            onMouseEnter={() => setActiveIndex(0)}
+            onMouseLeave={() => setActiveIndex(null)}
+          >
+            <circle
+              cx={DONUT_SIZE / 2}
+              cy={DONUT_SIZE / 2}
+              r={(DONUT_OUTER_RADIUS + DONUT_INNER_RADIUS) / 2}
+              fill="none"
+              stroke={items[0].color}
+              strokeWidth={DONUT_OUTER_RADIUS - DONUT_INNER_RADIUS}
+              className="transition-opacity duration-200"
             />
+          </svg>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={items}
+                cx="50%"
+                cy="50%"
+                startAngle={DONUT_START_ANGLE}
+                endAngle={DONUT_START_ANGLE - 360}
+                innerRadius={DONUT_INNER_RADIUS}
+                outerRadius={DONUT_OUTER_RADIUS}
+                cornerRadius={4}
+                paddingAngle={DONUT_PADDING_ANGLE}
+                dataKey="value"
+                stroke="#fff"
+                strokeWidth={2}
+                onMouseEnter={(_, index) => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(null)}
+              >
+                {items.map((entry, i) => (
+                  <Cell
+                    key={i}
+                    fill={entry.color}
+                    opacity={activeIndex === null || activeIndex === i ? 1 : 0.25}
+                    className="cursor-pointer transition-opacity duration-200"
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        )}
 
-           
-          </PieChart>
-        </ResponsiveContainer>
-
-        {activeIndex !== null && total > 0 && tooltipOffset && (
+        {activeIndex === null ? (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[26px] font-bold text-card-foreground">{total.toLocaleString("es-MX")}</span>
+            <span className="text-[11px] text-muted-foreground">{subLabel}</span>
+          </div>
+        ) : tooltipOffset && (
           <div
-            className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-semibold shadow-md"
+            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-md border px-2 py-1 text-[11px] shadow-md"
             style={{
               left: `calc(50% + ${tooltipOffset.dx}px)`,
               top: `calc(50% + ${tooltipOffset.dy}px)`,
               backgroundColor: "var(--card)",
-              border: `1px solid ${items[activeIndex].color}`,
-              color: items[activeIndex].color,
+              borderColor: items[activeIndex].color,
             }}
           >
-            {items[activeIndex].value.toLocaleString("es-MX")}
+            <span className="font-bold" style={{ color: items[activeIndex].color }}>
+              {((items[activeIndex].value / total) * 100).toFixed(1)}%
+            </span>
           </div>
         )}
       </div>
 
-      <div className="flex flex-col justify-center gap-1.5">
+      <div className="flex w-full flex-col gap-1">
         {items.map((item, index) => (
           <button
             key={item.name}
             type="button"
             onMouseEnter={() => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}
-            className={[
-              "flex items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors",
-              activeIndex === index ? "bg-muted" : "hover:bg-muted/70",
-            ].join(" ")}
+            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left transition-opacity duration-200"
+            style={{ opacity: activeIndex === null || activeIndex === index ? 1 : 0.4 }}
           >
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+            <span className={`min-w-0 flex-1 truncate text-xs text-card-foreground ${activeIndex === index ? "font-bold" : "font-medium"}`}>
+              {item.name}
+            </span>
+            <span className="text-xs font-bold text-card-foreground">
+              {item.value.toLocaleString("es-MX")}
+            </span>
             <span
-              className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: item.color }}
-            />
-            <span className="flex min-w-0 flex-col">
-              <span className={`text-xs leading-tight text-card-foreground ${activeIndex === index ? "font-bold" : "font-medium"}`}>
-                {item.name}
-              </span>
-              <span className="text-xs font-bold text-card-foreground">
-                {item.value.toLocaleString("es-MX")}
-                {activeIndex === index && total > 0 && (
-                  <span className="ml-1 font-medium text-muted-foreground">
-                    ({((item.value / total) * 100).toFixed(1)}%)
-                  </span>
-                )}
-              </span>
+              className="w-12 shrink-0 text-right text-[11px] font-medium text-muted-foreground transition-opacity duration-200"
+              style={{ opacity: activeIndex === index ? 1 : 0 }}
+            >
+              {((item.value / total) * 100).toFixed(1)}%
             </span>
           </button>
         ))}
@@ -509,23 +534,15 @@ function BarrasPrestadoresPorTipo({
 }
 
 function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prestadores: number }[] }) {
-  const items = data.map((d, i) => ({
-    name:  d.regimen,
-    value: d.prestadores,
-    color: donutColor(i),
-  }))
-  const total = items.reduce((s, d) => s + d.value, 0)
+  const items = buildDonutItems(data.map(d => ({ name: d.regimen, value: d.prestadores })))
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-light text-card-foreground">Prestadores por Régimen</CardTitle>
+        <p className="text-xs text-muted-foreground">Distribución de prestadores por tipo de régimen</p>
       </CardHeader>
       <CardContent>
-        {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
-        ) : (
-          <DonutSimple items={items} subLabel="prestadores" />
-        )}
+        <DonutSimple items={items} subLabel="prestadores" />
       </CardContent>
     </Card>
   )
@@ -576,23 +593,18 @@ function GraficaSolicitudesTipo({
 }) {
   const totalC = centralizada.reduce((s, d) => s + d.count, 0)
   const totalP = paraestatal.reduce((s, d)  => s + d.count, 0)
-  const items = [
-    { name: "Centralizada", value: totalC, color: donutColor(0) },
-    { name: "Paraestatal",  value: totalP, color: donutColor(1) },
-  ].filter(d => d.value > 0)
-  const total = items.reduce((s, d) => s + d.value, 0)
+  const items = buildDonutItems([
+    { name: "Centralizada", value: totalC },
+    { name: "Paraestatal",  value: totalP },
+  ])
   return (
-
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm text-card-foreground">Solicitudes por Administración</CardTitle>
+        <p className="text-xs text-muted-foreground">Distribución de solicitudes por tipo de administración</p>
       </CardHeader>
       <CardContent>
-        {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
-        ) : (
-          <DonutSimple items={items} subLabel="solicitudes" />
-        )}
+        <DonutSimple items={items} subLabel="solicitudes" />
       </CardContent>
     </Card>
   )
