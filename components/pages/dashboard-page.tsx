@@ -104,9 +104,10 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 function GraficaBarrasVertical({
-  title, data, dataKey = "count", nameKey = "secretaria", emptyMsg,
+  title, subtitle, data, dataKey = "count", nameKey = "secretaria", emptyMsg,
 }: {
   title: string
+  subtitle?: string
   data: any[]
   dataKey?: string
   nameKey?: string
@@ -119,6 +120,7 @@ function GraficaBarrasVertical({
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm text-card-foreground">{title}</CardTitle>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground py-8 text-center">{emptyMsg ?? "Sin datos para el periodo seleccionado."}</p>
@@ -133,6 +135,7 @@ function GraficaBarrasVertical({
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-1">
         <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
+        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </CardHeader>
       <CardContent className="pt-2">
         <ResponsiveContainer width="100%" height={300}>
@@ -215,7 +218,7 @@ function GraficaEmisiones({ data, title, barKey }: {
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-1">
-        
+        <CardTitle className="text-sm font-semibold text-card-foreground">{title}</CardTitle>
       </CardHeader>
 
       <CardContent className="pt-2">
@@ -246,20 +249,6 @@ function GraficaEmisiones({ data, title, barKey }: {
                 domain={[0, Math.ceil(maxVal * 1.18)]}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-                  <Legend
-                    verticalAlign="bottom"
-                    align="left"
-                    iconType="circle"
-                    iconSize={8}
-                      formatter={(value) => (
-                        <span className="text-black font-medium">{value}</span>
-                      )}
-                    wrapperStyle={{
-                      fontSize: "12px",
-                      paddingTop: "10px",
-                      paddingLeft: "12px",
-                    }}
-                  />
                 <Bar
                   dataKey={barKey}
                   name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"}
@@ -1054,11 +1043,13 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
               <div className="grid gap-4 lg:grid-cols-2">
                 <GraficaBarrasVertical
                   title="Administración Centralizada"
+                  subtitle="Solicitudes recibidas por secretaría"
                   data={data?.porSecretariaCentralizada ?? []}
                   emptyMsg="Sin solicitudes centralizadas en el periodo."
                 />
                 <GraficaBarrasVertical
                   title="Administración Paraestatal"
+                  subtitle="Solicitudes recibidas por secretaría"
                   data={data?.porSecretariaParaestatal ?? []}
                   emptyMsg="Sin solicitudes paraestatales en el periodo."
                 />
