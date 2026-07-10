@@ -4,10 +4,9 @@ import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
+import { SearchInput } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
@@ -764,11 +763,11 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             const circleStyle = done
               ? { width: 32, height: 32, flexShrink: 0, position: 'relative' as const, zIndex: 1 }
               : active
-              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#773357', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
+              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
               : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
 
             const labelStyle = active
-              ? { fontSize: 12, fontWeight: 400, color: '#374151', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
+              ? { fontSize: 12, fontWeight: 600, color: '#773357', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
               : done
               ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
               : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
@@ -781,7 +780,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     left: '-50%',
                     width: '100%',
                     height: 2,
-                    backgroundColor: step >= n ? '#15803d' : step === n - 1 ? '#773357' : '#D1D5DB',
+                    backgroundColor: done ? '#2A3B29' : '#D1D5DB',
                     zIndex: 0,
                   }} />
                 )}
@@ -790,7 +789,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     {done ? (
                       <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
                     ) : (
-                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#ffffff' : '#9CA3AF', lineHeight: 1 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#773357' : '#9CA3AF', lineHeight: 1 }}>
                         {n}
                       </span>
                     )}
@@ -1238,11 +1237,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               {usuario.estatus}
             </Badge>
             {usuario.tipoAdministracion === "centralizada" ? (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: "#16653418", color: "#166534" }}>
                 Centralizada
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
                 Paraestatal
               </span>
             )}
@@ -1967,7 +1966,7 @@ export function UsuariosPage() {
           placeholder="Buscar por nombre, correo, RFC..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          containerClassName={`flex-1 ${SEARCH_INPUT_MAX_W_SM}`}
+          containerClassName="flex-1 max-w-sm"
         />
         <TipoAdminSelect value={filtroAdmin} onChange={setFiltroAdmin} />
       </div>
@@ -2016,11 +2015,11 @@ export function UsuariosPage() {
                     <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
                     <td className="px-4 py-3">
                       {row.tipoAdministracion === "centralizada" ? (
-                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}>
+                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: "#16653418", color: "#166534" }}>
                           Centralizada
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}>
+                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
                           Paraestatal
                         </span>
                       )}
@@ -2032,14 +2031,14 @@ export function UsuariosPage() {
                       {row.estatus === "Activo" ? (
                         <span
                           className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
-                          style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}
+                          style={{ backgroundColor: "#16653418", color: "#166534" }}
                         >
                           Activo
                         </span>
                       ) : (
                         <span
                           className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
-                          style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}
+                          style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}
                         >
                           Inactivo
                         </span>
