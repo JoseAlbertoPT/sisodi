@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { SearchInput } from "@/components/ui/search-input"
+import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -136,7 +136,7 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-end gap-3 flex-wrap">
-        <div className="flex flex-col gap-1 flex-1 min-w-[220px] max-w-sm">
+        <div className={`flex flex-col gap-1 flex-1 min-w-[220px] ${SEARCH_INPUT_MAX_W_SM}`}>
           <Label className="text-xs text-muted-foreground">Búsqueda</Label>
           <SearchInput
             placeholder="Folio, secretaría, denominación..."

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
-import { SearchInput } from "@/components/ui/search-input"
+import { SearchInput, SEARCH_INPUT_MAX_W_MD } from "@/components/ui/search-input"
 import { StatusBadge } from "@/components/ui/status-badge"
 import {
 
@@ -812,7 +812,7 @@ function AdministracionTab() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar registro…"
-          containerClassName="flex-1 max-w-md"
+          containerClassName={`flex-1 ${SEARCH_INPUT_MAX_W_MD}`}
         />
         <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}

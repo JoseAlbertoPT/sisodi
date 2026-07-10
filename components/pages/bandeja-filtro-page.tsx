@@ -7,7 +7,14 @@ import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { StatusBadge, estadoBadge } from "@/components/ui/status-badge"
+import {
+  StatusBadge, estadoBadge,
+  C_ROSA_VINO, C_ROSA_VINO_BG,
+  C_AZUL_REVISION, C_AZUL_REVISION_BG,
+  C_VIOLETA_EMISION, C_VIOLETA_EMISION_BG,
+  C_AMARILLO, C_AMARILLO_BG,
+  C_VERDE_ESTADO, C_VERDE_ESTADO_BG,
+} from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -18,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 import { ActionResultScreen } from "@/components/ui/action-result-screen"
-import { SearchInput } from "@/components/ui/search-input"
+import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
   FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
@@ -207,24 +214,24 @@ function getSlaLabel(dias: number | null) {
 }
 type TabCfg = Record<string, { label: string; icon: React.ReactNode; activeBg: string; activeText: string; badgeStyle: React.CSSProperties }>
 const TAB_CONFIG_REVISION: TabCfg = {
-  nuevas:          { label: "Asignadas",          icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" } },
-  revision:        { label: "En revisión",         icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
-  observadas:      { label: "Observadas",          icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
-  pendientes_firma:{ label: "Pendiente de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
+  nuevas:          { label: "Asignadas",          icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_AZUL_REVISION_BG, color: C_AZUL_REVISION } },
+  revision:        { label: "En revisión",         icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: C_AZUL_REVISION_BG, color: C_AZUL_REVISION } },
+  observadas:      { label: "Observadas",          icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO } },
+  pendientes_firma:{ label: "Pendiente de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
   todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 const TAB_CONFIG_EMISION: TabCfg = {
-  nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" } },
-  revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
-  observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
-  pendientes_firma:{ label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
+  nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO } },
+  revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
+  observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO } },
+  pendientes_firma:{ label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
   todas:           { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 const TAB_CONFIG_DO: TabCfg = {
-  pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600",      badgeStyle: { backgroundColor: "#C2410C", color: "#FFFFFF" } },
-  en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary",         badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
-  observadas:            { label: "Observadas",               icon: <AlertTriangle className="h-3.5 w-3.5" />,  activeBg: "bg-destructive/10", activeText: "text-destructive",     badgeStyle: { backgroundColor: "#832B56", color: "#FFFFFF" } },
-  pendientes_firma:      { label: "Pendientes de firma",      icon: <Stamp className="h-3.5 w-3.5" />,          activeBg: "bg-secondary/10",   activeText: "text-secondary",       badgeStyle: { backgroundColor: "#D97706", color: "#FFFFFF" } },
+  pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600",      badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
+  en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary",         badgeStyle: { backgroundColor: C_AMARILLO_BG, color: C_AMARILLO } },
+  observadas:            { label: "Observadas",               icon: <AlertTriangle className="h-3.5 w-3.5" />,  activeBg: "bg-destructive/10", activeText: "text-destructive",     badgeStyle: { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO } },
+  pendientes_firma:      { label: "Pendientes de firma",      icon: <Stamp className="h-3.5 w-3.5" />,          activeBg: "bg-secondary/10",   activeText: "text-secondary",       badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
   todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
 }
 
@@ -1548,7 +1555,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
           placeholder="Buscar por folio, denominación, secretaría..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          containerClassName="flex-1 max-w-sm"
+          containerClassName={`flex-1 ${SEARCH_INPUT_MAX_W_SM}`}
         />
         <Select value={filterRegimen} onValueChange={setFilterRegimen}>
           <SelectTrigger className="w-60 bg-card"><SelectValue placeholder="Régimen" /></SelectTrigger>
@@ -1621,12 +1628,12 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                         <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                             {filtro === 2 && tab === "pendientes_asignacion" && sol.revisorAsignado
-                              ? <StatusBadge label="Pendiente de aceptación" color="#0E7490" />
-                              : <StatusBadge label={config.label} color={config.badgeStyle.backgroundColor as string} />
+                              ? <StatusBadge label="Pendiente de aceptación" color={C_VIOLETA_EMISION} bgColor={C_VIOLETA_EMISION_BG} />
+                              : <StatusBadge label={config.label} color={config.badgeStyle.color as string} bgColor={config.badgeStyle.backgroundColor as string} />
                             }
                             {((filtro === 1 && sol.estado.toLowerCase() === "observado por validacion final") ||
                               (filtro === 2 && sol.estado.toLowerCase().includes("observado por emisor"))) && (
-                              <StatusBadge label="Observada" color="#BE185D" />
+                              <StatusBadge label="Observada" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
                             )}
                           </div>
                         </td>

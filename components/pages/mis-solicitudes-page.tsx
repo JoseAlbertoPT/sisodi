@@ -8,7 +8,7 @@ import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { StatusBadge, estadoBadge } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
-import { SearchInput } from "@/components/ui/search-input"
+import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { Separator } from "@/components/ui/separator"
 import { FilterTabs } from "@/components/ui/filter-tabs"
@@ -1650,7 +1650,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
 
   return (
     <PageLayout
-      title="Bandeja de mis justificaciones"
+      title="Bandeja de mis solicitudes"
       description="Consulta y da seguimiento al estado de tus solicitudes."
     >
 
@@ -1664,7 +1664,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
         placeholder="Buscar por folio, tipo, secretaría..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        containerClassName="max-w-sm"
+        containerClassName={SEARCH_INPUT_MAX_W_SM}
       />
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">

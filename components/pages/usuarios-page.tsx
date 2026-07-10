@@ -4,9 +4,10 @@ import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { SearchInput } from "@/components/ui/search-input"
+import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
@@ -1237,11 +1238,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               {usuario.estatus}
             </Badge>
             {usuario.tipoAdministracion === "centralizada" ? (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: "#16653418", color: "#166534" }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}>
                 Centralizada
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}>
                 Paraestatal
               </span>
             )}
@@ -1966,7 +1967,7 @@ export function UsuariosPage() {
           placeholder="Buscar por nombre, correo, RFC..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          containerClassName="flex-1 max-w-sm"
+          containerClassName={`flex-1 ${SEARCH_INPUT_MAX_W_SM}`}
         />
         <TipoAdminSelect value={filtroAdmin} onChange={setFiltroAdmin} />
       </div>
@@ -2015,11 +2016,11 @@ export function UsuariosPage() {
                     <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
                     <td className="px-4 py-3">
                       {row.tipoAdministracion === "centralizada" ? (
-                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: "#16653418", color: "#166534" }}>
+                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}>
                           Centralizada
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}>
+                        <span className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit" style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}>
                           Paraestatal
                         </span>
                       )}
@@ -2031,14 +2032,14 @@ export function UsuariosPage() {
                       {row.estatus === "Activo" ? (
                         <span
                           className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
-                          style={{ backgroundColor: "#16653418", color: "#166534" }}
+                          style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}
                         >
                           Activo
                         </span>
                       ) : (
                         <span
                           className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
-                          style={{ backgroundColor: "#7b1d3d18", color: "#7b1d3d" }}
+                          style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}
                         >
                           Inactivo
                         </span>

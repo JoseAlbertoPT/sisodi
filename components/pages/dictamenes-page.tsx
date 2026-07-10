@@ -7,10 +7,10 @@ import dynamic from "next/dynamic"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { StatusBadge } from "@/components/ui/status-badge"
+import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { SearchInput } from "@/components/ui/search-input"
+import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
@@ -500,7 +500,7 @@ export function DictamenesPage() {
           placeholder="Buscar por número, folio, denominación, secretaría..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          containerClassName="flex-1 max-w-sm"
+          containerClassName={`flex-1 ${SEARCH_INPUT_MAX_W_SM}`}
         />
 
         <div className="flex flex-col gap-1">
@@ -570,7 +570,8 @@ export function DictamenesPage() {
                       <td className="px-4 py-3">
                         <StatusBadge
                           label={d.tipoDoc === "dictamen" ? "Dictamen" : "Opinión"}
-                          color="#15803d"
+                          color={C_VERDE_ESTADO}
+                          bgColor={C_VERDE_ESTADO_BG}
                         />
                       </td>
 
@@ -587,7 +588,8 @@ export function DictamenesPage() {
                       <td className="px-4 py-3">
                         <StatusBadge
                           label={d.tipoFirma === "electronica" ? "Electrónica" : "Autógrafa"}
-                          color={d.tipoFirma === "electronica" ? "#0891B2" : "#15803d"}
+                          color={d.tipoFirma === "electronica" ? C_AZUL_REVISION : C_VERDE_ESTADO}
+                          bgColor={d.tipoFirma === "electronica" ? C_AZUL_REVISION_BG : C_VERDE_ESTADO_BG}
                         />
                       </td>
 
