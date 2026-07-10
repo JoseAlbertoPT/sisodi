@@ -31,7 +31,7 @@ export function PageLayout({ title, description, children, noContainer = false }
                   >
                     <PanelLeft size={18} />
                   </button>
-                  <h2 className="text-2xl font-bold text-black">
+                  <h2 className="font-sans text-[32px] font-light leading-[120%] text-content-high">
                     {title}
                   </h2>
                 </div>

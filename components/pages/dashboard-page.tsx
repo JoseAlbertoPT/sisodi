@@ -103,10 +103,10 @@ function GraficaBarrasVertical({
     return (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-card-foreground">{title}</CardTitle>
+          <CardTitle className="ds-label-lg">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground py-8 text-center">{emptyMsg ?? "Sin datos para el periodo seleccionado."}</p>
+          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">{emptyMsg ?? "Sin datos para el periodo seleccionado."}</p>
         </CardContent>
       </Card>
     )
@@ -172,10 +172,10 @@ function GraficaEmisiones({ data, title, barKey, color }: {
     return (
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-card-foreground">{title}</CardTitle>
+          <CardTitle className="ds-label-lg">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground py-8 text-center">Sin emisiones en el periodo seleccionado.</p>
+          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">Sin emisiones en el periodo seleccionado.</p>
         </CardContent>
       </Card>
     )
@@ -459,11 +459,11 @@ function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prest
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-light text-card-foreground">Prestadores por Régimen</CardTitle>
+        <CardTitle className="ds-label-lg">Prestadores por Régimen</CardTitle>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
+          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
           <DonutSimple items={items} subLabel="prestadores" />
         )}
@@ -488,11 +488,11 @@ function GraficaPrestadores({
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-card-foreground">Número de Prestadores de Servicio</CardTitle>
+        <CardTitle className="ds-label-lg">Número de Prestadores de Servicio</CardTitle>
       </CardHeader>
       <CardContent>
         {sinDatos ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
+          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             <BarrasPrestadoresPorTipo
@@ -528,11 +528,11 @@ function GraficaSolicitudesTipo({
 
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-card-foreground">Solicitudes por Administración</CardTitle>
+        <CardTitle className="ds-label-lg">Solicitudes por Administración</CardTitle>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Sin datos para el periodo seleccionado.</p>
+          <p className="ds-label-md text-[var(--color-core-piedra-40)] py-8 text-center">Sin datos para el periodo seleccionado.</p>
         ) : (
           <DonutSimple items={items} subLabel="solicitudes" />
         )}
@@ -550,13 +550,13 @@ function KpiCard({
     <Card className="rounded-xl border border-border bg-card shadow-sm">
       <CardContent className="relative h-[96px]">
         <div
-          className="absolute right-4 top flex h-6 w-6 items-center justify-center rounded-lg"
+          className="absolute right-4 flex h-5 w-5 items-center font-light justify-center rounded-lg"
         >
           <Icon  strokeWidth={1.2}/>
         </div>
 
         <div className="pr-10">
-          <p className="text-sm font-light leading-tight text-card-foreground">
+          <p className="ds-label-sm">
             {label}
           </p>
 
