@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
-import { StatusBadge, estadoBadge, C_ROSA_VINO, C_AMARILLO, C_VERDE_ESTADO } from "@/components/ui/status-badge"
+import { StatusBadge, estadoBadge, C_ROSA_VINO, C_ROSA_VINO_BG, C_AMARILLO, C_AMARILLO_BG, C_VERDE_ESTADO, C_VERDE_ESTADO_BG } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
@@ -1777,11 +1777,12 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                           <span className="text-xs text-muted-foreground">—</span>
                         ) : (() => {
                           const color = sol.slaRestante <= 0 ? C_ROSA_VINO : sol.slaRestante <= 7 ? C_ROSA_VINO : sol.slaRestante <= 15 ? C_AMARILLO : C_VERDE_ESTADO
+                          const bgColor = sol.slaRestante <= 0 ? C_ROSA_VINO_BG : sol.slaRestante <= 7 ? C_ROSA_VINO_BG : sol.slaRestante <= 15 ? C_AMARILLO_BG : C_VERDE_ESTADO_BG
                           const label = sol.slaRestante <= 0 ? "Cerrada" : `${sol.slaRestante} ${sol.slaRestante === 1 ? "día" : "días"}`
                           return (
                             <span
                               className="inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit"
-                              style={{ backgroundColor: `${color}18`, color }}
+                              style={{ backgroundColor: bgColor, color }}
                             >
                               {label}
                             </span>

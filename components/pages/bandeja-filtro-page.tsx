@@ -203,9 +203,15 @@ function getSlaColor(dias: number | null): string {
   if (dias <= 15) return C_AMARILLO
   return C_VERDE_ESTADO
 }
+function getSlaBgColor(dias: number | null): string {
+  if (dias === null) return "#64748b18"
+  if (dias <= 0)  return C_ROSA_VINO_BG
+  if (dias <= 7)  return C_ROSA_VINO_BG
+  if (dias <= 15) return C_AMARILLO_BG
+  return C_VERDE_ESTADO_BG
+}
 function getSlaStyle(dias: number | null): React.CSSProperties {
-  const c = getSlaColor(dias)
-  return { backgroundColor: `${c}18`, color: c }
+  return { backgroundColor: getSlaBgColor(dias), color: getSlaColor(dias) }
 }
 function getSlaLabel(dias: number | null) {
   if (dias === null) return "Sin periodo"
