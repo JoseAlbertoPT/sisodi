@@ -617,22 +617,22 @@ function KpiCard({
 }) {
   return (
     <Card className="rounded-xl border border-border bg-card shadow-sm">
-      <CardContent className="relative h-[96px]">
+      <CardContent className="relative h-[78px] px-4 py-2.5">
         <div
-          className="absolute right-4 top flex h-6 w-6 items-center justify-center rounded-lg"
+          className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-lg"
         >
-          <Icon  strokeWidth={1.2}/>
+          <Icon strokeWidth={1.2} className="h-4 w-4" />
         </div>
 
-        <div className="pr-10">
-          <p className="text-sm font-light leading-tight text-card-foreground">
+        <div className="pr-8">
+          <p className="text-xs font-light leading-tight text-card-foreground truncate">
             {label}
           </p>
 
           {loading ? (
-            <div className="mt-3 h-7 w-12 animate-pulse rounded bg-muted" />
+            <div className="mt-2 h-6 w-10 animate-pulse rounded bg-muted" />
           ) : (
-            <p className="mt-3 text-5xl font-bold leading-none text-card-foreground tabular-nums">
+            <p className="mt-1.5 text-3xl font-bold leading-none text-card-foreground tabular-nums">
               {value.toLocaleString("es-MX")}
             </p>
           )}
