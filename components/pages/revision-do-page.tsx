@@ -1365,6 +1365,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     if (solicitud?.modalidadFirma) setModalidadFirma(solicitud.modalidadFirma)
   }, [solicitud?.modalidadFirma])
   useEffect(() => {
+    const emisionDisponible = filtro === 3 &&
+      (solicitud?.estado === "Pendiente Firma Dictamen" || solicitud?.estado === "Emitido")
+    if (emisionDisponible) setActiveTab(prev => prev === "review" ? "emision" : prev)
+  }, [filtro, solicitud?.estado])
+  useEffect(() => {
     const yaAvanzo = (error?.startsWith('__avanzada__') ?? false) || error === 'Solicitud enviada al siguiente filtro'
     if (yaAvanzo && !solicitud) onBack(filtro)
   }, [error, solicitud, filtro, onBack])
@@ -1660,8 +1665,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 <Shield className="h-7 w-7 text-primary" />
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-semibold text-card-foreground">Modalidad de Firma</h3>
-                <p className="text-sm text-muted-foreground mt-2">
+                <h3 className="ds-title-md text-card-foreground">Modalidad de Firma</h3>
+                <p className="font-sans text-sm font-light text-muted-foreground mt-2">
                   Selecciona cómo se firmará el dictamen. Esta decisión aplicará a todas las firmas del flujo; no se puede mezclar electrónica y autógrafa.
                 </p>
               </div>
@@ -1677,7 +1682,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                     <RadioGroupItem value={opt.value} id={`confirm-firma-${opt.value}`} className="mt-0.5" />
                     <div>
                       <span className="text-sm font-medium text-card-foreground">{opt.label}</span>
-                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                      <p className="text-xs font-light text-muted-foreground">{opt.desc}</p>
                     </div>
                   </label>
                 ))}
@@ -1809,7 +1814,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
             <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-              {!isEmitido && (
+              {!isEmitido && !showEmisionTab && (
                 <button onClick={() => setActiveTab("review")}
                   className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "review" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
                   <ClipboardCheck className="mr-1.5 inline h-4 w-4" />Revisión
@@ -2189,7 +2194,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                             <RadioGroupItem value={opt.value} id={`firma-${opt.value}`} className="mt-0.5" />
                             <div>
                               <span className="text-sm font-medium text-card-foreground">{opt.label}</span>
-                              <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                              <p className="text-xs font-light text-muted-foreground">{opt.desc}</p>
                             </div>
                           </label>
                         ))}
@@ -2214,7 +2219,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       onCambio={(subido) => setSelladoEmisionSubido(subido)}
                     />
                   )}
-                  <Card className="shadow-sm border-border">
+                  {/* <Card className="shadow-sm border-border">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
                         <Users className="h-4 w-4 text-secondary" />Destinatarios
@@ -2235,7 +2240,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                         <p className="text-xs text-destructive mt-2 font-medium">Debe seleccionar al menos un destinatario</p>
                       )}
                     </CardContent>
-                  </Card>
+                  </Card> */}
                   <Card className="shadow-sm border-border sticky bottom-0">
                     <CardContent className="flex items-center justify-end p-4">
                       <Button

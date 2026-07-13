@@ -251,10 +251,10 @@ const DictamenViewModal = React.memo(({
               <FileTypeIcon name="dictamen.pdf" size="md" />
             </div>
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-base font-semibold text-card-foreground truncate">
+              <CardTitle className="ds-title-md truncate text-card-foreground">
                 {titulo}
               </CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              <p className="font-sans text-xs font-light text-muted-foreground mt-0.5 truncate">
                 Número: {dictamen.folioDictamen ?? "—"} | Folio Recepción: {folioRecepcionFormateado}
               </p>
             </div>

@@ -40,7 +40,7 @@ export function ConfirmAlertDialog({
       >
         <AlertDialogHeader className="items-start gap-3 text-left">
           <Info className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-          <AlertDialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+          <AlertDialogTitle className="ds-title-md leading-[1.35]! text-[#2e3b2b]">
             {title}
           </AlertDialogTitle>
           <AlertDialogDescription className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">

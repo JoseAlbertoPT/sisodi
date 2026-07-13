@@ -678,8 +678,8 @@ table.w-full.conditions-table tbody td:not(:first-child) {
   }
   .ds-title-md {
     font-family: var(--font-sans);
-    font-size: 14px;
-    font-weight: 300;
+    font-size: 17px;
+    font-weight: 400;
     line-height: 1.2;
   }
   .ds-title-sm {

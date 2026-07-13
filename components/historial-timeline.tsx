@@ -258,7 +258,7 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
           </div>
           <div className="flex flex-col gap-1 min-w-0 flex-1">
             <DialogHeader>
-              <DialogTitle className="text-[15px] font-bold text-foreground leading-none">
+              <DialogTitle className="ds-title-md leading-none text-foreground">
                 Modificación de solicitud
               </DialogTitle>
             </DialogHeader>

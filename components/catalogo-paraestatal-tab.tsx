@@ -12,7 +12,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
-  Plus, Pencil, Trash2, MoreHorizontal,
+  Plus, Pencil, Trash2, MoreVertical,
   Landmark, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Search, X,
 } from "lucide-react"
 import {
@@ -215,7 +215,7 @@ function OrganoRow({
                   onClick={(e) => e.stopPropagation()}
                   aria-label="Más opciones"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <MoreVertical className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -300,7 +300,7 @@ function OrganoRow({
                             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                             aria-label="Más opciones"
                           >
-                            <MoreHorizontal className="h-3.5 w-3.5" />
+                            <MoreVertical className="h-3.5 w-3.5" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">

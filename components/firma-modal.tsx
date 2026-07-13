@@ -20,8 +20,6 @@ interface Props {
   onGenerarPdfBase64: () => Promise<string>
   onFinalizar: () => Promise<void>
   guardandoFinal: boolean
-  /** Si se define, la firma electrónica exige sellado externo después de
-   *  completar las firmas y antes de habilitar "Enviar". */
   selladoEtapa?: SelladoEtapa
 }
 
@@ -44,15 +42,15 @@ export function FirmaModal({
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-h-[75vh] overflow-y-auto font-sans">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
+          <DialogTitle className="ds-title-md flex items-center gap-3 leading-tight text-[color:var(--color-core-piedra-20)]">
             {esElectronica ? <Shield className="h-5 w-5 text-primary" /> : <FileSignature className="h-5 w-5 text-secondary" />}
             <span className="flex flex-col gap-0.5">
               <span>
-                Firmar dictamen — {folioDictamen ?? <span className="italic text-muted-foreground">sin folio</span>}
+                Firmar dictamen — {folioDictamen ?? <span className="italic text-gray-500">sin folio</span>}
               </span>
-              <span className="text-xs font-normal text-muted-foreground">
+              <span className="font-sans text-[13px] font-light leading-[1.2] text-gray-500">
                 Justificación: {folioJustificacion}
                 {folioRecepcion && <> · Folio Recepción: {folioRecepcion}</>}
               </span>

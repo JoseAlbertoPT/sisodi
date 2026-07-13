@@ -55,10 +55,7 @@ interface Props {
   onGenerarPdfBase64: () => Promise<string>
   onFinalizar: () => Promise<void> | void
   guardandoFinal: boolean
-  /** Si se define, después de que el usuario complete su firma se requiere
-   *  descargar el documento, sellarlo fuera del sistema y volver a subirlo
-   *  antes de habilitar "Enviar". */
-  selladoEtapa?: SelladoEtapa
+   selladoEtapa?: SelladoEtapa
 }
 
 export function FirmaElectronicaTabs({
@@ -257,21 +254,19 @@ export function FirmaElectronicaTabs({
     return (
       <div className="flex flex-col gap-4">
         <Card className="border-border">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Shield className="h-4 w-4 text-primary" /> Iniciar proceso de firma
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
+          <CardContent className="p-4 flex flex-col gap-3">
+            <h3 className="font-sans text-lg font-light leading-tight text-[color:var(--color-core-piedra-20)]">Iniciar proceso de firma</h3>
+            <p className="font-sans text-[13px] font-light leading-[1.2] text-gray-500">
               Se creará el proceso con todos los firmantes requeridos según el tipo de justificación.
               Los firmantes internos (UEFA, Revisor, Validador, Emisor) se identifican automáticamente a partir del historial de aprobaciones.
             </p>
             {error && <p className="text-xs text-destructive">{error}</p>}
-            <Button onClick={handleIniciar} disabled={iniciando}
-              className="gap-1.5 self-end">
-              {iniciando ? "Iniciando..." : "Iniciar proceso"}
-            </Button>
+            <div className="flex justify-center pt-1">
+              <Button onClick={handleIniciar} disabled={iniciando}
+                className="gap-1.5 h-10 px-8 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
+                {iniciando ? "Iniciando..." : "Iniciar proceso"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -301,11 +296,11 @@ export function FirmaElectronicaTabs({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 font-sans text-xs font-light">
           <Badge variant="outline">{firma.estado}</Badge>
-          <span className="font-semibold">{firma.firmados} / {totalFirmantes} firmas</span>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-muted-foreground">Externos: {firma.externos_firmados}/{firma.externos_total}</span>
+          <span className="text-[color:var(--color-core-piedra-20)]">{firma.firmados} / {totalFirmantes} firmas</span>
+          <span className="text-gray-500">·</span>
+          <span className="text-gray-500">Externos: {firma.externos_firmados}/{firma.externos_total}</span>
         </div>
         <div className="h-2 rounded-full bg-muted overflow-hidden">
           <div
@@ -315,11 +310,11 @@ export function FirmaElectronicaTabs({
         </div>
       </div>
 
-      <Card className="border-border">
+      <Card className="border-border mx-3">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <CardTitle className="font-sans text-sm font-light flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
             <Users className="h-4 w-4 text-secondary" /> Externos
-            <span className="text-xs text-muted-foreground ml-1">(firman primero)</span>
+            <span className="font-sans text-xs font-light text-gray-500 ml-1">(firman primero)</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
@@ -341,9 +336,9 @@ export function FirmaElectronicaTabs({
         </CardContent>
       </Card>
 
-      <Card className="border-border">
+      <Card className="border-border mx-3">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <CardTitle className="font-sans text-sm font-light flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
             <Lock className="h-4 w-4 text-muted-foreground" /> {miInterno ? "Mi firma" : "Internos"}
           </CardTitle>
         </CardHeader>
@@ -490,24 +485,24 @@ function FirmanteRow({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-muted-foreground">#{firmante.orden}</span>
-            <span className="text-sm font-semibold">{firmante.rol}</span>
+            <span className="text-xs font-mono text-gray-500">#{firmante.orden}</span>
+            <span className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)]">{firmante.rol}</span>
             {firmante.firmado
               ? <Badge className="bg-secondary/15 text-secondary border-0 text-[10px] gap-1"><CheckCircle2 className="h-3 w-3" />Firmado</Badge>
               : esperandoTurno
                 ? <Badge variant="outline" className="text-[10px]">Esperando turno</Badge>
                 : <Badge className="bg-primary/15 text-primary border-0 text-[10px]">Turno actual</Badge>}
           </div>
-          <p className="text-xs text-muted-foreground">{firmante.cargo}</p>
+          <p className="font-sans text-xs font-light text-gray-500">{firmante.cargo}</p>
           {(firmante.nombre || firmante.rfc) && (
-            <p className="text-xs mt-1">
+            <p className="font-sans text-xs font-light text-[color:var(--color-core-piedra-20)] mt-1">
               {firmante.nombre ?? "—"}
-              {firmante.rfc && <span className="text-muted-foreground ml-1 font-mono">({firmante.rfc})</span>}
-              {firmante.fecha_firma && <span className="text-muted-foreground ml-2">{new Date(firmante.fecha_firma).toLocaleString("es-MX")}</span>}
+              {firmante.rfc && <span className="text-gray-500 ml-1 font-mono">({firmante.rfc})</span>}
+              {firmante.fecha_firma && <span className="text-gray-500 ml-2">{new Date(firmante.fecha_firma).toLocaleString("es-MX")}</span>}
             </p>
           )}
           {firmante.cargo_firmante && (
-            <p className="text-xs mt-0.5 text-muted-foreground italic">Cargo capturado: {firmante.cargo_firmante}</p>
+            <p className="font-sans text-xs font-light text-gray-500 italic mt-0.5">Cargo capturado: {firmante.cargo_firmante}</p>
           )}
         </div>
       </div>
@@ -516,10 +511,10 @@ function FirmanteRow({
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
             <Input readOnly value={link} className="text-[10px] font-mono" />
-            <Button size="sm" variant="outline" onClick={() => onCopiar?.(link)} className="gap-1.5 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => onCopiar?.(link)} className="gap-1.5 shrink-0 border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
               {copiadoId === firmante.id ? "Copiado" : "Copiar"}
             </Button>
-            <Button size="sm" variant="outline" onClick={onRegenerar} disabled={regenerando === firmante.id} className="gap-1.5 shrink-0">
+            <Button size="sm" variant="outline" onClick={onRegenerar} disabled={regenerando === firmante.id} className="gap-1.5 shrink-0 border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
               {regenerando === firmante.id ? "Regenerando..." : "Regenerar"}
             </Button>
           </div>

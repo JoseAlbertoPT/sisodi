@@ -1197,7 +1197,7 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
             <Info className="h-5 w-5 text-primary" />
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Marco Normativo — Aviso Importannte </span>
+            <span className="ds-title-md text-card-foreground">Marco Normativo — Aviso Importannte </span>
           </div>
           <button onClick={onDismiss} className="ml-auto text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
@@ -3768,8 +3768,8 @@ export function NuevaSolicitudPage({
                               <Lock className="h-5 w-5 text-secondary" />
                             </div>
                             <div className="flex flex-col gap-0.5">
-                              <span className="text-sm font-semibold text-card-foreground">¿Confirmar mismas condiciones?</span>
-                              <span className="text-xs text-muted-foreground">Esta acción bloqueará los campos del formulario</span>
+                              <span className="ds-title-md text-card-foreground">¿Confirmar mismas condiciones?</span>
+                              <span className="font-sans text-xs font-light text-muted-foreground">Esta acción bloqueará los campos del formulario</span>
                             </div>
                           </div>
                           <div className="px-6 py-5 flex flex-col gap-4">

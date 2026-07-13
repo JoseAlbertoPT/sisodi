@@ -184,13 +184,13 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
       hideCancel
     />
     <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-md max-h-[75vh] overflow-y-auto font-sans">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
+          <DialogTitle className="ds-title-md flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
             <Shield className="h-5 w-5 text-primary" />
             {titulo ?? "Firmar con tu e.firma"}
           </DialogTitle>
-          {subtitulo && <p className="text-xs text-muted-foreground mt-1">{subtitulo}</p>}
+          {subtitulo && <p className="font-sans text-xs font-light text-gray-500 mt-1">{subtitulo}</p>}
         </DialogHeader>
 
         {exito ? (
@@ -233,12 +233,15 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
 
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => { reset(); onClose() }} disabled={emitiendo}>Cerrar</Button>
+              <Button onClick={() => { reset(); onClose() }} disabled={emitiendo}
+                className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
+                Cerrar
+              </Button>
               <Button
                 type="button"
                 onClick={() => setConfirmEmitirAbierto(true)}
                 disabled={emitiendo || !selladoSubido}
-                className="gap-1.5"
+                className="gap-1.5 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
               >
                 {emitiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
                 Emitir Dictamen
@@ -261,7 +264,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               </div>
             )}
             <div className="flex flex-col gap-2">
-              <Label className="text-xs flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
+              <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
               <Input
                 ref={cargoInputRef}
                 value={cargo}
@@ -274,31 +277,34 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 autoComplete="off"
                 name="cargo-firmante-interno"
               />
-              <p className="text-[10px] text-accent-foreground flex items-center gap-1">
+              <p className="font-sans text-[10px] font-light text-accent-foreground flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
                 Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
               </p>
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
+              <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
               <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} />
-              {cerFile && <span className="text-xs text-muted-foreground truncate">{cerFile.name}</span>}
+              {cerFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{cerFile.name}</span>}
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
+              <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
               <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} />
-              {keyFile && <span className="text-xs text-muted-foreground truncate">{keyFile.name}</span>}
+              {keyFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{keyFile.name}</span>}
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Contraseña de la clave privada</Label>
+              <Label className="font-sans text-xs font-light text-gray-500">Contraseña de la clave privada</Label>
               <Input type="password" value={password} onChange={e => setPassword(e.target.value)} />
             </div>
 
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => { reset(); onClose() }} disabled={trabajando}>Cancelar</Button>
+              <Button onClick={() => { reset(); onClose() }} disabled={trabajando}
+                className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
+                Cancelar
+              </Button>
               <Button type="submit" disabled={trabajando}
-                className="gap-1.5">
+                className="gap-1.5 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
                 {trabajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
                 Firmar
               </Button>

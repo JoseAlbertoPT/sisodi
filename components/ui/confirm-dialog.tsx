@@ -118,8 +118,8 @@ export function ConfirmDialog({
       >
         <div className="flex flex-col gap-3 mb-6">
           <div className="shrink-0" style={{ color: cfg.iconBorderColor }}>{iconEl}</div>
-          <h3 className="font-medium text-gray-900 text-xl leading-tight">{title}</h3>
-          <div className="text-sm text-gray-500">{description}</div>
+          <h3 className="ds-title-md leading-tight text-gray-900">{title}</h3>
+          <div className="font-sans text-sm font-light text-gray-500">{description}</div>
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
 
@@ -169,8 +169,8 @@ export function ObservarDialog({ open, onClose, onConfirm, folio }: ObservarDial
         >
           <div className="flex flex-col gap-3 mb-6">
             <img src="/iconos2/question-circle.svg" alt="" className="h-5 w-5 shrink-0" />
-            <h3 className="font-bold text-gray-900 text-xl leading-tight">¿Estás seguro de observar?</h3>
-            <p className="text-sm text-gray-500">
+            <h3 className="ds-title-md leading-tight text-gray-900">¿Estás seguro de observar?</h3>
+            <p className="font-sans text-sm font-light text-gray-500">
               Vas a marcar <strong className="text-gray-700">{folio}</strong> con observaciones. Se devolverá a la URG.
             </p>
           </div>
@@ -199,8 +199,8 @@ export function ObservarDialog({ open, onClose, onConfirm, folio }: ObservarDial
       >
         <div className="flex flex-col gap-3 mb-6">
           <AlertTriangle className="h-5 w-5 text-[#7c2d5e] shrink-0" />
-          <h3 className="font-bold text-gray-900 text-xl leading-tight">Observar — {folio}</h3>
-          <p className="text-sm text-gray-500">Escriba las observaciones que se enviarán a la URG.</p>
+          <h3 className="ds-title-md leading-tight text-gray-900">Observar — {folio}</h3>
+          <p className="font-sans text-sm font-light text-gray-500">Escriba las observaciones que se enviarán a la URG.</p>
           <Textarea
             placeholder="Describa las observaciones..."
             value={obs}

@@ -1292,8 +1292,8 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
             <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5" />
           </div>
           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-            <span className="text-base font-bold text-[#111827]">Marco Normativo</span>
-            <span className="text-sm text-[#6B7280]">Aviso importante antes de continuar</span>
+            <span className="ds-title-md text-[#111827]">Marco Normativo</span>
+            <span className="font-sans text-sm font-light text-[#6B7280]">Aviso importante antes de continuar</span>
           </div>
           <button onClick={onDismiss}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]">
@@ -1359,7 +1359,7 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between px-6 py-5">
           <div className="flex flex-col gap-1.5">
             <Info className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-            <span className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">Fórmula de llenado</span>
+            <span className="ds-title-md leading-[1.35]! text-[#2e3b2b]">Fórmula de llenado</span>
             <span className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">Guía para redactar correctamente el campo</span>
           </div>
           <button
@@ -4261,8 +4261,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                               <img src="/iconos2/Icon.svg" alt="" className="h-6 w-6" />
                             </div>
                             <div className="flex flex-col items-center gap-1 text-center">
-                              <span className="text-base font-bold text-[#111827]">¿Confirmar mismas condiciones?</span>
-                              <span className="text-sm text-[#6B7280]">Esta acción bloqueará los campos del formulario</span>
+                              <span className="ds-title-md text-[#111827]">¿Confirmar mismas condiciones?</span>
+                              <span className="font-sans text-sm font-light text-[#6B7280]">Esta acción bloqueará los campos del formulario</span>
                             </div>
                           </div>
 

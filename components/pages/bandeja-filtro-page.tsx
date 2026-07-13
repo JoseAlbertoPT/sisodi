@@ -460,7 +460,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
       >
         <div className="flex flex-col gap-3">
           <AlertTriangle className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+          <DialogTitle className="ds-title-md leading-[1.35]! text-[#2e3b2b]">
             Observar — {folio}
           </DialogTitle>
           <p className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">
@@ -615,14 +615,14 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
                 <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
               </div>
-              <DialogTitle className="font-bold text-gray-900 text-base leading-tight pt-2">Asignar Revisor</DialogTitle>
+              <DialogTitle className="ds-title-md leading-tight pt-2 text-gray-900">Asignar Revisor</DialogTitle>
             </div>
             <button type="button" onClick={onClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
           <div className="flex flex-col gap-3 pl-[52px]">
-            <p className="text-sm text-gray-500">
+            <p className="font-sans text-sm font-light text-gray-500">
               Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá.
             </p>
             {loading ? (
@@ -1122,17 +1122,17 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Folio de Recepción</span>
                   {solicitud.folioRecepcion
-                    ? <span className="text-sm font-semibold text-card-foreground font-mono">{folioFormateado}</span>
+                    ? <span className="text-sm text-card-foreground font-mono">{folioFormateado}</span>
                     : <span className="text-sm text-muted-foreground italic">Sin asignar</span>
                   }
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Denominación</span>
-                  <span className="text-sm font-medium text-card-foreground">{denominacion}</span>
+                  <span className="text-sm text-card-foreground">{denominacion}</span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Régimen de Contratación</span>
-                  <span className="text-sm font-medium text-card-foreground">{formatRegimen(raw?.regimen)}</span>
+                  <span className="text-sm text-card-foreground">{formatRegimen(raw?.regimen)}</span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Estado actual</span>
@@ -1144,7 +1144,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Fecha de Recepción DO</span>
-                  <span className="text-sm font-medium text-card-foreground">
+                  <span className="text-sm text-card-foreground">
                     {solicitud.fechaRecepcionDO
                       ? (() => { const [y,m,d] = solicitud.fechaRecepcionDO!.split("-"); return new Date(+y,+m-1,+d).toLocaleDateString("es-MX") })()
                       : "—"}
@@ -1153,7 +1153,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 {solicitud.reingresoCount > 0 && solicitud.lastObservedStage && (
                   <div className="flex flex-col gap-1">
                     <span className="text-xs text-muted-foreground">Última Observacion desde</span>
-                    <span className="text-sm font-medium text-card-foreground">
+                    <span className="text-sm text-card-foreground">
                       {solicitud.lastObservedDate ?? "—"}
                     </span>
                   </div>
@@ -1644,7 +1644,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                           </div>
                         </td>
 
-                        <td className="px-4 py-3 font-medium text-card-foreground">
+                        <td className="px-4 py-3 text-card-foreground">
                           <div className="flex flex-col gap-1">
                             {sol.folioRecepcion
                               ? <span className="font-mono">{formatearFolio(sol.folioRecepcion)}</span>

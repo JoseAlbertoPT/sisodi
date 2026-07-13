@@ -107,7 +107,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold flex items-center gap-2">
+        <h3 className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)] flex items-center gap-2">
           <Stamp className="h-4 w-4 text-secondary" /> Justificaciones pendientes de firmar como {bandejaActual}
         </h3>
       </div>
@@ -152,7 +152,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                       </td>
                       <td className="px-4 py-2 text-right">
                         <Button size="sm" onClick={() => p.mi_firmante_emisor_id && setFirmanteDialogId(p.mi_firmante_emisor_id)}
-                          className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-1.5">
+                          className="rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 gap-1.5">
                           <Stamp className="h-3.5 w-3.5" /> Sellar y emitir
                         </Button>
                       </td>
@@ -177,7 +177,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                     <td className="px-4 py-2 text-right">
                       <Button size="sm" onClick={() => p.mi_firmante_pendiente && setFirmanteDialogId(p.mi_firmante_pendiente.id)}
                         disabled={!esMiTurno}
-                        className="gap-1.5">
+                        className="rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 gap-1.5">
                         <Shield className="h-3.5 w-3.5" /> Firmar
                       </Button>
                     </td>

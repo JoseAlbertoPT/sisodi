@@ -542,7 +542,7 @@ function ConsultaTab() {
               <FileTypeIcon name="justificacion.pdf" size="md" />
             </div>
             <div className="min-w-0 flex-1 text-left">
-              <DialogTitle className="text-base font-semibold text-card-foreground truncate">
+              <DialogTitle className="ds-title-md truncate text-card-foreground">
                 Documento de justificación
               </DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -593,7 +593,7 @@ function ConsultaTab() {
       <Dialog open={showSol} onOpenChange={setShowSol}>
         <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-[#E5E7EB]">
-            <DialogTitle className="text-base font-semibold text-[#1F2937]">
+            <DialogTitle className="ds-title-md text-[#1F2937]">
               Generar dictamen
             </DialogTitle>
           </div>
@@ -928,7 +928,7 @@ function AdministracionTab() {
       <Dialog open={showReutilizaciones} onOpenChange={setShowReutilizaciones}>
         <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl bg-white p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-5 py-4 border-b border-[#E5E7EB]">
-            <DialogTitle className="text-base font-semibold text-[#1F2937]">
+            <DialogTitle className="ds-title-md text-[#1F2937]">
               Reutilizaciones{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
             </DialogTitle>
           </DialogHeader>

@@ -26,7 +26,7 @@ import {
   CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
   RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
-  Shield, FileSignature, X, MoreHorizontal,
+  Shield, FileSignature, X, MoreVertical,
 } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -408,10 +408,10 @@ function DictamenModal({
       <Card className="w-full max-w-2xl max-h-[85vh] flex flex-col shadow-xl border-2 border-primary/20">
         <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0">
           <div>
-            <CardTitle className="text-base font-semibold text-card-foreground flex items-center gap-2">
+            <CardTitle className="ds-title-md flex items-center gap-2 text-card-foreground">
               <FileTypeIcon name="dictamen.pdf" size="sm" />{titulo}
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="font-sans text-xs font-light text-muted-foreground mt-0.5">
               Número: {folioDictamenFormateado} | Folio Recepción: {folioRecepcionFormateado}
             </p>
           </div>
@@ -926,7 +926,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
       >
         <div className="flex flex-col gap-3">
           <AlertTriangle className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+          <DialogTitle className="ds-title-md leading-[1.35]! text-[#2e3b2b]">
             Observar — {folio}
           </DialogTitle>
           <p className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">
@@ -1664,7 +1664,7 @@ export function ValidacionUefaPage() {
 
                     return (
                       <tr key={sol.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-card-foreground">
+                        <td className="px-4 py-3 text-card-foreground">
                           <span>{folioPrincipal}</span>
                           {folioSecundario && (
                             <span className="block text-xs text-muted-foreground mt-0.5">{folioSecundario}</span>
@@ -1698,7 +1698,7 @@ export function ValidacionUefaPage() {
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
+                                  <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">

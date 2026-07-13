@@ -65,10 +65,10 @@ export function ConfirmationModal({
 
           <div className="flex flex-col gap-1">
             <DialogTitle asChild>
-              <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+              <h2 className="ds-title-md text-foreground">{title}</h2>
             </DialogTitle>
             <DialogDescription asChild>
-              <p className="text-sm text-muted-foreground">{message}</p>
+              <p className="font-sans text-sm font-light text-muted-foreground">{message}</p>
             </DialogDescription>
           </div>
 

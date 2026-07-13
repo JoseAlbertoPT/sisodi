@@ -697,8 +697,8 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 <CheckCircle2 className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-card-foreground">Confirmar Registro</h3>
-                <p className="text-[11px] text-muted-foreground">Revisa los datos antes de guardar</p>
+                <h3 className="ds-title-md text-card-foreground">Confirmar Registro</h3>
+                <p className="font-sans text-[11px] font-light text-muted-foreground">Revisa los datos antes de guardar</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setShowConfirm(false)}>
@@ -1236,8 +1236,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               <Pencil className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-sm font-medium text-card-foreground">Editar Usuario</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
+              <h2 className="ds-title-md text-card-foreground">Editar Usuario</h2>
+              <p className="font-sans text-xs font-light text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" onClick={onClose}>
@@ -1649,10 +1649,10 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
               <Shield className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-card-foreground">
+              <h2 className="ds-title-md text-card-foreground">
                 Permisos de menús
               </h2>
-              <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
+              <p className="font-sans text-xs font-light text-muted-foreground">{usuario.nombre}</p>
           </div>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 " onClick={requestClose}>

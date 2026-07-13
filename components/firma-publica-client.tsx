@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
+import dynamic from "next/dynamic"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,8 +12,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   Shield, CheckCircle2, Loader2, AlertCircle, Clock,
-  FileKey, KeyRound, FileText, Briefcase, AlertTriangle,
+  FileKey, KeyRound, Briefcase, AlertTriangle, Info,
 } from "lucide-react"
+
+const PdfPreview = dynamic(() => import("@/components/pdf-preview").then(m => m.PdfPreview), {
+  ssr: false,
+})
 
 async function fileToBase64(file: File): Promise<string> {
   const buf = await file.arrayBuffer()
@@ -229,26 +234,29 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
       <div className="min-h-screen flex items-center justify-center p-6">
         <Card className="w-full max-w-lg border-2 border-accent/30">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertCircle className="h-5 w-5 text-accent-foreground" />
+            <CardTitle className="flex items-center gap-2 font-sans text-base font-normal text-[#2e3b2b]">
+              <Info className="h-6 w-6 text-[#2e3b2b] shrink-0" strokeWidth={1.75} />
               Aviso importante antes de firmar
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+            <div className="flex flex-col gap-2 font-sans text-sm font-light text-[#5d5e5f]">
               <p>Estás por acceder al documento para firmarlo electrónicamente.</p>
               <ul className="list-disc pl-5 flex flex-col gap-1.5">
-                <li>Al presionar <span className="font-semibold text-card-foreground">Acceder</span> se iniciará un cronómetro de <span className="font-semibold text-card-foreground">30 minutos</span>.</li>
+                <li>Al presionar <span className="font-medium text-[#2e3b2b]">Acceder</span> se iniciará un cronómetro de <span className="font-medium text-[#2e3b2b]">30 minutos</span>.</li>
                 <li>Si no firmas en ese tiempo, el link se vencerá y deberás pedir uno nuevo al responsable.</li>
                 <li>Solo una persona debe usar este link. No lo compartas.</li>
-                <li>Necesitarás tu <span className="font-semibold text-card-foreground">certificado (.cer)</span>, <span className="font-semibold text-card-foreground">clave privada (.key)</span> y contraseña de tu e.firma.</li>
+                <li>Necesitarás tu <span className="font-medium text-[#2e3b2b]">certificado (.cer)</span>, <span className="font-medium text-[#2e3b2b]">clave privada (.key)</span> y contraseña de tu e.firma.</li>
               </ul>
             </div>
             {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => window.close()}>Cancelar</Button>
+            <div className="flex justify-between gap-6">
+              <Button onClick={() => window.close()}
+                className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
+                Cancelar
+              </Button>
               <Button onClick={handleAcceder} disabled={accediendo}
-                className="gap-1.5">
+                className="gap-1.5 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
                 {accediendo ? "Accediendo..." : "Acceder y comenzar"}
               </Button>
             </div>
@@ -264,8 +272,8 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <Card className="w-full max-w-md border-destructive/40 border-2">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <Clock className="h-10 w-10 text-destructive" />
-            <h2 className="text-lg font-semibold text-destructive">Link expirado</h2>
-            <p className="text-sm text-muted-foreground text-center">
+            <h2 className="font-sans text-lg font-light text-destructive">Link expirado</h2>
+            <p className="font-sans text-sm font-light text-gray-500 text-center">
               El plazo de 30 minutos para firmar se agotó. Solicita un nuevo link al responsable del proceso.
             </p>
           </CardContent>
@@ -312,14 +320,14 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
       <AlertDialog open={avisoCargoAbierto} onOpenChange={setAvisoCargoAbierto}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
+            <AlertDialogTitle className="ds-title-md flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
               <AlertTriangle className="h-5 w-5 text-accent-foreground" />
               Antes de escribir su cargo
             </AlertDialogTitle>
-            <AlertDialogDescription className="leading-relaxed">
-              Escriba su cargo con <strong>exactitud y sin abreviaturas</strong>.
+            <AlertDialogDescription className="font-sans text-sm font-light leading-relaxed text-gray-500">
+              Escriba su cargo con <strong className="font-medium text-[color:var(--color-core-piedra-20)]">exactitud y sin abreviaturas</strong>.
               Este texto aparecerá impreso junto a su firma en el PDF definitivo y
-              <strong> no podrá modificarse después</strong>.
+              <strong className="font-medium text-[color:var(--color-core-piedra-20)]"> no podrá modificarse después</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -330,8 +338,8 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
       <header className="border-b bg-background sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-3">
           <div>
-            <h1 className="text-sm font-semibold text-card-foreground">Firma de Justificación</h1>
-            <p className="text-xs text-muted-foreground">Portal de firma electrónica — Dirección de Organización</p>
+            <h1 className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)]">Firma de Justificación</h1>
+            <p className="font-sans text-xs font-light text-gray-500">Portal de firma electrónica — Dirección de Organización</p>
           </div>
           <div className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-mono ${timerColor}`}>
             <Clock className="h-4 w-4" /> {mmss}
@@ -339,33 +347,33 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-0 min-h-0">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[45%_55%] gap-0 min-h-0">
         <div className="border-r p-6 overflow-y-auto flex flex-col gap-4">
           {firmanteInfo && (
             <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Estás firmando como</p>
-              <p className="text-lg font-semibold text-card-foreground mt-0.5">{firmanteInfo.rol}</p>
-              <p className="text-xs text-muted-foreground mt-2">Cargo que respaldas con tu firma:</p>
-              <p className="text-sm text-card-foreground mt-0.5">{firmanteInfo.cargo}</p>
+              <p className="font-sans text-xs font-light uppercase tracking-wide text-gray-500">Estás firmando como</p>
+              <p className="font-sans text-lg font-light text-[color:var(--color-core-piedra-20)] mt-0.5">{firmanteInfo.rol}</p>
+              <p className="font-sans text-xs font-light text-gray-500 mt-2">Cargo que respaldas con tu firma:</p>
+              <p className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)] mt-0.5">{firmanteInfo.cargo}</p>
             </div>
           )}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2 font-sans text-base font-light text-[color:var(--color-core-piedra-20)]">
                 <Shield className="h-5 w-5 text-primary" /> Firmar con e.firma
               </CardTitle>
-              <CardDescription className="text-xs">
+              <CardDescription className="font-sans text-xs font-light text-gray-500">
                 Revisa el documento a la derecha y completa tus credenciales para firmar.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleFirmar} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">RFC del firmante</Label>
+                  <Label className="font-sans text-xs font-light text-gray-500">RFC del firmante</Label>
                   <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
+                  <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
                   <Input
                     ref={cargoInputRef}
                     value={cargo}
@@ -378,28 +386,28 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                     autoComplete="off"
                     name="cargo-firmante-externo"
                   />
-                  <p className="text-[10px] text-accent-foreground flex items-center gap-1">
+                  <p className="font-sans text-[10px] font-light text-accent-foreground flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
                     Escriba su cargo correctamente. Aparecerá impreso junto a su firma en el PDF.
                   </p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
+                  <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
                   <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} />
-                  {cerFile && <span className="text-xs text-muted-foreground truncate">{cerFile.name}</span>}
+                  {cerFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{cerFile.name}</span>}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
+                  <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
                   <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} />
-                  {keyFile && <span className="text-xs text-muted-foreground truncate">{keyFile.name}</span>}
+                  {keyFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{keyFile.name}</span>}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">Contraseña de la clave privada</Label>
+                  <Label className="font-sans text-xs font-light text-gray-500">Contraseña de la clave privada</Label>
                   <Input type="password" value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
                 {error && <p className="text-xs text-destructive">{error}</p>}
                 <Button type="submit" disabled={trabajando}
-                  className="gap-1.5 self-end mt-2">
+                  className="gap-1.5 self-end mt-2 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
                   {trabajando ? "Firmando..." : "Firmar ahora"}
                 </Button>
               </form>
@@ -407,11 +415,15 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           </Card>
         </div>
 
-        <div className="bg-muted/30 p-3 flex flex-col min-h-[60vh] lg:min-h-0">
-          <div className="flex items-center gap-2 px-2 pb-2 text-xs text-muted-foreground">
-            <FileText className="h-3.5 w-3.5" /> Documento a firmar
+        <div className="bg-muted/30 p-3 flex flex-col min-h-[50vh] lg:min-h-0">
+          <div className="flex items-center gap-3 mx-2 mb-2 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+            <CheckCircle2 className="h-6 w-6 shrink-0 text-green-500" />
+            <img src="/Iconos1/doc icon-pdf.svg" alt="PDF" className="h-6 w-6 shrink-0" />
+            <span className="text-base font-medium text-gray-800 truncate">Documento a firmar</span>
           </div>
-          <iframe src={pdfSrc} className="flex-1 w-full rounded-md border bg-background" title="Documento a firmar" />
+          <div className="flex-1 min-h-0 rounded-md overflow-hidden border bg-background">
+            <PdfPreview fileUrl={pdfSrc} label="Cargando documento…" />
+          </div>
         </div>
       </div>
     </div>
