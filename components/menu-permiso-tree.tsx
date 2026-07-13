@@ -93,7 +93,7 @@ export function MenuPermisoTree({
                       }}
                       onClick={(e) => e.stopPropagation()}
                     />
-                    <span className="text-sm font-semibold text-card-foreground uppercase tracking-wide truncate">
+                    <span className="text-sm font-medium text-card-foreground uppercase tracking-wide truncate">
                       {node.label}
                     </span>
                   </div>
@@ -204,7 +204,7 @@ function MenuPermisoRow({
         />
         <label
           htmlFor={`menu-${node.id}`}
-          className={`text-sm font-medium cursor-pointer flex-1 ${isChecked ? "text-card-foreground" : "text-muted-foreground"}`}
+          className={`text-sm font-light cursor-pointer flex-1 ${isChecked ? "text-[var(--color-core-piedra-20)]" : "text-muted-foreground"}`}
         >
           {node.label}
         </label>

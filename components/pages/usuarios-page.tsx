@@ -219,7 +219,14 @@ function SecretariaTreeSelector({
   }, [allNodes, autocompleteQuery])
 
   useEffect(() => {
-    if (!selectedId || tree.length === 0) return
+    if (!selectedId) {
+      setSteps([])
+      setSearchQueries({})
+      setAutocompleteQuery("")
+      setJustClearedAt(null)
+      return
+    }
+    if (tree.length === 0) return
     const path = findNodePath(tree, selectedId)
     if (path) {
       setSteps(path)
@@ -328,7 +335,7 @@ function SecretariaTreeSelector({
               <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{level.label}</span>
               {level.selected && (
                   <>
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="text-sm font-light text-[var(--color-core-piedra-20)]">
                     {level.selected.nombre}
                   </span>
                   <button
@@ -390,7 +397,7 @@ function SecretariaTreeSelector({
                             onClick={() => handlePickAtLevel(idx, node)}
                             >
                             <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 group-hover:bg-primary shrink-0 transition-colors" />
-                            <span className="text-xs font-medium text-foreground group-hover:text-primary flex-1 truncate min-w-0 transition-colors">
+                            <span className="text-xs font-light text-[var(--color-core-piedra-20)] group-hover:text-primary flex-1 truncate min-w-0 transition-colors">
                               {query ? <HighlightText text={node.nombre} query={query} /> : node.nombre}
                             </span>
                             {hasChildren && (
@@ -417,7 +424,7 @@ function SecretariaTreeSelector({
                             onSelect(node.id, node.nombre, pathNames)
                           }}
                           >
-                          <span className="text-xs font-medium text-foreground group-hover:text-primary truncate transition-colors">
+                          <span className="text-xs font-light text-[var(--color-core-piedra-20)] group-hover:text-primary truncate transition-colors">
                             <HighlightText text={node.nombre} query={query} />
                           </span>
                           {path.length > 1 && (
@@ -657,7 +664,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             if (key === "correo" && form.correo.trim() && /\S+@\S+\.\S+/.test(form.correo))
               checkUnico("correo", form.correo)
           }}
-          className={`bg-background rounded-full h-9 px-4 text-xs ${hasError ? "border-destructive" : ""}`}
+          className={`bg-background rounded-full h-9 px-4 text-xs font-light text-[var(--color-core-piedra-20)] ${hasError ? "border-destructive" : ""}`}
         />
         {isChecking && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
         {!isChecking && hint && !hasError && <span className="text-[10px] text-muted-foreground">{hint}</span>}
@@ -690,7 +697,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 <CheckCircle2 className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-card-foreground">Confirmar Registro</h3>
+                <h3 className="text-sm font-medium text-card-foreground">Confirmar Registro</h3>
                 <p className="text-[11px] text-muted-foreground">Revisa los datos antes de guardar</p>
               </div>
             </div>
@@ -709,40 +716,40 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
               <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
                 <User className="h-3 w-3 text-primary/70" />
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Datos personales</span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <span className="text-muted-foreground">Nombre:</span>
-                <span className="font-medium text-card-foreground">{form.nombre}</span>
+                <span className="font-light text-[var(--color-core-piedra-20)]">{form.nombre}</span>
                 <span className="text-muted-foreground">Correo:</span>
-                <span className="font-medium text-card-foreground break-all">{form.correo}</span>
+                <span className="font-light text-[var(--color-core-piedra-20)] break-all">{form.correo}</span>
                 <span className="text-muted-foreground">RFC:</span>
-                <span className="font-mono font-medium text-card-foreground">{form.rfc || "—"}</span>
+                <span className="font-mono font-light text-[var(--color-core-piedra-20)]">{form.rfc || "—"}</span>
               </div>
             </div>
             <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
               <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Acceso y permisos</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Acceso y permisos</span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <span className="text-muted-foreground">Contraseña:</span>
-                <span className="font-mono font-medium text-card-foreground">{"•".repeat(form.password.length)}</span>
+                <span className="font-mono font-light text-[var(--color-core-piedra-20)]">{"•".repeat(form.password.length)}</span>
                 <span className="text-muted-foreground">Rol:</span>
-                <span className="font-medium text-card-foreground">{form.rol}</span>
+                <span className="font-light text-[var(--color-core-piedra-20)]">{form.rol}</span>
                 <span className="text-muted-foreground">Estatus:</span>
-                <span className="font-medium text-card-foreground">{form.estatus}</span>
+                <span className="font-light text-[var(--color-core-piedra-20)]">{form.estatus}</span>
               </div>
             </div>
             <div className="rounded-xl border border-border bg-muted/30 p-3 flex flex-col gap-2">
               <div className="flex items-center gap-2 pb-1.5 border-b border-border/50">
                 <Building2 className="h-3 w-3 text-blue-600/70" />
-                <span className="tzext-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Administración</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Tipo de Administración</span>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <span className="text-muted-foreground">Tipo:</span>
-                <span className="font-medium text-card-foreground capitalize">{tipoAdmin}</span>
+                <span className="font-light text-[var(--color-core-piedra-20)] capitalize">{tipoAdmin}</span>
                 <span className="text-muted-foreground">Secretaría:</span>
-                <span className="font-medium text-card-foreground leading-snug">{secretariaDisplay}</span>
+                <span className="font-light text-[var(--color-core-piedra-20)] leading-snug">{secretariaDisplay}</span>
               </div>
             </div>
           </div>
@@ -847,7 +854,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     onBlur={() => {
                       if (form.rfc.trim()) checkUnico("rfc", form.rfc)
                     }}
-                    className={`bg-background h-9 py-2 rounded-full px-4 pr-9 text-xs font-mono tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
+                    className={`bg-background h-9 py-2 rounded-full px-4 pr-9 text-xs font-mono font-light text-[var(--color-core-piedra-20)] tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
                     maxLength={13}
                   />
                   {checking.rfc && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
@@ -925,7 +932,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                           setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
                         }}
                       />
-                      <span className="text-sm font-medium text-card-foreground">Centralizada</span>
+                      <span className="text-sm font-light text-[var(--color-core-piedra-20)]">Centralizada</span>
                     </label>
                   )}
                   {(esAdministrador || tipoAdminFijo === "paraestatal") && (
@@ -939,7 +946,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                           setForm((f) => ({ ...f, secretaria: "", secretariaId: null, secretariaPath: [], unidad: "", unidadId: null, unidadPath: [] }))
                         }}
                       />
-                      <span className="text-sm font-medium text-card-foreground">Paraestatal</span>
+                      <span className="text-sm font-light text-[var(--color-core-piedra-20)]">Paraestatal</span>
                     </label>
                   )}
                 </div>
@@ -975,12 +982,12 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-3.5 w-3.5 text-primary/70" />
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Acceso al menú para <span className="text-primary normal-case">{form.nombre || "el usuario"}</span>
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Selecciona las secciones del menú a las que tendrá acceso. Los permisos pre-seleccionados corresponden al rol <strong>{form.rol}</strong>.
+                Selecciona las secciones del menú a las que tendrá acceso. Los permisos pre-seleccionados corresponden al rol <span className="font-medium">{form.rol}</span>.
               </p>
               {permTreeLoading ? (
                 <div className="flex items-center gap-2 py-6 justify-center text-sm text-muted-foreground">
@@ -1196,7 +1203,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         autoComplete={autoComplete}
         value={form[key] as string}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-        className={`bg-background rounded-full h-9 px-4 text-xs ${errors[key] ? "border-destructive" : ""}`}
+        className={`bg-background rounded-full h-9 px-4 text-xs font-light text-[var(--color-core-piedra-20)] ${errors[key] ? "border-destructive" : ""}`}
       />
       {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
@@ -1229,7 +1236,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               <Pencil className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-card-foreground">Editar Usuario</h2>
+              <h2 className="text-sm font-medium text-card-foreground">Editar Usuario</h2>
               <p className="text-xs text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
             </div>
           </div>
@@ -1240,10 +1247,10 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
 
         <div className="flex items-center gap-3 px-6 py-3 bg-muted/40 border-b border-border/50 shrink-0">
           <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-            <span className="text-sm font-bold text-primary">{initials}</span>
+            <span className="text-sm font-medium text-primary">{initials}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-foreground truncate">{usuario.nombre}</p>
+            <p className="text-xs font-light text-[var(--color-core-piedra-20)] truncate">{usuario.nombre}</p>
             <p className="text-[11px] text-muted-foreground truncate">{usuario.correo} · {usuario.rol}</p>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
@@ -1253,11 +1260,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} className="text-[11px]" />
             )}
             {usuario.tipoAdministracion === "centralizada" ? (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-light" style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}>
                 Centralizada
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-semibold" style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-light" style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}>
                 Paraestatal
               </span>
             )}
@@ -1275,7 +1282,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           <div className="flex flex-col gap-3 mb-6">
             <div className="flex items-center gap-2">
               <User className="h-3.5 w-3.5 text-primary/70" />
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Datos personales</span>
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Datos personales</span>
             </div>
             <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -1289,7 +1296,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                   value={form.rfc}
                   autoComplete="off"
                   onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
-                  className={`bg-background rounded-full h-9 text-xs font-mono tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+                  className={`bg-background rounded-full h-9 text-xs font-mono font-light text-[var(--color-core-piedra-20)] tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
                   maxLength={13}
                 />
                 {!errors.rfc && <span className="text-[10px] text-muted-foreground"></span>}
@@ -1340,7 +1347,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 >
                   <Landmark className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "centralizada" ? "text-primary" : "text-muted-foreground"}`} />
                   <div className="flex flex-col gap-0.5">
-                    <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "centralizada" ? "text-primary" : "text-card-foreground"}`}>Centralizada</span>
+                    <span className={`text-xs font-light leading-tight ${tipoAdmin === "centralizada" ? "text-primary" : "text-[var(--color-core-piedra-20)]"}`}>Centralizada</span>
                     <span className="text-[10px] text-muted-foreground leading-tight">Dependencias del gobierno federal</span>
                   </div>
                 </button>
@@ -1358,7 +1365,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 >
                   <Factory className={`h-4 w-4 mt-0.5 shrink-0 ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-muted-foreground"}`} />
                   <div className="flex flex-col gap-0.5">
-                    <span className={`text-xs font-semibold leading-tight ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-card-foreground"}`}>Paraestatal</span>
+                    <span className={`text-xs font-light leading-tight ${tipoAdmin === "paraestatal" ? "text-secondary" : "text-[var(--color-core-piedra-20)]"}`}>Paraestatal</span>
                     <span className="text-[10px] text-muted-foreground leading-tight">Organismos y entidades paraestatales</span>
                   </div>
                 </button>
@@ -1369,7 +1376,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           <div className="flex flex-col gap-3 mb-6">
             <div className="flex items-center gap-2">
               <Building2 className="h-3.5 w-3.5 text-blue-600/70 shrink-0" />
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Secretaría / Unidad perteneciente</span>
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">Secretaría / Unidad perteneciente</span>
               {form.secretaria && (
                 <span className="ml-auto min-w-0 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-medium">
                   <CheckCircle2 className="h-3 w-3 shrink-0" />
@@ -1398,7 +1405,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Lock className="h-3.5 w-3.5 text-amber-600/70" />
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Cambiar contraseña</span>
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Cambiar contraseña</span>
               <span className="ml-auto text-[10px] text-muted-foreground italic">opcional</span>
             </div>
             <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
