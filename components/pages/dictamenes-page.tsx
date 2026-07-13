@@ -136,8 +136,8 @@ const DictamenViewModal = React.memo(({
 }) => {
   const titulo =
     dictamen.tipoDoc === "dictamen"
-      ? "DICTAMEN TÉCNICO FUNCIONAL"
-      : "OPINIÓN TÉCNICA FUNCIONAL"
+      ? "Dictamen técnico funcional"
+      : "Opinión técnica funcional"
 
   const folioRecepcionFormateado = formatearFolio(dictamen.folioRecepcion)
 
