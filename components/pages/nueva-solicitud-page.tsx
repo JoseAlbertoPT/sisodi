@@ -908,7 +908,7 @@ function DynamicList({
   )
 }
 
-function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
+function StepIndicator({ step, tipo, progresoSeleccion = 0 }: { step: Step; tipo: TipoSolicitud; progresoSeleccion?: number }) {
   const steps = [
     { key: "tipo",       label: "Tipo de Solicitud" },
     { key: "formulario", label: tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento" },
@@ -930,7 +930,7 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
 
         /* Label style */
         const labelStyle: React.CSSProperties = isActive
-          ? { fontSize: 12, fontWeight: 400, color: '#374151', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : isDone
           ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
@@ -946,7 +946,10 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
                 left: '-50%',
                 width: '100%',
                 height: 2,
-                backgroundColor: currentIndex >= i ? '#15803d' : '#773357',
+                backgroundColor: currentIndex >= i ? '#15803d' : '#D1D5DB',
+                backgroundImage: currentIndex >= i
+                  ? undefined
+                  : `linear-gradient(to right, #773357 ${progresoSeleccion * 100}%, #D1D5DB ${progresoSeleccion * 100}%)`,
                 zIndex: 0,
               }} />
             )}
@@ -3992,7 +3995,11 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       {!isEditMode && (
         <div className="py-2 -mx-4 px-4 -mt-3 mb-1">
           <div className="max-w-4xl mx-auto w-full flex justify-center">
-            <StepIndicator step={step} tipo={tipo} />
+            <StepIndicator
+              step={step}
+              tipo={tipo}
+              progresoSeleccion={periodoSeleccionado ? 1 : regimenPeriodo ? 0.5 : 0}
+            />
           </div>
         </div>
       )}
