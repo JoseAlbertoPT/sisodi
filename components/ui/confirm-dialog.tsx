@@ -12,6 +12,7 @@ export type ConfirmVariant = "aprobar" | "observar" | "eliminar" | "default"
 // Shared button styles used across all variants
 const BTN_PINK: React.CSSProperties = { backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }
 const BTN_PURPLE: React.CSSProperties = { backgroundColor: "#773357", color: "#fff", border: "none" }
+const BTN_GRAY: React.CSSProperties = { backgroundColor: "#F3F4F6", color: "#374151", border: "none" }
 
 const VARIANT_CFG = {
   aprobar: {
@@ -101,7 +102,7 @@ export function ConfirmDialog({
   const cancelBtn = (
     <Button
       className="flex-1 rounded-2xl font-medium hover:opacity-90 h-11"
-      style={variant === "eliminar" ? BTN_PURPLE : BTN_PINK}
+      style={variant === "eliminar" ? BTN_PURPLE : BTN_GRAY}
       onClick={onClose}
       disabled={loading}
     >
@@ -117,7 +118,7 @@ export function ConfirmDialog({
       >
         <div className="flex flex-col gap-3 mb-6">
           <div className="shrink-0" style={{ color: cfg.iconBorderColor }}>{iconEl}</div>
-          <h3 className="font-bold text-gray-900 text-xl leading-tight">{title}</h3>
+          <h3 className="font-medium text-gray-900 text-xl leading-tight">{title}</h3>
           <div className="text-sm text-gray-500">{description}</div>
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
@@ -174,7 +175,7 @@ export function ObservarDialog({ open, onClose, onConfirm, folio }: ObservarDial
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button className="flex-1 rounded-2xl font-medium hover:opacity-90 h-11" style={BTN_PINK} onClick={handleClose}>
+            <Button className="flex-1 rounded-2xl font-medium hover:opacity-90 h-11" style={BTN_GRAY} onClick={handleClose}>
               Cancelar
             </Button>
             <Button
@@ -208,7 +209,7 @@ export function ObservarDialog({ open, onClose, onConfirm, folio }: ObservarDial
           />
         </div>
         <div className="flex items-center gap-3">
-          <Button className="flex-1 rounded-2xl font-medium hover:opacity-90 h-11" style={BTN_PINK} onClick={handleClose}>
+          <Button className="flex-1 rounded-2xl font-medium hover:opacity-90 h-11" style={BTN_GRAY} onClick={handleClose}>
             Cancelar
           </Button>
           <Button

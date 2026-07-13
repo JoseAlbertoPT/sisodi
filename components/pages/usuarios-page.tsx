@@ -208,6 +208,7 @@ function SecretariaTreeSelector({
   const [steps, setSteps] = useState<OrganoCentralizadoNode[]>([])
   const [searchQueries, setSearchQueries] = useState<Record<number, string>>({})
   const [autocompleteQuery, setAutocompleteQuery] = useState("")
+  const [justClearedAt, setJustClearedAt] = useState<number | null>(null)
   const allNodes = useMemo(() => flattenTree(tree), [tree])
   const filteredNodes = useMemo(() => {
     const q = autocompleteQuery.trim()
@@ -236,12 +237,14 @@ function SecretariaTreeSelector({
       }
       return next
     })
+    setJustClearedAt(null)
     const pathNames = newSteps.map((n) => n.nombre)
     setAutocompleteQuery(pathNames.join(" › "))
     onSelect(node.id, node.nombre, pathNames)
   }
 
   const handleClearFromLevel = (level: number) => {
+    const hadDeeperSelection = steps.length > level + 1
     const newSteps = steps.slice(0, level)
     setSteps(newSteps)
     setSearchQueries((prev) => {
@@ -251,6 +254,7 @@ function SecretariaTreeSelector({
       }
       return next
     })
+    setJustClearedAt(hadDeeperSelection ? level : null)
     if (newSteps.length > 0) {
       const last = newSteps[newSteps.length - 1]
       const pathNames = newSteps.map((n) => n.nombre)
@@ -265,6 +269,7 @@ function SecretariaTreeSelector({
     setSteps([])
     setSearchQueries({})
     setAutocompleteQuery("")
+    setJustClearedAt(null)
     onSelect(null, "", [])
   }
 
@@ -310,7 +315,7 @@ function SecretariaTreeSelector({
           <div key={idx} className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2.5">
               <div className={`
-                flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold shrink-0
+                flex items-center justify-center h-6 w-6 rounded-full text-xs font-medium shrink-0
                 ${level.selected
                   ? "bg-[#7A1E3A] text-white"
                   : idx === levels.length - 1 && !level.selected
@@ -320,15 +325,15 @@ function SecretariaTreeSelector({
               `}>
                 {level.selected ? <Check className="h-3.5 w-3.5" /> : idx + 1}
               </div>
-              <span className="text-sm font-medium text-muted-foreground">{level.label}</span>
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{level.label}</span>
               {level.selected && (
                   <>
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-sm font-medium text-foreground">
                     {level.selected.nombre}
                   </span>
                   <button
                     type="button"
-                    className="text-xs text-muted-foreground hover:text-destructive ml-auto"
+                    className="text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline ml-auto"
                     onClick={() => handleClearFromLevel(idx)}
                      >
                     Cambiar
@@ -336,11 +341,21 @@ function SecretariaTreeSelector({
                 </>
               )}
             </div>
+            {level.selected && idx > 0 && levels[idx - 1].selected?.nombre === level.selected.nombre && (
+              <span className="ml-7 text-[10px] text-muted-foreground">
+                {steps.slice(0, idx + 1).map((n) => n.nombre).join(" › ")}
+              </span>
+            )}
             {idx < levels.length - 1 && level.selected && (
-              <div className="ml-2.5 h-2 border-l-2 border-[#7A1E3A]/25" />
+              <div className="ml-2.5 h-3 border-l-2 border-dashed border-[#7A1E3A]/40" />
             )}
             {!level.selected && (
               <div className="ml-7">
+                {idx === justClearedAt && (
+                  <p className="text-[10px] text-muted-foreground mb-1">
+                    Se reinició la selección de {STEP_LABELS[Math.min(levelOffset + idx + 1, STEP_LABELS.length - 1)]} — elige de nuevo.
+                  </p>
+                )}
                 {(level.options.length > 5 || idx === 0) && (
                   <div className="relative mb-1.5">
                     <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -364,22 +379,22 @@ function SecretariaTreeSelector({
                     </div>
                   )}
                   {filtered.length > 0 && (
-                    <div className="divide-y divide-border/40">
+                    <div className="divide-y divide-border/60">
                       {filtered.map((node) => {
                         const hasChildren = node.children && node.children.length > 0
                         return (
                           <button
                             key={node.id}
                             type="button"
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-primary/[0.05] transition-colors group"
+                            className="w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-primary/10 transition-colors group"
                             onClick={() => handlePickAtLevel(idx, node)}
                             >
                             <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 group-hover:bg-primary shrink-0 transition-colors" />
-                            <span className="text-xs font-medium text-foreground flex-1 truncate min-w-0">
+                            <span className="text-xs font-medium text-foreground group-hover:text-primary flex-1 truncate min-w-0 transition-colors">
                               {query ? <HighlightText text={node.nombre} query={query} /> : node.nombre}
                             </span>
                             {hasChildren && (
-                              <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
                             )}
                           </button>
                         )
@@ -387,21 +402,22 @@ function SecretariaTreeSelector({
                     </div>
                   )}
                   {treeMatches.length > 0 && (
-                    <div className="divide-y divide-border/40">
+                    <div className="divide-y divide-border/60">
                       {treeMatches.map(({ node, path }) => (
                         <button
                           key={node.id}
                           type="button"
-                          className="w-full flex flex-col px-2.5 py-1.5 text-left hover:bg-primary/[0.05] transition-colors"
+                          className="w-full flex flex-col px-2.5 py-2 text-left hover:bg-primary/10 transition-colors group"
                           onClick={() => {
                             setSteps(path)
                             const pathNames = path.map((n) => n.nombre)
                             setAutocompleteQuery(pathNames.join(" › "))
                             setSearchQueries({})
+                            setJustClearedAt(null)
                             onSelect(node.id, node.nombre, pathNames)
                           }}
                           >
-                          <span className="text-xs font-medium text-foreground truncate">
+                          <span className="text-xs font-medium text-foreground group-hover:text-primary truncate transition-colors">
                             <HighlightText text={node.nombre} query={query} />
                           </span>
                           {path.length > 1 && (
@@ -423,11 +439,11 @@ function SecretariaTreeSelector({
       {steps.length > 0 && (
         <button
           type="button"
-          className="text-[11px] text-muted-foreground hover:text-destructive self-start ml-7 flex items-center gap-1"
+          className="self-start ml-7 flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive"
           onClick={handleReset}
            >
           <X className="h-3 w-3" />
-          Limpiar seleccion
+          Limpiar selección
         </button>
       )}
     </div>
@@ -932,7 +948,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-3.5 w-3.5 text-blue-600/70" />
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Secretaría / Unidad perteneciente</span>
                 </div>
                 <SecretariaTreeSelector
                   tree={tree}

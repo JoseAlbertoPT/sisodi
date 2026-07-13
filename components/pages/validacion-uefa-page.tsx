@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
-import { ActionResultScreen } from "@/components/ui/action-result-screen"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion"
@@ -1541,17 +1541,6 @@ export function ValidacionUefaPage() {
   const selectedSolicitud  = selectedId    !== null ? solicitudes.find(s => s.id === selectedId)    ?? null : null
   const dictamenViewSol    = dictamenViewId !== null ? solicitudes.find(s => s.id === dictamenViewId) ?? null : null
 
-  if (successMsg) return (
-    <PageLayout noContainer>
-      <ActionResultScreen
-        type={successMsg.type}
-        title={successMsg.title}
-        description={successMsg.description}
-        onBack={() => { setSelectedId(null); setSuccessMsg(null) }}
-      />
-    </PageLayout>
-  )
-
   if (selectedSolicitud) return (
     <PageLayout noContainer>
       <>
@@ -1568,6 +1557,14 @@ export function ValidacionUefaPage() {
           onClose={() => setObservarTargetId(null)}
           onConfirm={handleObservarConfirm}
           folio={solicitudes.find(s => s.id === observarTargetId)?.folioJustificacion ?? ""}
+        />
+        <ConfirmationModal
+          open={!!successMsg}
+          type={successMsg?.type === "observe" ? "error" : "success"}
+          title={successMsg?.title ?? ""}
+          message={successMsg?.description ?? ""}
+          primaryAction={{ label: "Regresar a bandeja", onClick: () => { setSelectedId(null); setSuccessMsg(null) } }}
+          onClose={() => { setSelectedId(null); setSuccessMsg(null) }}
         />
       </>
     </PageLayout>

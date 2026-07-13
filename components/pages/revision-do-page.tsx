@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
-import { ActionResultScreen } from "@/components/ui/action-result-screen"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PageLayout } from "@/components/page-layout"
 import {
@@ -1028,14 +1028,10 @@ function FolioRecepcionCard({
     await onAsignar(folio)
     setGuardando(false)
   }
-
-  // Temporal = 3 partes donde la última NO es un año de 4 dígitos (ej. MY-001-1)
-  // Normal con año = 3 partes donde la última SÍ es año (ej. MY-001-2026)
   const esFolioTemporal = (f: string) => {
     const p = f.split("-")
     return p.length >= 3 && !/^\d{4}$/.test(p[p.length - 1])
   }
-
   if (folioRecepcion && (!esExtemporanea || !esFolioTemporal(folioRecepcion))) {
     return (
       <Card className="shadow-sm border-primary/30 border-2 bg-primary/[0.03]">
@@ -1049,7 +1045,6 @@ function FolioRecepcionCard({
       </Card>
     )
   }
-
   if (!esExtemporanea) return null
   if (folioRecepcion) {
     return (
@@ -1156,7 +1151,6 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
   const [revisores,  setRevisores]  = useState<RevisorInfo[]>([])
   const [loading,    setLoading]    = useState(false)
   const [selectedId, setSelectedId] = useState("")
-
   useEffect(() => {
     if (!open) return
     setSelectedId("")
@@ -1171,7 +1165,6 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
       .catch(() => setRevisores([]))
       .finally(() => setLoading(false))
   }, [open])
-
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent showCloseButton={false} className="max-w-sm p-0">
@@ -1218,7 +1211,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               onClick={onClose}
               disabled={guardando}
-              className="h-10 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+              className="h-10 rounded-full border-0 bg-[#F3F4F6] text-sm font-medium text-[#374151] hover:bg-[#E5E7EB] focus-visible:outline-[#e7b400]"
             >
               Cancelar
             </Button>
@@ -1255,7 +1248,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState<string | null>(null)
   const [guardando,  setGuardando]  = useState(false)
-
   const [activeTab,          setActiveTab]          = useState<ActiveTab>("review")
   const [observacionGeneral, setObservacionGeneral] = useState("")
   const [observacionError,   setObservacionError]   = useState("")
@@ -1277,7 +1269,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
   const today = new Date().toISOString().slice(0, 10)
   const [fechaDictaminacion,    setFechaDictaminacion]    = useState(today)
-
   const [calData, setCalData] = useState<{ honorarios: any[]; asimilados: any[]; nombramiento: any[] }>({ honorarios: [], asimilados: [], nombramiento: [] })
   useEffect(() => {
     const year = new Date().getFullYear()
@@ -1373,6 +1364,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   useEffect(() => {
     if (solicitud?.modalidadFirma) setModalidadFirma(solicitud.modalidadFirma)
   }, [solicitud?.modalidadFirma])
+  useEffect(() => {
+    const yaAvanzo = (error?.startsWith('__avanzada__') ?? false) || error === 'Solicitud enviada al siguiente filtro'
+    if (yaAvanzo && !solicitud) onBack(filtro)
+  }, [error, solicitud, filtro, onBack])
   const updateChecklist = useCallback((key: string, valor: ChecklistValor, obs?: string) => {
     setSolicitud(prev => {
       if (!prev) return prev
@@ -1421,9 +1416,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   )
   const isEnTabObservadas = (() => {
     const n = (solicitud?.estado ?? "").toLowerCase()
-    if (filtro === 1) return n === "observado por revisor"
-    if (filtro === 3) return n === "observado por emisor"
-    return (n.includes("observad") || n.includes("devuelta")) && !n.includes("por emisor")
+    return n.includes("observad") || n.includes("devuelta")
   })()
   const isCheckboxSinObsDisabled = (solicitud?.estado ?? "").toLowerCase().includes("observad")
   const canObservar = isEnTabObservadas || (filtro === 1 && checklistYaRealizado) || (
@@ -1541,7 +1534,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
     if (nuevoEstado) setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
   }
-
   const handleAsignarFolioDictamen = useCallback(async (folio: string) => {
     if (!solicitud) return
     try {
@@ -1614,15 +1606,19 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     </div>
   )
 
-  if (error || !solicitud) {
-    const esAvanzada = error?.startsWith('__avanzada__')
-    const esObservada = error === '__avanzada__observar'
-    if (esAvanzada) return (
-      <ActionResultScreen
-        type={esObservada ? "observe" : "approve"}
-        onBack={() => onBack(filtro)}
-      />
-    )
+  const esAvanzada    = error?.startsWith('__avanzada__') ?? false
+  const esObservada   = error === '__avanzada__observar'
+  const esMovioOtro   = error === 'Solicitud enviada al siguiente filtro'
+  const showAvanceModal = esAvanzada || esMovioOtro
+
+  if (showAvanceModal && !solicitud) return (
+    <div className="flex items-center justify-center py-24 gap-3">
+      <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+      <span className="text-sm text-muted-foreground">Regresando a la bandeja...</span>
+    </div>
+  )
+
+  if ((error && !showAvanceModal) || !solicitud) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f3f4f6]">
@@ -1645,6 +1641,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   return (
     <PageLayout noContainer>
     <div className="flex flex-col gap-4 h-full">
+      <ConfirmationModal
+        open={showAvanceModal}
+        type={esObservada ? "error" : "success"}
+        title={esObservada ? "Solicitud marcada con observaciones" : "Solicitud enviada al siguiente filtro"}
+        message={esObservada ? "La solicitud fue devuelta con observaciones." : "La solicitud fue procesada exitosamente y avanzó a la siguiente bandeja."}
+        primaryAction={{ label: "Regresar a bandeja", onClick: () => onBack(filtro) }}
+        onClose={() => onBack(filtro)}
+      />
       {errorToast && (
         <ConfirmToast key={errorToast.key} variant="error" title={errorToast.title} description={errorToast.description} />
       )}
@@ -1783,7 +1787,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           >
             Descagar Justificacion
           </Button>
-          {onEditSolicitud && enTurno && !isEnTabObservadas && (
+          {onEditSolicitud && enTurno && (
             <Button variant="default" size="sm" className="gap-1.5"
               onClick={() => setShowEditarConfirm(true)}
             >
@@ -1793,7 +1797,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           {!isEmitido && <SlaIndicatorLarge diasRestantes={solicitud.slaRestante} />}
         </div>
       </div>
-
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
         <ScrollArea className="h-[calc(100vh-220px)]">
@@ -1835,7 +1838,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
             {activeTab === "review" && !isEmitido && (
               <>
-                {filtro !== 3 && !isEnTabObservadas && (
+                {filtro !== 3 && (
                   <>
                     {filtro === 1 && (
                       <FolioDictamenCard folioDictamen={folioDictamenResuelto} onAsignar={handleAsignarFolioDictamen} esExtemporanea={solicitud.esExtemporanea} />
@@ -2019,7 +2022,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       </Card>
                     )}
 
-                    {filtro === 1 && !isEnTabObservadas && (
+                    {filtro === 1 && (
                       <Card className="shadow-sm border-border">
                         <CardHeader className="pb-3">
                           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2037,7 +2040,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 )}
 
                 {filtro !== 1 && (
-                  <div className={`overflow-hidden rounded-xl border border-border shadow-md transition-opacity ${isEnTabObservadas ? "opacity-60" : ""}`}>
+                  <div className="overflow-hidden rounded-xl border border-border shadow-md">
                     <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #A0845C 0%, #C4A882 100%)" }}>
                       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
                         <Shield className="h-5 w-5 text-white" />
@@ -2045,12 +2048,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-white flex items-center gap-2">
                           Revisión de Dirección General
-                          {isEnTabObservadas && <Lock className="h-3.5 w-3.5 text-white/60" />}
                         </span>
                         <span className="text-xs font-semibold text-white/90">
-                          {isEnTabObservadas
-                            ? `Solicitud en estado "${solicitud?.estado}" — no disponible para edición.`
-                            : "Determine si procede la emisión o requiere observaciones."}
+                          Determine si procede la emisión o requiere observaciones.
                         </span>
                       </div>
                       {sinObservacion && (
@@ -2075,7 +2075,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                           </span>
                         </div>
                       </div>
-                      {!sinObservacion && !isEnTabObservadas && (
+                      {!sinObservacion && (
                         <div className="flex flex-col gap-2">
                           <Label className="text-sm font-medium text-card-foreground">Observación</Label>
                           <Textarea value={observacionGeneral}

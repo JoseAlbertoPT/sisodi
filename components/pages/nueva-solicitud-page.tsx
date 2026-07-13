@@ -13,11 +13,11 @@ import { PageLayout } from "@/components/page-layout"
 import { FileDropZone, UploadedFileRow } from "@/components/ui/file-drop-zone"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { ConfirmToast } from "@/components/ui/confirm-toast"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import { Separator } from "@/components/ui/separator"
 import {
 
-  FilePlus, Upload, ArrowLeft, ArrowRight, Plus, Trash2,
+  Upload, ArrowLeft, ArrowRight, Plus, Trash2,
   FileText, ClipboardList, Save, SendHorizonal, AlertCircle,
   ShieldAlert, CheckCircle2, Clock, Lock, X, Search, Loader2,
   Edit3, RotateCcw, Info, AlertTriangle,
@@ -2915,7 +2915,6 @@ function FormularioNombramiento({
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 px-4 pb-4 pt-0">
-          {/* ── Condiciones de Trabajo ── */}
           <div>
             <Label className="text-sm font-medium mb-3 block">Condiciones de Trabajo</Label>
             <div className="overflow-x-auto overflow-hidden rounded-[8px] border border-[#E5E7EB]">
@@ -3477,7 +3476,7 @@ export type EditSolicitudPayload = {
   estadoSiguienteTrasSave?: string
   adjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
 }
-export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { editSolicitud?: EditSolicitudPayload; onAfterSave?: () => void; onCancel?: () => void }) {
+export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoToBandeja }: { editSolicitud?: EditSolicitudPayload; onAfterSave?: () => void; onCancel?: () => void; onGoToBandeja?: () => void }) {
   const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
   const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")
   const [esRenovacion,        setEsRenovacion]        = useState<string>("")
@@ -3952,103 +3951,6 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
     setErrorEnvio(null); setErrorBorrador(null); setFormData({})
   }, [])
 
-  if (enviado) {
-    return (
-      <>
-        <ConfirmToast
-          variant="success"
-          title="Solicitud enviada a validación"
-          description="La solicitud fue enviada exitosamente."
-        />
-        <div className="flex items-center justify-center min-h-[400px] w-full px-4 py-8">
-          <div className="border border-[#E5E7EB] rounded-xl py-12 px-8 text-center w-full max-w-[600px]">
-            <div className="flex items-center justify-center mx-auto mb-5"
-              style={{ width: 48, height: 48, borderRadius: 12, background: "#d2fad2" }}>
-              <CheckCircle2 style={{ width: 24, height: 24, color: "#1c7d29" }} />
-            </div>
-            <p className="text-lg font-bold mb-2">Solicitud enviada a validación</p>
-            <p className="text-sm text-[#6B7280] mb-6">
-              La solicitud fue enviada exitosamente. Puede seguir su seguimiento en Validación Justificación.
-            </p>
-            {folioGenerado && (
-              <div className="flex justify-center mb-6">
-                <span className="text-sm rounded-full px-4 py-1.5 bg-[#F3F4F6]">
-                  Folio: {folioGenerado}
-                </span>
-              </div>
-            )}
-            <Button onClick={handleReset} className="rounded-full bg-white border-[1.5px] border-[#ccc] text-foreground hover:bg-gray-50 shadow-none">
-              <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
-            </Button>
-          </div>
-        </div>
-      </>
-    )
-  }
-  if (borradorGuardado) {
-    const esEdicion = !!editSolicitud?.id
-    return (
-      <>
-        <ConfirmToast
-          variant="success"
-          title={esEdicion ? "Cambios guardados correctamente" : "Borrador guardado correctamente"}
-          description={esEdicion ? "Los cambios han sido guardados." : "Puede continuar desde Mis Solicitudes → Borradores."}
-        />
-        <div className="flex items-center justify-center min-h-[400px] w-full px-4 py-8">
-          <div className="border border-[#E5E7EB] rounded-xl py-12 px-8 text-center w-full max-w-[600px]">
-            <div className="flex items-center justify-center mx-auto mb-5"
-              style={{ width: 48, height: 48, borderRadius: 12, background: "#d2fad2" }}>
-              <CheckCircle2 style={{ width: 24, height: 24, color: "#1c7d29" }} />
-            </div>
-            <p className="text-lg font-bold mb-2">
-              {esEdicion ? "Cambios guardados correctamente" : "Borrador guardado correctamente"}
-            </p>
-            <p className="text-sm text-[#6B7280] mb-6">
-              {esEdicion
-                ? "Los cambios han sido guardados. Puede cerrar esta pantalla."
-                : "Puede continuar la captura desde \"Mis Solicitudes\" → pestaña \"Borradores\"."}
-            </p>
-            {folioBorradorGuardado && (
-              <div className="flex justify-center mb-6">
-                <span className="text-sm rounded-full px-4 py-1.5 bg-[#F3F4F6]">
-                  Folio: {folioBorradorGuardado}
-                </span>
-              </div>
-            )}
-            {!esEdicion && (
-              <Button onClick={handleReset} className="rounded-full bg-white border-[1.5px] border-[#ccc] text-foreground hover:bg-gray-50 shadow-none">
-                <FilePlus className="mr-1.5 h-4 w-4" />Nueva Solicitud
-              </Button>
-            )}
-          </div>
-        </div>
-      </>
-    )
-  }
-  if (errorEnvio && !enviando) {
-    return (
-      <>
-        <ConfirmToast
-          variant="error"
-          title="La solicitud no se ha podido enviar"
-          description={errorEnvio}
-        />
-        <div className="flex items-center justify-center min-h-[400px] w-full px-4 py-8">
-          <div className="border border-[#E5E7EB] rounded-xl py-12 px-8 text-center w-full max-w-[600px]">
-            <div className="flex items-center justify-center mx-auto mb-5"
-              style={{ width: 48, height: 48, borderRadius: 12, background: "#FEE2E2" }}>
-              <FileText style={{ width: 24, height: 24, color: "#DC2626" }} />
-            </div>
-            <p className="text-lg font-bold mb-2">La solicitud no se ha podido enviar</p>
-            <p className="text-sm text-[#6B7280] mb-6">{errorEnvio}</p>
-            <Button onClick={() => setErrorEnvio(null)} className="rounded-full bg-white border-[1.5px] border-[#ccc] text-foreground hover:bg-gray-50 shadow-none">
-              Volver a la solicitud
-            </Button>
-          </div>
-        </div>
-      </>
-    )
-  }
   const isEditMode = !!editSolicitud?.id
   return (
     <div className="ns-select">
@@ -4058,6 +3960,35 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel }: { e
         ? "Revise y corrija los datos conforme a las observaciones recibidas antes de reenviar."
         : "Inicia el registro de una solicitud para su análisis y emisión de dictamen u opinión técnica funcional."}
     >
+      <ConfirmationModal
+        open={borradorGuardado}
+        type="success"
+        title={isEditMode ? "Cambios guardados correctamente" : "Borrador guardado correctamente"}
+        message={isEditMode
+          ? "Los cambios han sido guardados. Puede cerrar esta pantalla."
+          : "Puede continuar la captura desde \"Mis Solicitudes\" → pestaña \"Borradores\"."}
+        folio={folioBorradorGuardado || undefined}
+        primaryAction={isEditMode ? undefined : { label: "Nueva Solicitud", onClick: handleReset }}
+        onClose={() => setBorradorGuardado(false)}
+      />
+      <ConfirmationModal
+        open={enviado}
+        type="success"
+        title="Solicitud enviada a validación"
+        message="La solicitud fue enviada exitosamente. Puede seguir su seguimiento en Validación Justificación."
+        folio={folioGenerado || undefined}
+        secondaryAction={onGoToBandeja ? { label: "Ir a Mis Solicitudes", onClick: onGoToBandeja } : undefined}
+        primaryAction={{ label: "Nueva Solicitud", onClick: handleReset }}
+        onClose={() => setEnviado(false)}
+      />
+      <ConfirmationModal
+        open={!!errorEnvio && !enviando}
+        type="error"
+        title="La solicitud no se ha podido enviar"
+        message={errorEnvio ?? ""}
+        primaryAction={{ label: "Volver a la solicitud", onClick: () => setErrorEnvio(null) }}
+        onClose={() => setErrorEnvio(null)}
+      />
       {!isEditMode && (
         <div className="py-2 -mx-4 px-4 -mt-3 mb-1">
           <div className="max-w-4xl mx-auto w-full flex justify-center">
