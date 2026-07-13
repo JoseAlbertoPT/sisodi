@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ChevronUp, UserCircle, Pencil, MoveRight, X } from "lucide-react"
+import { ChevronDown, ChevronUp, UserCircle, Pencil, MoveRight, X, CheckCircle2, AlertCircle } from "lucide-react"
+import { type StepStatus } from "@/components/steps-timeline"
 import {
   Dialog,
   DialogContent,
@@ -81,7 +82,6 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── Validación UEFA (alias) ───────────────────────────────────────────────
   if (n === "enviada a validacion (uefa)" || n === "enviada a validacion uefa")
     return {
       label: "Enviada a Validación UEFA",
@@ -96,7 +96,6 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── Pendiente DO / DGDO ───────────────────────────────────────────────────
   if (n === "pendiente do" || n === "enviado a do (recepcion)")
     return {
       label: "Recibida en DGDO",
@@ -104,7 +103,6 @@ function getEvento(
       tipo:  "normal",
     }
 
-  // ── Revisión por Revisor ──────────────────────────────────────────────────
   if (n === "en revision revisor") {
     if (a.includes("en revision revisor"))
       return {
@@ -140,7 +138,6 @@ function getEvento(
       tipo:  "normal",
     }
 
-  // ── ────────────────────────────────────────────────
   if (n === "pendiente firma justificacion")
     return {
       label: "En espera de firma — Justificación",
@@ -148,7 +145,6 @@ function getEvento(
       tipo:  "normal",
     }
 
-  // ── Validación DGDO ──────────────────────────────────────────────────────
   if (n === "en validacion final")
     return {
       label: "Recibida en Validación DGDO",
@@ -163,7 +159,7 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── Revisión por Emisor ───────────────────────────────────────────────────
+
   if (n === "en revision emisor" || n === "en revision do filtro 3")
     return {
       label: "Recibida en Área de Emisión",
@@ -178,7 +174,7 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── Firmas ────────────────────────────────────────────────────────────────
+
   if (n === "pendiente firma dictamen")
     return {
       label: "En espera de firma — Dictamen",
@@ -199,7 +195,7 @@ function getEvento(
       desc:  "pendiente de firma de validación",
       tipo:  "normal",
     }
-  // ── Emisión final ─────────────────────────────────────────────────────────
+
   if (n === "emitido")
     return {
       label: "Dictamen Emitido",
@@ -207,7 +203,7 @@ function getEvento(
       tipo:  "emision",
     }
 
-  // ── Rechazado ─────────────────────────────────────────────────────────────
+
   if (n === "rechazado")
     return {
       label: "Solicitud Rechazada",
@@ -215,7 +211,7 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── En proceso DO ─────────────────────────────────────────────────────────
+
   if (n === "en proceso do" || n === "aprobado")
     return {
       label: "En proceso DGDO",
@@ -347,38 +343,26 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
   )
 }
 
-/* ── Dot icon for timeline ────────────────────────────────────────────────── */
+
+const TIPO_A_STATUS: Record<Tipo, StepStatus> = {
+  captura:     "success",
+  normal:      "success",
+  emision:     "success",
+  observacion: "error",
+  edicion:     "warning",
+}
+
+const STATUS_DOT: Record<StepStatus, { bg: string; Icon: typeof CheckCircle2 }> = {
+  success: { bg: "#2E7D32", Icon: CheckCircle2 },
+  warning: { bg: "#8A6D1D", Icon: AlertCircle },
+  error:   { bg: "#C62828", Icon: AlertCircle },
+}
+
 function TimelineDot({ tipo }: { tipo: Tipo }) {
-  if (tipo === "emision")
-    return (
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2D3B2D] ring-4 ring-[#2D3B2D]/10">
-        <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-    )
-  if (tipo === "observacion")
-    return (
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#773357] ring-4 ring-[#773357]/15">
-        <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </div>
-    )
-  if (tipo === "edicion")
-    return (
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E8DCC8] ring-4 ring-[#C4A882]/15">
-        <svg className="h-3.5 w-3.5 text-[#8B6F47]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      </div>
-    )
-  /* captura / normal / emision */
+  const { bg, Icon } = STATUS_DOT[TIPO_A_STATUS[tipo]]
   return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2D3B2D] ring-4 ring-[#2D3B2D]/15">
-      <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-      </svg>
+    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: bg }}>
+      <Icon className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
     </div>
   )
 }
@@ -419,7 +403,7 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
             {/* ── Left col: dot + vertical line ── */}
             <div className="flex flex-col items-center">
               <TimelineDot tipo={tipo} />
-              {!isLast && <div className="w-px flex-1 bg-[#E5E7EB] mt-1 mb-1 min-h-[20px]" />}
+              {!isLast && <div className="w-0 flex-1 border-l-2 border-dashed border-[#C7C2B3] mt-1 mb-1 min-h-[20px]" />}
             </div>
 
             {/* ── Right col: content ── */}
