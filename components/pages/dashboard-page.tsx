@@ -983,13 +983,13 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
         </DialogContent>
       </Dialog>
       <Dialog open={confirmarDescarga} onOpenChange={setConfirmarDescarga}>
-  <DialogContent className="max-w-md">
-    <DialogHeader>
-      <DialogTitle className="ds-title-md flex items-center gap-2">
-        <FileSpreadsheet className="h-6 w-6 text-secondary" />
+  <DialogContent className="max-w-sm sm:max-w-sm">
+    <DialogHeader className="px-4 pt-4 pb-3 gap-0.5">
+      <DialogTitle className="flex items-center gap-2" style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.2 }}>
+        <FileSpreadsheet className="h-5 w-5 text-secondary" />
         Confirmar descarga
       </DialogTitle>
-      <p className="font-sans text-sm font-light text-muted-foreground pt-1">
+      <p className="font-sans text-base font-light text-muted-foreground">
         ¿Está seguro de descargar el reporte{" "}
         <strong className="text-card-foreground">
           {reporteSeleccionado?.titulo}
@@ -998,16 +998,19 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       </p>
     </DialogHeader>
 
-    <DialogFooter className="gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]">
+    <DialogFooter className="gap-2 px-4 pt-3 pb-3 mt-0 border-t border-[#e4e3dc] sm:justify-between">
       <Button
         type="button"
-        className="rounded-full h-10 px-6 font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
+        variant="outline"
+        size="sm"
+        className="rounded-full h-9 px-5 text-base font-medium border-[1.5px] border-[#D1D5DB] shadow-sm bg-white text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#6B7280] active:bg-white active:text-[#6B7280] focus:bg-white focus:text-[#6B7280]"
         onClick={() => setConfirmarDescarga(false)} >
         Cancelar
       </Button>
       <Button
         type="button"
-        className="rounded-full h-10 px-6 font-medium shadow-sm bg-[#773357] hover:bg-[#773357] active:bg-[#773357] text-white active:text-white border-0"
+        size="sm"
+        className="rounded-full h-9 px-5 text-base font-medium shadow-sm bg-[#773357] hover:bg-[#773357] active:bg-[#773357] text-white active:text-white border-0"
         disabled={!reporteSeleccionado || descargando === reporteSeleccionado.id}
         onClick={() => {
           if (!reporteSeleccionado) return
