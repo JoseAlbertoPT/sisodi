@@ -35,6 +35,7 @@ import { type EditSolicitudPayload, type FormularioData } from "@/components/pag
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 import { FirmaModal } from "@/components/firma-modal"
+import { FirmaAutografaPanel } from "@/components/firma-autografa-panel"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
@@ -1308,6 +1309,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [modalidadFirma,        setModalidadFirma]        = useState<"electronica" | "autografa">("electronica")
   const [selectedDestinatarios, setSelectedDestinatarios] = useState<string[]>([])
   const [selladoEmisionSubido,  setSelladoEmisionSubido]  = useState(false)
+  const [autografaArchivoSubido, setAutografaArchivoSubido] = useState(false)
   const [firmaEmisionAbierta,   setFirmaEmisionAbierta]   = useState(false)
 
   const cargar = useCallback(async () => {
@@ -1602,7 +1604,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
     (modalidadFirma === "electronica"
       ? true
-      : selladoEmisionSubido)
+      : autografaArchivoSubido && selladoEmisionSubido)
 
   if (loading) return (
     <div className="flex items-center justify-center py-24 gap-3">
@@ -2179,28 +2181,37 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       />
                     </CardContent>
                   </Card>
-                  <Card className="shadow-sm border-border">
-                    <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-card-foreground">Modalidad de Firma</CardTitle></CardHeader>
-                    <CardContent>
-                      <RadioGroup value={modalidadFirma}
-                        onValueChange={v => { setModalidadFirma(v as any); if (v !== "electronica") setSelladoEmisionSubido(false) }}
-                        className="flex flex-col gap-3">
-                        {[
-                          { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
-                          { value: "autografa",   label: "Firma Autógrafa",   desc: "Descargue, firme y suba el documento" },
-                        ].map(opt => (
-                          <label key={opt.value} htmlFor={`firma-${opt.value}`}
-                            className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-3 transition-colors ${modalidadFirma === opt.value ? "border-secondary bg-secondary/5" : "border-border hover:border-secondary/50"}`}>
-                            <RadioGroupItem value={opt.value} id={`firma-${opt.value}`} className="mt-0.5" />
-                            <div>
-                              <span className="text-sm font-medium text-card-foreground">{opt.label}</span>
-                              <p className="text-xs font-light text-muted-foreground">{opt.desc}</p>
-                            </div>
-                          </label>
-                        ))}
-                      </RadioGroup>
-                    </CardContent>
-                  </Card>
+                  {solicitud?.modalidadFirma !== "electronica" && (
+                    <Card className="shadow-sm border-border">
+                      <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-card-foreground">Modalidad de Firma</CardTitle></CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-3 rounded-lg border-2 border-secondary bg-secondary/5 p-3">
+                          <img src="/Iconos1/step-check.svg" width={16} height={16} alt="" className="shrink-0" />
+                          <div>
+                            <span className="text-sm font-medium text-card-foreground">Firma Autógrafa</span>
+                            <p className="text-xs font-light text-muted-foreground">Descargue, firme y suba el documento</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {modalidadFirma === "autografa" && solicitud && (
+                    <FirmaAutografaPanel
+                      solicitudId={solicitud.id}
+                      folioJustificacion={solicitud.folioJustificacion ?? `SOL-${solicitud.id}`}
+                      currentUserId={(user as any)?.id ?? ""}
+                      onGenerarPdf={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion ?? `SOL-${solicitud.id}`)}
+                      onFinalizar={() => {}}
+                      guardandoFinal={false}
+                      hideEnviar
+                      onArchivoChange={setAutografaArchivoSubido}
+                    />
+                  )}
+                  {modalidadFirma === "autografa" && solicitud && (
+                    <p className="text-xs font-medium text-muted-foreground px-1 -mb-1">
+                      Cuando termines de subir el documento firmado, continúa con el sellado abajo:
+                    </p>
+                  )}
                   {modalidadFirma === "autografa" && solicitud && (
                     <SelladoDocumentoSection
                       solicitudId={solicitud.id}
