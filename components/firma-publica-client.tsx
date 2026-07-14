@@ -323,7 +323,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader className="items-start gap-3 text-left">
             <Info className="h-6 w-6 text-[#2e3b2b]" strokeWidth={1.75} />
-            <AlertDialogTitle className="ds-title-md text-[color:var(--color-core-piedra-20)]">
+            <AlertDialogTitle className="ds-title-md font-light text-[color:var(--color-core-piedra-20)]">
               Antes de escribir su cargo
             </AlertDialogTitle>
             <AlertDialogDescription className="font-sans text-sm font-light leading-relaxed text-gray-500">

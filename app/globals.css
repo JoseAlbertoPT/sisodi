@@ -878,3 +878,13 @@ button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):focus {
 .ds-select-trigger:not([data-placeholder]) * {
   color: var(--brand-vino) !important;
 }
+
+/* ── Campos sin resaltado de foco (vino) — ej. formulario "Firmar como" ── */
+.no-focus-paint:focus,
+.no-focus-paint:focus-visible {
+  border-color: #c6c6c6 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-color: transparent !important;
+}

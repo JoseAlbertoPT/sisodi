@@ -2183,7 +2183,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                   </Card>
                   {solicitud?.modalidadFirma !== "electronica" && (
                     <Card className="shadow-sm border-border">
-                      <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-card-foreground">Modalidad de Firma</CardTitle></CardHeader>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+                          <img src="/iconos2/Shield.svg" width={16} height={16} alt="" />
+                          Modalidad de Firma
+                        </CardTitle>
+                      </CardHeader>
                       <CardContent>
                         <div className="flex items-center gap-3 rounded-lg border-2 border-secondary bg-secondary/5 p-3">
                           <img src="/Iconos1/step-check.svg" width={16} height={16} alt="" className="shrink-0" />

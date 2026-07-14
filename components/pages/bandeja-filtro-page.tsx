@@ -178,7 +178,7 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
     if (estadoNorm === estadoEnRevision.toLowerCase()) return "nuevas"
   }
   if (filtro === 3) {
-    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma emisor") return "pendientes_firma"
+    if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma emisor" || estadoNorm === "pendiente firma justificacion") return "pendientes_firma"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
       if (filtro === 3) return "revision"
       return (s.openedInFiltro[filtro] || !!s.folioDictamen) ? "revision" : "nuevas"
@@ -189,7 +189,6 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
       "observado por revisor",
       "aceptado por revisor",
       "aprobado por revisor",
-      "pendiente firma justificacion",
       "en validacion final",
     ])
     if (preEmisor.has(estadoNorm)) return "nuevas"

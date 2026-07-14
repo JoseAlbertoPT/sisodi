@@ -54,7 +54,7 @@ export function FirmaModal({
             <DialogTitle className="ds-title-md flex items-center gap-3 leading-tight text-[color:var(--color-core-piedra-20)]">
               {esElectronica ? <img src="/iconos2/Shield.svg" alt="" className="h-5 w-5 shrink-0" /> : <FileSignature className="h-5 w-5 text-secondary" />}
               <span className="flex flex-col gap-0.5">
-                <span className={esElectronica && !procesoIniciado ? "text-base font-light" : undefined}>
+                <span className={esElectronica && !procesoIniciado ? "text-base font-light" : "font-light"}>
                   {esElectronica && !procesoIniciado ? "Iniciar Proceso de Firmar dictamen" : "Firmar dictamen"} — {folioDictamen ?? <span className="italic text-gray-500">sin folio</span>}
                 </span>
                 <span className="font-sans text-sm font-light leading-[1.3] text-gray-500">
