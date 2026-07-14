@@ -1444,7 +1444,12 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       pendientes_asignacion: 0, en_validacion: 0, pendientes_firma: 0,
       todas: 0, solicitudes: 0,
     }
-    c.todas = solicitudes.length
+    c.todas = solicitudes.filter(s => {
+      const tab = classifySolicitud(s, filtro)
+      if (filtro === 3 && tab === "todas") return false
+      if (filtro === 2) return tab !== "pendientes_asignacion"
+      return true
+    }).length
     solicitudes.forEach(s => {
       const tab = classifySolicitud(s, filtro)
       if (tab !== "todas") c[tab]++
