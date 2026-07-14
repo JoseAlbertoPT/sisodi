@@ -60,13 +60,10 @@ export function FirmaAutografaPanel({
       setLoading(false)
     }
   }, [solicitudId])
-
   useEffect(() => { cargar() }, [cargar])
-
   useEffect(() => {
     onArchivoChange?.(Boolean(firma?.archivo_firmado))
   }, [firma, onArchivoChange])
-
   const handleUpload = async (file: File) => {
     setUploading(true); setError(null)
     try {
@@ -84,6 +81,7 @@ export function FirmaAutografaPanel({
       setUploading(false)
     }
   }
+
   const handleClear = async () => {
     setClearing(true); setError(null)
     try {
@@ -120,15 +118,15 @@ export function FirmaAutografaPanel({
         </CardHeader>
         <CardContent className="px-5 pb-1 pt-0">
           <Button
-            variant="outline"
             size="sm"
             onClick={() => onGenerarPdf()}
-            className="gap-1.5"
+            className="gap-1.5 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
           >
             Descargar PDF ({folioJustificacion})
           </Button>
         </CardContent>
       </Card>
+
       <Card className="border-border py-4 gap-3">
         <CardHeader className="px-5 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
