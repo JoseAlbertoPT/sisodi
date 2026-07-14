@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogAction,
+} from "@/components/ui/alert-dialog"
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, Loader2, FileKey, KeyRound, CheckCircle2, Briefcase, AlertCircle, AlertTriangle, History } from "lucide-react"
+import { Shield, Loader2, FileKey, KeyRound, CheckCircle2, Briefcase, AlertCircle, AlertTriangle, Info, History } from "lucide-react"
 import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 
 async function fileToBase64(file: File): Promise<string> {
@@ -27,12 +30,8 @@ interface Props {
   subtitulo?: string
   bandeja?: string | null
   folio?: string | null
-  /** Requerido cuando bandeja === "emision" para descargar el dictamen y subir el sellado. */
   solicitudId?: number | null
-  /** Folio del dictamen (para nombrar la descarga). */
   folioDictamen?: string | null
-  /** Si true, abre directo en el paso 2 (sellado + emitir). Útil cuando el usuario
-   *  ya firmó pero abandonó el flujo y vuelve a entrar para terminar de emitir. */
   iniciarEnSellado?: boolean
   onFirmado?: () => void
 }
@@ -50,8 +49,6 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
   const [confirmEmitirAbierto, setConfirmEmitirAbierto] = useState(false)
   const [selladoSubido, setSelladoSubido] = useState(false)
   const [ultimoCargo, setUltimoCargo] = useState<string | null>(null)
-  /** En el flujo del emisor: pasa a true cuando ya se firmó electrónicamente
-   *  pero aún falta subir el sellado y emitir. */
   const [firmaCompleta, setFirmaCompleta] = useState(!!iniciarEnSellado)
   const [emitiendo, setEmitiendo] = useState(false)
   const cargoInputRef = useRef<HTMLInputElement | null>(null)
@@ -62,6 +59,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
 
   const esEmisor = bandeja === "emision"
   const requiereSellado = esEmisor && !!solicitudId
+  const camposIncompletos = error === "Completa cargo, .cer, .key y contraseña"
 
   useEffect(() => {
     if (!open || !usuarioId) return
@@ -126,7 +124,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
         return
       }
       setExito(true)
-      setTimeout(() => { onFirmado?.(); reset(); onClose() }, 1500)
+      onFirmado?.()
     } catch (e: any) {
       setError(e?.message ?? "Error de conexión")
     } finally {
@@ -147,14 +145,14 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al emitir"); return }
       setExito(true)
-      setTimeout(() => { onFirmado?.(); reset(); onClose() }, 1500)
+      onFirmado?.()
     } catch (e: any) {
       setError(e?.message ?? "Error de conexión")
     } finally {
       setEmitiendo(false)
     }
   }
-
+  const cerrarExito = () => { reset(); onClose() }
   return (
     <>
     <ConfirmAlertDialog
@@ -167,51 +165,71 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
         El expediente quedará <strong>bloqueado</strong> y pasará a la sección de Dictámenes.
         Esta acción <strong>no se puede revertir</strong>.
       </>}
-      confirmLabel="Sí, emitir dictamen"
+      confirmLabel="Emitir dictamen"
     />
-    <ConfirmDialog
-      open={avisoCargoAbierto}
-      onClose={() => setAvisoCargoAbierto(false)}
-      onConfirm={aceptarAvisoCargo}
-      variant="default"
-      title="Antes de escribir su cargo"
-      description={<>
-        Escriba su cargo con <strong>exactitud y sin abreviaturas</strong>.
-        Este texto aparecerá impreso junto a su firma en el PDF definitivo y
-        <strong> no podrá modificarse después</strong>.
-      </>}
-      confirmLabel="Entendido"
-      hideCancel
-    />
+    <AlertDialog open={avisoCargoAbierto} onOpenChange={setAvisoCargoAbierto}>
+      <AlertDialogContent className="sm:max-w-md">
+        <AlertDialogHeader className="items-start gap-3 text-left">
+          <Info className="h-6 w-6 text-[#2e3b2b]" strokeWidth={1.75} />
+          <AlertDialogTitle className="ds-title-md text-[color:var(--color-core-piedra-20)]">
+            Antes de escribir su cargo
+          </AlertDialogTitle>
+          <AlertDialogDescription className="font-sans text-sm font-light leading-relaxed text-gray-500">
+            Escriba su cargo con <strong className="font-medium text-[color:var(--color-core-piedra-20)]">exactitud y sin abreviaturas</strong>.
+            Este texto aparecerá impreso junto a su firma en el PDF definitivo y
+            <strong className="font-medium text-[color:var(--color-core-piedra-20)]"> no podrá modificarse después</strong>.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="sm:justify-center">
+          <AlertDialogAction onClick={aceptarAvisoCargo}>Entendido</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
-      <DialogContent className="sm:max-w-md max-h-[75vh] overflow-y-auto font-sans">
-        <DialogHeader>
-          <DialogTitle className="ds-title-md flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
-            <Shield className="h-5 w-5 text-primary" />
-            {titulo ?? "Firmar con tu e.firma"}
-          </DialogTitle>
-          {subtitulo && <p className="font-sans text-xs font-light text-gray-500 mt-1">{subtitulo}</p>}
-        </DialogHeader>
-
+      <DialogContent
+        className={`overflow-y-auto font-sans ${exito ? "sm:max-w-md max-h-[75vh]" : "sm:max-w-3xl max-h-[85vh]"}`}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        showCloseButton={false}
+      >
+        {!exito && (
+          <DialogHeader>
+            <DialogTitle className="ds-title-md flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
+              <Shield className="h-5 w-5 text-primary" />
+              {titulo ?? "Firmar con tu e.firma"}
+            </DialogTitle>
+            {subtitulo && <p className="font-sans text-xs font-light text-gray-500 mt-1">{subtitulo}</p>}
+          </DialogHeader>
+        )}
+        <div className="px-6 pb-6">
         {exito ? (
           <div className="flex flex-col items-center gap-3 py-8">
-            <CheckCircle2 className="h-12 w-12 text-secondary" />
-            <p className="text-sm font-medium">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#d2fad2]">
+              <CheckCircle2 className="h-8 w-8 text-[#1c7d29]" />
+            </div>
+            <h2 className="font-sans text-lg font-light text-foreground">
               {requiereSellado ? "¡Dictamen emitido!" : "¡Firma registrada!"}
+            </h2>
+            <p className="font-sans text-sm font-light text-gray-500 text-center">
+              {requiereSellado
+                ? "El dictamen fue sellado y emitido correctamente."
+                : "Tu firma quedó registrada correctamente."}
             </p>
+            <Button onClick={cerrarExito}
+              className="mt-2 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400] px-8">
+              Cerrar
+            </Button>
           </div>
         ) : firmaCompleta ? (
           <div className="flex flex-col gap-4 pt-2">
             <div className="rounded-md border border-secondary/40 bg-secondary/10 p-3 flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
               <div className="flex flex-col gap-0.5">
-                <p className="text-xs font-semibold text-secondary">Firma registrada correctamente</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="font-sans text-xs font-medium text-secondary">Firma registrada correctamente</p>
+                <p className="font-sans text-[11px] font-light text-gray-500">
                   Falta sellar el dictamen y emitirlo. Descargue, agregue el sello fuera del sistema y suba el archivo.
                 </p>
               </div>
             </div>
-
             {solicitudId && (
               <SelladoDocumentoSection
                 solicitudId={solicitudId}
@@ -243,19 +261,19 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 disabled={emitiendo || !selladoSubido}
                 className="gap-1.5 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
               >
-                {emitiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                {emitiendo && <Loader2 className="h-4 w-4 animate-spin" />}
                 Emitir Dictamen
               </Button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3 pt-2">
+          <form onSubmit={handleSubmit} className={`flex flex-col gap-5 pt-2 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
             {esEmisor && (
               <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-0.5">
-                  <p className="text-xs font-semibold text-destructive">Firma del emisor</p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="font-sans text-xs font-medium text-destructive">Firma del emisor</p>
+                  <p className="font-sans text-[11px] font-light text-gray-500">
                     {requiereSellado
                       ? "Después de firmar electrónicamente, deberá descargar el dictamen, sellarlo y subirlo para emitirlo."
                       : "Al firmar, el dictamen será emitido oficialmente y ya no podrá modificarse."}
@@ -264,40 +282,46 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               </div>
             )}
             <div className="flex flex-col gap-2">
-              <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
+              <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><Briefcase className="h-3.5 w-3.5 shrink-0" /> Cargo / Puesto <span className="text-destructive">*</span></Label>
               <Input
                 ref={cargoInputRef}
                 value={cargo}
                 readOnly={!cargoHabilitado}
+                tabIndex={cargoHabilitado ? undefined : -1}
                 onMouseDown={e => { if (!cargoHabilitado) { e.preventDefault(); setAvisoCargoAbierto(true) } }}
                 onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
                 onChange={e => setCargo(e.target.value.toUpperCase())}
                 placeholder="EJ. DIRECTOR DE ANÁLISIS NORMATIVO"
-                className={`uppercase ${!cargoHabilitado ? "cursor-pointer" : ""}`}
+                className={`h-11 py-2.5 uppercase focus-visible:ring-0 focus-visible:border-input ${!cargoHabilitado ? "cursor-pointer" : ""} ${camposIncompletos && !cargo.trim() ? "border-destructive" : ""}`}
                 autoComplete="off"
                 name="cargo-firmante-interno"
               />
-              <p className="font-sans text-[10px] font-light text-accent-foreground flex items-center gap-1">
+              <p className="font-sans text-[10px] font-light text-gray-500 flex items-center gap-1 mt-2">
                 <AlertCircle className="h-3 w-3" />
                 Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
               </p>
             </div>
-            <div className="flex flex-col gap-1">
-              <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
-              <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} />
+            <div className="flex flex-col gap-2">
+              <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><FileKey className="h-3.5 w-3.5 shrink-0" /> Certificado (.cer) <span className="text-destructive">*</span></Label>
+              <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} className={`h-11 py-2.5 file:mr-3 focus-visible:ring-0 focus-visible:border-input ${camposIncompletos && !cerFile ? "border-destructive" : ""}`} />
               {cerFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{cerFile.name}</span>}
             </div>
-            <div className="flex flex-col gap-1">
-              <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
-              <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} />
+            <div className="flex flex-col gap-2">
+              <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><KeyRound className="h-3.5 w-3.5 shrink-0" /> Clave privada (.key) <span className="text-destructive">*</span></Label>
+              <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} className={`h-11 py-2.5 file:mr-3 focus-visible:ring-0 focus-visible:border-input ${camposIncompletos && !keyFile ? "border-destructive" : ""}`} />
               {keyFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{keyFile.name}</span>}
             </div>
-            <div className="flex flex-col gap-1">
-              <Label className="font-sans text-xs font-light text-gray-500">Contraseña de la clave privada</Label>
-              <Input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+            <div className="flex flex-col gap-2">
+              <Label className="font-sans text-xs font-light text-gray-500">Contraseña de la clave privada <span className="text-destructive">*</span></Label>
+              <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className={`h-11 py-2.5 focus-visible:ring-0 focus-visible:border-input ${camposIncompletos && !password ? "border-destructive" : ""}`} />
             </div>
 
-            {error && <p className="text-xs text-destructive">{error}</p>}
+            {error && (
+              <p className="text-xs text-destructive flex items-center gap-1.5">
+                <Info className="h-3.5 w-3.5 shrink-0" />
+                {error}
+              </p>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <Button onClick={() => { reset(); onClose() }} disabled={trabajando}
                 className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
@@ -305,12 +329,13 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               </Button>
               <Button type="submit" disabled={trabajando}
                 className="gap-1.5 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
-                {trabajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                {trabajando && <Loader2 className="h-4 w-4 animate-spin" />}
                 Firmar
               </Button>
             </div>
           </form>
         )}
+        </div>
       </DialogContent>
     </Dialog>
     </>

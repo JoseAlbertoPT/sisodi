@@ -1,9 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, RefreshCw, Shield, AlertCircle, Stamp } from "lucide-react"
+import { Loader2, RefreshCw, AlertCircle, Stamp } from "lucide-react"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
 
 interface FirmanteInfo {
@@ -88,7 +88,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
   useEffect(() => { cargar() }, [cargar])
   useEffect(() => { onCountChange?.(items.length) }, [items.length, onCountChange])
 
-  const dialogTarget = (() => {
+  const dialogTargetLive = (() => {
     if (firmanteDialogId === null) return null
     for (const p of items) {
       const f = p.firmantes.find(x => x.id === firmanteDialogId)
@@ -96,6 +96,14 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
     }
     return null
   })()
+
+  /** Si al refrescar la lista el firmante ya no aparece como pendiente (porque
+   *  acaba de firmar), seguimos usando los últimos datos conocidos para que el
+   *  diálogo de confirmación no se cierre solo — solo se cierra cuando el
+   *  usuario le da clic a "Cerrar". */
+  const dialogTargetCache = useRef<typeof dialogTargetLive>(null)
+  if (dialogTargetLive) dialogTargetCache.current = dialogTargetLive
+  const dialogTarget = firmanteDialogId === null ? null : (dialogTargetLive ?? dialogTargetCache.current)
 
   const dialogIniciarEnSellado = !!(
     dialogTarget &&
@@ -177,8 +185,8 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                     <td className="px-4 py-2 text-right">
                       <Button size="sm" onClick={() => p.mi_firmante_pendiente && setFirmanteDialogId(p.mi_firmante_pendiente.id)}
                         disabled={!esMiTurno}
-                        className="rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 gap-1.5">
-                        <Shield className="h-3.5 w-3.5" /> Firmar
+                        className="rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90">
+                        Firmar
                       </Button>
                     </td>
                   </tr>
@@ -206,7 +214,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
           folioDictamen={dialogTarget.proceso.folio_dictamen}
           solicitudId={dialogTarget.proceso.solicitud_id}
           iniciarEnSellado={dialogIniciarEnSellado}
-          onFirmado={async () => { await cargar(); setFirmanteDialogId(null) }}
+          onFirmado={() => { cargar() }}
         />
       )}
     </div>

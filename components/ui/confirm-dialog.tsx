@@ -54,7 +54,7 @@ function ModalOverlay({ children, onEscape }: { children: React.ReactNode; onEsc
 
   if (!mounted) return null
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" aria-modal="true" role="dialog">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm" aria-modal="true" role="dialog">
       {children}
     </div>,
     document.body

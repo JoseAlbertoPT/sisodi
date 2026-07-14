@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   CheckCircle2, Loader2, Link as LinkIcon, Shield,
-  AlertCircle, Users, Lock, Briefcase, FileKey, KeyRound, AlertTriangle, X, History,
+  AlertCircle, Users, Lock, Briefcase, FileKey, KeyRound, Info, X, History,
 } from "lucide-react"
 import { SelladoDocumentoSection, type SelladoEtapa } from "@/components/sellado-documento-section"
 
@@ -56,6 +56,9 @@ interface Props {
   onFinalizar: () => Promise<void> | void
   guardandoFinal: boolean
    selladoEtapa?: SelladoEtapa
+  onCompactoChange?: (compacto: boolean) => void
+  onProcesoIniciadoChange?: (iniciado: boolean) => void
+  onExitoChange?: (exito: boolean) => void
 }
 
 export function FirmaElectronicaTabs({
@@ -67,6 +70,9 @@ export function FirmaElectronicaTabs({
   onFinalizar,
   guardandoFinal,
   selladoEtapa,
+  onCompactoChange,
+  onProcesoIniciadoChange,
+  onExitoChange,
 }: Props) {
   const [selladoSubido, setSelladoSubido] = useState(false)
   const [firma, setFirma] = useState<FirmaProceso | null>(null)
@@ -79,6 +85,7 @@ export function FirmaElectronicaTabs({
   const [copiadoId, setCopiadoId] = useState<number | null>(null)
   const [regenerando, setRegenerando] = useState<number | null>(null)
   const [firmandoInline, setFirmandoInline] = useState<number | null>(null)
+  const [firmaExitosa, setFirmaExitosa] = useState(false)
 
   const [cargoFirma, setCargoFirma] = useState("")
   const [cerFile, setCerFile] = useState<File | null>(null)
@@ -130,6 +137,7 @@ export function FirmaElectronicaTabs({
       if (!res.ok || !json.ok) { setFirmandoError(json.error ?? "Error al firmar"); return }
       resetFirmandoInline()
       await cargar()
+      setFirmaExitosa(true)
     } catch (e: any) {
       setFirmandoError(e?.message ?? "Error de conexión")
     } finally {
@@ -152,6 +160,18 @@ export function FirmaElectronicaTabs({
   }, [solicitudId])
 
   useEffect(() => { cargar() }, [cargar])
+
+  useEffect(() => {
+    onExitoChange?.(firmaExitosa)
+  }, [firmaExitosa, onExitoChange])
+
+  useEffect(() => {
+    onProcesoIniciadoChange?.(!!firma)
+  }, [firma, onProcesoIniciadoChange])
+
+  useEffect(() => {
+    onCompactoChange?.(!firma || firmaExitosa)
+  }, [firma, firmaExitosa, onCompactoChange])
 
   useEffect(() => {
     if (!currentUserId) return
@@ -253,10 +273,9 @@ export function FirmaElectronicaTabs({
   if (!firma) {
     return (
       <div className="flex flex-col gap-4">
-        <Card className="border-border">
-          <CardContent className="p-4 flex flex-col gap-3">
-            <h3 className="font-sans text-lg font-light leading-tight text-[color:var(--color-core-piedra-20)]">Iniciar proceso de firma</h3>
-            <p className="font-sans text-[13px] font-light leading-[1.2] text-gray-500">
+        <Card className="border-border py-3">
+          <CardContent className="px-4 py-2 flex flex-col gap-3">
+            <p className="font-sans text-[14px] font-light leading-[1.2] text-gray-500">
               Se creará el proceso con todos los firmantes requeridos según el tipo de justificación.
               Los firmantes internos (UEFA, Revisor, Validador, Emisor) se identifican automáticamente a partir del historial de aprobaciones.
             </p>
@@ -269,6 +288,24 @@ export function FirmaElectronicaTabs({
             </div>
           </CardContent>
         </Card>
+      </div>
+    )
+  }
+
+  if (firmaExitosa) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-10">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#d2fad2]">
+          <CheckCircle2 className="h-8 w-8 text-[#1c7d29]" />
+        </div>
+        <h2 className="font-sans text-lg font-light text-foreground">¡Firma registrada!</h2>
+        <p className="font-sans text-sm font-light text-gray-500 text-center">
+          Tu firma quedó registrada correctamente.
+        </p>
+        <Button onClick={() => setFirmaExitosa(false)}
+          className="mt-2 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400] px-8">
+          Cerrar
+        </Button>
       </div>
     )
   }
@@ -294,7 +331,7 @@ export function FirmaElectronicaTabs({
   const pctFirmados = totalFirmantes > 0 ? Math.round((firma.firmados / totalFirmantes) * 100) : 0
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-2 font-sans text-xs font-light">
           <Badge variant="outline">{firma.estado}</Badge>
@@ -311,15 +348,15 @@ export function FirmaElectronicaTabs({
       </div>
 
       <Card className="border-border mx-3">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="font-sans text-sm font-light flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
+        <CardHeader className="pb-4 flex flex-row items-center justify-between">
+          <CardTitle className="font-sans text-base font-light flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
             <Users className="h-4 w-4 text-secondary" /> Externos
-            <span className="font-sans text-xs font-light text-gray-500 ml-1">(firman primero)</span>
+            <span className="font-sans text-sm font-light text-gray-500 ml-1">(firman primero)</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="flex flex-col gap-3">
           {externos.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Esta justificación no requiere firmas externas.</p>
+            <p className="text-sm text-muted-foreground">Esta justificación no requiere firmas externas.</p>
           ) : externos.map(f => (
             <FirmanteRow
               key={f.id}
@@ -337,12 +374,12 @@ export function FirmaElectronicaTabs({
       </Card>
 
       <Card className="border-border mx-3">
-        <CardHeader className="pb-3">
-          <CardTitle className="font-sans text-sm font-light flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
+        <CardHeader className="pb-4">
+          <CardTitle className="font-sans text-base font-light flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
             <Lock className="h-4 w-4 text-muted-foreground" /> {miInterno ? "Mi firma" : "Internos"}
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="flex flex-col gap-3">
           {internos.map(f => (
             <div key={f.id} className="flex flex-col gap-2">
               <FirmanteRow
@@ -353,9 +390,9 @@ export function FirmaElectronicaTabs({
                 onFirmar={() => setFirmandoInline(f.id)}
               />
               {firmandoInline === f.id && (
-                <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 flex flex-col gap-3">
+                <div className={`rounded-lg border-2 border-primary/40 bg-primary/5 p-4 flex flex-col gap-3 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                    <h4 className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)] flex items-center gap-2">
                       <Shield className="h-4 w-4 text-primary" /> Firmar como {f.rol}
                     </h4>
                     <Button size="icon" variant="ghost" onClick={resetFirmandoInline} className="h-7 w-7">
@@ -369,6 +406,7 @@ export function FirmaElectronicaTabs({
                       ref={cargoInputRef}
                       value={cargoFirma}
                       readOnly={!cargoHabilitado}
+                      tabIndex={cargoHabilitado ? undefined : -1}
                       onMouseDown={e => { if (!cargoHabilitado) { e.preventDefault(); setAvisoCargoAbierto(true) } }}
                       onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
                       onChange={e => setCargoFirma(e.target.value.toUpperCase())}
@@ -397,9 +435,12 @@ export function FirmaElectronicaTabs({
                   </div>
                   {firmandoError && <p className="text-xs text-destructive">{firmandoError}</p>}
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={resetFirmandoInline} disabled={firmandoTrabajo}>Cancelar</Button>
+                    <Button onClick={resetFirmandoInline} disabled={firmandoTrabajo}
+                      className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
+                      Cancelar
+                    </Button>
                     <Button onClick={() => handleFirmarInline(f.id)} disabled={firmandoTrabajo}
-                      className="gap-1.5">
+                      className="gap-1.5 rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
                       {firmandoTrabajo ? "Firmando..." : "Firmar"}
                     </Button>
                   </div>
@@ -433,26 +474,26 @@ export function FirmaElectronicaTabs({
         <Button
           onClick={() => onFinalizar()}
           disabled={!puedeContinuar || guardandoFinal || (!!selladoEtapa && !selladoSubido)}
-          className="gap-1.5 px-5 py-2"
+          className="gap-1.5 px-5 py-2 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
         >
           {guardandoFinal ? "Enviando..." : "Enviar"}
         </Button>
       </div>
 
       <AlertDialog open={avisoCargoAbierto} onOpenChange={setAvisoCargoAbierto}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-accent-foreground" />
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader className="items-start gap-3 text-left">
+            <Info className="h-6 w-6 text-[#2e3b2b]" strokeWidth={1.75} />
+            <AlertDialogTitle className="ds-title-md text-[color:var(--color-core-piedra-20)]">
               Antes de escribir su cargo
             </AlertDialogTitle>
-            <AlertDialogDescription className="leading-relaxed">
-              Escriba su cargo con <strong>exactitud y sin abreviaturas</strong>.
+            <AlertDialogDescription className="font-sans text-sm font-light leading-relaxed text-gray-500">
+              Escriba su cargo con <strong className="font-medium text-[color:var(--color-core-piedra-20)]">exactitud y sin abreviaturas</strong>.
               Este texto aparecerá impreso junto a su firma en el PDF definitivo y
-              <strong> no podrá modificarse después</strong>.
+              <strong className="font-medium text-[color:var(--color-core-piedra-20)]"> no podrá modificarse después</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="sm:justify-center">
             <AlertDialogAction onClick={aceptarAvisoCargo}>Entendido</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -481,28 +522,28 @@ function FirmanteRow({
     : ""
   const esperandoTurno = !firmante.firmado && !esSuTurno
   return (
-    <div className={`rounded-md border p-3 flex flex-col gap-2 ${esSuTurno && !firmante.firmado ? "border-primary/40 bg-primary/5" : ""}`}>
+    <div className={`rounded-md border p-4 flex flex-col gap-3 ${esSuTurno && !firmante.firmado ? "border-primary/40 bg-primary/5" : ""}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono text-gray-500">#{firmante.orden}</span>
-            <span className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)]">{firmante.rol}</span>
+            <span className="font-sans text-base font-light text-[color:var(--color-core-piedra-20)]">{firmante.rol}</span>
             {firmante.firmado
               ? <Badge className="bg-secondary/15 text-secondary border-0 text-[10px] gap-1"><CheckCircle2 className="h-3 w-3" />Firmado</Badge>
               : esperandoTurno
                 ? <Badge variant="outline" className="text-[10px]">Esperando turno</Badge>
                 : <Badge className="bg-primary/15 text-primary border-0 text-[10px]">Turno actual</Badge>}
           </div>
-          <p className="font-sans text-xs font-light text-gray-500">{firmante.cargo}</p>
+          <p className="font-sans text-sm font-light text-gray-500">{firmante.cargo}</p>
           {(firmante.nombre || firmante.rfc) && (
-            <p className="font-sans text-xs font-light text-[color:var(--color-core-piedra-20)] mt-1">
+            <p className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)] mt-1">
               {firmante.nombre ?? "—"}
               {firmante.rfc && <span className="text-gray-500 ml-1 font-mono">({firmante.rfc})</span>}
               {firmante.fecha_firma && <span className="text-gray-500 ml-2">{new Date(firmante.fecha_firma).toLocaleString("es-MX")}</span>}
             </p>
           )}
           {firmante.cargo_firmante && (
-            <p className="font-sans text-xs font-light text-gray-500 italic mt-0.5">Cargo capturado: {firmante.cargo_firmante}</p>
+            <p className="font-sans text-sm font-light text-gray-500 italic mt-0.5">Cargo capturado: {firmante.cargo_firmante}</p>
           )}
         </div>
       </div>
@@ -510,7 +551,7 @@ function FirmanteRow({
       {modo === "externo" && !firmante.firmado && link && (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <Input readOnly value={link} className="text-[10px] font-mono" />
+            <Input readOnly value={link} className="flex-1 min-w-0 text-xs font-mono" />
             <Button size="sm" variant="outline" onClick={() => onCopiar?.(link)} className="gap-1.5 shrink-0 border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
               {copiadoId === firmante.id ? "Copiado" : "Copiar"}
             </Button>
@@ -519,7 +560,7 @@ function FirmanteRow({
             </Button>
           </div>
           {esperandoTurno && (
-            <p className="text-[10px] text-muted-foreground">Este link sólo será válido cuando los anteriores firmen.</p>
+            <p className="text-xs text-muted-foreground">Este link sólo será válido cuando los anteriores firmen.</p>
           )}
         </div>
       )}

@@ -41,7 +41,6 @@ import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 
 type UefaEstado = string
-
 type UefaTab =
   | "Nuevas"
   | "Pendiente Firma"
@@ -354,6 +353,7 @@ function DictamenModal({
 }) {
   const esParaestatal = solicitud.tipo.toLowerCase().includes("paraestatal")
   const titulo = esParaestatal ? "OPINIÓN TÉCNICA FUNCIONAL" : "DICTAMEN TÉCNICO FUNCIONAL"
+  const tituloDisplay = titulo.charAt(0) + titulo.slice(1).toLowerCase()
   const folioDictamenFormateado  = formatearFolio(solicitud.folioDictamen)
   const folioRecepcionFormateado = formatearFolio(solicitud.folio)
   const handlePrint = () => {
@@ -408,8 +408,8 @@ function DictamenModal({
       <Card className="w-full max-w-2xl max-h-[85vh] flex flex-col shadow-xl border-2 border-primary/20">
         <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0">
           <div>
-            <CardTitle className="ds-title-md flex items-center gap-2 text-card-foreground">
-              <FileTypeIcon name="dictamen.pdf" size="sm" />{titulo}
+            <CardTitle className="font-sans text-lg font-light flex items-center gap-2 text-card-foreground">
+              <FileTypeIcon name="dictamen.pdf" size="sm" />{tituloDisplay}
             </CardTitle>
             <p className="font-sans text-xs font-light text-muted-foreground mt-0.5">
               Número: {folioDictamenFormateado} | Folio Recepción: {folioRecepcionFormateado}
@@ -417,19 +417,18 @@ function DictamenModal({
           </div>
           <div className="flex items-center gap-2">
             <Button
-              size="sm"
-              onClick={handlePrint}
-              className="gap-1.5 rounded-2xl font-medium hover:opacity-90"
-              style={{ backgroundColor: "#fce4f0", color: "#7c2d5e", border: "1px solid #f0b0d0" }}
-            >
-              <Printer className="h-4 w-4" />Imprimir
-            </Button>
-            <Button
               variant="default"
               size="sm"
               onClick={onClose}
             >
               Cerrar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handlePrint}
+              className="gap-1.5 rounded-2xl bg-[#773357] text-white font-medium hover:bg-[#773357] hover:text-white hover:opacity-90"
+            >
+              <Printer className="h-4 w-4" />Imprimir
             </Button>
           </div>
         </CardHeader>
@@ -1158,8 +1157,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
               <Button
                 size="sm"
                 onClick={() => setShowDictamen(true)}
-                className="gap-1.5 rounded-2xl font-medium hover:opacity-90"
-                style={{ backgroundColor: "#722F37", color: "#ffffff", border: "1px solid #5a252c" }}
+                className="gap-1.5 rounded-2xl bg-[#773357] text-white font-medium hover:bg-[#773357] hover:text-white hover:opacity-90"
               >
                 <FileCheck className="h-4 w-4" />Ver Dictamen
               </Button>

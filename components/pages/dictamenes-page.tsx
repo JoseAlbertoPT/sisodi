@@ -15,9 +15,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
+
   Download, FileCheck, Stamp, Printer,
   Loader2, AlertTriangle, RefreshCw, MoreVertical, Eye,
 } from "lucide-react"
+
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
   DropdownMenu,
@@ -158,7 +160,6 @@ const DictamenViewModal = React.memo(({
     firmaDictVerificoNombre: "",
     firmaDictEmitioNombre: ""
   })
-
   const commitFirmas = useCallback(() => {
     setDebouncedFirmas((prev) => {
       const next = {
@@ -179,18 +180,15 @@ const DictamenViewModal = React.memo(({
       return sameValues ? prev : next
     })
   }, [firmaElaboroNombre, firmaRevisoNombre, firmaVoBoJuridicoNombre, firmaDictRevisoNombre, firmaDictVerificoNombre, firmaDictEmitioNombre])
-
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [pdfRefreshing, setPdfRefreshing] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const currentBlobRef = useRef<string | null>(null)
-
   useEffect(() => {
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
     setPdfRefreshing(true)
-
     const params = new URLSearchParams({ id: dictamen.id })
     if (debouncedFirmas.firmaElaboroNombre) params.set("firmaElaboroNombre", debouncedFirmas.firmaElaboroNombre)
     if (debouncedFirmas.firmaRevisoNombre) params.set("firmaRevisoNombre", debouncedFirmas.firmaRevisoNombre)
@@ -251,7 +249,7 @@ const DictamenViewModal = React.memo(({
               <FileTypeIcon name="dictamen.pdf" size="md" />
             </div>
             <div className="min-w-0 flex-1">
-              <CardTitle className="ds-title-md truncate text-card-foreground">
+              <CardTitle className="font-sans text-lg font-light truncate text-card-foreground">
                 {titulo}
               </CardTitle>
               <p className="font-sans text-xs font-light text-muted-foreground mt-0.5 truncate">

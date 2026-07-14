@@ -11,8 +11,8 @@ import {
   AlertDialogTitle, AlertDialogDescription, AlertDialogAction,
 } from "@/components/ui/alert-dialog"
 import {
-  Shield, CheckCircle2, Loader2, AlertCircle, Clock,
-  FileKey, KeyRound, Briefcase, AlertTriangle, Info,
+  CheckCircle2, Loader2, AlertCircle, Clock,
+  FileKey, KeyRound, Briefcase, Info,
 } from "lucide-react"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then(m => m.PdfPreview), {
@@ -189,8 +189,8 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <Card className="w-full max-w-md border-accent/40 border-2">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <AlertCircle className="h-10 w-10 text-accent-foreground" />
-            <h2 className="text-lg font-semibold">Link en uso</h2>
-            <p className="text-sm text-muted-foreground text-center">
+            <h2 className="font-sans text-lg font-light">Link en uso</h2>
+            <p className="font-sans text-sm font-light text-gray-500 text-center">
               Este link ya fue abierto por otra persona y estamos esperando a que firme. Si tú eres quien debe firmar, solicita un nuevo link al responsable.
             </p>
           </CardContent>
@@ -205,8 +205,8 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <Card className="w-full max-w-md border-destructive/40 border-2">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <AlertCircle className="h-10 w-10 text-destructive" />
-            <h2 className="text-lg font-semibold text-destructive">Link inválido</h2>
-            <p className="text-sm text-muted-foreground text-center">
+            <h2 className="font-sans text-lg font-light text-destructive">Link inválido</h2>
+            <p className="font-sans text-sm font-light text-gray-500 text-center">
               El link no existe o el token no es correcto. Pide uno nuevo al responsable.
             </p>
           </CardContent>
@@ -221,8 +221,8 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <Card className="w-full max-w-md border-secondary/40 border-2">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <CheckCircle2 className="h-10 w-10 text-secondary" />
-            <h2 className="text-lg font-semibold">Proceso completado</h2>
-            <p className="text-sm text-muted-foreground text-center">Todas las firmas ya fueron registradas. Ya puedes cerrar esta pestaña.</p>
+            <h2 className="font-sans text-lg font-light">Proceso completado</h2>
+            <p className="font-sans text-sm font-light text-gray-500 text-center">Todas las firmas ya fueron registradas. Ya puedes cerrar esta pestaña.</p>
           </CardContent>
         </Card>
       </div>
@@ -233,9 +233,9 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <Card className="w-full max-w-lg border-2 border-accent/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-sans text-base font-normal text-[#2e3b2b]">
-              <Info className="h-6 w-6 text-[#2e3b2b] shrink-0" strokeWidth={1.75} />
+          <CardHeader className="flex flex-col items-start gap-3">
+            <Info className="h-6 w-6 text-[#2e3b2b] shrink-0" strokeWidth={1.75} />
+            <CardTitle className="font-sans text-base font-normal text-[#2e3b2b]">
               Aviso importante antes de firmar
             </CardTitle>
           </CardHeader>
@@ -252,7 +252,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex justify-between gap-6">
               <Button onClick={() => window.close()}
-                className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700">
+                className="rounded-full border-0 bg-[#ffeaea] text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]">
                 Cancelar
               </Button>
               <Button onClick={handleAcceder} disabled={accediendo}
@@ -285,24 +285,26 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
   if (fase === "exito" && exito) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <Card className="w-full max-w-md border-secondary/40 border-2">
+        <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center gap-3 py-10">
-            <CheckCircle2 className="h-14 w-14 text-secondary" />
-            <h2 className="text-lg font-semibold">¡Firma registrada!</h2>
-            <p className="text-sm text-muted-foreground text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#d2fad2]">
+              <CheckCircle2 className="h-8 w-8 text-[#1c7d29]" />
+            </div>
+            <h2 className="font-sans text-lg font-light text-foreground">¡Firma registrada!</h2>
+            <p className="font-sans text-sm font-light text-gray-500 text-center">
               Tu firma quedó registrada correctamente.{" "}
               {exito.estado === "completado"
                 ? "El proceso está completo."
                 : `Se han recibido ${exito.firmados} firmas hasta ahora.`}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="font-sans text-xs font-light text-gray-500">
               Si la descarga no inició automáticamente,{" "}
               <button onClick={descargarPdfFirmado} className="text-primary underline hover:text-primary/80">
                 haz clic aquí
               </button>
               .
             </p>
-            <p className="text-xs text-muted-foreground">Ya puedes cerrar esta pestaña.</p>
+            <p className="font-sans text-xs font-light text-gray-500">Ya puedes cerrar esta pestaña.</p>
           </CardContent>
         </Card>
       </div>
@@ -318,10 +320,10 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
   return (
     <div className="min-h-screen flex flex-col">
       <AlertDialog open={avisoCargoAbierto} onOpenChange={setAvisoCargoAbierto}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="ds-title-md flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
-              <AlertTriangle className="h-5 w-5 text-accent-foreground" />
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader className="items-start gap-3 text-left">
+            <Info className="h-6 w-6 text-[#2e3b2b]" strokeWidth={1.75} />
+            <AlertDialogTitle className="ds-title-md text-[color:var(--color-core-piedra-20)]">
               Antes de escribir su cargo
             </AlertDialogTitle>
             <AlertDialogDescription className="font-sans text-sm font-light leading-relaxed text-gray-500">
@@ -330,84 +332,105 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
               <strong className="font-medium text-[color:var(--color-core-piedra-20)]"> no podrá modificarse después</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="sm:justify-center">
             <AlertDialogAction onClick={aceptarAvisoCargo}>Entendido</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       <header className="border-b bg-background sticky top-0 z-10">
-        <div className="flex items-center justify-between px-6 py-3">
+        <div className="flex items-center justify-between px-6 py-4">
           <div>
             <h1 className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)]">Firma de Justificación</h1>
             <p className="font-sans text-xs font-light text-gray-500">Portal de firma electrónica — Dirección de Organización</p>
           </div>
-          <div className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-mono ${timerColor}`}>
+          <div className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-mono font-medium ${timerColor}`}>
             <Clock className="h-4 w-4" /> {mmss}
           </div>
         </div>
       </header>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[45%_55%] gap-0 min-h-0">
-        <div className="border-r p-6 overflow-y-auto flex flex-col gap-4">
+        <div className="border-r p-6 overflow-y-auto flex flex-col gap-5">
           {firmanteInfo && (
-            <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4">
-              <p className="font-sans text-xs font-light uppercase tracking-wide text-gray-500">Estás firmando como</p>
-              <p className="font-sans text-lg font-light text-[color:var(--color-core-piedra-20)] mt-0.5">{firmanteInfo.rol}</p>
-              <p className="font-sans text-xs font-light text-gray-500 mt-2">Cargo que respaldas con tu firma:</p>
-              <p className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)] mt-0.5">{firmanteInfo.cargo}</p>
+            <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                <img src="/Iconos1/account_circle-user-perfil.svg" width={20} height={20} alt="" />
+              </div>
+              <div>
+                <p className="font-sans text-xs font-light uppercase tracking-wide text-gray-500">Estás firmando como</p>
+                <p className="font-sans text-lg font-light text-[color:var(--color-core-piedra-20)] mt-0.5">{firmanteInfo.rol}</p>
+                <p className="font-sans text-xs font-light text-gray-500 mt-3">Cargo que respaldas con tu firma:</p>
+                <p className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)] mt-0.5">{firmanteInfo.cargo}</p>
+              </div>
             </div>
           )}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-sans text-base font-light text-[color:var(--color-core-piedra-20)]">
-                <Shield className="h-5 w-5 text-primary" /> Firmar con e.firma
-              </CardTitle>
-              <CardDescription className="font-sans text-xs font-light text-gray-500">
-                Revisa el documento a la derecha y completa tus credenciales para firmar.
-              </CardDescription>
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
+                  <img src="/iconos2/Shield.svg" width={20} height={20} alt="" />
+                </div>
+                <div>
+                  <CardTitle className="font-sans text-base font-light text-[color:var(--color-core-piedra-20)]">
+                    Firmar con e.firma
+                  </CardTitle>
+                  <CardDescription className="font-sans text-xs font-light text-gray-500 mt-0.5">
+                    Revisa el documento a la derecha y completa tus credenciales para firmar.
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleFirmar} className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1">
+              <form onSubmit={handleFirmar} className={`flex flex-col gap-5 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
+                <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500">RFC del firmante</Label>
-                  <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" />
+                  <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" className="focus-visible:ring-0 focus-visible:border-input" />
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
                   <Input
                     ref={cargoInputRef}
                     value={cargo}
                     readOnly={!cargoHabilitado}
+                    tabIndex={cargoHabilitado ? undefined : -1}
                     onMouseDown={e => { if (!cargoHabilitado) { e.preventDefault(); setAvisoCargoAbierto(true) } }}
                     onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
                     onChange={e => setCargo(e.target.value.toUpperCase())}
                     placeholder="EJ. DIRECTOR DE RECURSOS HUMANOS"
-                    className={`uppercase ${!cargoHabilitado ? "cursor-pointer" : ""}`}
+                    className={`uppercase focus-visible:ring-0 focus-visible:border-input ${!cargoHabilitado ? "cursor-pointer" : ""}`}
                     autoComplete="off"
                     name="cargo-firmante-externo"
                   />
-                  <p className="font-sans text-[10px] font-light text-accent-foreground flex items-center gap-1">
+                  <p className="font-sans text-[10px] font-light text-accent-foreground flex items-center gap-1 mt-1">
                     <AlertCircle className="h-3 w-3" />
                     Escriba su cargo correctamente. Aparecerá impreso junto a su firma en el PDF.
                   </p>
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
                   <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} />
-                  {cerFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{cerFile.name}</span>}
+                  {cerFile && (
+                    <span className="font-sans text-xs font-light text-gray-500 truncate flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />{cerFile.name}
+                    </span>
+                  )}
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
                   <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} />
-                  {keyFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{keyFile.name}</span>}
+                  {keyFile && (
+                    <span className="font-sans text-xs font-light text-gray-500 truncate flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />{keyFile.name}
+                    </span>
+                  )}
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500">Contraseña de la clave privada</Label>
-                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className="focus-visible:ring-0 focus-visible:border-input" />
                 </div>
                 {error && <p className="text-xs text-destructive">{error}</p>}
                 <Button type="submit" disabled={trabajando}
-                  className="gap-1.5 self-end mt-2 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
+                  className="gap-1.5 self-end mt-1 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
                   {trabajando ? "Firmando..." : "Firmar ahora"}
                 </Button>
               </form>

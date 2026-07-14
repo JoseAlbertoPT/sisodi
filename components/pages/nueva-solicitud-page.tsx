@@ -914,21 +914,17 @@ function StepIndicator({ step, tipo, progresoSeleccion = 0 }: { step: Step; tipo
     { key: "formulario", label: tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento" },
   ]
   const currentIndex = steps.findIndex((s) => s.key === step)
-
   return (
     <div className="flex items-start w-full">
       {steps.map((s, i) => {
         const isDone    = i < currentIndex
         const isActive  = i === currentIndex
-
-        /* Circle style */
         const circleStyle: React.CSSProperties = isDone
           ? { width: 32, height: 32, flexShrink: 0, position: 'relative', zIndex: 1 }
           : isActive
           ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#773357', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
           : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
 
-        /* Label style */
         const labelStyle: React.CSSProperties = isActive
           ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : isDone
@@ -938,7 +934,6 @@ function StepIndicator({ step, tipo, progresoSeleccion = 0 }: { step: Step; tipo
         return (
           <div key={s.key} className="flex flex-1 flex-col items-center" style={{ position: 'relative' }}>
 
-            {/* ── Connector line (between circles) ────────── */}
             {i > 0 && (
               <div style={{
                 position: 'absolute',
@@ -953,7 +948,6 @@ function StepIndicator({ step, tipo, progresoSeleccion = 0 }: { step: Step; tipo
                 zIndex: 0,
               }} />
             )}
-
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               <div style={circleStyle}>
                 {isDone ? (
@@ -1046,14 +1040,12 @@ function TagInput({
 }
 
 type TabuladorEntry = { nivel: string; categoria: string }
-
 const SSPC_KEYWORDS = ["SEGURIDAD Y PROTECCION CIUDADANA", "SEGURIDAD Y PROTECCIÓN CIUDADANA", "SSPC"]
 function isSSPC(secretaria?: string) {
   if (!secretaria) return false
   const upper = secretaria.toUpperCase()
   return SSPC_KEYWORDS.some((k) => upper.includes(k))
 }
-
 function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSeleccionadoChange, secretaria, initialNivel, initialCategoria }: {
   nivelCategoria?: string; importeBruto?: string; readonly?: boolean
   onSeleccionadoChange?: (nivel: string, categoria: string) => void
@@ -1110,7 +1102,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
   return (
     <Card className="shadow-sm border-secondary/30 border-2">
       <CardHeader className="px-4 pt-3 pb-1">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+        <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
           <ClipboardList className="h-4 w-4 text-secondary" />Equivalencia al Tabulador
           {readonly && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
         </CardTitle>
@@ -1118,7 +1110,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
       <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-2">
         {readonly ? (
           <div className="flex items-center gap-3 rounded-lg border-2 border-secondary/20 bg-secondary/5 px-3 py-2">
-            <span className="text-sm font-semibold text-card-foreground">
+            <span className="text-sm font-light text-card-foreground">
               {(() => {
                 let nivel = coincidencias[0]?.nivel || nivelCategoria || ""
                 if (!nivel && normalizedImporte) {
@@ -1179,7 +1171,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
                       className={`flex items-center gap-3 rounded-lg border-2 px-3 py-2 cursor-pointer transition-colors
                         ${isSelected ? "border-secondary bg-secondary/15" : "border-secondary/20 bg-secondary/5 hover:border-secondary/50"}`}
                          >
-                        <span className="text-sm font-semibold text-card-foreground shrink-0">
+                        <span className="text-sm font-light text-card-foreground shrink-0">
                         {c.nivel} : {formatMXN(c.min)} - {formatMXN(c.max)}
                         </span>
                         <span className="text-xs text-muted-foreground truncate">{c.puesto}</span>
@@ -1195,6 +1187,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
     </Card>
   )
 }
+
 function SelectConBusqueda({
   opciones, value, onValueChange, placeholder, disabled = false, className = "",
 }: {
@@ -1314,7 +1307,6 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
           </p>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end px-6 py-4" style={{ borderTop: "1px solid #E5E7EB" }}>
           <button
             type="button"
@@ -1749,7 +1741,7 @@ function FormularioPrestacion({
         <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
           <Lock className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Renovación — Datos  Precargados  y Bloqueados </span>
+            <span className="text-sm font-light text-card-foreground">Renovación — Datos  Precargados  y Bloqueados </span>
             <span className="text-xs text-muted-foreground">
               Todos los campos se han cargado del folio anterior. Solo puede modificar la <strong>Vigencia</strong>, el <strong>Oficio de Suficiencia</strong> y el <strong>Número de Prestadores de Servicios</strong>.
             </span>
@@ -1758,8 +1750,8 @@ function FormularioPrestacion({
       )}
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.I ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
+          <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.I ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>I</span>
              I. Datos Generales
           </CardTitle>
         </CardHeader>
@@ -1782,7 +1774,7 @@ function FormularioPrestacion({
               </Label>
               {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground font-semibold font-mono">{fmtClave(numeroUA)}</span>
+                  <span className="text-sm text-muted-foreground font-medium font-mono">{fmtClave(numeroUA)}</span>
                 </div>
               ) : catalogoUAsConGuardada.some((u) => u.clave !== "") ? (
                 <Select
@@ -2064,8 +2056,8 @@ function FormularioPrestacion({
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
+          <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>II</span>
             Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
@@ -2093,8 +2085,8 @@ function FormularioPrestacion({
       </Card>
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
+          <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
@@ -2126,8 +2118,8 @@ function FormularioPrestacion({
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.IV ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
+          <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.IV ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>IV</span>
             Responsabilidades
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
@@ -2154,8 +2146,8 @@ function FormularioPrestacion({
       </Card>
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.V ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>V</span>
+          <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.V ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>V</span>
             Perfil
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
@@ -2165,7 +2157,7 @@ function FormularioPrestacion({
         </CardHeader>
         <CardContent className="grid gap-x-6 gap-y-5 px-4 pb-4 pt-0 md:grid-cols-2">
           <div className="md:col-span-2 flex flex-col gap-2">
-            <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            <span className="text-sm font-light text-card-foreground flex items-center gap-1.5">
               Escolaridad Mínima
               {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
             </span>
@@ -2189,9 +2181,9 @@ function FormularioPrestacion({
             <div key={label} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
                 {sub && (
-                  <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
+                  <span className="text-[10px] font-medium text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
                 )}
-                <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+                <span className="text-sm font-light text-card-foreground flex items-center gap-1.5">
                   {label}
                   {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
                 </span>
@@ -2490,7 +2482,7 @@ function FormularioNombramiento({
         <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
           <Lock className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Renovación — Datos  Precargados y Bloqueados</span>
+            <span className="text-sm font-light text-card-foreground">Renovación — Datos  Precargados y Bloqueados</span>
             <span className="text-xs text-muted-foreground">
               La mayoría de campos vienen precargados del folio anterior. Solo puede modificar <strong>vigencia, oficio de suficiencia, número de prestadores de servicios, marco normativo, condiciones y riesgos</strong>.
             </span>
@@ -2500,8 +2492,8 @@ function FormularioNombramiento({
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.I ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
+          <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.I ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>I</span>
             Datos Generales
           </CardTitle>
         </CardHeader>
@@ -2525,7 +2517,7 @@ function FormularioNombramiento({
               </Label>
               {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground font-semibold font-mono">{fmtClave(numeroUA)}</span>
+                  <span className="text-sm text-muted-foreground font-medium font-mono">{fmtClave(numeroUA)}</span>
                 </div>
               ) : clavesAdscripcion.length > 0 ? (
                 <Select
@@ -2807,8 +2799,8 @@ function FormularioNombramiento({
       />
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
+          <CardTitle className="text-sm font-light text-card-foreground flex items-center gap-1.5">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>II</span>
             Objeto del Nombramiento
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
@@ -2836,8 +2828,8 @@ function FormularioNombramiento({
       </Card>
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
+          <CardTitle className="text-sm font-light text-card-foreground flex items-center gap-1.5">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
@@ -2868,8 +2860,8 @@ function FormularioNombramiento({
       </Card>
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.IV ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
+          <CardTitle className="text-sm font-light text-card-foreground flex items-center gap-1.5">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.IV ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>IV</span>
             Responsabilidades
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
@@ -2896,7 +2888,7 @@ function FormularioNombramiento({
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+          <CardTitle className="text-sm font-light text-card-foreground flex items-center gap-1.5">
             V. Marco Normativo
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary text-primary ml-1">Siempre editable</Badge>
           </CardTitle>
@@ -2912,7 +2904,7 @@ function FormularioNombramiento({
       </Card>
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+          <CardTitle className="text-sm font-light text-card-foreground flex items-center gap-1.5">
             VI. Condiciones y Riesgos
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary text-primary ml-1">Siempre editable</Badge>
           </CardTitle>
@@ -3025,7 +3017,7 @@ function FormularioNombramiento({
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+          <CardTitle className="text-sm font-light text-card-foreground flex items-center gap-1.5">
             VII. Resguardo Personalizado de Activos
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary text-primary ml-1">Siempre editable</Badge>
           </CardTitle>
@@ -3035,13 +3027,13 @@ function FormularioNombramiento({
             <img src="/iconos2/Icon.svg" alt="" className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-50" />
             <div className="flex flex-col gap-1.5">
               <p className="text-xs text-muted-foreground italic leading-relaxed">
-                <span className="font-semibold not-italic text-card-foreground">Administración Pública Centralizada:</span>{" "}
+                <span className="font-medium not-italic text-card-foreground">Administración Pública Centralizada:</span>{" "}
                 En este caso se estará a lo que establezca el formato de Resguardo Personalizado de Activos de bienes muebles e intangibles,
                 emitido por la Dirección General de Patrimonio de la Secretaría de Administración y Finanzas,
                 que señala las obligaciones como resguardante de los Activos.
               </p>
               <p className="text-xs text-muted-foreground italic leading-relaxed">
-                <span className="font-semibold not-italic text-card-foreground">Organismos Auxiliares:</span>{" "}
+                <span className="font-medium not-italic text-card-foreground">Organismos Auxiliares:</span>{" "}
                 En este caso se estará a lo establecido por sus disposiciones administrativas correspondientes.
               </p>
             </div>
@@ -3066,8 +3058,8 @@ function FormularioNombramiento({
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.VIII ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>VIII</span>
+          <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.VIII ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-medium text-primary-foreground`}>VIII</span>
             Perfil
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
@@ -3077,7 +3069,7 @@ function FormularioNombramiento({
         </CardHeader>
         <CardContent className="grid gap-x-6 gap-y-5 px-4 pb-4 pt-0 md:grid-cols-2">
           <div className="md:col-span-2 flex flex-col gap-2">
-            <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+            <span className="text-sm font-light text-card-foreground flex items-center gap-1.5">
               Escolaridad Mínima
               {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
             </span>
@@ -3100,9 +3092,9 @@ function FormularioNombramiento({
             <div key={label} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
                 {sub && (
-                  <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
+                  <span className="text-[10px] font-medium text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
                 )}
-                <span className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
+                <span className="text-sm font-light text-card-foreground flex items-center gap-1.5">
                   {label}
                   {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
                 </span>
@@ -3180,7 +3172,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
         <Card className="shadow-sm border-2 border-secondary/30">
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <CheckCircle2 className="h-12 w-12 text-secondary" />
-            <p className="text-sm font-semibold text-card-foreground text-center">
+            <p className="text-sm font-light text-card-foreground text-center">
               {subTipo === "regularizacion" ? "Regularización registrada exitosamente" : "Excepción DO registrada exitosamente"}
             </p>
             {subTipo === "regularizacion" && (
@@ -3204,13 +3196,13 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5"><ArrowLeft className="h-4 w-4" />Volver</Button>
         <Separator orientation="vertical" className="h-6" />
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Excepción DO</h2>
+          <h2 className="text-xl font-light text-foreground">Excepción DO</h2>
           <p className="text-sm text-muted-foreground">Captura directa por la Dirección de Organización</p>
         </div>
       </div>
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+          <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
             <ShieldAlert className="h-5 w-5 text-accent-foreground" />Tipo de Excepción
           </CardTitle>
         </CardHeader>
@@ -4019,7 +4011,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
               <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-[#DC2626]">Calendario de Recepción Incompleto</span>
+                <span className="text-sm font-medium text-[#DC2626]">Calendario de Recepción Incompleto</span>
                 <span className="text-sm text-[#374151]">
                   Para continuar con el registro es necesario contar con las fechas de los <strong>3 Regímenes</strong> (Honorarios, Asimilados y Nombramiento). <strong>Todos los Meses/Quincenas</strong> deben tener fecha configurada.
                 </span>
@@ -4028,7 +4020,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
           )}
                 <Card className={`shadow-sm border-secondary/30 border-2 ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
               <CardHeader className="px-4 pt-3 pb-1">
-              <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+              <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
               Período de Aplicación
               </CardTitle>
               <CardDescription>Seleccione el régimen y período para consultar las fechas límite de recepción</CardDescription>
@@ -4085,11 +4077,11 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="flex flex-col gap-1">
                       <span className="text-xs text-muted-foreground">Fecha límite de recepción de solicitudes de dictamen/opiniones técnicas funcionales (DGDO) </span>
-                      <span className="text-sm font-semibold text-card-foreground">{periodoInfo.row.limiteDO}</span>
+                      <span className="text-sm font-light text-card-foreground">{periodoInfo.row.limiteDO}</span>
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-xs text-muted-foreground">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH) </span>
-                      <span className="text-sm font-semibold text-card-foreground">{periodoInfo.row.limiteDGRH}</span>
+                      <span className="text-sm font-light text-card-foreground">{periodoInfo.row.limiteDGRH}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -4101,7 +4093,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                       <div className="flex items-start gap-2 w-full">
                         <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "#f97316" }} />
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold" style={{ color: "#f97316" }}>Período vencido — temporalmente habilitado</span>
+                          <span className="text-sm font-medium" style={{ color: "#f97316" }}>Período vencido — temporalmente habilitado</span>
                           <span className="text-xs text-muted-foreground">Tiene autorización para registrar fuera de tiempo.</span>
                         </div>
                       </div>
@@ -4109,7 +4101,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                       <div className="flex items-start gap-2 w-full">
                         <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold text-destructive">Período vencido — No se puede Registrar</span>
+                          <span className="text-sm font-medium text-destructive">Período vencido — No se puede Registrar</span>
                           <span className="text-xs text-muted-foreground">La Fecha  límite DO ({periodoInfo.row.limiteDO}) ya Expiro .</span>
                         </div>
                       </div>
@@ -4131,7 +4123,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       {false && (
         <Card className="shadow-sm border-border">
           <CardHeader className="px-4 pt-3 pb-1">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+            <CardTitle className="flex items-center gap-2 text-sm font-light text-card-foreground">
               <FileText className="h-4 w-4 text-secondary" />Renovación
             </CardTitle>
           </CardHeader>
@@ -4208,7 +4200,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                             <span className="font-medium">{formatFolioJustificacion(f.folioJustificacion)}</span>{" / "}
                             <span className="font-medium">{formatFolioDictamen(f.folioDictamen)}</span>
                             {f.secretaria && <span className="text-muted-foreground"> - {f.secretaria}</span>}
-                            {foliosDBIds.has(f.id) && <span className="ml-1.5 text-[10px] text-blue-500 font-semibold"> BD</span>}
+                            {foliosDBIds.has(f.id) && <span className="ml-1.5 text-[10px] text-blue-500 font-medium"> BD</span>}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -4282,7 +4274,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                               b) La Dirección General de Desarrollo Organizacional emitirá la dictaminación correspondiente a la presente Justificación.
                             </p>
                             <div className="flex flex-col gap-2 rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
-                              <span className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">
+                              <span className="text-[11px] font-medium uppercase tracking-wide text-[#6B7280]">
                                 Campos editables en renovación
                               </span>
                               <ul className="flex flex-col gap-1.5">
