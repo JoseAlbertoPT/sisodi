@@ -2212,12 +2212,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       onArchivoChange={setAutografaArchivoSubido}
                     />
                   )}
-                  {modalidadFirma === "autografa" && solicitud && (
+                  {modalidadFirma === "autografa" && solicitud && autografaArchivoSubido && (
                     <p className="text-xs font-medium text-muted-foreground px-1 -mb-1">
-                      Cuando termines de subir el documento firmado, continúa con el sellado abajo:
+                      Continúa con el sellado abajo:
                     </p>
                   )}
-                  {modalidadFirma === "autografa" && solicitud && (
+                  {modalidadFirma === "autografa" && solicitud && autografaArchivoSubido && (
                     <SelladoDocumentoSection
                       solicitudId={solicitud.id}
                       etapa="emision"

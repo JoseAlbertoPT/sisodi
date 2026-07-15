@@ -11,13 +11,16 @@ import { PageHeader } from '@/components/page-header';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
+
   FileText, Briefcase, FileQuestion, UserCheck,
   FileOutput, Users, Clock, RefreshCw, Loader2,
-  BarChart2, TrendingUp, FileSpreadsheet, ChevronRight,
+  BarChart2, TrendingUp, FileSpreadsheet, ChevronRight, Info,
+
 } from "lucide-react"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList,
+
 } from "recharts"
 import * as XLSX from "xlsx"
 
@@ -50,13 +53,10 @@ const C_MORA90       = "#ffd8e7"
 const C_PIEDRA40    = "#3f80ff"
 const C_PIEDRA70    = "#79a6ff"
 
-// ── Paleta de gráficas (vino) ──────────────────────────────────────────
 const C_VINO_HOVER  = "#6F2C4F"
 const C_ROSA_BASE   = "#C9A3B6"
 const DONUT_PALETTE = ["#4F1E37", "#8A4A6A", "#A56A86", "#C9A3B6"]
 const donutColor = (i: number) => DONUT_PALETTE[i % DONUT_PALETTE.length]
-
-// Ordena de mayor a menor y asigna la paleta en ese orden (rota si hay más categorías que colores)
 function buildDonutItems(raw: { name: string; value: number }[]): { name: string; value: number; color: string }[] {
   return [...raw]
     .filter(d => d.value > 0)
@@ -940,7 +940,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       </div>
 
       <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" showCloseButton={false}>
           <DialogHeader>
             <DialogTitle className="ds-title-md flex items-center gap-2">
               <FileSpreadsheet className="h-6 w-6 text-secondary" />
@@ -983,50 +983,48 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
         </DialogContent>
       </Dialog>
       <Dialog open={confirmarDescarga} onOpenChange={setConfirmarDescarga}>
-  <DialogContent className="max-w-sm sm:max-w-sm">
-    <DialogHeader className="px-4 pt-4 pb-3 gap-0.5">
-      <DialogTitle className="flex items-center gap-2" style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.2 }}>
-        <FileSpreadsheet className="h-5 w-5 text-secondary" />
-        Confirmar descarga
-      </DialogTitle>
-      <p className="font-sans text-base font-light text-muted-foreground">
-        ¿Está seguro de descargar el reporte{" "}
-        <strong className="text-card-foreground">
-          {reporteSeleccionado?.titulo}
-        </strong>
-        ?
-      </p>
-    </DialogHeader>
+        <DialogContent className="sm:max-w-sm" showCloseButton={false}>
+          <DialogHeader className="items-start gap-3">
+            <Info className="h-6 w-6 text-[#2e3b2b]" strokeWidth={1.75} />
+            <DialogTitle className="ds-title-md font-light">
+              Confirmar descarga
+            </DialogTitle>
+            <p className="font-sans text-sm font-light text-muted-foreground text-left">
+              ¿Está seguro de descargar el reporte{" "}
+              <strong className="font-medium text-card-foreground">
+                {reporteSeleccionado?.titulo}
+              </strong>
+              ?
+            </p>
+          </DialogHeader>
 
-    <DialogFooter className="gap-2 px-4 pt-3 pb-3 mt-0 border-t border-[#e4e3dc] sm:justify-between">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="rounded-full h-9 px-5 text-base font-medium border-[1.5px] border-[#D1D5DB] shadow-sm bg-white text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#6B7280] active:bg-white active:text-[#6B7280] focus:bg-white focus:text-[#6B7280]"
-        onClick={() => setConfirmarDescarga(false)} >
-        Cancelar
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        className="rounded-full h-9 px-5 text-base font-medium shadow-sm bg-[#773357] hover:bg-[#773357] active:bg-[#773357] text-white active:text-white border-0"
-        disabled={!reporteSeleccionado || descargando === reporteSeleccionado.id}
-        onClick={() => {
-          if (!reporteSeleccionado) return
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              onClick={() => setConfirmarDescarga(false)}
+              className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              className="rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+              disabled={!reporteSeleccionado || descargando === reporteSeleccionado.id}
+              onClick={() => {
+                if (!reporteSeleccionado) return
 
-          handleDescargar(reporteSeleccionado)
-          setConfirmarDescarga(false)
-          setModalAbierto(false)
-        }}
-      >
-        {reporteSeleccionado && descargando === reporteSeleccionado.id
-          ? "Descargando..."
-          : "Descargar"}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-       </Dialog>
+                handleDescargar(reporteSeleccionado)
+                setConfirmarDescarga(false)
+                setModalAbierto(false)
+              }}
+            >
+              {reporteSeleccionado && descargando === reporteSeleccionado.id
+                ? "Descargando..."
+                : "Descargar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {kpis.map(kpi => (
           <KpiCard key={kpi.label} {...kpi} loading={loading} />

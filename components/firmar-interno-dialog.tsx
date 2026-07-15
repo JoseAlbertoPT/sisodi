@@ -188,20 +188,20 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
     </AlertDialog>
     <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
       <DialogContent
-        className={`overflow-y-auto font-sans ${exito ? "sm:max-w-md max-h-[75vh]" : "sm:max-w-3xl max-h-[85vh]"}`}
+        className={`overflow-y-auto font-sans ${exito ? "sm:max-w-md max-h-[75vh]" : "sm:max-w-md max-h-[80vh]"}`}
         onOpenAutoFocus={(e) => e.preventDefault()}
         showCloseButton={false}
       >
         {!exito && (
-          <DialogHeader>
-            <DialogTitle className="ds-title-md font-light flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
-              <Shield className="h-5 w-5 text-primary" />
+          <DialogHeader className="px-5 pt-5 pb-3">
+            <DialogTitle className="text-base font-light flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
+              <Shield className="h-4 w-4 text-primary" />
               {titulo ?? "Firmar con tu e.firma"}
             </DialogTitle>
-            {subtitulo && <p className="font-sans text-xs font-light text-gray-500 mt-1">{subtitulo}</p>}
+            {subtitulo && <p className="font-sans text-xs font-light text-gray-500 mt-0.5">{subtitulo}</p>}
           </DialogHeader>
         )}
-        <div className="px-6 pb-6">
+        <div className="px-5 pb-5">
         {exito ? (
           <div className="flex flex-col items-center gap-3 py-8">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#d2fad2]">
@@ -268,7 +268,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className={`flex flex-col gap-5 pt-2 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
+          <form onSubmit={handleSubmit} className={`flex flex-col gap-3 pt-1 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
             {esEmisor && (
               <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
@@ -282,7 +282,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 </div>
               </div>
             )}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><Briefcase className="h-3.5 w-3.5 shrink-0" /> Cargo / Puesto <span className="text-destructive">*</span></Label>
               <Input
                 ref={cargoInputRef}
@@ -293,28 +293,36 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
                 onChange={e => setCargo(e.target.value.toUpperCase())}
                 placeholder="EJ. DIRECTOR DE ANÁLISIS NORMATIVO"
-                className={`h-11 py-2.5 uppercase no-focus-paint ${!cargoHabilitado ? "cursor-pointer" : ""} ${camposIncompletos && !cargo.trim() ? "border-destructive" : ""}`}
+                className={`h-8 w-full rounded-xl border px-2.5 py-1.5 text-xs font-light uppercase ${!cargoHabilitado ? "cursor-pointer" : ""} ${camposIncompletos && !cargo.trim() ? "border-destructive" : ""}`}
                 autoComplete="off"
                 name="cargo-firmante-interno"
               />
-              <p className="font-sans text-[10px] font-light text-gray-500 flex items-center gap-1 mt-2">
+              <p className="font-sans text-[10px] font-light text-gray-500 flex items-center gap-1 mt-1">
                 <AlertCircle className="h-3 w-3" />
                 Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
               </p>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><FileKey className="h-3.5 w-3.5 shrink-0" /> Certificado (.cer) <span className="text-destructive">*</span></Label>
-              <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} className={`h-11 py-2.5 file:mr-3 no-focus-paint ${camposIncompletos && !cerFile ? "border-destructive" : ""}`} />
-              {cerFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{cerFile.name}</span>}
+              <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} className={`h-8 w-full rounded-xl border px-2.5 py-1.5 text-xs font-light file:mr-3 ${camposIncompletos && !cerFile ? "border-destructive" : ""}`} />
+              {cerFile && (
+                <span className="font-sans text-xs font-light text-[#773357] truncate flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />{cerFile.name}
+                </span>
+              )}
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><KeyRound className="h-3.5 w-3.5 shrink-0" /> Clave privada (.key) <span className="text-destructive">*</span></Label>
-              <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} className={`h-11 py-2.5 file:mr-3 no-focus-paint ${camposIncompletos && !keyFile ? "border-destructive" : ""}`} />
-              {keyFile && <span className="font-sans text-xs font-light text-gray-500 truncate">{keyFile.name}</span>}
+              <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} className={`h-8 w-full rounded-xl border px-2.5 py-1.5 text-xs font-light file:mr-3 ${camposIncompletos && !keyFile ? "border-destructive" : ""}`} />
+              {keyFile && (
+                <span className="font-sans text-xs font-light text-[#773357] truncate flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />{keyFile.name}
+                </span>
+              )}
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <Label className="font-sans text-xs font-light text-gray-500">Contraseña de la clave privada <span className="text-destructive">*</span></Label>
-              <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className={`h-11 py-2.5 no-focus-paint ${camposIncompletos && !password ? "border-destructive" : ""}`} />
+              <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className={`h-8 w-full rounded-xl border px-2.5 py-1.5 text-xs font-light ${camposIncompletos && !password ? "border-destructive" : ""}`} />
             </div>
 
             {error && (

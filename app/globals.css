@@ -888,3 +888,12 @@ button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):focus {
   --tw-ring-shadow: 0 0 #0000 !important;
   --tw-ring-color: transparent !important;
 }
+
+/* ── Oculta la barra de scroll visualmente, sin quitar la función de scroll ── */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

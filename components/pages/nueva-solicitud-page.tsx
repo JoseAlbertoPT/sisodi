@@ -1307,7 +1307,7 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
           </p>
         </div>
 
-        <div className="flex justify-end px-6 py-4" style={{ borderTop: "1px solid #E5E7EB" }}>
+        <div className="flex justify-center px-6 py-4" style={{ borderTop: "1px solid #E5E7EB" }}>
           <button
             type="button"
             onClick={onAccept}
@@ -1325,9 +1325,6 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
               gap: 8,
             }}
           >
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
             Entendido, continuar
           </button>
         </div>

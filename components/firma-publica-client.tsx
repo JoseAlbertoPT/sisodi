@@ -18,7 +18,6 @@ import {
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then(m => m.PdfPreview), {
   ssr: false,
 })
-
 async function fileToBase64(file: File): Promise<string> {
   const buf = await file.arrayBuffer()
   const bytes = new Uint8Array(buf)
@@ -26,7 +25,6 @@ async function fileToBase64(file: File): Promise<string> {
   for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
   return btoa(binary)
 }
-
 type Fase = "cargando" | "aviso" | "firmando" | "exito" | "expirado" | "otra_sesion" | "invalido" | "completado"
 
 interface Props { uuid: string; token: string }
@@ -172,7 +170,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
     const s = segundosRestantes % 60
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
   }, [segundosRestantes])
-
+  const camposIncompletos = error === "Completa todos los campos"
   if (fase === "cargando") {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -313,12 +311,12 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
 
   const pdfSrc = `/api/firma-efirma/pdf?uuid=${encodeURIComponent(uuid)}&t=${encodeURIComponent(token)}`
   const timerColor =
-    segundosRestantes > 10 * 60 ? "text-secondary" :
-    segundosRestantes > 5 * 60  ? "text-accent-foreground" :
-    "text-destructive"
+    segundosRestantes > 10 * 60 ? "text-white border-white/30" :
+    segundosRestantes > 5 * 60  ? "text-amber-300 border-amber-300/40" :
+    "text-red-400 border-red-400/40"
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       <AlertDialog open={avisoCargoAbierto} onOpenChange={setAvisoCargoAbierto}>
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader className="items-start gap-3 text-left">
@@ -337,25 +335,27 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <header className="border-b bg-background sticky top-0 z-10">
-        <div className="flex items-center justify-between px-6 py-4">
+      <header className="rounded-2xl mx-4 mt-4 overflow-hidden shrink-0 z-10" style={{ backgroundColor: "#2e3b2b" }}>
+        <div className="flex items-center justify-between px-10 pt-6 pb-8">
           <div>
-            <h1 className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)]">Firma de Justificación</h1>
-            <p className="font-sans text-xs font-light text-gray-500">Portal de firma electrónica — Dirección de Organización</p>
+            <h1 className="font-sans text-sm font-light text-white">Firma de Justificación</h1>
+            <p className="font-sans text-xs font-light text-white/70">Portal de firma electrónica — Dirección de Organización</p>
           </div>
           <div className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-mono font-medium ${timerColor}`}>
             <Clock className="h-4 w-4" /> {mmss}
           </div>
         </div>
+        <div
+          className="h-8 bg-repeat-x bg-center"
+          style={{ backgroundImage: "url(/banner-completo.svg)" }}
+        />
       </header>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[45%_55%] gap-0 min-h-0">
-        <div className="border-r p-6 overflow-y-auto flex flex-col gap-5">
+        <div className="p-6 overflow-y-auto flex flex-col gap-5 no-scrollbar">
           {firmanteInfo && (
             <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
-                <img src="/Iconos1/account_circle-user-perfil.svg" width={20} height={20} alt="" />
-              </div>
+              <img src="/Iconos1/account_circle-user-perfil.svg" width={20} height={20} alt="" className="shrink-0" />
               <div>
                 <p className="font-sans text-xs font-light uppercase tracking-wide text-gray-500">Estás firmando como</p>
                 <p className="font-sans text-lg font-light text-[color:var(--color-core-piedra-20)] mt-0.5">{firmanteInfo.rol}</p>
@@ -367,9 +367,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           <Card>
             <CardHeader>
               <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
-                  <img src="/iconos2/Shield.svg" width={20} height={20} alt="" />
-                </div>
+                <img src="/iconos2/Shield.svg" width={20} height={20} alt="" className="shrink-0" />
                 <div>
                   <CardTitle className="font-sans text-base font-light text-[color:var(--color-core-piedra-20)]">
                     Firmar con e.firma
@@ -384,7 +382,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
               <form onSubmit={handleFirmar} className={`flex flex-col gap-5 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500">RFC del firmante</Label>
-                  <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" className="focus-visible:ring-0 focus-visible:border-input" />
+                  <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" className={camposIncompletos && !usuario ? "border-destructive" : ""} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
@@ -397,7 +395,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                     onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
                     onChange={e => setCargo(e.target.value.toUpperCase())}
                     placeholder="EJ. DIRECTOR DE RECURSOS HUMANOS"
-                    className={`uppercase focus-visible:ring-0 focus-visible:border-input ${!cargoHabilitado ? "cursor-pointer" : ""}`}
+                    className={`uppercase ${!cargoHabilitado ? "cursor-pointer" : ""} ${camposIncompletos && !cargo.trim() ? "border-destructive" : ""}`}
                     autoComplete="off"
                     name="cargo-firmante-externo"
                   />
@@ -408,25 +406,25 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
-                  <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} />
+                  <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} className={camposIncompletos && !cerFile ? "border-destructive" : ""} />
                   {cerFile && (
-                    <span className="font-sans text-xs font-light text-gray-500 truncate flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />{cerFile.name}
+                    <span className="font-sans text-xs font-light text-[#773357] truncate flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />{cerFile.name}
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
-                  <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} />
+                  <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} className={camposIncompletos && !keyFile ? "border-destructive" : ""} />
                   {keyFile && (
-                    <span className="font-sans text-xs font-light text-gray-500 truncate flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />{keyFile.name}
+                    <span className="font-sans text-xs font-light text-[#773357] truncate flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />{keyFile.name}
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500">Contraseña de la clave privada</Label>
-                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className="focus-visible:ring-0 focus-visible:border-input" />
+                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className={camposIncompletos && !password ? "border-destructive" : ""} />
                 </div>
                 {error && <p className="text-xs text-destructive">{error}</p>}
                 <Button type="submit" disabled={trabajando}

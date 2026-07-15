@@ -1211,7 +1211,7 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
             La información registrada será <strong>responsabilidad de la persona titular</strong> de la Unidad de Enlace Financiero Administrativo o equivalente.
           </p>
         </div>
-        <div className="flex justify-end px-6 py-4 border-t border-border bg-muted/20">
+        <div className="flex justify-center px-6 py-4 border-t border-border bg-muted/20">
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onAccept}>
             Entendido, continuar
           </Button>

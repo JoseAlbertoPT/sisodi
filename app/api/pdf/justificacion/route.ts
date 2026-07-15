@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { renderToStream } from "@react-pdf/renderer";
-import { Readable } from "node:stream";
 import {
   PlantillaJustificacionServicios,
   type JustificacionData,
@@ -353,74 +352,61 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
 
     const pdfStream = await renderToStream(pdfElement as any);
 
-    if (firmas.formato === "en_linea") {
-      let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
-      try {
-        const bypass = process.env.EFIRMA_BYPASS === "true";
+    let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
+    try {
+      const bypass = process.env.EFIRMA_BYPASS === "true";
 
-        const firmaProceso = await prisma.firma_proceso.findUnique({
-          where: { solicitud_id: Number(solicitudId) },
-          include: bypass
-            ? {
-                firmantes: {
-                  orderBy: { orden: "asc" },
-                  ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
-                },
-              }
-            : undefined,
-        });
+      const firmaProceso = await prisma.firma_proceso.findUnique({
+        where: { solicitud_id: Number(solicitudId) },
+        include: bypass
+          ? {
+              firmantes: {
+                orderBy: { orden: "asc" },
+                ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
+              },
+            }
+          : undefined,
+      });
 
-        let firmasPortal: FirmaPortal[] = [];
+      let firmasPortal: FirmaPortal[] = [];
 
-        if (bypass) {
-          const dummyFirmantes = (firmaProceso as any)?.firmantes ?? [];
-          if (dummyFirmantes.length > 0) {
-            firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
-          } else if (!soloFirmanteId) {
-            firmasPortal = [buildFirmaFicticia({}, firmaProceso?.uuid)];
-          }
-        } else if (firmaProceso?.proceso_id) {
-          const estado: any = await efirmaClient.estado(firmaProceso.proceso_id);
-          firmasPortal = Array.isArray(estado?.firmas)
-            ? estado.firmas.map((f: any) => ({
-                usuario: f.usuario ?? "",
-                rolFirmante: f.rolFirmante ?? null,
-                responsable: f.responsable ?? null,
-                selloDigital: f.selloDigital ?? null,
-                estampadoTiempo: f.estampadoTiempo ?? null,
-                selloEstampadoTiempo: f.selloEstampadoTiempo ?? null,
-                noCertificado: f.noCertificado ?? null,
-                noCertificadoGEM: f.noCertificadoGEM ?? null,
-                rfcGEM: f.rfcGEM ?? null,
-                urlValidacion: f.urlValidacion ?? null,
-                firmadoEn: f.firmadoEn ?? null,
-              }))
-            : [];
+      if (bypass) {
+        const dummyFirmantes = (firmaProceso as any)?.firmantes ?? [];
+        if (dummyFirmantes.length > 0) {
+          firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
+        } else if (!soloFirmanteId) {
+          firmasPortal = [buildFirmaFicticia({}, firmaProceso?.uuid)];
         }
-
-        if (firmasPortal.length > 0) {
-          pdfFinal = await agregarConstanciaFirma({
-            pdfBase: pdfFinal as Buffer,
-            firmas: firmasPortal,
-            nombreArchivo: filename,
-            folio,
-          });
-        }
-      } catch (errFirma) {
-        console.error("[pdf/justificacion] Error agregando constancia de firma:", errFirma);
+      } else if (firmaProceso?.proceso_id) {
+        const estado: any = await efirmaClient.estado(firmaProceso.proceso_id);
+        firmasPortal = Array.isArray(estado?.firmas)
+          ? estado.firmas.map((f: any) => ({
+              usuario: f.usuario ?? "",
+              rolFirmante: f.rolFirmante ?? null,
+              responsable: f.responsable ?? null,
+              selloDigital: f.selloDigital ?? null,
+              estampadoTiempo: f.estampadoTiempo ?? null,
+              selloEstampadoTiempo: f.selloEstampadoTiempo ?? null,
+              noCertificado: f.noCertificado ?? null,
+              noCertificadoGEM: f.noCertificadoGEM ?? null,
+              rfcGEM: f.rfcGEM ?? null,
+              urlValidacion: f.urlValidacion ?? null,
+              firmadoEn: f.firmadoEn ?? null,
+            }))
+          : [];
       }
 
-      return new NextResponse(pdfFinal as unknown as BodyInit, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `inline; filename="${filename}"`,
-        },
+      pdfFinal = await agregarConstanciaFirma({
+        pdfBase: pdfFinal as Buffer,
+        firmas: firmasPortal,
+        nombreArchivo: filename,
+        folio,
       });
+    } catch (errFirma) {
+      console.error("[pdf/justificacion] Error agregando constancia de firma:", errFirma);
     }
 
-    const webStream = Readable.toWeb(pdfStream as Readable) as ReadableStream;
-    return new NextResponse(webStream, {
+    return new NextResponse(pdfFinal as unknown as BodyInit, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
