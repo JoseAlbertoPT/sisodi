@@ -147,6 +147,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           uuid, token,
           usuario: usuario.toUpperCase(),
           cargoFirmante: cargo.trim(),
+
           certificado: cerB64, clavePrivada: keyB64, fraseClavePrivada: password,
         }),
       })
@@ -336,12 +337,17 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         </AlertDialogContent>
       </AlertDialog>
       <header className="rounded-2xl mx-4 mt-4 overflow-hidden shrink-0 z-10" style={{ backgroundColor: "#2e3b2b" }}>
-        <div className="flex items-center justify-between px-10 pt-6 pb-8">
-          <div>
-            <h1 className="font-sans text-sm font-light text-white">Firma de Justificación</h1>
-            <p className="font-sans text-xs font-light text-white/70">Portal de firma electrónica — Dirección de Organización</p>
+        <div className="flex items-center justify-between flex-wrap gap-y-3 px-4 sm:px-10 pt-6 pb-8">
+          <div className="flex items-center min-w-0">
+            <div className="shrink-0 pr-6 sm:pr-8">
+              <img src="/logo-20finanzas.png" alt="Secretaría de Administración y Finanzas" className="h-10 sm:h-12 w-auto" />
+            </div>
+            <div className="pl-5 sm:pl-6 border-l border-white/15 min-w-0">
+              <h1 className="font-sans text-base sm:text-lg font-light text-white truncate">Firma de Justificación</h1>
+              <p className="font-sans text-xs sm:text-sm font-light text-white/70 truncate">Portal de firma electrónica — Dirección de Organización</p>
+            </div>
           </div>
-          <div className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-mono font-medium ${timerColor}`}>
+          <div className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-mono font-medium shrink-0 ${timerColor}`}>
             <Clock className="h-4 w-4" /> {mmss}
           </div>
         </div>

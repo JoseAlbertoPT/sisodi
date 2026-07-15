@@ -1053,10 +1053,10 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
   )
 }
 
-function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustificacion, guardando }: {
+function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustificacion, onFirmarElectronica, guardando }: {
   solicitud: UefaSolicitud; onBack: () => void
   onAprobar: (id: number) => void; onObservar: (id: number) => void
-  onFirmarJustificacion: (id: number) => void; guardando: boolean
+  onFirmarJustificacion: (id: number) => void; onFirmarElectronica: (id: number) => void; guardando: boolean
 }) {
   const [showFirmarConfirm,  setShowFirmarConfirm]  = useState(false)
   const [showDictamen,       setShowDictamen]       = useState(false)
@@ -1142,7 +1142,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
           )}
           {isPendienteFirma && (
             <Button
-              onClick={() => setShowFirmarConfirm(true)}
+              onClick={() => solicitud.modalidadFirma === "electronica" ? onFirmarElectronica(solicitud.id) : setShowFirmarConfirm(true)}
               disabled={guardando}
               className="gap-1.5"
               size="sm"
@@ -1159,7 +1159,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                 onClick={() => setShowDictamen(true)}
                 className="gap-1.5 rounded-2xl bg-[#773357] text-white font-medium hover:bg-[#773357] hover:text-white hover:opacity-90"
               >
-                <FileCheck className="h-4 w-4" />Ver Dictamen
+                Ver Dictamen
               </Button>
 
             </>
@@ -1538,6 +1538,7 @@ export function ValidacionUefaPage() {
 
   const selectedSolicitud  = selectedId    !== null ? solicitudes.find(s => s.id === selectedId)    ?? null : null
   const dictamenViewSol    = dictamenViewId !== null ? solicitudes.find(s => s.id === dictamenViewId) ?? null : null
+  const firmaTargetSol     = firmaTargetId  !== null ? solicitudes.find(s => s.id === firmaTargetId)  ?? null : null
 
   if (selectedSolicitud) return (
     <PageLayout noContainer>
@@ -1548,6 +1549,7 @@ export function ValidacionUefaPage() {
           onAprobar={handleAprobar}
           onObservar={id => setObservarTargetId(id)}
           onFirmarJustificacion={handleFirmarJustificacion}
+          onFirmarElectronica={id => setFirmaTargetId(id)}
           guardando={guardando}
         />
         <ObservarModal
@@ -1564,11 +1566,27 @@ export function ValidacionUefaPage() {
           primaryAction={{ label: "Regresar a bandeja", onClick: () => { setSelectedId(null); setSuccessMsg(null) } }}
           onClose={() => { setSelectedId(null); setSuccessMsg(null) }}
         />
+        {firmaTargetSol && (
+          <FirmaModal
+            open={firmaTargetId !== null}
+            onClose={() => setFirmaTargetId(null)}
+            solicitudId={firmaTargetSol.id}
+            folioJustificacion={firmaTargetSol.folioJustificacion}
+            folioRecepcion={firmaTargetSol.folio && firmaTargetSol.folio !== `SOL-${firmaTargetSol.id}` ? firmaTargetSol.folio : null}
+            folioDictamen={firmaTargetSol.numeroDictamen ?? (firmaTargetSol.folioDictamen ? formatearFolio(firmaTargetSol.folioDictamen) : null)}
+            modalidadFirma={firmaTargetSol.modalidadFirma}
+            currentUserId={(user as any)?.id ?? ""}
+            onGenerarPdf={() => {
+              generateJustificacionPDF(firmaTargetSol.id, firmaTargetSol.folioJustificacion)
+            }}
+            onGenerarPdfBase64={async () => generateJustificacionPDFBase64(firmaTargetSol.id)}
+            onFinalizar={async () => { await handleFirmarJustificacion(firmaTargetSol.id) }}
+            guardandoFinal={guardando}
+          />
+        )}
       </>
     </PageLayout>
   )
-
-  const firmaTargetSol = solicitudes.find(s => s.id === firmaTargetId) ?? null
 
   return (
     <>

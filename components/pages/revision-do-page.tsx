@@ -23,7 +23,7 @@ import {
 
   ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle, RotateCcw,
   History, MessageSquare, ClipboardCheck, MinusCircle,
-  ChevronDown, ChevronRight, Send, Download, Lock, Stamp,
+  ChevronDown, ChevronRight, Download, Lock, Stamp,
   Users, Shield, Loader2, GraduationCap, Brain, Wrench, Heart, Star, Briefcase,
   UserCheck, Pencil, X,
 
@@ -33,7 +33,6 @@ import { useAuth } from "@/lib/auth-context"
 import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
 import { type EditSolicitudPayload, type FormularioData } from "@/components/pages/nueva-solicitud-page"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
-import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 import { FirmaModal } from "@/components/firma-modal"
 import { FirmaAutografaPanel } from "@/components/firma-autografa-panel"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
@@ -1308,7 +1307,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   }, [solicitud, calData])
   const [modalidadFirma,        setModalidadFirma]        = useState<"electronica" | "autografa">("electronica")
   const [selectedDestinatarios, setSelectedDestinatarios] = useState<string[]>([])
-  const [selladoEmisionSubido,  setSelladoEmisionSubido]  = useState(false)
   const [autografaArchivoSubido, setAutografaArchivoSubido] = useState(false)
   const [firmaEmisionAbierta,   setFirmaEmisionAbierta]   = useState(false)
 
@@ -1601,10 +1599,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const enTurno = (solicitud?.estado ?? "").toLowerCase() === estadoEnRevisionEtapa
     || isEnTabObservadas || isAceptadoPorRevisor || checklistYaRealizado
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
-  const canEmit        = selectedDestinatarios.length > 0 && fechaDictaminacion &&
+  const canEmit        = !!fechaDictaminacion &&
     (modalidadFirma === "electronica"
       ? true
-      : autografaArchivoSubido && selladoEmisionSubido)
+      : autografaArchivoSubido)
 
   if (loading) return (
     <div className="flex items-center justify-center py-24 gap-3">
@@ -1673,7 +1671,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 </p>
               </div>
               <RadioGroup value={modalidadFirma}
-                onValueChange={v => { setModalidadFirma(v as any); if (v !== "electronica") setSelladoEmisionSubido(false) }}
+                onValueChange={v => setModalidadFirma(v as any)}
                 className="flex flex-col gap-3 w-full">
                 {[
                   { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
@@ -2212,6 +2210,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       onArchivoChange={setAutografaArchivoSubido}
                     />
                   )}
+                  {/* Sellado del dictamen: no va en este flujo, solo son paso 1 (Fecha de Dictaminación) y paso 2 (subir archivo autógrafa).
                   {modalidadFirma === "autografa" && solicitud && autografaArchivoSubido && (
                     <p className="text-xs font-medium text-muted-foreground px-1 -mb-1">
                       Continúa con el sellado abajo:
@@ -2235,6 +2234,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       onCambio={(subido) => setSelladoEmisionSubido(subido)}
                     />
                   )}
+                  */}
                   {/* <Card className="shadow-sm border-border">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2268,9 +2268,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                           }
                         }}
                         disabled={!canEmit}
-                        className={`gap-1.5 ${canEmit ? "" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+                        className={canEmit ? "" : "bg-muted text-muted-foreground cursor-not-allowed"}
+                        style={canEmit ? { backgroundColor: "#773357", color: "#fff", border: "none" } : undefined}
                       >
-                        <Send className="h-4 w-4" />
                         {modalidadFirma === "electronica" ? "Firmar y Emitir Dictamen" : "Emitir Dictamen"}
                       </Button>
                     </CardContent>
