@@ -14,6 +14,8 @@ import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estamp
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
 import React from "react";
 
+export const runtime = "nodejs";
+
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream as AsyncIterable<Buffer | string>) {
