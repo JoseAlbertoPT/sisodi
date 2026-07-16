@@ -536,7 +536,7 @@ function ConsultaTab() {
 
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       <Dialog open={showView} onOpenChange={setShowView}>
-        <DialogContent showCloseButton={false} className="w-[75vw] max-w-[75vw] sm:max-w-[75vw] h-[92vh] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden bg-white">
+        <DialogContent showCloseButton={false} className="w-[55vw] max-w-[55vw] sm:max-w-[55vw] h-[90vh] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden bg-white">
           <DialogHeader className="flex flex-row items-center gap-3 px-5 py-4 border-b border-border shrink-0 space-y-0">
             <div className="flex items-center justify-center shrink-0">
               <FileTypeIcon name="justificacion.pdf" size="md" />

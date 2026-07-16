@@ -49,7 +49,6 @@ export interface JustificacionNombramientoData {
   };
   
   resguardoActivos: boolean;
-
   perfil: {
     escolaridadMinima: string[];
     competenciasAdministrativas: string[];
@@ -71,7 +70,6 @@ export interface JustificacionNombramientoData {
 
 const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20finanzas.png"));
 const MARCA_MORELOS = fs.readFileSync(path.join(process.cwd(), "public/LOGO_MORELOS_V1.png"));
-
 const s = StyleSheet.create({
   page: {
     paddingTop: 30,
@@ -147,6 +145,7 @@ const s = StyleSheet.create({
     fontSize: 10,
     textAlign: "center",
   },
+
   pageBox: { flex: 1, paddingHorizontal: 4, paddingTop: 10, justifyContent: "flex-start", alignItems: "center" },
   claveText: { fontSize: 8, textAlign: "center" },
 
@@ -672,19 +671,21 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         </View>
 
-        <Text style={{...s.sectionTitle, marginTop: 10}}>I.6    RESGUARDO PERSONALIZADO DE ACTIVOS:</Text>
-        <View style={{ flexDirection: "row", marginBottom: 10, alignItems: "center" }}>
-          <Text style={{ fontSize: 9, marginLeft: 15 }}>Sí</Text>
-          <View style={s.checkboxRect}>{data.resguardoActivos && <Text style={s.checkText}>X</Text>}</View>
-          <Text style={{ fontSize: 9, marginLeft: 20 }}>No</Text>
-          <View style={s.checkboxRect}>{!data.resguardoActivos && <Text style={s.checkText}>X</Text>}</View>
+        <View wrap={false}>
+          <Text style={{...s.sectionTitle, marginTop: 10}}>I.6    RESGUARDO PERSONALIZADO DE ACTIVOS:</Text>
+          <View style={{ flexDirection: "row", marginBottom: 10, alignItems: "center" }}>
+            <Text style={{ fontSize: 9, marginLeft: 15 }}>Sí</Text>
+            <View style={s.checkboxRect}>{data.resguardoActivos && <Text style={s.checkText}>X</Text>}</View>
+            <Text style={{ fontSize: 9, marginLeft: 20 }}>No</Text>
+            <View style={s.checkboxRect}>{!data.resguardoActivos && <Text style={s.checkText}>X</Text>}</View>
+          </View>
+          <Text style={{ fontSize: 9, textAlign: "justify", marginBottom: 5 }}>
+            En el caso de la Administración Pública Centralizada, se estará a lo que establezca el formato de Resguardo Personalizado de Activos de bienes muebles e intangibles, emitido por la Dirección General de Patrimonio de la Secretaría de Administración y Finanzas, que señala las obligaciones, como resguardante de los Activos.
+          </Text>
+          <Text style={{ fontSize: 9, textAlign: "justify", marginBottom: 15 }}>
+            En el caso de Organismos Auxiliares, se estará a lo establecido por sus disposiciones administrativas correspondientes.
+          </Text>
         </View>
-        <Text style={{ fontSize: 9, textAlign: "justify", marginBottom: 5 }}>
-          En el caso de la Administración Pública Centralizada, se estará a lo que establezca el formato de Resguardo Personalizado de Activos de bienes muebles e intangibles, emitido por la Dirección General de Patrimonio de la Secretaría de Administración y Finanzas, que señala las obligaciones, como resguardante de los Activos.
-        </Text>
-        <Text style={{ fontSize: 9, textAlign: "justify", marginBottom: 15 }}>
-          En el caso de Organismos Auxiliares, se estará a lo establecido por sus disposiciones administrativas correspondientes.
-        </Text>
 
         <View wrap={false}>
           <Text style={{ ...s.sectionTitle, marginTop: 15 }}>II.  PERFIL:</Text>
@@ -809,7 +810,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
                 <Text style={s.firmaDesc}>Persona Titular de la Unidad Administrativa u Organismo Auxiliar</Text>
               </View>
               <View style={s.firmaBox}>
-                <Text style={s.firmaLabel}>Revisó</Text>
+                <Text style={s.firmaLabel}>Revisó (UEFA)</Text>
                 <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
                 <View style={s.firmaLine}></View>
                 <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la</Text>

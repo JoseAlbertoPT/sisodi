@@ -188,12 +188,12 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
     </AlertDialog>
     <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
       <DialogContent
-        className={`overflow-y-auto font-sans ${exito ? "sm:max-w-md max-h-[75vh]" : "sm:max-w-md max-h-[80vh]"}`}
+        className={`overflow-y-auto font-sans ${exito ? "sm:max-w-[520px] max-h-[75vh]" : "sm:max-w-[520px] max-h-[80vh]"}`}
         onOpenAutoFocus={(e) => e.preventDefault()}
         showCloseButton={false}
       >
         {!exito && (
-          <DialogHeader className="px-5 pt-5 pb-3">
+          <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle className="text-base font-light flex items-center gap-2 text-[color:var(--color-core-piedra-20)]">
               <Shield className="h-4 w-4 text-primary" />
               {titulo ?? "Firmar con tu e.firma"}
@@ -201,7 +201,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
             {subtitulo && <p className="font-sans text-xs font-light text-gray-500 mt-0.5">{subtitulo}</p>}
           </DialogHeader>
         )}
-        <div className="px-5 pb-5">
+        <div className="px-6 pb-6">
         {exito ? (
           <div className="flex flex-col items-center gap-3 py-8">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#d2fad2]">
@@ -268,7 +268,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className={`flex flex-col gap-3 pt-1 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
+          <form onSubmit={handleSubmit} className={`flex flex-col gap-4 pt-1 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
             {esEmisor && (
               <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />

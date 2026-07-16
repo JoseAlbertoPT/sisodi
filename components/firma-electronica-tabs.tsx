@@ -59,6 +59,7 @@ interface Props {
   onCompactoChange?: (compacto: boolean) => void
   onProcesoIniciadoChange?: (iniciado: boolean) => void
   onExitoChange?: (exito: boolean) => void
+  onCancelar?: () => void
 }
 
 export function FirmaElectronicaTabs({
@@ -73,6 +74,7 @@ export function FirmaElectronicaTabs({
   onCompactoChange,
   onProcesoIniciadoChange,
   onExitoChange,
+  onCancelar,
 }: Props) {
   const [selladoSubido, setSelladoSubido] = useState(false)
   const [firma, setFirma] = useState<FirmaProceso | null>(null)
@@ -314,22 +316,18 @@ export function FirmaElectronicaTabs({
   const internosTodos = firmantes.filter(f => f.tipo === "interno")
   const miInterno = internosTodos.find(f => f.usuario_id === currentUserId) ?? null
   const internos = miInterno ? [miInterno] : internosTodos
-
   const siguienteFirmante = firmantes
     .filter(f => !f.firmado)
     .sort((a, b) => a.orden - b.orden)[0] ?? null
   const siguienteOrden = siguienteFirmante?.orden ?? Infinity
-
   const puedeContinuar = (() => {
     if (miInterno) {
       return miInterno.firmado
     }
     return firma.estado === "completado" || (firma.total_firmantes !== null && firma.firmados >= firma.total_firmantes)
   })()
-
   const totalFirmantes = firma.total_firmantes ?? 0
   const pctFirmados = totalFirmantes > 0 ? Math.round((firma.firmados / totalFirmantes) * 100) : 0
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
@@ -470,7 +468,17 @@ export function FirmaElectronicaTabs({
         />
       )}
 
-      <div className="flex justify-end px-6 py-4 border-t border-[#E5E7EB]">
+      <div className="flex justify-end gap-2 px-6 py-4 border-t border-[#E5E7EB]">
+        {onCancelar && (
+          <Button
+            type="button"
+            onClick={onCancelar}
+            disabled={guardandoFinal}
+            className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700"
+          >
+            Cancelar
+          </Button>
+        )}
         <Button
           onClick={() => onFinalizar()}
           disabled={!puedeContinuar || guardandoFinal || (!!selladoEtapa && !selladoSubido)}
@@ -521,13 +529,16 @@ function FirmanteRow({
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/firmado/${uuid}?t=${firmante.acceso_token}`
     : ""
   const esperandoTurno = !firmante.firmado && !esSuTurno
+  const rolMostrar = firmante.bandeja === "uefa" && !/uefa/i.test(firmante.rol)
+    ? `${firmante.rol} (UEFA)`
+    : firmante.rol
   return (
     <div className={`rounded-md border p-4 flex flex-col gap-3 ${esSuTurno && !firmante.firmado ? "border-primary/40 bg-primary/5" : ""}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono text-gray-500">#{firmante.orden}</span>
-            <span className="font-sans text-base font-light text-[color:var(--color-core-piedra-20)]">{firmante.rol}</span>
+            <span className="font-sans text-base font-light text-[color:var(--color-core-piedra-20)]">{rolMostrar}</span>
             {firmante.firmado
               ? <Badge className="bg-secondary/15 text-secondary border-0 text-[10px] gap-1"><CheckCircle2 className="h-3 w-3" />Firmado</Badge>
               : esperandoTurno

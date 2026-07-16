@@ -47,7 +47,7 @@ export function FirmaModal({
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent
         className={`overflow-y-auto font-sans ${compacto ? "sm:max-w-md max-h-[75vh]" : "sm:max-w-3xl max-h-[85vh]"}`}
-        showCloseButton={!exito && !(esElectronica && !procesoIniciado)}
+        showCloseButton={false}
       >
         {!exito && (
           <DialogHeader>
@@ -85,6 +85,7 @@ export function FirmaModal({
             currentUserId={currentUserId}
             onGenerarPdf={onGenerarPdf}
             onFinalizar={handleFinalizar}
+            onCancelar={onClose}
             guardandoFinal={finalizando || guardandoFinal}
           />
         )}
@@ -97,6 +98,7 @@ export function FirmaModal({
             currentUserId={currentUserId}
             onGenerarPdfBase64={onGenerarPdfBase64}
             onFinalizar={handleFinalizar}
+            onCancelar={onClose}
             guardandoFinal={finalizando || guardandoFinal}
             selladoEtapa={selladoEtapa}
             onCompactoChange={setCompacto}

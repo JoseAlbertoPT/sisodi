@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
   AlertDialogTitle, AlertDialogDescription, AlertDialogAction,
@@ -35,6 +36,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
   const [segundosRestantes, setSegundosRestantes] = useState<number>(0)
   const [accediendo, setAccediendo] = useState(false)
   const [firmanteInfo, setFirmanteInfo] = useState<{ rol: string; cargo: string } | null>(null)
+  const [documentoInfo, setDocumentoInfo] = useState<{ secretaria: string | null; tipo: string | null; fecha: string | null; folio: string | null } | null>(null)
 
   const [usuario, setUsuario] = useState("")
   const [cargo, setCargo] = useState("")
@@ -74,6 +76,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         const json = await res.json()
         if (cancelled) return
         if (json?.firmante) setFirmanteInfo(json.firmante)
+        if (json?.documento) setDocumentoInfo(json.documento)
         const st = json?.status as string | undefined
         if (st === "en_curso_mi_sesion" && json.expira_en) {
           setExpiraEn(new Date(json.expira_en))
@@ -352,7 +355,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           </div>
         </div>
         <div
-          className="h-8 bg-repeat-x bg-center"
+          className="h-8 bg-repeat-x bg-center bg-contain"
           style={{ backgroundImage: "url(/banner-completo.svg)" }}
         />
       </header>
@@ -443,13 +446,21 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         </div>
 
         <div className="bg-muted/30 p-3 flex flex-col min-h-[50vh] lg:min-h-0">
-          <div className="flex items-center gap-3 mx-2 mb-2 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-            <CheckCircle2 className="h-6 w-6 shrink-0 text-green-500" />
-            <img src="/Iconos1/doc icon-pdf.svg" alt="PDF" className="h-6 w-6 shrink-0" />
-            <span className="text-base font-medium text-gray-800 truncate">Documento a firmar</span>
-          </div>
-          <div className="flex-1 min-h-0 rounded-md overflow-hidden border bg-background">
-            <PdfPreview fileUrl={pdfSrc} label="Cargando documento…" />
+          <div className="flex flex-col flex-1 min-h-0 mx-2 rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-[#e5e7eb] shrink-0">
+              <FileTypeIcon name="justificacion.pdf" size="md" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-gray-800 truncate">Documento a firmar</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {documentoInfo?.secretaria ?? "—"}
+                  {documentoInfo?.tipo && <> · {documentoInfo.tipo}</>}
+                  {documentoInfo?.fecha && <> · {new Date(documentoInfo.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</>}
+                </p>
+              </div>
+            </div>
+            <div className="flex-1 min-h-0">
+              <PdfPreview fileUrl={pdfSrc} label="Cargando documento…" />
+            </div>
           </div>
         </div>
       </div>

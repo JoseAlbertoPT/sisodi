@@ -242,7 +242,7 @@ const DictamenViewModal = React.memo(({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
-      <Card className="w-[75vw] max-w-[75vw] h-[92vh] max-h-[92vh] flex flex-col shadow-xl border-2 border-primary/20">
+      <Card className="w-[55vw] max-w-[55vw] h-[90vh] max-h-[90vh] flex flex-col shadow-xl border-2 border-primary/20">
         <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0 gap-4">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex items-center justify-center shrink-0">
@@ -291,7 +291,7 @@ const DictamenViewModal = React.memo(({
                   <Input value={firmaElaboroNombre} onChange={(e) => setFirmaElaboroNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">Revisó</label>
+                  <label className="text-xs text-muted-foreground">Revisó (UEFA)</label>
                   <Input value={firmaRevisoNombre} onChange={(e) => setFirmaRevisoNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                 </div>
                 {esNombramiento && (

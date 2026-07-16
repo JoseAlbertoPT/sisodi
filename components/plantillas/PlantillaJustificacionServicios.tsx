@@ -1,5 +1,5 @@
-
 import {
+
   Document,
   Page,
   Text,
@@ -10,7 +10,6 @@ import {
 import path from "path";
 import fs from "fs";
 import React from "react";
-
 export interface JustificacionData {
   tipoAdministracion: 'centralizada' | 'paraestatal';
   formato: 'fisico' | 'en_linea';
@@ -607,7 +606,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
                 )}
               </View>
               <View style={s.firmaBox}>
-                <Text style={s.firmaLabel}>Revisó</Text>
+                <Text style={s.firmaLabel}>Revisó (UEFA)</Text>
                 <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
                 <View style={s.firmaLine}></View>
                 {data.firmaRevisoNombre && data.firmaRevisoCargo ? (

@@ -29,6 +29,8 @@ interface Props {
   hideEnviar?: boolean
   /** Notifica hacia afuera cuando el archivo firmado ya fue subido. */
   onArchivoChange?: (subido: boolean) => void
+  /** Si se provee, muestra un botón "Cancelar" junto al de envío. */
+  onCancelar?: () => void
 }
 export function FirmaAutografaPanel({
   solicitudId,
@@ -39,6 +41,7 @@ export function FirmaAutografaPanel({
   guardandoFinal,
   hideEnviar,
   onArchivoChange,
+  onCancelar,
 }: Props) {
   const [firma, setFirma] = useState<FirmaProceso | null>(null)
   const [loading, setLoading] = useState(true)
@@ -180,7 +183,17 @@ export function FirmaAutografaPanel({
 
       {!hideEnviar && (
         <>
-          <div className="flex justify-end px-6 py-4 border-t border-[#E5E7EB]">
+          <div className="flex justify-end gap-2 px-6 py-4 border-t border-[#E5E7EB]">
+            {onCancelar && (
+              <Button
+                type="button"
+                onClick={onCancelar}
+                disabled={guardandoFinal}
+                className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700"
+              >
+                Cancelar
+              </Button>
+            )}
             <Button
               onClick={() => setShowEnviarConfirm(true)}
               disabled={!archivoSubido || guardandoFinal}
