@@ -24,15 +24,14 @@ interface FilterTabsProps {
   activeCountClassName?: string
 }
 
-const DEFAULT_ACTIVE_TAB_CLASS = "bg-[#e4e3d6] border border-[#c2d4a8] text-[#3a4a2a]"
-const DEFAULT_ACTIVE_COUNT_CLASS = "bg-[#f3f4f6] text-[#1f1f1f]"
+const DEFAULT_ACTIVE_TAB_CLASS = "bg-card shadow-sm text-[#3a4a2a]"
+const DEFAULT_ACTIVE_COUNT_CLASS = "bg-[#773357] text-white"
 
 export function FilterTabs({ value, onValueChange, items, sectionLabel, className, fullWidth, activeClassName, activeCountClassName }: FilterTabsProps) {
   return (
-    <div className="flex w-full justify-center">
     <div
       className={cn(
-        "flex items-center gap-1 rounded-lg border border-border bg-card p-1",
+        "flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1",
         fullWidth ? "w-full" : "w-fit",
         className
       )}
@@ -51,19 +50,19 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel, classNam
             id={`tab-${item.value}`}
             onClick={() => onValueChange(item.value)}
             className={cn(
-              "rounded-md px-4 py-1.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5",
+              "rounded-xl px-5 py-2 text-sm font-light transition-colors flex items-center justify-center gap-1.5 text-content-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-support-focus focus-visible:ring-offset-2",
               fullWidth && "flex-1",
               isActive
                 ? (activeClassName ?? DEFAULT_ACTIVE_TAB_CLASS)
-                : "text-muted-foreground hover:text-card-foreground"
+                : "hover:bg-black/5"
             )}
           >
             <span>{item.label}</span>
             {item.count !== undefined && (
               <span
                 className={cn(
-                  "ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono",
-                  isActive ? (activeCountClassName ?? DEFAULT_ACTIVE_COUNT_CLASS) : "bg-muted"
+                  "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal",
+                  isActive ? (activeCountClassName ?? DEFAULT_ACTIVE_COUNT_CLASS) : "bg-[#773357] text-white"
                 )}
               >
                 {item.count}
@@ -72,7 +71,6 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel, classNam
           </button>
         )
       })}
-    </div>
     </div>
   )
 }

@@ -36,7 +36,7 @@ export function ConcentradoPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Concentrado General</h2>
+          <h2 className="ds-title-md text-content-high">Concentrado General</h2>
           <p className="text-sm text-muted-foreground">
             Vista consolidada de solicitudes por secretaria
           </p>
@@ -110,10 +110,10 @@ export function ConcentradoPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-secondary text-secondary-foreground">
+                <tr className="bg-bg-base text-content-high">
                   <th className="px-4 py-3 text-left font-semibold">Secretaria</th>
                   <th className="px-4 py-3 text-right font-semibold">Total</th>
                   <th className="px-4 py-3 text-right font-semibold">Emitidas</th>

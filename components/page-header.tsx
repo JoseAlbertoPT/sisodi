@@ -18,10 +18,9 @@ const { toggle } = useSidebar()
           type="button"
           onClick={toggle}
           aria-label="Alternar sidebar"
-          className="p-1.5 rounded-md hover:bg-gray-200 text-gray-500 transition-colors"
-
+          className="flex-shrink-0 text-content-low hover:text-content-high transition-colors"
         >
-          <PanelLeft className="h-5 w-5"  />
+          <PanelLeft className="h-5 w-5" />
         </button>
         <div className="flex-1">
           <h1 className="font-sans text-[32px] font-light leading-[120%] text-content-high">

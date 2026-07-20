@@ -15,11 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
-
   Download, FileCheck, Stamp, Printer,
   Loader2, AlertTriangle, RefreshCw, MoreVertical, Eye,
 } from "lucide-react"
-
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
   DropdownMenu,
@@ -138,8 +136,8 @@ const DictamenViewModal = React.memo(({
 }) => {
   const titulo =
     dictamen.tipoDoc === "dictamen"
-      ? "Dictamen técnico funcional"
-      : "Opinión técnica funcional"
+      ? "DICTAMEN TÉCNICO FUNCIONAL"
+      : "OPINIÓN TÉCNICA FUNCIONAL"
 
   const folioRecepcionFormateado = formatearFolio(dictamen.folioRecepcion)
 
@@ -160,6 +158,7 @@ const DictamenViewModal = React.memo(({
     firmaDictVerificoNombre: "",
     firmaDictEmitioNombre: ""
   })
+
   const commitFirmas = useCallback(() => {
     setDebouncedFirmas((prev) => {
       const next = {
@@ -180,15 +179,18 @@ const DictamenViewModal = React.memo(({
       return sameValues ? prev : next
     })
   }, [firmaElaboroNombre, firmaRevisoNombre, firmaVoBoJuridicoNombre, firmaDictRevisoNombre, firmaDictVerificoNombre, firmaDictEmitioNombre])
+
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [pdfRefreshing, setPdfRefreshing] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const currentBlobRef = useRef<string | null>(null)
+
   useEffect(() => {
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
     setPdfRefreshing(true)
+
     const params = new URLSearchParams({ id: dictamen.id })
     if (debouncedFirmas.firmaElaboroNombre) params.set("firmaElaboroNombre", debouncedFirmas.firmaElaboroNombre)
     if (debouncedFirmas.firmaRevisoNombre) params.set("firmaRevisoNombre", debouncedFirmas.firmaRevisoNombre)
@@ -242,17 +244,17 @@ const DictamenViewModal = React.memo(({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4">
-      <Card className="w-[55vw] max-w-[55vw] h-[90vh] max-h-[90vh] flex flex-col shadow-xl border-2 border-primary/20">
+      <Card className="w-[75vw] max-w-[75vw] h-[92vh] max-h-[92vh] flex flex-col shadow-xl border-2 border-primary/20">
         <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0 gap-4">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex items-center justify-center shrink-0">
               <FileTypeIcon name="dictamen.pdf" size="md" />
             </div>
             <div className="min-w-0 flex-1">
-              <CardTitle className="font-sans text-lg font-light truncate text-card-foreground">
+              <CardTitle className="text-base font-semibold text-card-foreground truncate">
                 {titulo}
               </CardTitle>
-              <p className="font-sans text-xs font-light text-muted-foreground mt-0.5 truncate">
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 Número: {dictamen.folioDictamen ?? "—"} | Folio Recepción: {folioRecepcionFormateado}
               </p>
             </div>
@@ -291,7 +293,7 @@ const DictamenViewModal = React.memo(({
                   <Input value={firmaElaboroNombre} onChange={(e) => setFirmaElaboroNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">Revisó (UEFA)</label>
+                  <label className="text-xs text-muted-foreground">Revisó</label>
                   <Input value={firmaRevisoNombre} onChange={(e) => setFirmaRevisoNombre(e.target.value)} onBlur={commitFirmas} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} placeholder="Nombre y cargo" className="h-8 text-xs" />
                 </div>
                 {esNombramiento && (

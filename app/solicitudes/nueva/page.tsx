@@ -29,6 +29,7 @@ import type { HistoricoRow } from "@/lib/parse-excel-historico"
 import { RANGOS_TABULADOR } from "@/lib/tabulador"
 import { filtrarSecretarias, getUAsForSecretaria, getClaveForUA } from "@/lib/ua-claves-catalog"
 import { fetchCentralizadaTree, type OrganoCentralizadoNode } from "@/lib/catalogo-api"
+import type { SolicitudDetalle } from "@/components/pages/revision-do-page"
 
 export type FormularioData = {
   secretaria:            string
@@ -2745,7 +2746,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RadioGroup value={subTipo} onValueChange={() => setSubTipo(v as "captura" | "regularizacion")} className="flex flex-col gap-3">
+          <RadioGroup value={subTipo} onValueChange={(v) => setSubTipo(v as "captura" | "regularizacion")} className="flex flex-col gap-3">
             <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${subTipo === "captura" ? "border-accent bg-accent/5" : "border-border hover:border-secondary/50"}`}>
               <RadioGroupItem value="captura" id="sub-captura" className="mt-0.5" />
               <div className="flex flex-col gap-1">
@@ -3750,7 +3751,7 @@ export function NuevaSolicitudPage({
                         }}
                         >
 
-                        <Checkbox checked={condicionRenovacion === "mismas"} className="mt-0.5 shrink-0 pointer-events-none" readOnly />
+                        <Checkbox checked={condicionRenovacion === "mismas"} className="mt-0.5 shrink-0 pointer-events-none" />
                         <div className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium text-card-foreground">Se solicita bajo mismas condiciones técnicas y funcionales</span>
                           <span className="text-xs text-muted-foreground">Marque si confirma que no hay cambios respecto al dictamen anterior</span>
@@ -3809,7 +3810,7 @@ export function NuevaSolicitudPage({
                 disabled={
                   !esRenovacion ||
                   (esRenovacion === "si" && !folioSeleccionado) ||
-                  (esRenovacion === "si" && folioSeleccionado && condicionRenovacion !== "mismas")
+                  (esRenovacion === "si" && !!folioSeleccionado && condicionRenovacion !== "mismas")
                 }
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >

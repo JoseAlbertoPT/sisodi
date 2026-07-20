@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Building2, Landmark, FileSpreadsheet, Upload, Loader2, Trash2, FileText, AlertCircle, CheckCircle2 } from "lucide-react"
 import { FileDropZone } from "@/components/ui/file-drop-zone"
@@ -8,6 +8,7 @@ import { PageLayout } from "@/components/page-layout"
 import { CatalogoCentralizadaTab } from "@/components/catalogo-centralizada-tab"
 import { CatalogoParaestatalTab } from "@/components/catalogo-paraestatal-tab"
 import { useHistoricoStore } from "@/lib/historico-store"
+import { fetchCategoriasParaestatal } from "@/lib/catalogo-api"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -174,7 +175,16 @@ function HistoricoTab() {
   )
 }
 
+const BADGE = "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[#773357] text-white"
+
 export function EntidadesPage() {
+  const [cCount, setCCount] = useState<number | null>(null)
+  const [pCount, setPCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetchCategoriasParaestatal().then((data) => setPCount(data.length)).catch(() => {})
+  }, [])
+
   return (
     <PageLayout
       title="Entidades"
@@ -185,17 +195,19 @@ export function EntidadesPage() {
           <TabsTrigger value="centralizada" className="gap-1.5">
             <Building2 className="h-4 w-4" />
             Centralizada
+            {cCount !== null && <span className={BADGE}>{cCount}</span>}
           </TabsTrigger>
           <TabsTrigger value="paraestatal" className="gap-1.5">
             <Landmark className="h-4 w-4" />
             Paraestatal
+            {pCount !== null && <span className={BADGE}>{pCount}</span>}
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="centralizada" className="mt-6">
-          <CatalogoCentralizadaTab />
+        <TabsContent value="centralizada" className="mt-3">
+          <CatalogoCentralizadaTab onCountChange={setCCount} />
         </TabsContent>
-        <TabsContent value="paraestatal" className="mt-6">
-          <CatalogoParaestatalTab />
+        <TabsContent value="paraestatal" className="mt-3">
+          <CatalogoParaestatalTab onCountChange={setPCount} />
         </TabsContent>
       </Tabs>
     </PageLayout>

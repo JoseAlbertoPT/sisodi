@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Eye, EyeOff, Lock, CheckCircle2, KeyRound, User,
+  Eye, EyeOff, Lock, CheckCircle2, KeyRound, User, AlertCircle,
 } from "lucide-react"
 import Image from "next/image"
 
@@ -441,64 +441,48 @@ export function LoginForm() {
     } catch { setError("Error de conexión. Intente de nuevo.") }
     finally { setLoading(false) }
   }
+  const labelClass = "block font-sans text-[13px] font-normal leading-[120%] text-content-high mb-1"
+  const inputClass = "w-full rounded-xl border border-border-high bg-bg-base px-4 py-3 pr-11 text-sm text-content-high placeholder:text-content-low/60 outline-none focus:border-content-high transition-colors"
+
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
     <div>
-      <label className="block font-sans text-[13px] font-normal leading-[120%] text-[#2e3b2b] mb-1">
-        Usuario
-      </label>
-
+      <label className={labelClass}>Usuario</label>
       <div className="relative">
-        <User
-          size={18}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeada6] pointer-events-none"
-        />
-
+        <User size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-content-low/60 pointer-events-none" />
         <input
           type="text"
           placeholder="Usuario"
           value={rfc}
           onChange={(e) => {
-            if (!mustChangePassword) {
-              setRfc(e.target.value.toUpperCase())
-              setError("")
-            }
+            if (!mustChangePassword) { setRfc(e.target.value.toUpperCase()); setError("") }
           }}
           readOnly={mustChangePassword}
           maxLength={13}
           autoComplete="username"
-          className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pr-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors"
+          className={`${inputClass} uppercase placeholder:normal-case`}
         />
       </div>
     </div>
 
     <div>
-      <label className="block font-sans text-[13px] font-normal leading-[120%] text-[#2e3b2b] mb-1">
-        Contraseña
-      </label>
-
+      <label className={labelClass}>Contraseña</label>
       <div className="relative">
         <input
           type={showPassword ? "text" : "password"}
           placeholder="Contraseña"
           value={password}
           onChange={(e) => {
-            if (!mustChangePassword) {
-              setPassword(e.target.value)
-              setError("")
-            }
+            if (!mustChangePassword) { setPassword(e.target.value); setError("") }
           }}
           readOnly={mustChangePassword}
           autoComplete="current-password"
-          className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pr-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors"
+          className={inputClass}
         />
-
         <button
           type="button"
-          onClick={() => {
-            if (!mustChangePassword) setShowPassword(!showPassword)
-          }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeada6] hover:text-[#2e3b2b] transition-colors"
+          onClick={() => { if (!mustChangePassword) setShowPassword(!showPassword) }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-content-low/60 hover:text-content-high transition-colors"
         >
           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
@@ -508,27 +492,20 @@ export function LoginForm() {
     {mustChangePassword && (
       <>
         <div>
-          <label className="block font-sans text-[13px] font-normal leading-[120%] text-[#2e3b2b] mb-1">
-            Nueva contraseña
-          </label>
-
+          <label className={labelClass}>Nueva contraseña</label>
           <div className="relative">
             <input
               type={showNueva ? "text" : "password"}
               placeholder="Nueva contraseña"
               value={nuevaPassword}
-              onChange={(e) => {
-                setNuevaPassword(e.target.value)
-                setError("")
-              }}
+              onChange={(e) => { setNuevaPassword(e.target.value); setError("") }}
               autoComplete="new-password"
-              className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pr-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors"
+              className={inputClass}
             />
-
             <button
               type="button"
               onClick={() => setShowNueva(!showNueva)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeada6] hover:text-[#2e3b2b] transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-content-low/60 hover:text-content-high transition-colors"
             >
               {showNueva ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -536,27 +513,20 @@ export function LoginForm() {
         </div>
 
         <div>
-          <label className="block font-sans text-[13px] font-normal leading-[120%] text-[#2e3b2b] mb-1">
-            Confirmar contraseña
-          </label>
-
+          <label className={labelClass}>Confirmar contraseña</label>
           <div className="relative">
             <input
               type={showConfirmar ? "text" : "password"}
               placeholder="Confirmar contraseña"
               value={confirmarPassword}
-              onChange={(e) => {
-                setConfirmarPassword(e.target.value)
-                setError("")
-              }}
+              onChange={(e) => { setConfirmarPassword(e.target.value); setError("") }}
               autoComplete="new-password"
-              className="w-full rounded-xl border border-[#dedad2] bg-white px-4 py-3 pr-11 text-sm text-[#2e3b2b] placeholder:text-[#aeada6] outline-none focus:border-[#2e3b2b] transition-colors"
+              className={inputClass}
             />
-
             <button
               type="button"
               onClick={() => setShowConfirmar(!showConfirmar)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeada6] hover:text-[#2e3b2b] transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-content-low/60 hover:text-content-high transition-colors"
             >
               {showConfirmar ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -566,16 +536,16 @@ export function LoginForm() {
     )}
 
     {error && (
-      <p className="mt-1 px-1 text-xs text-red-500 text-center">
-        {error}
+      <p className="mt-1 flex items-center justify-center gap-1.5 px-1 text-xs font-light text-support-error">
+        <AlertCircle size={14} strokeWidth={1.75} className="shrink-0" />
+        <span>{error}</span>
       </p>
     )}
 
     <button
       type="submit"
       disabled={loading || changeLoading || (mustChangePassword && !todasOk)}
-      className="mt-2 mx-auto block rounded-full px-10 py-2 font-sans text-[16px] font-normal leading-[120%] text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-      style={{ backgroundColor: "#2e3b2b" }}
+      className="mt-2 mx-auto block rounded-full px-10 py-2 font-sans text-[16px] font-normal leading-[120%] bg-accent-primary text-accent-on-primary transition-opacity hover:opacity-90 disabled:opacity-60"
     >
       {changeLoading
         ? "Actualizando…"
@@ -590,7 +560,7 @@ export function LoginForm() {
       <button
         type="button"
         onClick={() => setMostrarModalRecuperar(true)}
-        className="text-xs text-[#5d5e5f] hover:text-[#2e3b2b] text-center transition-colors"
+        className="text-xs text-content-low hover:text-content-high text-center transition-colors"
       >
         ¿Olvidaste tu contraseña?
       </button>
@@ -608,7 +578,7 @@ export function LoginForm() {
           setConfirmarPassword("")
           setError("")
         }}
-        className="text-xs text-[#5d5e5f] hover:text-[#2e3b2b] text-center transition-colors"
+        className="text-xs text-content-low hover:text-content-high text-center transition-colors"
       >
         Cerrar sesión
       </button>

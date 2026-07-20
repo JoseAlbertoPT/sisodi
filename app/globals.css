@@ -414,10 +414,7 @@
   border-radius: 8px;
   padding: 10px 14px;
   background-color: #ffffff;
-  font-family: var(--font-sans);
   font-size: 0.875rem;
-  font-weight: 300;
-  color: var(--foreground);
   outline: none;
   box-shadow: none;
   transition: background-color 0.15s, border-color 0.15s;
@@ -448,22 +445,6 @@
 }
 .ds-list-input--error:focus {
   background-color: #fff5f5 !important;
-}
-/* ──────────────────────────────────────────────────────────────────────── */
-
-/* ── Bloquea el color de autocompletado del navegador (RFC, contraseñas, etc.) ── */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active,
-textarea:-webkit-autofill,
-textarea:-webkit-autofill:hover,
-textarea:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
-  box-shadow: 0 0 0px 1000px #ffffff inset !important;
-  -webkit-text-fill-color: var(--foreground) !important;
-  caret-color: var(--foreground);
-  transition: background-color 5000s ease-in-out 0s;
 }
 /* ──────────────────────────────────────────────────────────────────────── */
 
@@ -697,8 +678,8 @@ table.w-full.conditions-table tbody td:not(:first-child) {
   }
   .ds-title-md {
     font-family: var(--font-sans);
-    font-size: 17px;
-    font-weight: 400;
+    font-size: 14px;
+    font-weight: 300;
     line-height: 1.2;
   }
   .ds-title-sm {
@@ -877,23 +858,4 @@ button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):focus {
 .ds-select-trigger:not([data-placeholder]),
 .ds-select-trigger:not([data-placeholder]) * {
   color: var(--brand-vino) !important;
-}
-
-/* ── Campos sin resaltado de foco (vino) — ej. formulario "Firmar como" ── */
-.no-focus-paint:focus,
-.no-focus-paint:focus-visible {
-  border-color: #c6c6c6 !important;
-  outline: none !important;
-  box-shadow: none !important;
-  --tw-ring-shadow: 0 0 #0000 !important;
-  --tw-ring-color: transparent !important;
-}
-
-/* ── Oculta la barra de scroll visualmente, sin quitar la función de scroll ── */
-.no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
 }

@@ -676,12 +676,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const secretariaDisplay = form.secretariaPath.length > 0
     ? form.secretariaPath.join(" › ")
     : form.secretaria || "—"
-  const progresoStep = (n: number) => {
-    if (n === 1) return [form.nombre.trim(), form.correo.trim()].filter(Boolean).length / 2
-    if (n === 2) return [form.password.trim(), form.rol].filter(Boolean).length / 2
-    if (n === 3) return form.secretaria ? 1 : 0
-    return 0
-  }
   return (
     <>
     <ConfirmDialog
@@ -703,8 +697,8 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 <CheckCircle2 className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h3 className="ds-title-md text-card-foreground">Confirmar Registro</h3>
-                <p className="font-sans text-[11px] font-light text-muted-foreground">Revisa los datos antes de guardar</p>
+                <h3 className="text-sm font-medium text-card-foreground">Confirmar Registro</h3>
+                <p className="text-[11px] text-muted-foreground">Revisa los datos antes de guardar</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setShowConfirm(false)}>
@@ -793,11 +787,11 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             const circleStyle = done
               ? { width: 32, height: 32, flexShrink: 0, position: 'relative' as const, zIndex: 1 }
               : active
-              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#773357', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
+              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
               : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
 
             const labelStyle = active
-              ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
+              ? { fontSize: 12, fontWeight: 600, color: '#773357', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
               : done
               ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
               : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
@@ -810,10 +804,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     left: '-50%',
                     width: '100%',
                     height: 2,
-                    backgroundColor: step > idx ? '#2A3B29' : '#D1D5DB',
-                    backgroundImage: step > idx
-                      ? undefined
-                      : `linear-gradient(to right, #773357 ${progresoStep(idx) * 100}%, #D1D5DB ${progresoStep(idx) * 100}%)`,
+                    backgroundColor: done ? '#2A3B29' : '#D1D5DB',
                     zIndex: 0,
                   }} />
                 )}
@@ -822,7 +813,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     {done ? (
                       <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
                     ) : (
-                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#ffffff' : '#9CA3AF', lineHeight: 1 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#773357' : '#9CA3AF', lineHeight: 1 }}>
                         {n}
                       </span>
                     )}
@@ -1245,8 +1236,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
               <Pencil className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="ds-title-md text-card-foreground">Editar Usuario</h2>
-              <p className="font-sans text-xs font-light text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
+              <h2 className="text-sm font-medium text-card-foreground">Editar Usuario</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" onClick={onClose}>
@@ -1658,10 +1649,10 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
               <Shield className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="ds-title-md text-card-foreground">
+              <h2 className="text-base font-semibold text-card-foreground">
                 Permisos de menús
               </h2>
-              <p className="font-sans text-xs font-light text-muted-foreground">{usuario.nombre}</p>
+              <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
           </div>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 " onClick={requestClose}>

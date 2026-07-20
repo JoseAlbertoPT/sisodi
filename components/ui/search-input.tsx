@@ -30,16 +30,16 @@ export function SearchInput({ className, containerClassName, onChange, ...props 
         type="text"
         onChange={handleChange}
         className={cn(
-          'w-full rounded-full border border-[#E5E7EB] bg-white shadow-sm',
-          'py-2 pl-4 pr-10',
-          'text-sm text-foreground placeholder:text-[#9CA3AF]',
+          'w-full h-9 rounded-xl border border-border bg-white shadow-sm',
+          'pl-9 pr-4',
+          'text-sm font-light text-foreground placeholder:text-[#9CA3AF]',
           'outline-none transition-colors',
-          'focus:border-[#2D3B2D]',
+          'focus:border-[#2D3B2D] focus-visible:outline-none',
           className,
         )}
         {...props}
       />
-      <Search className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
     </div>
   )
 }

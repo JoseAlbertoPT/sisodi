@@ -32,63 +32,53 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
   const pages = buildPages(currentPage, totalPages)
 
   return (
-    <div className="flex flex-col items-center gap-0 pt-3">
-      <div className="flex items-center gap-1 pb-3">
-        {/* Anterior */}
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          aria-label="Página anterior"
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full bg-[#f1f1f1] text-[#6b7280] transition-colors",
-            "hover:bg-[#e5e5e5] disabled:opacity-30 disabled:pointer-events-none",
-          )}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-
-        {/* Números */}
-        {pages.map((p, idx) =>
-          p === "…" ? (
-            <span key={`ellipsis-${idx}`} className="flex h-8 w-8 items-center justify-center text-xs text-[#9ca3af] select-none">
-              …
-            </span>
-          ) : (
-            <button
-              key={p}
-              type="button"
-              onClick={() => onPageChange(p as number)}
-              aria-current={p === currentPage ? "page" : undefined}
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-md text-xs font-medium transition-colors select-none",
-                p === currentPage
-                  ? "bg-white border border-[#d1d5db] text-[#111827] shadow-sm"
-                  : "text-[#6b7280] hover:bg-[#f3f4f6]",
-              )}
-            >
-              {p}
-            </button>
-          )
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        aria-label="Página anterior"
+        className={cn(
+          "flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[#2A3B29] transition-colors",
+          "hover:bg-[#eae9e6] disabled:opacity-40 disabled:cursor-not-allowed",
         )}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
 
-        {/* Siguiente */}
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          aria-label="Página siguiente"
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full bg-[#f1f1f1] text-[#6b7280] transition-colors",
-            "hover:bg-[#e5e5e5] disabled:opacity-30 disabled:pointer-events-none",
-          )}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
+      {pages.map((p, idx) =>
+        p === "…" ? (
+          <span key={`ellipsis-${idx}`} className="px-2 text-sm text-content-low select-none">…</span>
+        ) : (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onPageChange(p as number)}
+            aria-current={p === currentPage ? "page" : undefined}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-md text-sm font-light transition-colors select-none text-content-high",
+              p === currentPage
+                ? "bg-white border border-border shadow-sm"
+                : "hover:bg-muted",
+            )}
+          >
+            {p}
+          </button>
+        )
+      )}
 
-      {/* Separador */}
-      <div className="w-full border-t border-[#e5e7eb]" />
+      <button
+        type="button"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        aria-label="Página siguiente"
+        className={cn(
+          "flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[#2A3B29] transition-colors",
+          "hover:bg-[#eae9e6] disabled:opacity-40 disabled:cursor-not-allowed",
+        )}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
     </div>
   )
 }

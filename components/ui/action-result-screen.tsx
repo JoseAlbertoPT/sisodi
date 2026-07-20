@@ -53,7 +53,7 @@ export function ActionResultScreen({
       )}
 
       <div className="text-center max-w-sm">
-        <h2 className="text-lg font-semibold text-foreground">{title ?? defaults.title}</h2>
+        <h2 className="ds-title-md text-content-high">{title ?? defaults.title}</h2>
         <p className="text-sm text-muted-foreground mt-1">{description ?? defaults.description}</p>
       </div>
 

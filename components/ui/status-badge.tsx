@@ -154,7 +154,7 @@ export function estadoBadge(estado: string): React.ReactElement {
   let bgColor: string | undefined = undefined
 
   if (n === "borrador" || n === "en captura")                           { label = "Borrador";         color = "#94a3b8" }
-  else if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion"))
+  else if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion") || n.includes("pendiente firma justificacion"))
                                                                          { label = "En Aprobación";    color = C_VERDE_ESTADO; bgColor = C_VERDE_ESTADO_BG }
   else if (n.includes("observado por revisor"))                          { label = "Obs. Revisión";    color = C_ROSA_VINO; bgColor = C_ROSA_VINO_BG }
   else if (n.includes("observado por validacion final"))                 { label = "Obs. Validación";  color = C_ROSA_VINO; bgColor = C_ROSA_VINO_BG }

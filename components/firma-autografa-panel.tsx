@@ -23,14 +23,6 @@ interface Props {
   onGenerarPdf: () => Promise<void> | void
   onFinalizar: () => Promise<void> | void
   guardandoFinal: boolean
-  /** Si true, no muestra su propio botón "Enviar a Emisor" — para cuando este
-   *  panel se embebe dentro de otra vista (p.ej. la pestaña Emisión) que ya
-   *  tiene su propio botón de acción final. */
-  hideEnviar?: boolean
-  /** Notifica hacia afuera cuando el archivo firmado ya fue subido. */
-  onArchivoChange?: (subido: boolean) => void
-  /** Si se provee, muestra un botón "Cancelar" junto al de envío. */
-  onCancelar?: () => void
 }
 export function FirmaAutografaPanel({
   solicitudId,
@@ -39,9 +31,6 @@ export function FirmaAutografaPanel({
   onGenerarPdf,
   onFinalizar,
   guardandoFinal,
-  hideEnviar,
-  onArchivoChange,
-  onCancelar,
 }: Props) {
   const [firma, setFirma] = useState<FirmaProceso | null>(null)
   const [loading, setLoading] = useState(true)
@@ -63,10 +52,8 @@ export function FirmaAutografaPanel({
       setLoading(false)
     }
   }, [solicitudId])
+
   useEffect(() => { cargar() }, [cargar])
-  useEffect(() => {
-    onArchivoChange?.(Boolean(firma?.archivo_firmado))
-  }, [firma, onArchivoChange])
   const handleUpload = async (file: File) => {
     setUploading(true); setError(null)
     try {
@@ -84,7 +71,6 @@ export function FirmaAutografaPanel({
       setUploading(false)
     }
   }
-
   const handleClear = async () => {
     setClearing(true); setError(null)
     try {
@@ -121,15 +107,15 @@ export function FirmaAutografaPanel({
         </CardHeader>
         <CardContent className="px-5 pb-1 pt-0">
           <Button
+            variant="outline"
             size="sm"
             onClick={() => onGenerarPdf()}
-            className="gap-1.5 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+            className="gap-1.5"
           >
             Descargar PDF ({folioJustificacion})
           </Button>
         </CardContent>
       </Card>
-
       <Card className="border-border py-4 gap-3">
         <CardHeader className="px-5 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -181,38 +167,24 @@ export function FirmaAutografaPanel({
         </CardContent>
       </Card>
 
-      {!hideEnviar && (
-        <>
-          <div className="flex justify-end gap-2 px-6 py-4 border-t border-[#E5E7EB]">
-            {onCancelar && (
-              <Button
-                type="button"
-                onClick={onCancelar}
-                disabled={guardandoFinal}
-                className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700"
-              >
-                Cancelar
-              </Button>
-            )}
-            <Button
-              onClick={() => setShowEnviarConfirm(true)}
-              disabled={!archivoSubido || guardandoFinal}
-              className="gap-1.5 px-5 py-2"
-              style={{ backgroundColor: "#773357", color: "#fff", border: "none" }}
-            >
-              {guardandoFinal ? "Enviando..." : "Enviar a Emisor"}
-            </Button>
-          </div>
-          <ConfirmAlertDialog
-            open={showEnviarConfirm}
-            onOpenChange={setShowEnviarConfirm}
-            onConfirm={() => { setShowEnviarConfirm(false); onFinalizar() }}
-            title="¿Estás seguro de firmar?"
-            description={<>Vas a enviar la justificación <strong className="font-semibold">{folioJustificacion}</strong> firmada a Emisor. Esta acción no se puede deshacer.</>}
-            confirmLabel="Sí, enviar"
-          />
-        </>
-      )}
+      <div className="flex justify-end px-6 py-4 border-t border-[#E5E7EB]">
+        <Button
+          onClick={() => setShowEnviarConfirm(true)}
+          disabled={!archivoSubido || guardandoFinal}
+          className="gap-1.5 px-5 py-2"
+          style={{ backgroundColor: "#773357", color: "#fff", border: "none" }}
+        >
+          {guardandoFinal ? "Enviando..." : "Enviar a Emisor"}
+        </Button>
+      </div>
+      <ConfirmAlertDialog
+        open={showEnviarConfirm}
+        onOpenChange={setShowEnviarConfirm}
+        onConfirm={() => { setShowEnviarConfirm(false); onFinalizar() }}
+        title="¿Estás seguro de firmar?"
+        description={<>Vas a enviar la justificación <strong className="font-semibold">{folioJustificacion}</strong> firmada a Emisor. Esta acción no se puede deshacer.</>}
+        confirmLabel="Sí, enviar"
+      />
     </div>
   )
 }
