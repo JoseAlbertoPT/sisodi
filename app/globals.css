@@ -1,105 +1,20 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is([data-theme='dark'] *));
 
+/* ============================================================================
+   MORELOS DESIGN SYSTEM — 3 capas de color
+     1) CORE ramps (hex, no cambian)
+     2) TOKENS semánticos --sem-* (tema claro solamente)
+     3) @theme inline → utilidades Tailwind
+   Regla: usar SIEMPRE tokens/utilidades, NUNCA hex directos.
+   ============================================================================ */
+
+/* ============================================================================
+   1) CORE RAMPS
+   ============================================================================ */
 :root {
-  /* ── Fondos ──────────────────────────────────────────────────────────── */
-  --background: #ffffff;
-  --card: #ffffff;
-  --popover: #ffffff;
-
-  /* ── Texto ───────────────────────────────────────────────────────────── */
-  --foreground: #1a2419;
-  --card-foreground: #1a2419;
-  --popover-foreground: #1a2419;
-
-  /* ── Primario (vino) ─────────────────────────────────────────────────── */
-  --primary: #2e3b2b;
-  --primary-foreground: #ffffff;
-
-  /* ── Secundario (olivo) ──────────────────────────────────────────────── */
-  --secondary: #71785b;
-  --secondary-foreground: #ffffff;
-
-  /* ── Muted / sutiles ─────────────────────────────────────────────────── */
-  --muted: #f3f2ee;
-  --muted-foreground: #86857e;
-
-  /* ── Acento (dorado) ─────────────────────────────────────────────────── */
-  --accent: #c69c6d;
-  --accent-foreground: #2A3B29;
-
-  /* ── Destructivo (rojo) ──────────────────────────────────────────────── */
-  --destructive: #da3237;
-  --destructive-foreground: #ffffff;
-
-  /* ── Bordes / inputs ─────────────────────────────────────────────────── */
-  --border: #e4e3dc;
-  --input: #c6c6c6;
-  --ring: #773357;
-
-  /* ── Charts ──────────────────────────────────────────────────────────── */
-  --chart-1: #2A3B29;
-  --chart-2: #71785b;
-  --chart-3: #c69c6d;
-  --chart-4: #773357;
-  --chart-5: #86857e;
-  --radius: 0.5rem;
-
-  /* ── Sidebar ─────────────────────────────────────────────────────────── */
-  --sidebar: #2A3B29;
-  --sidebar-foreground: #f3f2ee;
-  --sidebar-primary: #c69c6d;
-  --sidebar-primary-foreground: #2A3B29;
-  --sidebar-accent: #344636;
-  --sidebar-accent-foreground: #f3f2ee;
-  --sidebar-border: #344636;
-  --sidebar-ring: #c69c6d;
-  --sidebar-bg-light: #F3F2EE;
-  --sidebar-dropdown: #6B2347;
-  --title: #C69C6D;
-  --subtitle: #6E795A;
-  --warning: #832b56;
-  --warning-foreground: #F3F2EE;
-  --status-default-bg: #FFFFFF;
-  --status-default-text: #6B7280;
-  --status-default-border: #E5E7EB;
-
-  --status-primary-bg: #D9A300;
-  --status-primary-text: #FFFFFF;
-  --status-primary-border: #D9A300;
-
-  --sidebar-bg-light: #f9f8f5;
-  --sidebar-dropdown: #773357;
-
-  /* ── Legados / misceláneos ───────────────────────────────────────────── */
-  --title: #c69c6d;
-  --subtitle: #71785b;
-  --warning: #773357;
-  --warning-foreground: #ffffff;
-
-  /* ── Tokens de marca ─────────────────────────────────────────────────── */
-  --brand-verde-oscuro: #2A3B29;
-  --brand-verde-medio: #2d5a3d;
-  --brand-dorado: #c69c6d;
-  --brand-arena: #f0ede6;
-  --brand-arena-claro: #f9f8f5;
-  --brand-vino: #773357;
-  --brand-texto: #1a2419;
-  --brand-texto-secundario: #5c6158;
-  --brand-texto-muted: #86857e;
-
-  /* ── Tokens de badges semánticos ─────────────────────────────────────── */
-  --badge-success-bg: #d2fad2;
-  --badge-success-fg: #1c7d29;
-  --badge-warning-bg: #ffefb6;
-  --badge-warning-fg: #936901;
-  --badge-info-bg: #ecf2ff;
-  --badge-info-fg: #3266cb;
-  --badge-rose-bg: #ffeaea;
-  --badge-rose-fg: #87090c;
-
   /* Global (neutros) */
   --color-core-global-100: #ffffff;
   --color-core-global-95: #f1f1f0;
@@ -223,12 +138,151 @@
   --color-core-red-50: #da3237;
   --color-core-red-40: #c22124;
   --color-core-red-30: #87090c;
+
+  --radius: 0.5rem;
 }
 
+/* ============================================================================
+   2) TOKENS SEMÁNTICOS — TEMA CLARO
+   ============================================================================ */
+:root {
+  /* sem/support */
+  --sem-support-error: #da3237;
+  --sem-support-on-error: #ffffff;
+  --sem-support-error-low: #ffeaea;
+  --sem-support-on-error-low: #87090c;
+  --sem-support-warning: #936901;
+  --sem-support-on-warning: #ffffff;
+  --sem-support-warning-low: #ffefb6;
+  --sem-support-on-warning-low: #936901;
+  --sem-support-success: #1c7d29;
+  --sem-support-on-success: #ffffff;
+  --sem-support-success-low: #d2fad2;
+  --sem-support-on-success-low: #1c7d29;
+  --sem-support-info: #3266cb;
+  --sem-support-on-info: #ffffff;
+  --sem-support-info-low: #ecf2ff;
+  --sem-support-on-info-low: #3266cb;
+  --sem-support-disabled: #c6c6c6;
+  --sem-support-disabled-low: #f1f1f0;
+  --sem-support-on-disabled-low: #c6c6c6;
+  --sem-support-focus: #e7b400;
+  --sem-support-on-focus: #000000;
+
+  /* sem/reactive */
+  --sem-reactive-surface-hover: rgba(113, 120, 91, 0.1);
+  --sem-reactive-surface-pressed: rgba(113, 120, 91, 0.25);
+  --sem-reactive-accent-hover: rgba(60, 1, 38, 0.25);
+  --sem-reactive-accent-pressed: rgba(60, 1, 38, 0.5);
+  --sem-reactive-accent-active: rgba(201, 119, 159, 0.18);
+  --sem-reactive-inverse-hover: rgba(255, 255, 255, 0.15);
+  --sem-reactive-inverse-pressed: rgba(255, 255, 255, 0.25);
+
+  /* sem/border */
+  --sem-border-highest: #6d7b68;
+  --sem-border-high: #acaca0;
+  --sem-border-md: #cbcabe;
+  --sem-border-low: #e4e3d6;
+  --sem-border-inverse-highest: #ffffff;
+  --sem-border-inverse-md: rgba(255, 255, 255, 0.25);
+  --sem-border-inverse-low: rgba(255, 255, 255, 0.1);
+
+  /* sem/bg */
+  --sem-bg-surface-emphasis: #ffeedd;
+  --sem-bg-surface-high: #e4e3d6;
+  --sem-bg-surface-md: #ebeade;
+  --sem-bg-surface-low: #f5f4f2;
+  --sem-bg-base: #ffffff;
+  --sem-bg-surface-inverse: #2e3b2b;
+  --sem-bg-surface-inverse-md: #71785b;
+
+  /* sem/accent */
+  --sem-accent-primary: #773357;
+  --sem-accent-on-primary: #ffffff;
+  --sem-accent-primary-low: #ffd8e7;
+  --sem-accent-on-primary-low: #773357;
+  --sem-accent-secondary: #71785b;
+  --sem-accent-on-secondary: #ffffff;
+  --sem-accent-secondary-low: #dfe6c3;
+  --sem-accent-on-secondary-low: #2d331b;
+  --sem-accent-inverse: #f5f4f2;
+  --sem-accent-on-inverse: #3d4a39;
+  --sem-accent-neutral: rgba(255, 255, 255, 0.75);
+  --sem-accent-on-neutral: #3d4a39;
+
+  /* sem/content */
+  --sem-content-emphasis: #8f724d;
+  --sem-content-high: #2e3b2b;
+  --sem-content-low: #5d5e5f;
+  --sem-content-inverse: #ffffff;
+  --sem-content-inverse-low: #c6c6c6;
+
+  /* shadcn shim → sem */
+  --background: var(--sem-bg-base);
+  --foreground: var(--sem-content-high);
+  --card: var(--sem-bg-base);
+  --card-foreground: var(--sem-content-high);
+  --popover: var(--sem-bg-base);
+  --popover-foreground: var(--sem-content-high);
+  --primary: var(--sem-bg-surface-inverse);
+  --primary-foreground: var(--sem-content-inverse);
+  --secondary: var(--sem-accent-secondary);
+  --secondary-foreground: var(--sem-accent-on-secondary);
+  --muted: var(--sem-bg-surface-low);
+  --muted-foreground: var(--sem-content-low);
+  --accent: var(--sem-content-emphasis);
+  --accent-foreground: var(--sem-content-inverse);
+  --destructive: var(--sem-accent-primary);
+  --destructive-foreground: var(--sem-accent-on-primary);
+  --border: var(--sem-border-low);
+  --input: var(--sem-border-md);
+  --ring: var(--sem-content-high);
+
+  /* Sidebar (tema oscuro fijo — el sidebar siempre es verde oscuro) */
+  --sidebar: #2e3b2b;
+  --sidebar-foreground: #f5f4f2;
+  --sidebar-primary: #c69c6d;
+  --sidebar-primary-foreground: #2e3b2b;
+  --sidebar-accent: #344636;
+  --sidebar-accent-foreground: #f3f2ee;
+  --sidebar-border: #344636;
+  --sidebar-ring: #c69c6d;
+  --sidebar-bg-light: #f9f8f5;
+  --sidebar-dropdown: #773357;
+
+  /* Chart */
+  --chart-1: #2e3b2b;
+  --chart-2: #71785b;
+  --chart-3: #c69c6d;
+  --chart-4: #773357;
+  --chart-5: #909191;
+
+  /* Brand shim → sem (deprecated, no usar en código nuevo) */
+  --brand-verde-oscuro: var(--sem-content-high);
+  --brand-verde-medio: var(--sem-accent-secondary);
+  --brand-dorado: var(--sem-content-emphasis);
+  --brand-arena: var(--sem-bg-surface-md);
+  --brand-arena-claro: var(--sem-bg-surface-low);
+  --brand-vino: var(--sem-accent-primary);
+  --brand-texto: var(--sem-content-high);
+  --brand-texto-secundario: var(--sem-content-low);
+  --brand-texto-muted: var(--sem-content-low);
+}
+
+/* ============================================================================
+   3) @theme inline — utilidades Tailwind
+   ============================================================================ */
 @theme inline {
   --font-display: var(--font-karol-sans), sans-serif;
   --font-sans: var(--font-twogether-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* shadcn shim */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -248,15 +302,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Sidebar */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -267,11 +314,15 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-bg-light: var(--sidebar-bg-light);
   --color-sidebar-dropdown: var(--sidebar-dropdown);
-  --color-title: var(--title);
-  --color-subtitle: var(--subtitle);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  /* Brand */
+
+  /* Chart */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Brand (deprecated) */
   --color-brand-verde-oscuro: var(--brand-verde-oscuro);
   --color-brand-verde-medio: var(--brand-verde-medio);
   --color-brand-dorado: var(--brand-dorado);
@@ -281,332 +332,85 @@
   --color-brand-texto: var(--brand-texto);
   --color-brand-texto-secundario: var(--brand-texto-secundario);
   --color-brand-texto-muted: var(--brand-texto-muted);
-  /* Badge semánticos */
-  --color-badge-success-bg: var(--badge-success-bg);
-  --color-badge-success-fg: var(--badge-success-fg);
-  --color-badge-warning-bg: var(--badge-warning-bg);
-  --color-badge-warning-fg: var(--badge-warning-fg);
-  --color-badge-info-bg: var(--badge-info-bg);
-  --color-badge-info-fg: var(--badge-info-fg);
-  --color-badge-rose-bg: var(--badge-rose-bg);
-  --color-badge-rose-fg: var(--badge-rose-fg);
-}
 
-.scroll-thin {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-}
-.scroll-thin:hover {
-  scrollbar-color: var(--border) transparent;
-}
-.scroll-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scroll-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-.scroll-thin::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 2px;
-}
-.scroll-thin:hover::-webkit-scrollbar-thumb {
-  background: var(--border);
-}
+  /* bg */
+  --color-bg-base: var(--sem-bg-base);
+  --color-bg-surface-low: var(--sem-bg-surface-low);
+  --color-bg-surface-md: var(--sem-bg-surface-md);
+  --color-bg-surface-high: var(--sem-bg-surface-high);
+  --color-bg-surface-emphasis: var(--sem-bg-surface-emphasis);
+  --color-bg-surface-inverse: var(--sem-bg-surface-inverse);
+  --color-bg-surface-inverse-md: var(--sem-bg-surface-inverse-md);
 
-/* ── Design System Fields — Inputs específicos (ej. Importe Bruto) ────── */
-.ns-select .ns-ds-field {
-  border: 1.5px solid #ccc !important;
-  border-radius: 12px !important;
-  padding-top: 12px !important;
-  padding-bottom: 12px !important;
-  padding-right: 16px !important;
-  height: auto !important;
-  min-height: 44px !important;
-  background-color: #ffffff;
-  box-shadow: none !important;
-}
-.ns-select .ns-ds-field:hover:not(:focus-visible) {
-  background-color: #f5f5f5 !important;
-}
-.ns-select .ns-ds-field:focus-visible {
-  border-color: #773357 !important;
-  background-color: #ffffff !important;
-  box-shadow: none !important;
-}
-/* ──────────────────────────────────────────────────────────────────────── */
+  /* content */
+  --color-content-emphasis: var(--sem-content-emphasis);
+  --color-content-high: var(--sem-content-high);
+  --color-content-low: var(--sem-content-low);
+  --color-content-inverse: var(--sem-content-inverse);
+  --color-content-inverse-low: var(--sem-content-inverse-low);
 
-/* ── Design System Selects — Global ───────────────────────────────────── */
+  /* accent */
+  --color-accent-primary: var(--sem-accent-primary);
+  --color-accent-on-primary: var(--sem-accent-on-primary);
+  --color-accent-primary-low: var(--sem-accent-primary-low);
+  --color-accent-on-primary-low: var(--sem-accent-on-primary-low);
+  --color-accent-secondary: var(--sem-accent-secondary);
+  --color-accent-on-secondary: var(--sem-accent-on-secondary);
+  --color-accent-secondary-low: var(--sem-accent-secondary-low);
+  --color-accent-on-secondary-low: var(--sem-accent-on-secondary-low);
+  --color-accent-inverse: var(--sem-accent-inverse);
+  --color-accent-on-inverse: var(--sem-accent-on-inverse);
+  --color-accent-neutral: var(--sem-accent-neutral);
+  --color-accent-on-neutral: var(--sem-accent-on-neutral);
 
-/* Estado Hover */
-[data-slot="select-trigger"]:hover:not([data-state="open"]):not([disabled]):not([data-disabled]) {
-  background-color: #f5f5f5 !important;
-}
+  /* border */
+  --color-border-low: var(--sem-border-low);
+  --color-border-md: var(--sem-border-md);
+  --color-border-high: var(--sem-border-high);
+  --color-border-highest: var(--sem-border-highest);
+  --color-border-inverse-low: var(--sem-border-inverse-low);
+  --color-border-inverse-md: var(--sem-border-inverse-md);
+  --color-border-inverse-highest: var(--sem-border-inverse-highest);
 
-/* Estado Selected — tiene valor (no placeholder) */
-[data-slot="select-trigger"]:not([data-placeholder]) > svg {
-  color: #773357 !important;
-}
+  /* support */
+  --color-support-error: var(--sem-support-error);
+  --color-support-on-error: var(--sem-support-on-error);
+  --color-support-error-low: var(--sem-support-error-low);
+  --color-support-on-error-low: var(--sem-support-on-error-low);
+  --color-support-warning: var(--sem-support-warning);
+  --color-support-on-warning: var(--sem-support-on-warning);
+  --color-support-warning-low: var(--sem-support-warning-low);
+  --color-support-on-warning-low: var(--sem-support-on-warning-low);
+  --color-support-success: var(--sem-support-success);
+  --color-support-on-success: var(--sem-support-on-success);
+  --color-support-success-low: var(--sem-support-success-low);
+  --color-support-on-success-low: var(--sem-support-on-success-low);
+  --color-support-info: var(--sem-support-info);
+  --color-support-on-info: var(--sem-support-on-info);
+  --color-support-info-low: var(--sem-support-info-low);
+  --color-support-on-info-low: var(--sem-support-on-info-low);
+  --color-support-disabled: var(--sem-support-disabled);
+  --color-support-disabled-low: var(--sem-support-disabled-low);
+  --color-support-focus: var(--sem-support-focus);
+  --color-support-on-focus: var(--sem-support-on-focus);
 
-/* Estado Abierto */
-[data-slot="select-trigger"][data-state="open"] {
-  border-color: #9CA3AF !important;
-  background-color: #ffffff !important;
+  /* reactive */
+  --color-reactive-surface-hover: var(--sem-reactive-surface-hover);
+  --color-reactive-surface-pressed: var(--sem-reactive-surface-pressed);
+  --color-reactive-accent-hover: var(--sem-reactive-accent-hover);
+  --color-reactive-accent-pressed: var(--sem-reactive-accent-pressed);
+  --color-reactive-accent-active: var(--sem-reactive-accent-active);
 }
-[data-slot="select-trigger"][data-state="open"] > svg {
-  color: #773357 !important;
-  transform: rotate(180deg);
-}
-
-/* Estado Focus (teclado) */
-[data-slot="select-trigger"]:focus-visible {
-  border-color: #9CA3AF !important;
-  background-color: #ffffff !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* Estado Disabled */
-[data-slot="select-trigger"]:disabled,
-[data-slot="select-trigger"][data-disabled] {
-  background-color: #f0f0f0 !important;
-  border-color: #ddd !important;
-  color: #aaa !important;
-  cursor: not-allowed !important;
-  opacity: 1 !important;
-}
-
-/* Estado Error */
-[data-slot="select-trigger"][aria-invalid="true"] {
-  border-color: #D32F2F !important;
-}
-/* ──────────────────────────────────────────────────────────────────────── */
-
-/* ── Design System Textareas — global ─────────────────────────────────── */
-[data-slot="textarea"] {
-  border: 1.5px solid #ccc !important;
-  border-radius: 12px !important;
-  padding: 12px 16px !important;
-  background-color: #ffffff !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-[data-slot="textarea"]:hover:not(:disabled):not(:focus-visible) {
-  background-color: #f5f5f5 !important;
-}
-[data-slot="textarea"]:focus-visible,
-[data-slot="textarea"]:focus {
-  border-color: #773357 !important;
-  background-color: #ffffff !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-[data-slot="textarea"]:disabled {
-  background-color: #f0f0f0 !important;
-  border-color: #ddd !important;
-  color: #aaa !important;
-  cursor: not-allowed !important;
-}
-/* ──────────────────────────────────────────────────────────────────────── */
-
-/* ── Design System Dynamic List Items ─────────────────────────────────── */
-.ds-list-input {
-  border: 1.5px solid #ccc;
-  border-radius: 8px;
-  padding: 10px 14px;
-  background-color: #ffffff;
-  font-size: 0.875rem;
-  outline: none;
-  box-shadow: none;
-  transition: background-color 0.15s, border-color 0.15s;
-  display: block;
-  width: 100%;
-}
-.ds-list-input::placeholder {
-  color: #9ca3af;
-}
-.ds-list-input:hover:not(:focus):not(:disabled) {
-  background-color: #f5f5f5;
-  border-color: #ccc;
-}
-.ds-list-input:focus {
-  border-color: #773357;
-  background-color: #ffffff;
-  outline: none;
-  box-shadow: none;
-}
-.ds-list-input:disabled {
-  background-color: #f0f0f0;
-  border-color: #ddd;
-  color: #aaa;
-  cursor: not-allowed;
-}
-.ds-list-input--error {
-  border-color: #D32F2F !important;
-}
-.ds-list-input--error:focus {
-  background-color: #fff5f5 !important;
-}
-/* ──────────────────────────────────────────────────────────────────────── */
-
-/* ── Design System Radio Buttons & Checkboxes — Global ────────────────── */
-
-/* Focus outline vino para Radix radio */
-[data-slot="radio-group-item"]:focus-visible {
-  outline: 2px solid #773357 !important;
-  outline-offset: 2px;
-  box-shadow: none !important;
-}
-
-/* Focus outline vino para Radix checkbox */
-[data-slot="checkbox"]:focus-visible {
-  outline: 2px solid #773357 !important;
-  outline-offset: 2px;
-  box-shadow: none !important;
-}
-
-/* Radio nativos (tablas de condiciones y riesgos) */
-input[type="radio"].cursor-pointer {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid #ccc;
-  background-color: #ffffff;
-  cursor: pointer;
-  outline: none;
-  vertical-align: middle;
-  transition: border-color 0.15s;
-  flex-shrink: 0;
-  position: relative;
-}
-input[type="radio"].cursor-pointer:hover {
-  border-color: #7B2D5E;
-}
-input[type="radio"].cursor-pointer:checked {
-  border-color: #7B2D5E;
-  background-color: #ffffff;
-}
-input[type="radio"].cursor-pointer:checked::after {
-  content: "";
-  display: block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #7B2D5E;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-input[type="radio"].cursor-pointer:focus-visible {
-  outline: 2px solid #773357;
-  outline-offset: 2px;
-}
-input[type="radio"].cursor-pointer:disabled {
-  border-color: #ccc;
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-/* ──────────────────────────────────────────────────────────────────────── */
-
-/* ── DS Tables — Global ─────────────────────────────────────────────────── */
-
-/* Header: muted 40% bg, brand-texto-secundario, no bold */
-table.w-full thead tr {
-  background-color: rgba(243,242,238,0.4) !important;
-  color: #5c6158 !important;
-}
-table.w-full thead th {
-  background-color: rgba(243,242,238,0.4) !important;
-  color: var(--color-core-verde-tierra-20) !important;
-  font-weight: 500 !important;
-  font-size: 14px !important;
-  padding: 10px 16px !important;
-  border-bottom: 1px solid #e4e3dc !important;
-  text-align: left;
-}
-
-/* Body rows: all white, no alternating */
-table.w-full tbody tr {
-  background-color: #ffffff !important;
-}
-table.w-full tbody tr:hover {
-  background-color: rgba(243,242,238,0.5) !important;
-}
-
-/* Cell separators */
-table.w-full tbody td {
-  border-bottom: 1px solid #e4e3dc;
-  padding: 12px 16px !important;
-  font-family: var(--font-sans) !important;
-    font-size: 13px !important;
-    font-weight: 300 !important;
-    line-height: 1.2 !important;
-    color: var(--color-core-piedra-20) !important;
-}
-table.w-full tbody tr:last-child td {
-  border-bottom: none !important;
-}
-
-/* Footer row (totals etc.) */
-table.w-full tfoot tr {
-  background-color: rgba(243,242,238,0.4) !important;
-  border-top: 1px solid #e4e3dc !important;
-}
-table.w-full tfoot td {
-  padding: 12px 16px !important;
-}
-
-/* Conditions/Risks option columns — override horizontal padding so checkboxes
-   center correctly under their header. Selector specificity (0,2,1) beats
-   the generic (0,1,3) rules above, so !important wins cleanly. */
-table.w-full.conditions-table thead th:not(:first-child) {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  text-align: center !important;
-}
-table.w-full.conditions-table tbody td:not(:first-child) {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  text-align: center !important;
-  vertical-align: middle !important;
-}
-
-/* DS-slot table component (shadcn Table) */
-[data-slot="table-header"] tr {
-  background-color: rgba(243,242,238,0.4) !important;
-  color: #5c6158 !important;
-  border-bottom: 1px solid #e4e3dc !important;
-}
-[data-slot="table-head"] {
-  background-color: rgba(243,242,238,0.4) !important;
-  color: #5c6158 !important;
-  font-weight: 500 !important;
-  font-size: 14px !important;
-  padding: 10px 16px !important;
-}
-[data-slot="table-row"]:hover {
-  background-color: rgba(243,242,238,0.5) !important;
-}
-[data-slot="table-cell"] {
-  padding: 12px 16px !important;
-  border-bottom: 1px solid #e4e3dc;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-}
-/* ──────────────────────────────────────────────────────────────────────── */
 
 @layer base {
   * {
     @apply border-border;
-    outline-color: #773357;
   }
   *:focus {
     outline: none;
   }
   *:focus-visible {
-    outline: 2px solid #773357;
+    outline: 2px solid var(--sem-support-focus);
     outline-offset: 2px;
   }
   body {
@@ -624,238 +428,348 @@ table.w-full.conditions-table tbody td:not(:first-child) {
   }
 }
 
-/* ── Design System — Escala tipográfica ds-* ───────────────────────────── */
+/* ── DS Typography — escala ds-* ─────────────────────────────────────────── */
 @layer utilities {
-  /* Display — Karol Sans (solo hero del portal público) */
-  .ds-display-lg {
-    font-family: var(--font-display);
-    font-size: 76px;
-    font-weight: 600;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-  }
-  .ds-display-md {
-    font-family: var(--font-display);
-    font-size: 64px;
-    font-weight: 600;
-    line-height: 1.05;
-    letter-spacing: -0.02em;
-  }
-  .ds-display-sm {
-    font-family: var(--font-display);
-    font-size: 52px;
-    font-weight: 600;
-    line-height: 1.08;
-    letter-spacing: -0.01em;
-  }
+  .ds-display-lg { font-family: var(--font-display); font-size: 76px; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; }
+  .ds-display-md { font-family: var(--font-display); font-size: 64px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; }
+  .ds-display-sm { font-family: var(--font-display); font-size: 52px; font-weight: 600; line-height: 1.08; letter-spacing: -0.01em; }
+  .ds-heading-lg { font-family: var(--font-sans); font-size: 48px; font-weight: 400; line-height: 1.1; }
+  .ds-heading-md { font-family: var(--font-sans); font-size: 42px; font-weight: 400; line-height: 1.1; }
+  .ds-heading-sm { font-family: var(--font-sans); font-size: 32px; font-weight: 400; line-height: 1.15; }
+  .ds-title-lg   { font-family: var(--font-sans); font-size: 28px; font-weight: 300; line-height: 1.2; }
+  .ds-title-md   { font-family: var(--font-sans); font-size: 22px; font-weight: 400; line-height: 1.2; }
+  .ds-title-sm   { font-family: var(--font-sans); font-size: 18px; font-weight: 400; line-height: 1.2; }
+  .ds-body-lg    { font-family: var(--font-sans); font-size: 20px; font-weight: 300; line-height: 1.4; }
+  .ds-body-md    { font-family: var(--font-sans); font-size: 16px; font-weight: 300; line-height: 1.4; }
+  .ds-body-sm    { font-family: var(--font-sans); font-size: 14px; font-weight: 300; line-height: 1.4; }
+  .ds-label-lg   { font-family: var(--font-sans); font-size: 16px; font-weight: 300; line-height: 1.2; }
+  .ds-label-md   { font-family: var(--font-sans); font-size: 14px; font-weight: 300; line-height: 1.2; }
+  .ds-label-sm   { font-family: var(--font-sans); font-size: 12px; font-weight: 300; line-height: 1.2; }
 
-  /* Headings — Twogether Sans */
-  .ds-heading-lg {
-    font-family: var(--font-sans);
-    font-size: 48px;
-    font-weight: 400;
-    line-height: 1.1;
-  }
-  .ds-heading-md {
-    font-family: var(--font-sans);
-    font-size: 42px;
-    font-weight: 400;
-    line-height: 1.1;
-  }
-  .ds-heading-sm {
-    font-family: var(--font-sans);
-    font-size: 32px;
-    font-weight: 400;
-    line-height: 1.15;
-  }
-
-  /* Titles — Twogether Sans */
-  .ds-title-lg {
-    font-family: var(--font-sans);
-    font-size: 28px;
-    font-weight: 300;
-    line-height: 1.2;
-  }
-  .ds-title-md {
-    font-family: var(--font-sans);
-    font-size: 14px;
-    font-weight: 300;
-    line-height: 1.2;
-  }
-  .ds-title-sm {
-    font-family: var(--font-sans);
-    font-size: 12px;
-    font-weight: 300;
-    line-height: 1.2;
-  }
-
-  /* Body — Twogether Sans */
-  .ds-body-lg {
-    font-family: var(--font-sans);
-    font-size: 20px;
-    font-weight: 300;
-    line-height: 1.2;
-  }
-  .ds-body-md {
-    font-family: var(--font-sans);
-    font-size: 16px;
-    font-weight: 300;
-    line-height: 1.4;
-  }
-  .ds-body-sm {
-    font-family: var(--font-sans);
-    font-size: 14px;
-    font-weight: 300;
-    line-height: 1.4;
-  }
-
-  /* Labels — Twogether Sans */
-  .ds-label-lg {
-    font-family: var(--font-sans);
-    font-size: 15px;
-    font-weight: 300;
-    line-height: 1.2;
-  }
-  .ds-label-md {
-    font-family: var(--font-sans);
-    font-size: 14px;
-    font-weight: 300;
-    line-height: 1.2;
-    color: var(--color-core-piedra-40);
-  }
-  .ds-label-sm {
-    font-family: var(--font-sans);
-    font-size: 14px;
-    font-weight: 300;
-    line-height: 1.2;
-    color: #5c6158;
-  }
-
-  .ds-table-header {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 120%;
-  color: var(--color-core-global-0);
+  .ds-table-header { font-family: var(--font-sans); font-size: 14px; font-weight: 600; line-height: 1.2; }
 }
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Scrollbar fino */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.scroll-thin:hover { scrollbar-color: var(--sem-border-low) transparent; }
+.scroll-thin::-webkit-scrollbar { width: 4px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+.scroll-thin::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
+.scroll-thin:hover::-webkit-scrollbar-thumb { background: var(--sem-border-low); }
+
+/* ── NS Select fields ─────────────────────────────────────────────────────── */
+.ns-select .ns-ds-field {
+  border-radius: calc(var(--radius) - 2px) !important;
+  height: 2.25rem !important;
+  min-height: unset !important;
+  box-shadow: none !important;
+}
+.ns-select .ns-ds-field:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
-/* ── Botones vino/guinda — bloquear fondo y texto en TODOS los estados ── */
-/* Solo aplica a botones con FONDO vino (bg-[#...]), excluye select-triggers
-   que solo tienen text-[#...] en su clase */
-button[class*="bg-\[#773357\]"]:not([data-slot="select-trigger"]):hover,
-button[class*="bg-\[#773357\]"]:not([data-slot="select-trigger"]):active,
-button[class*="bg-\[#773357\]"]:not([data-slot="select-trigger"]):focus {
-  background-color: #773357 !important;
-  color: #ffffff !important;
-  filter: none !important;
+/* ── Text input atom states (DS Entrada de texto) ─────────────────────────── */
+.ds-input {
+  border-color: var(--sem-border-md);
 }
-button[class*="bg-\[#7b2d5e\]"]:not([data-slot="select-trigger"]):hover,
-button[class*="bg-\[#7b2d5e\]"]:not([data-slot="select-trigger"]):active,
-button[class*="bg-\[#7b2d5e\]"]:not([data-slot="select-trigger"]):focus,
-button[class*="bg-\[#7B2D5E\]"]:not([data-slot="select-trigger"]):hover,
-button[class*="bg-\[#7B2D5E\]"]:not([data-slot="select-trigger"]):active,
-button[class*="bg-\[#7B2D5E\]"]:not([data-slot="select-trigger"]):focus {
-  background-color: #7b2d5e !important;
-  color: #ffffff !important;
-  filter: none !important;
+.ds-input:hover:not(:disabled):not(:focus):not([aria-invalid='true']) {
+  background-color: var(--sem-bg-surface-low);
 }
-button[class*="bg-\[#8a1f52\]"]:not([data-slot="select-trigger"]):hover,
-button[class*="bg-\[#8a1f52\]"]:not([data-slot="select-trigger"]):active,
-button[class*="bg-\[#8a1f52\]"]:not([data-slot="select-trigger"]):focus,
-button[class*="bg-\[#8A1F52\]"]:not([data-slot="select-trigger"]):hover,
-button[class*="bg-\[#8A1F52\]"]:not([data-slot="select-trigger"]):active,
-button[class*="bg-\[#8A1F52\]"]:not([data-slot="select-trigger"]):focus {
-  background-color: #8a1f52 !important;
-  color: #ffffff !important;
-  filter: none !important;
+.ds-input:focus:not(:disabled):not([aria-invalid='true']) {
+  border-color: var(--sem-content-high);
 }
-button[class*="bg-\[#832B56\]"]:not([data-slot="select-trigger"]):hover,
-button[class*="bg-\[#832B56\]"]:not([data-slot="select-trigger"]):active,
-button[class*="bg-\[#832B56\]"]:not([data-slot="select-trigger"]):focus,
-button[class*="bg-\[#832b56\]"]:not([data-slot="select-trigger"]):hover,
-button[class*="bg-\[#832b56\]"]:not([data-slot="select-trigger"]):active,
-button[class*="bg-\[#832b56\]"]:not([data-slot="select-trigger"]):focus {
-  background-color: #832b56 !important;
-  color: #ffffff !important;
-  filter: none !important;
+.ds-input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
-button[class*="bg-\[#72243E\]"]:not([data-slot="select-trigger"]):hover,
-button[class*="bg-\[#72243E\]"]:not([data-slot="select-trigger"]):active,
-button[class*="bg-\[#72243E\]"]:not([data-slot="select-trigger"]):focus,
-button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):hover,
-button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):active,
-button[class*="bg-\[#72243e\]"]:not([data-slot="select-trigger"]):focus {
-  background-color: #72243e !important;
-  color: #ffffff !important;
-  filter: none !important;
+.ds-input[aria-invalid='true'] {
+  border-color: var(--sem-support-error);
+  color: var(--sem-support-error);
 }
-/* ──────────────────────────────────────────────────────────────────────── */
+.ds-input[aria-invalid='true']::placeholder {
+  color: var(--sem-support-error);
+}
+.ds-input:disabled {
+  background-color: var(--sem-bg-base);
+  color: var(--sem-support-disabled);
+}
+.ds-input:disabled::placeholder {
+  color: var(--sem-support-disabled);
+}
+.ds-input[readonly] { cursor: default; }
 
+/* ── Select trigger atom states (DS Selector) ─────────────────────────────── */
+.ds-select-trigger {
+  border-color: var(--sem-border-md);
+  font-weight: 300;
+}
+.ds-select-trigger:hover:not([disabled]):not([data-state='open']) {
+  background-color: var(--sem-bg-surface-low);
+}
+.ds-select-trigger[data-state='open'] {
+  border-color: var(--sem-content-high);
+}
+.ds-select-trigger[aria-invalid='true'] {
+  border-color: var(--sem-support-error);
+  color: var(--sem-support-error);
+}
+.ds-select-trigger:focus-visible {
+  border-color: var(--sem-content-high) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Estado Selected — tiene valor (no placeholder) */
+[data-slot="select-trigger"]:not([data-placeholder]) > svg {
+  color: var(--sem-accent-primary) !important;
+}
+[data-slot="select-trigger"][data-state="open"] > svg {
+  color: var(--sem-accent-primary) !important;
+  transform: rotate(180deg);
+}
+[data-slot="select-trigger"]:focus-visible {
+  border-color: var(--sem-content-high) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+[data-slot="select-trigger"][aria-invalid="true"] {
+  border-color: var(--sem-support-error) !important;
+}
+
+/* ── Select item states ───────────────────────────────────────────────────── */
+.ds-select-item { font-weight: 300; }
+.ds-select-item:hover,
+.ds-select-item[data-highlighted] {
+  background-color: var(--sem-bg-surface-md);
+  color: var(--sem-content-high);
+}
+.ds-select-item[data-state='checked'] {
+  color: var(--sem-accent-primary);
+}
+.ds-select-trigger:not([data-placeholder]),
+.ds-select-trigger:not([data-placeholder]) * {
+  color: var(--sem-accent-primary) !important;
+}
+
+/* ── Textarea ─────────────────────────────────────────────────────────────── */
+[data-slot="textarea"]:focus {
+  border-color: var(--sem-content-high) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+[data-slot="textarea"]:focus-visible {
+  border-color: var(--sem-content-high) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* ── DS Dynamic List Inputs ───────────────────────────────────────────────── */
+.ds-list-input {
+  border: 1px solid var(--sem-border-low);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--sem-bg-base);
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: var(--sem-content-high);
+  outline: none;
+  box-shadow: none;
+  transition: border-color 0.15s;
+  display: block;
+  width: 100%;
+}
+.ds-list-input::placeholder { color: var(--sem-content-low); }
+.ds-list-input:focus {
+  border-color: var(--sem-content-high);
+  outline: none;
+  box-shadow: none;
+}
+.ds-list-input:disabled { opacity: 0.6; cursor: not-allowed; }
+.ds-list-input--error { border-color: var(--sem-support-error) !important; }
+.ds-list-input--error:focus { background-color: var(--sem-support-error-low) !important; }
+
+/* ── Radio Buttons & Checkboxes ───────────────────────────────────────────── */
+[data-slot="radio-group-item"]:focus-visible {
+  outline: 2px solid var(--sem-support-focus) !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+[data-slot="checkbox"]:focus-visible {
+  outline: 2px solid var(--sem-support-focus) !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+
+/* Radio nativos */
+input[type="radio"].cursor-pointer {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--sem-border-md);
+  background-color: var(--sem-bg-base);
+  cursor: pointer;
+  outline: none;
+  vertical-align: middle;
+  transition: border-color 0.15s;
+  flex-shrink: 0;
+  position: relative;
+}
+input[type="radio"].cursor-pointer:hover { border-color: var(--sem-accent-primary); }
+input[type="radio"].cursor-pointer:checked {
+  border-color: var(--sem-accent-primary);
+  background-color: var(--sem-bg-base);
+}
+input[type="radio"].cursor-pointer:checked::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--sem-accent-primary);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+input[type="radio"].cursor-pointer:focus-visible {
+  outline: 2px solid var(--sem-support-focus);
+  outline-offset: 2px;
+}
+input[type="radio"].cursor-pointer:disabled {
+  border-color: var(--sem-support-disabled);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Pagination atom states ───────────────────────────────────────────────── */
+.pagination-page-btn {
+  background-color: transparent;
+  border: 1px solid transparent;
+}
+.pagination-page-btn:hover { background-color: var(--sem-bg-surface-md); }
+.pagination-page-btn:active { background-color: var(--sem-bg-surface-high); }
+.pagination-page-btn:focus-visible {
+  outline: none;
+  border-color: var(--sem-support-focus);
+  box-shadow: 0 0 0 2px rgba(231, 180, 0, 0.4);
+}
+.pagination-page-btn[data-selected='true'] {
+  background-color: var(--sem-bg-base);
+  border-color: var(--sem-border-md);
+}
+.pagination-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── DS Tables ────────────────────────────────────────────────────────────── */
+table.w-full thead tr {
+  background-color: var(--sem-bg-base) !important;
+  color: var(--sem-content-high) !important;
+}
+table.w-full thead th {
+  background-color: var(--sem-bg-base) !important;
+  color: var(--sem-content-high) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 10px 16px !important;
+  border-bottom: 1px solid var(--sem-border-low) !important;
+  text-align: left !important;
+  text-decoration: none !important;
+}
+table.w-full tbody td:hover { text-decoration: none !important; }
+table.w-full tbody tr {
+  background-color: var(--sem-bg-base) !important;
+}
+table.w-full tbody tr:hover {
+  background-color: var(--sem-bg-surface-low) !important;
+}
+table.w-full tbody tr.empty-row:hover { background-color: transparent !important; }
+table.w-full tbody td {
+  border-bottom: 1px solid var(--sem-border-low);
+  padding: 12px 16px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 13px !important;
+  font-weight: 300 !important;
+  line-height: 1.4 !important;
+  color: var(--sem-content-high) !important;
+}
+table.w-full tbody tr:last-child td { border-bottom: none !important; }
+table.w-full tfoot tr {
+  background-color: var(--sem-bg-surface-low) !important;
+  border-top: 1px solid var(--sem-border-low) !important;
+}
+table.w-full tfoot td { padding: 12px 16px !important; }
+
+table.w-full.conditions-table thead th:not(:first-child) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  text-align: center !important;
+}
+table.w-full.conditions-table tbody td:not(:first-child) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+[data-slot="table-row"]:hover {
+  background-color: var(--sem-bg-surface-low) !important;
+}
+
+/* ── Autofill ─────────────────────────────────────────────────────────────── */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--sem-content-high);
+  caret-color: var(--sem-content-high);
+  box-shadow: 0 0 0px 1000px var(--sem-bg-base) inset;
+  transition: background-color 99999s ease-in-out 0s;
+}
+
+.login-form input:-webkit-autofill,
+.login-form input:-webkit-autofill:hover,
+.login-form input:-webkit-autofill:focus,
+.login-form input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--sem-bg-surface-inverse) inset !important;
+  -webkit-text-fill-color: var(--sem-content-inverse) !important;
+  caret-color: var(--sem-content-inverse) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ── DS Calendar ──────────────────────────────────────────────────────────── */
 .ds-calendar-popover .rdp-day_button {
   width: 34px !important;
   height: 34px !important;
   border-radius: 8px !important;
   background-color: transparent !important;
-  color: #1a2419 !important;
+  color: var(--sem-content-high) !important;
 }
-
 .ds-calendar-popover .rdp-day_button:hover {
-  background-color: #f3f2ee !important;
-  color: #1a2419 !important;
+  background-color: var(--sem-bg-surface-low) !important;
+  color: var(--sem-content-high) !important;
 }
-
 .ds-calendar-popover [data-selected="true"] .rdp-day_button {
-  background-color: #8a1f52 !important;
-  color: #ffffff !important;
+  background-color: var(--sem-accent-primary) !important;
+  color: var(--sem-accent-on-primary) !important;
 }
-
 .ds-calendar-popover [data-selected="true"] .rdp-day_button:hover {
-  background-color: #8a1f52 !important;
-  color: #ffffff !important;
+  background-color: var(--sem-accent-primary) !important;
+  color: var(--sem-accent-on-primary) !important;
 }
-
 .ds-calendar-popover [data-disabled="true"] .rdp-day_button {
   background-color: transparent !important;
-  color: #d1d5db !important;
+  color: var(--sem-support-disabled) !important;
   text-decoration: none !important;
 }
-
 .ds-calendar-popover .rdp-day_button:focus-visible {
-  outline: 2px solid #d9a300 !important;
+  outline: 2px solid var(--sem-support-focus) !important;
   outline-offset: 2px !important;
 }
-/* ──────────────────────────────────────────────────────────────────────── */
 
-/* Select trigger atom states (DS Selector) */
-.ds-select-trigger {
-  border-color: var(--border);
-  font-weight: 300;
-}
-.ds-select-trigger:hover:not([disabled]):not([data-state='open']) {
-  background-color: var(--muted);
-}
-.ds-select-trigger[data-state='open'] {
-  border-color: var(--foreground);
-}
-.ds-select-trigger[aria-invalid='true'] {
-  border-color: var(--destructive);
-  color: var(--destructive);
-}
-
-/* Select item states */
-.ds-select-item {
-  font-weight: 300;
-}
-.ds-select-item:hover,
-.ds-select-item[data-highlighted] {
-  background-color: var(--color-core-piedra-95);
-  color: var(--foreground);
-}
-.ds-select-item[data-state='checked'] {
-  color: var(--brand-vino);
-}
-.ds-select-trigger:not([data-placeholder]),
-.ds-select-trigger:not([data-placeholder]) * {
-  color: var(--brand-vino) !important;
-}
+/* Sonner toasts sobre Radix Dialog */
+[data-sonner-toaster] { pointer-events: auto !important; }

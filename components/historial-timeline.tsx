@@ -351,11 +351,7 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
 function TimelineDot({ tipo }: { tipo: Tipo }) {
   if (tipo === "emision")
     return (
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2D3B2D] ring-4 ring-[#2D3B2D]/10">
-        <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
+      <img src="/Iconos1/step-check.svg" alt="" className="h-7 w-7 shrink-0" />
     )
   if (tipo === "observacion")
     return (
@@ -373,13 +369,9 @@ function TimelineDot({ tipo }: { tipo: Tipo }) {
         </svg>
       </div>
     )
-  /* captura / normal / emision */
+  /* captura / normal */
   return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2D3B2D] ring-4 ring-[#2D3B2D]/15">
-      <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-      </svg>
-    </div>
+    <img src="/Iconos1/step-check.svg" alt="" className="h-7 w-7 shrink-0" />
   )
 }
 
@@ -412,7 +404,7 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
         const rowBg =
           tipo === "observacion" ? "bg-[#773357]/[0.06] border border-[#773357]/20 rounded-lg px-3 py-2"
           : tipo === "edicion"    ? "bg-[#F5EFE3] border border-[#C4A882]/30 rounded-lg px-3 py-2"
-          : "bg-[#2D3B2D]/[0.06] border border-[#2D3B2D]/20 rounded-lg px-3 py-2"
+          : "px-3 py-2"
 
         return (
           <div key={i} className="flex gap-3">

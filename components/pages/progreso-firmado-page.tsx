@@ -176,7 +176,7 @@ export function ProgresoFirmadoPage() {
         <Dialog open onOpenChange={v => { if (!v) setDetalle(null) }}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="ds-title-md">
+              <DialogTitle className="text-base">
                 {detalle.folio_recepcion ?? detalle.folio_justificacion ?? `SOL-${detalle.solicitud_id}`} — {detalle.tipo_solicitud}
               </DialogTitle>
             </DialogHeader>

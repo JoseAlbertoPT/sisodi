@@ -202,7 +202,7 @@ function FoliosCell({ sol }: { sol: UrgSolicitud }) {
           }`}>
             {label}
           </span>
-          <span className={`text-xs ${highlight ? "text-card-foreground" : "text-muted-foreground"}`}>
+          <span className={`text-xs ${highlight ? "font-semibold text-card-foreground" : "text-muted-foreground"}`}>
             {value}
           </span>
         </div>
@@ -1730,7 +1730,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                         <FoliosCell sol={sol} />
                       </td>
                       <td className="px-4 py-3 text-xs break-words max-w-[180px]">
-                        <span className="text-card-foreground">
+                        <span className="text-card-foreground font-medium">
                           {formatRegimen(sol.regimen)}
                         </span>
                       </td>

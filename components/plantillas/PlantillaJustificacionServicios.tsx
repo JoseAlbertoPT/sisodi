@@ -1,5 +1,4 @@
 import {
-
   Document,
   Page,
   Text,
@@ -8,8 +7,8 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import path from "path";
-import fs from "fs";
 import React from "react";
+
 export interface JustificacionData {
   tipoAdministracion: 'centralizada' | 'paraestatal';
   formato: 'fisico' | 'en_linea';
@@ -51,8 +50,8 @@ export interface JustificacionData {
   ocultarFirmas?: boolean;
 }
 
-const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20finanzas.png"));
-const MARCA_MORELOS = fs.readFileSync(path.join(process.cwd(), "public/LOGO_MORELOS_V1.png"));
+const LOGO_FINANZAS = path.join(process.cwd(), "public/logo-20finanzas.png");
+const MARCA_MORELOS = path.join(process.cwd(), "public/LOGO_MORELOS_V1.png");
 
 const s = StyleSheet.create({
   page: {
@@ -606,7 +605,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
                 )}
               </View>
               <View style={s.firmaBox}>
-                <Text style={s.firmaLabel}>Revisó (UEFA)</Text>
+                <Text style={s.firmaLabel}>Revisó</Text>
                 <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
                 <View style={s.firmaLine}></View>
                 {data.firmaRevisoNombre && data.firmaRevisoCargo ? (

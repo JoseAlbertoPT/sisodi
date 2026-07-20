@@ -26,6 +26,7 @@ const SIDEBAR_KEY = "sdtf_sidebar_collapsed"
 export function AppShell() {
   const { user } = useAuth()
   const [currentPage, setCurrentPage] = useState<PageKey>("dashboard")
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [reviewSolicitudId, setReviewSolicitudId] = useState<string | null>(null)
   const [reviewFiltro, setReviewFiltro] = useState<1 | 2 | 3>(1)
   const [editSolicitud, setEditSolicitud] = useState<EditSolicitudPayload | undefined>(undefined)
@@ -42,7 +43,7 @@ export function AppShell() {
     const storedPage = localStorage.getItem(PAGE_KEY) as PageKey | null
     if (storedPage && storedPage !== "revision-do") setCurrentPage(storedPage)
     const storedSidebar = localStorage.getItem(SIDEBAR_KEY)
-    if (storedSidebar === "true") setCollapsed(true)
+    if (storedSidebar === "true") setSidebarCollapsed(true)
     if (sessionStorage.getItem("sdtf_just_logged_in")) {
       sessionStorage.removeItem("sdtf_just_logged_in")
       setShowSplash(true)
@@ -57,8 +58,8 @@ export function AppShell() {
 
   useEffect(() => {
     if (!hydrated) return
-    localStorage.setItem(SIDEBAR_KEY, String(collapsed))
-  }, [collapsed, hydrated])
+    localStorage.setItem(SIDEBAR_KEY, String(sidebarCollapsed))
+  }, [sidebarCollapsed, hydrated])
 
   const handleNavigate = (page: PageKey) => {
     setShowSplash(false)

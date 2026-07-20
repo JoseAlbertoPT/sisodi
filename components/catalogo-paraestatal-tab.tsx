@@ -7,14 +7,15 @@ import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
+  Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   Plus, Pencil, Trash2, MoreHorizontal,
-  Landmark, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Search, X,
+  Landmark, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Search, X, Inbox,
 } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
@@ -33,11 +34,10 @@ import {
 const VINO = "#773357"
 const VINO_HOVER = "#773357"
 const AREA_PAGE_SIZE = 10
-const BTN_CANCEL: React.CSSProperties = {}
 const BTN_CANCEL_CLASS =
-  "rounded-full h-10 px-6 font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb] hover:text-[#4b5563] active:bg-[#f3f4f6] active:text-[#4b5563] focus:bg-[#f3f4f6] focus:text-[#4b5563]"
-const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-medium shadow-sm"
-const DIALOG_FOOTER_CLASS = "gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]"
+  "rounded-full h-10 px-6 font-normal border border-[#e4e3d6] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-normal shadow-sm"
+const DIALOG_FOOTER_CLASS = ""
 
 function reorder<T>(list: T[], from: number, to: number): T[] {
   const result = [...list]
@@ -208,14 +208,11 @@ function OrganoRow({
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
-                  style={{ color: VINO }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${VINO}15`)}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-surface-low border border-border-low transition-colors hover:bg-bg-surface-md"
                   onClick={(e) => e.stopPropagation()}
                   aria-label="Más opciones"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <MoreHorizontal className="h-4 w-4 text-content-low" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -289,18 +286,15 @@ function OrganoRow({
                     <GripVertical className={`h-3.5 w-3.5 shrink-0 ${areaSearch ? "invisible" : "text-muted-foreground/25 cursor-grab"}`} />
                     <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: VINO, opacity: 0.5 }} />
                     <span className="text-sm flex-1 truncate text-foreground">{area.nombre}</span>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
-                            className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
-                            style={{ color: VINO }}
-                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${VINO}15`)}
-                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-bg-surface-low border border-border-low transition-colors hover:bg-bg-surface-md"
                             aria-label="Más opciones"
                           >
-                            <MoreHorizontal className="h-3.5 w-3.5" />
+                            <MoreHorizontal className="h-3.5 w-3.5 text-content-low" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -375,15 +369,17 @@ function OrganoRow({
       <Dialog open={addAreaOpen} onOpenChange={setAddAreaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Agregar Área</DialogTitle></DialogHeader>
-          <p className="text-xs text-muted-foreground px-6 pt-1">Organismo: <strong>{node.nombre}</strong></p>
-          <div className="flex flex-col gap-3 px-6 pt-2 pb-1">
-            <div className="flex flex-col gap-1.5">
-              <Label>Nombre del área <span className="text-destructive">*</span></Label>
-              <Input value={areaNombre} onChange={(e) => setAreaNombre(e.target.value)} placeholder="Ej. Subdirección de Finanzas" onKeyDown={(e) => e.key === "Enter" && handleAddArea()} autoFocus className="h-9 text-sm" />
+          <DialogBody>
+            <p className="text-xs text-muted-foreground mb-3">Organismo: <strong>{node.nombre}</strong></p>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>Nombre del área <span className="text-destructive">*</span></Label>
+                <Input value={areaNombre} onChange={(e) => setAreaNombre(e.target.value)} placeholder="Ej. Subdirección de Finanzas" onKeyDown={(e) => e.key === "Enter" && handleAddArea()} autoFocus className="h-9 text-sm" />
+              </div>
+              {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
             </div>
-            {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
-          </div>
-          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+          </DialogBody>
+          <DialogFooter>
             <DialogClose asChild>
               <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
             </DialogClose>
@@ -397,14 +393,16 @@ function OrganoRow({
       <Dialog open={editOrgOpen} onOpenChange={setEditOrgOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Organismo</DialogTitle></DialogHeader>
-          <div className="flex flex-col gap-3 px-6 pt-4 pb-1">
-            <div className="flex flex-col gap-1.5">
-              <Label>Nombre <span className="text-destructive">*</span></Label>
-              <Input value={orgNombre} onChange={(e) => setOrgNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditOrg()} autoFocus />
+          <DialogBody>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>Nombre <span className="text-destructive">*</span></Label>
+                <Input value={orgNombre} onChange={(e) => setOrgNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditOrg()} autoFocus />
+              </div>
+              {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
             </div>
-            {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
-          </div>
-          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+          </DialogBody>
+          <DialogFooter>
             <DialogClose asChild>
               <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
             </DialogClose>
@@ -430,14 +428,16 @@ function OrganoRow({
       <Dialog open={editAreaOpen} onOpenChange={setEditAreaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Área</DialogTitle></DialogHeader>
-          <div className="flex flex-col gap-3 px-6 pt-4 pb-1">
-            <div className="flex flex-col gap-1.5">
-              <Label>Nombre <span className="text-destructive">*</span></Label>
-              <Input value={areaNombre} onChange={(e) => setAreaNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditArea()} autoFocus />
+          <DialogBody>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>Nombre <span className="text-destructive">*</span></Label>
+                <Input value={areaNombre} onChange={(e) => setAreaNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditArea()} autoFocus />
+              </div>
+              {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
             </div>
-            {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
-          </div>
-          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+          </DialogBody>
+          <DialogFooter>
             <DialogClose asChild>
               <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
             </DialogClose>
@@ -463,7 +463,7 @@ function OrganoRow({
   )
 }
 
-export function CatalogoParaestatalTab() {
+export function CatalogoParaestatalTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const [organismos, setOrganismos] = useState<CategoriaParaestatalItem[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -477,10 +477,14 @@ export function CatalogoParaestatalTab() {
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
-    try { setOrganismos(await fetchCategoriasParaestatal()) }
+    try {
+      const data = await fetchCategoriasParaestatal()
+      setOrganismos(data)
+      onCountChange?.(data.length)
+    }
     catch (e) { setLoadError(e instanceof Error ? e.message : "Error al cargar el catálogo") }
     finally { setLoading(false) }
-  }, [])
+  }, [onCountChange])
 
   useEffect(() => { void load() }, [load])
 
@@ -512,36 +516,19 @@ export function CatalogoParaestatalTab() {
   const totalAreas = organismos.reduce((s, n) => s + n.organos.length, 0)
 
   return (
-    <>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <SearchInput placeholder="Buscar organismo o área..." value={search} onChange={(e) => setSearch(e.target.value)} containerClassName="flex-1 max-w-sm" />
+        <Button
+          size="sm"
+          variant="primary"
+          className="shrink-0 gap-1.5"
+          onClick={() => { setNewOrgNombre(""); setFormError(""); setAddOrgOpen(true) }}
+        >
+          Agregar Organismo
+        </Button>
+      </div>
       <Card className="shadow-sm border-[#e4e3dc] overflow-hidden">
-        {/* ── Header ── */}
-        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#e4e3dc] bg-[#f9f8f5]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#773357]/10 shrink-0">
-              <Landmark className="h-5 w-5" style={{ color: VINO }} />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground leading-tight">Administración Pública Paraestatal</h3>
-              {!loading && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {organismos.length} organismo{organismos.length !== 1 ? "s" : ""} · {totalAreas} área{totalAreas !== 1 ? "s" : ""}
-                </p>
-              )}
-            </div>
-          </div>
-          <Button
-            size="sm"
-            className="shrink-0 rounded-full text-white font-medium gap-1.5 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white border-0"
-            onClick={() => { setNewOrgNombre(""); setFormError(""); setAddOrgOpen(true) }}
-          >
-            Agregar Organismo
-          </Button>
-        </div>
-
-        {/* ── Búsqueda ── */}
-        <div className="px-6 py-3 border-b border-[#e4e3dc]">
-          <SearchInput placeholder="Buscar organismo o área..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
 
         {/* ── Lista ── */}
         <CardContent className="p-4">
@@ -558,9 +545,7 @@ export function CatalogoParaestatalTab() {
               </div>
             </div>
           ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">
-              {search ? "Sin resultados para esa búsqueda." : "No hay organismos. Agrega uno con el botón de arriba."}
-            </p>
+            <EmptyState icon={Inbox} title={search ? "Sin resultados para esa búsqueda" : "No hay organismos registrados"} description={search ? "Intenta con otros términos." : "Agrega uno con el botón de arriba."} />
           ) : (
             <div className="space-y-2">
               {filtered.map((org, i) => (
@@ -581,14 +566,16 @@ export function CatalogoParaestatalTab() {
       <Dialog open={addOrgOpen} onOpenChange={setAddOrgOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nuevo Organismo Paraestatal</DialogTitle></DialogHeader>
-          <div className="flex flex-col gap-3 px-6 pt-4 pb-1">
-            <div className="flex flex-col gap-1.5">
-              <Label>Nombre <span className="text-destructive">*</span></Label>
-              <Input value={newOrgNombre} onChange={(e) => setNewOrgNombre(e.target.value)} placeholder="Ej. Instituto Morelense de la Vivienda" onKeyDown={(e) => e.key === "Enter" && handleAddOrg()} autoFocus />
+          <DialogBody>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>Nombre <span className="text-destructive">*</span></Label>
+                <Input value={newOrgNombre} onChange={(e) => setNewOrgNombre(e.target.value)} placeholder="Ej. Instituto Morelense de la Vivienda" onKeyDown={(e) => e.key === "Enter" && handleAddOrg()} autoFocus />
+              </div>
+              {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
             </div>
-            {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
-          </div>
-          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+          </DialogBody>
+          <DialogFooter>
             <DialogClose asChild>
               <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
             </DialogClose>
@@ -598,6 +585,6 @@ export function CatalogoParaestatalTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }

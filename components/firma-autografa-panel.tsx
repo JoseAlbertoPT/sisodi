@@ -171,8 +171,8 @@ export function FirmaAutografaPanel({
         <Button
           onClick={() => setShowEnviarConfirm(true)}
           disabled={!archivoSubido || guardandoFinal}
+          variant="primary"
           className="gap-1.5 px-5 py-2"
-          style={{ backgroundColor: "#773357", color: "#fff", border: "none" }}
         >
           {guardandoFinal ? "Enviando..." : "Enviar a Emisor"}
         </Button>

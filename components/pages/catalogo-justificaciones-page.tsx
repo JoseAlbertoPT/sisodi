@@ -17,8 +17,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
-import { SearchInput, SEARCH_INPUT_MAX_W_MD } from "@/components/ui/search-input"
+import { SearchInput, SEARCH_INPUT_MAX_W_MD, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG } from "@/components/ui/status-badge"
 import {
 
@@ -35,9 +36,13 @@ import {
   Send,
   AlertCircle,
   MoreVertical,
+  MoreHorizontal,
   Power,
   PowerOff,
+  Inbox,
 } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -269,106 +274,27 @@ function ConsultaTab() {
   const BEIGE  = C_BEIGE
   const MORADO = C_VINO
   return (
-    <>
-      <div className="mb-6 flex w-full flex-col items-center text-center">
-        <h2 className="text-2xl font-normal tracking-wide leading-snug text-[#4B5563]">
-          Catálogo de Justificaciones Dictaminadas
-        </h2>
-        <p className="mt-1.5 text-sm text-[#6B7280]">
-          Consulta los dictámenes vigentes y solicita reutilización de justificaciones
-        </p>
-
-        <div className="mt-5 flex w-full flex-col items-center gap-4">
-          <div className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white p-1.5">
-            <button
-              type="button"
-              onClick={() => { setTipoTab("honorarios"); setPage(1) }}
-              className="flex items-center gap-2 rounded-md px-6 py-2.5 text-sm font-semibold transition-all duration-150"
-              style={
-                tipoTab === "honorarios"
-                  ? { backgroundColor: "#e4e3d6", border: "1px solid #c2d4a8", color: "#3a4a2a" }
-                  : { color: "#6B7280", border: "1px solid transparent" }
-              }
-            >
-              <BookOpen className="h-4 w-4" />
-              Honorarios
-              <span
-                className="ml-0.5 inline-flex items-center justify-center rounded-full w-5 h-5 text-[11px] font-bold"
-                style={
-                  tipoTab === "honorarios"
-                    ? { backgroundColor: "#f3f4f6", color: "#1f1f1f" }
-                    : { backgroundColor: "#F3F4F6", color: "#6B7280" }
-                }
-              >
-                {honorarios.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTipoTab("nombramiento"); setPage(1) }}
-              className="flex items-center gap-2 rounded-md px-6 py-2.5 text-sm font-semibold transition-all duration-150"
-              style={
-                tipoTab === "nombramiento"
-                  ? { backgroundColor: "#e4e3d6", border: "1px solid #c2d4a8", color: "#3a4a2a" }
-                  : { color: "#6B7280", border: "1px solid transparent" }
-              }
-            >
-              <ListChecks className="h-4 w-4" />
-              Nombramiento por Tiempo Determinado
-              <span
-                className="ml-0.5 inline-flex items-center justify-center rounded-full w-5 h-5 text-[11px] font-bold"
-                style={
-                  tipoTab === "nombramiento"
-                    ? { backgroundColor: "#f3f4f6", color: "#1f1f1f" }
-                    : { backgroundColor: "#F3F4F6", color: "#6B7280" }
-                }
-              >
-                {nombramiento.length}
-              </span>
-            </button>
-          </div>
-          <div
-            className="flex items-center gap-2 w-full max-w-5xl rounded-full pl-6 pr-2 py-2 shadow-sm border-2 border-transparent transition-colors focus-within:border-[#2D3B2D]"
-            style={{ backgroundColor: "#fff" }}
-          >
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar por dependencia, programa, denominación…"
-              className="flex-1 border-0 bg-transparent text-base shadow-none focus-visible:ring-0 h-11 px-0"
-            />
-            <button
-              type="button"
-              onClick={fetchData}
-              disabled={loading}
-              className="flex items-center justify-center rounded-full w-[52px] h-[52px] shrink-0 transition-opacity hover:opacity-85 disabled:opacity-50"
-              style={{ backgroundColor: MORADO }}
-            >
-              {loading
-                ? <Loader2 className="h-5 w-5 animate-spin text-white" />
-                : <Image src="/search-sparkle.svg" alt="Buscar" width={46} height={46} />}
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center justify-end gap-2 mb-4">
-        <span className="text-xs text-muted-foreground">
-          {allVisible.length} registro{allVisible.length !== 1 ? "s" : ""}{q.trim() ? ` de ${allRecords.length}` : ""}
-        </span>
-        <button
-          type="button"
-          onClick={fetchData}
-          disabled={loading}
-          className="flex items-center justify-center rounded-lg w-7 h-7 border transition-colors hover:bg-muted/30 disabled:opacity-40"
-          style={{ borderColor: "rgb(120 5 84 / 0.62)" }}
-        >
-          {loading
-            ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-            : <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />}
-        </button>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <SearchInput
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && fetchData()}
+          placeholder="Buscar por dependencia, programa, denominación…"
+          containerClassName={SEARCH_INPUT_MAX_W_SM}
+        />
+        <Select value={tipoTab} onValueChange={(v) => { setTipoTab(v as "honorarios" | "nombramiento"); setPage(1) }}>
+          <SelectTrigger className="w-72 bg-card">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="honorarios">Honorarios ({honorarios.length})</SelectItem>
+            <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado ({nombramiento.length})</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3 mb-4">
+        <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3">
           <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
           <span className="text-sm text-destructive">{error}</span>
         </div>
@@ -377,6 +303,22 @@ function ConsultaTab() {
         className="rounded-xl overflow-hidden mb-5"
         style={{ boxShadow: "0 2px 12px rgba(0,0,0,.08)", border: "1px solid #e2ddd6" }}
       >
+        <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-[#e2ddd6]">
+          <span className="text-xs text-muted-foreground">
+            {allVisible.length} registro{allVisible.length !== 1 ? "s" : ""}{q.trim() ? ` de ${allRecords.length}` : ""}
+          </span>
+          <button
+            type="button"
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center justify-center rounded-lg w-7 h-7 border transition-colors hover:bg-muted/30 disabled:opacity-40"
+            style={{ borderColor: "rgb(120 5 84 / 0.62)" }}
+          >
+            {loading
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              : <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
+        </div>
         <div className="overflow-x-auto">
           {tipoTab === "honorarios" ? (
             <table className="w-full text-sm">
@@ -402,10 +344,8 @@ function ConsultaTab() {
                   </tr>
                 )}
                 {!loading && visibleRows.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                      Sin registros de honorarios
-                    </td>
+                  <tr className="empty-row">
+                    <td colSpan={6}><EmptyState icon={Inbox} title="Sin registros de honorarios" description="No se encontraron registros en el catálogo." /></td>
                   </tr>
                 )}
                 {!loading && visibleRows.map((rec, idx) => (
@@ -433,10 +373,10 @@ function ConsultaTab() {
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-bg-surface-low border border-border-low transition-colors"
                             aria-label="Acciones"
                           >
-                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                            <MoreHorizontal className="h-4 w-4 text-content-low" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -477,10 +417,8 @@ function ConsultaTab() {
                   </tr>
                 )}
                 {!loading && visibleRows.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                      Sin registros de nombramiento por tiempo determinado
-                    </td>
+                  <tr className="empty-row">
+                    <td colSpan={8}><EmptyState icon={Inbox} title="Sin registros de nombramiento" description="No se encontraron registros en el catálogo." /></td>
                   </tr>
                 )}
                 {!loading && visibleRows.map((rec, idx) => (
@@ -510,10 +448,10 @@ function ConsultaTab() {
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-bg-surface-low border border-border-low transition-colors"
                             aria-label="Acciones"
                           >
-                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                            <MoreHorizontal className="h-4 w-4 text-content-low" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -542,7 +480,7 @@ function ConsultaTab() {
               <FileTypeIcon name="justificacion.pdf" size="md" />
             </div>
             <div className="min-w-0 flex-1 text-left">
-              <DialogTitle className="text-base font-semibold text-card-foreground truncate">
+              <DialogTitle className="ds-title-md text-content-high truncate">
                 Documento de justificación
               </DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -593,7 +531,7 @@ function ConsultaTab() {
       <Dialog open={showSol} onOpenChange={setShowSol}>
         <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-[#E5E7EB]">
-            <DialogTitle className="text-base font-semibold text-[#1F2937]">
+            <DialogTitle className="ds-title-md text-content-high">
               Generar dictamen
             </DialogTitle>
           </div>
@@ -614,7 +552,7 @@ function ConsultaTab() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
-                  Nueva vigencia <span className="text-destructive"></span>
+                  Nueva vigencia
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
@@ -694,7 +632,7 @@ function ConsultaTab() {
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }
 
@@ -758,6 +696,8 @@ function AdministracionTab() {
   }, [debouncedQ, page, user?.id])
   useEffect(() => { void fetchData() }, [fetchData])
   useRealtime(["catalogo"], fetchData)
+  const [confirmToggle, setConfirmToggle] = useState<AdminRecord | null>(null)
+
   const handleToggle = async (rec: AdminRecord) => {
     setToggling(rec.id)
     try {
@@ -836,7 +776,7 @@ function AdministracionTab() {
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Reutilizaciones</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Estado</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Acciones</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground"><div className="flex justify-end">Acciones</div></th>
               </tr>
             </thead>
             <tbody>
@@ -848,10 +788,8 @@ function AdministracionTab() {
                 </tr>
               )}
               {!loading && records.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    Sin registros en el catálogo
-                  </td>
+                <tr className="empty-row">
+                  <td colSpan={8}><EmptyState icon={Inbox} title="Sin registros en el catálogo" description="No se encontraron registros." /></td>
                 </tr>
               )}
               {!loading && records.map((rec) => {
@@ -890,24 +828,24 @@ function AdministracionTab() {
                       <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
                       {toggling === rec.id && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-bg-surface-low border border-border-low transition-colors"
                             aria-label="Acciones"
                           >
-                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                            <MoreHorizontal className="h-4 w-4 text-content-low" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openReutilizaciones(rec)}>
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggle(rec)} disabled={toggling === rec.id}>
+                          <DropdownMenuItem onClick={() => setConfirmToggle(rec)} disabled={toggling === rec.id}>
                             {rec.activo
                               ? <><PowerOff className="h-4 w-4" /> Desactivar</>
                               : <><Power className="h-4 w-4" /> Activar</>
@@ -928,7 +866,7 @@ function AdministracionTab() {
       <Dialog open={showReutilizaciones} onOpenChange={setShowReutilizaciones}>
         <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl bg-white p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-5 py-4 border-b border-[#E5E7EB]">
-            <DialogTitle className="text-base font-semibold text-[#1F2937]">
+            <DialogTitle className="ds-title-md text-content-high">
               Reutilizaciones{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
             </DialogTitle>
           </DialogHeader>
@@ -991,6 +929,17 @@ function AdministracionTab() {
           </div>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!confirmToggle}
+        onClose={() => setConfirmToggle(null)}
+        onConfirm={() => { if (confirmToggle) { handleToggle(confirmToggle); setConfirmToggle(null) } }}
+        variant={confirmToggle?.activo ? "eliminar" : "default"}
+        title={confirmToggle?.activo ? "¿Desactivar registro?" : "¿Activar registro?"}
+        description={confirmToggle?.activo
+          ? "El registro dejará de estar disponible para reutilización en nuevas solicitudes."
+          : "El registro estará disponible nuevamente para reutilización en nuevas solicitudes."}
+        confirmLabel={confirmToggle?.activo ? "Sí, desactivar" : "Sí, activar"}
+      />
     </>
   )
 }
@@ -1003,21 +952,21 @@ export function CatalogoJustificacionesPage() {
       description="Consulta y reutilización de justificaciones dictaminadas previamente."
     >
       {isAdmin ? (
-        <Tabs defaultValue="consulta" className="w-full">
+        <Tabs defaultValue="consulta" className="w-full gap-3">
           <TabsList>
-            <TabsTrigger value="consulta" className="gap-1.5">
+            <TabsTrigger value="consulta" className="gap-1.5 min-w-[11rem]">
               <Search className="h-4 w-4" />
               Consulta
             </TabsTrigger>
-            <TabsTrigger value="administracion" className="gap-1.5">
+            <TabsTrigger value="administracion" className="gap-1.5 min-w-[11rem]">
               <ListChecks className="h-4 w-4" />
               Administración
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="consulta" className="mt-6">
+          <TabsContent value="consulta">
             <ConsultaTab />
           </TabsContent>
-          <TabsContent value="administracion" className="mt-6">
+          <TabsContent value="administracion">
             <AdministracionTab />
           </TabsContent>
         </Tabs>

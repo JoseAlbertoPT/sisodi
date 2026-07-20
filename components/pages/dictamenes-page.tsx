@@ -16,8 +16,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
   Download, FileCheck, Stamp, Printer,
-  Loader2, AlertTriangle, RefreshCw, MoreVertical, Eye,
+  Loader2, AlertTriangle, RefreshCw, MoreVertical, MoreHorizontal, Eye, Inbox,
 } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
   DropdownMenu,
@@ -273,9 +274,9 @@ const DictamenViewModal = React.memo(({
             </Button>
             <Button
               size="sm"
+              variant="primary"
               onClick={() => setShowFirmas(!showFirmas)}
-              className="gap-1.5 font-medium hover:opacity-90"
-              style={{ backgroundColor: "#773357", color: "#ffffff", border: "1px solid #773357" }}
+              className="gap-1.5"
             >
               {showFirmas ? "Ocultar Firmas" : "Editar Firmas"}
             </Button>
@@ -532,10 +533,10 @@ export function DictamenesPage() {
               <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-secondary text-secondary-foreground">
+                  <tr className="bg-bg-base text-content-high">
                     <th className="px-4 py-3 text-left font-semibold">Folio Dictamen</th>
                     <th className="px-4 py-3 text-left font-semibold">Folio Recepción</th>
                     <th className="px-4 py-3 text-left font-semibold">Secretaría</th>
@@ -544,14 +545,14 @@ export function DictamenesPage() {
                     <th className="px-4 py-3 text-left font-semibold">Fecha Dict.</th>
                     <th className="px-4 py-3 text-left font-semibold">Modalidad</th>
                     <th className="px-4 py-3 text-left font-semibold">Destinatarios</th>
-                    <th className="px-4 py-3 text-left font-semibold">Acciones</th>
+                    <th className="px-4 py-3 font-semibold"><div className="flex justify-end">Acciones</div></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
-                        No se encontraron dictámenes emitidos
+                    <tr className="empty-row">
+                      <td colSpan={9}>
+                        <EmptyState icon={Inbox} title="No se encontraron dictámenes" description="Ajusta los filtros para ver más resultados." />
                       </td>
                     </tr>
                   ) : paginated.map((d) => (
@@ -612,13 +613,14 @@ export function DictamenesPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 bg-bg-surface-low border border-border-low">
                               {downloadingId === d.id
-                                ? <Loader2 className="h-4 w-4 animate-spin" />
-                                : <MoreVertical className="h-4 w-4" />}
+                                ? <Loader2 className="h-4 w-4 animate-spin text-content-low" />
+                                : <MoreHorizontal className="h-4 w-4 text-content-low" />}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -641,6 +643,7 @@ export function DictamenesPage() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        </div>
                       </td>
                     </tr>
                   ))}

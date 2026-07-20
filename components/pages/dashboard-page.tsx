@@ -925,7 +925,8 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
 
         <Button
           size="sm"
-          className="gap-2 ml-auto rounded-full bg-[#773357] hover:bg-[#773357] active:bg-[#773357] text-white active:text-white border-0"
+          variant="primary"
+          className="gap-2 ml-auto"
           disabled={!data || loading}
           onClick={() => setModalAbierto(true)}
         >
@@ -942,7 +943,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg">
+            <DialogTitle className="flex items-center gap-2 ds-title-md">
               <FileSpreadsheet className="h-6 w-6 text-secondary" />
               Reportes disponibles
             </DialogTitle>
@@ -985,7 +986,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       <Dialog open={confirmarDescarga} onOpenChange={setConfirmarDescarga}>
   <DialogContent className="max-w-md">
     <DialogHeader>
-      <DialogTitle className="flex items-center gap-2 text-lg">
+      <DialogTitle className="flex items-center gap-2 ds-title-md">
         <FileSpreadsheet className="h-6 w-6 text-secondary" />
         Confirmar descarga
       </DialogTitle>
@@ -1007,7 +1008,8 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       </Button>
       <Button
         type="button"
-        className="rounded-full h-10 px-6 font-medium shadow-sm bg-[#773357] hover:bg-[#773357] active:bg-[#773357] text-white active:text-white border-0"
+        variant="primary"
+        className="h-10 px-6 shadow-sm"
         disabled={!reporteSeleccionado || descargando === reporteSeleccionado.id}
         onClick={() => {
           if (!reporteSeleccionado) return

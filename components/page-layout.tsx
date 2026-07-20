@@ -1,7 +1,7 @@
 "use client"
 
 import { PanelLeft } from "lucide-react"
-import { useSidebar } from "@/lib/sidebar-context"
+import { useSidebar } from "@/context/sidebar-context"
 
 interface PageLayoutProps {
   title?: React.ReactNode
@@ -11,41 +11,43 @@ interface PageLayoutProps {
 }
 
 export function PageLayout({ title, description, children, noContainer = false }: PageLayoutProps) {
-  const { onToggle } = useSidebar()
+  const { toggle } = useSidebar()
+
+  if (noContainer) {
+    return <>{children}</>
+  }
 
   return (
-    <div className="flex flex-1 flex-col bg-white">
-      {noContainer ? (
-        children
-      ) : (
-        <div className="flex-1 rounded-xl border border-border bg-sidebar-bg-light shadow-sm p-4 flex flex-col gap-3">
-          {(title != null || description != null) && (
-            <div>
+    <div className="flex flex-1 flex-col">
+      {(title != null || description != null) && (
+        <div className="border-b border-border-low px-8 py-6 shrink-0">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label="Toggle menú"
+              className="flex-shrink-0 text-content-low hover:text-content-high transition-colors"
+            >
+              <PanelLeft className="h-5 w-5" />
+            </button>
+            <div className="flex-1">
               {title != null && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={onToggle}
-                    aria-label="Toggle menú"
-                    className="p-1.5 rounded-md hover:bg-gray-200 text-gray-500 transition-colors"
-                  >
-                    <PanelLeft size={18} />
-                  </button>
-                  <h2 className="font-sans text-[32px] font-light leading-[120%] text-content-high">
-                    {title}
-                  </h2>
-                </div>
+                <h1 className="font-sans text-[32px] font-light leading-[120%] text-content-high">
+                  {title}
+                </h1>
               )}
               {description != null && (
-                <p className="ds-body-sm text-muted-foreground">
+                <p className="ds-body-sm text-content-low">
                   {description}
                 </p>
               )}
             </div>
-          )}
-          {children}
+          </div>
         </div>
       )}
+      <div className="flex-1 p-6 flex flex-col gap-3">
+        {children}
+      </div>
     </div>
   )
 }

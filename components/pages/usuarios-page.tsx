@@ -4,7 +4,7 @@ import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG } from "@/components/ui/status-badge"
+import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
@@ -14,11 +14,12 @@ import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
 
-  Search, KeyRound, MoreVertical, Pencil, X, PowerOff, Power,
+  Search, KeyRound, MoreVertical, MoreHorizontal, Pencil, X, PowerOff, Power,
   ChevronRight, Building2, Check,
   Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
-  Landmark, Factory,
+  Landmark, Factory, Inbox,
 } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
@@ -365,7 +366,7 @@ function SecretariaTreeSelector({
                 )}
                 {(level.options.length > 5 || idx === 0) && (
                   <div className="relative mb-1.5">
-                    <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                     <Input
                       placeholder={idx === 0 ? "Escribir para buscar Secretaría o Unidad..." : `Buscar ${level.label.toLowerCase()}...`}
                       value={query}
@@ -373,7 +374,7 @@ function SecretariaTreeSelector({
                         setSearchAtLevel(idx, e.target.value)
                         setAutocompleteQuery(e.target.value)
                       }}
-                      className={`pl-8 h-7 rounded-full px-4 text-xs bg-background ${error && idx === 0 ? "border-destructive" : ""}`}
+                      className={`pl-9 rounded-xl text-sm bg-background ${error && idx === 0 ? "border-destructive" : ""}`}
                       autoFocus={idx !== 0}
                     />
                   </div>
@@ -664,7 +665,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             if (key === "correo" && form.correo.trim() && /\S+@\S+\.\S+/.test(form.correo))
               checkUnico("correo", form.correo)
           }}
-          className={`bg-background rounded-full h-9 px-4 text-xs font-light text-[var(--color-core-piedra-20)] ${hasError ? "border-destructive" : ""}`}
+          className={`bg-background h-9 px-4 text-xs font-light ${hasError ? "border-destructive" : ""}`}
         />
         {isChecking && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
         {!isChecking && hint && !hasError && <span className="text-[10px] text-muted-foreground">{hint}</span>}
@@ -691,15 +692,10 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     {showConfirm && (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm">
         <div className="w-full max-w-md mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-card-foreground">Confirmar Registro</h3>
-                <p className="text-[11px] text-muted-foreground">Revisa los datos antes de guardar</p>
-              </div>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+            <div>
+              <h3 className="ds-title-md text-content-high">Confirmar Registro</h3>
+              <p className="text-[11px] text-muted-foreground">Revisa los datos antes de guardar</p>
             </div>
             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setShowConfirm(false)}>
               <X className="h-3.5 w-3.5" />
@@ -754,7 +750,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </div>
           </div>
           <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20">
-            <Button variant="outline" size="sm" className="text-xs h-9" onClick={() => setShowConfirm(false)} disabled={loading}>
+            <Button variant="destructive-low" size="sm" className="text-xs h-9" onClick={() => setShowConfirm(false)} disabled={loading}>
               Regresar
             </Button>
             <Button
@@ -766,7 +762,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               {loading ? (
                 <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
               ) : (
-                <><CheckCircle2 className="h-3.5 w-3.5" />Guardar usuario</>
+                <>Guardar usuario</>
               )}
             </Button>
           </div>
@@ -854,7 +850,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     onBlur={() => {
                       if (form.rfc.trim()) checkUnico("rfc", form.rfc)
                     }}
-                    className={`bg-background h-9 py-2 rounded-full px-4 pr-9 text-xs font-mono font-light text-[var(--color-core-piedra-20)] tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
+                    className={`bg-background h-9 py-2 px-4 pr-9 text-xs font-mono font-light tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
                     maxLength={13}
                   />
                   {checking.rfc && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
@@ -1038,7 +1034,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white border-0"
+              variant="primary" className="text-xs h-9 gap-1.5"
               onClick={handleNext}
               disabled={step === 4 && permTreeLoading}
             >
@@ -1203,7 +1199,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         autoComplete={autoComplete}
         value={form[key] as string}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-        className={`bg-background rounded-full h-9 px-4 text-xs font-light text-[var(--color-core-piedra-20)] ${errors[key] ? "border-destructive" : ""}`}
+        className={`bg-background h-9 px-4 text-xs font-light ${errors[key] ? "border-destructive" : ""}`}
       />
       {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
       {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
@@ -1230,18 +1226,10 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     >
       <div className="w-full max-w-xl mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden">
 
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <Pencil className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-sm font-medium text-card-foreground">Editar Usuario</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Modifica los datos del usuario seleccionado</p>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" onClick={onClose}>
-            <X className="h-4 w-4" />
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
+          <h2 className="ds-title-md text-content-high">Editar Usuario</h2>
+          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg shrink-0" onClick={onClose}>
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
 
@@ -1253,14 +1241,14 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             <p className="text-xs font-light text-[var(--color-core-piedra-20)] truncate">{usuario.nombre}</p>
             <p className="text-[11px] text-muted-foreground truncate">{usuario.correo} · {usuario.rol}</p>
           </div>
-          <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="flex flex-row items-center gap-1.5 shrink-0">
             {usuario.estatus === "Activo" ? (
               <StatusBadge label="Activo" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} className="text-[11px]" />
             ) : (
               <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} className="text-[11px]" />
             )}
             {usuario.tipoAdministracion === "centralizada" ? (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-light" style={{ backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-light" style={{ backgroundColor: C_AZUL_REVISION_BG, color: C_AZUL_REVISION }}>
                 Centralizada
               </span>
             ) : (
@@ -1272,6 +1260,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         </div>
 
         <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto">
+          <span className="text-[11px] text-muted-foreground">Los campos requeridos están marcados en rojo</span>
           {apiError && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-xs text-destructive flex items-center gap-2">
               <X className="h-3.5 w-3.5 shrink-0" />
@@ -1296,7 +1285,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                   value={form.rfc}
                   autoComplete="off"
                   onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
-                  className={`bg-background rounded-full h-9 text-xs font-mono font-light text-[var(--color-core-piedra-20)] tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+                  className={`bg-background h-9 text-xs font-mono font-light tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
                   maxLength={13}
                 />
                 {!errors.rfc && <span className="text-[10px] text-muted-foreground"></span>}
@@ -1418,7 +1407,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className={`bg-background rounded-full px-4 h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                    className={`bg-background px-4 h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
@@ -1440,7 +1429,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.confirmPassword}
                     onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                    className={`bg-background h-9 rounded-full px-4 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                    className={`bg-background h-9 px-4 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
@@ -1456,9 +1445,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
-          <span className="text-[11px] text-muted-foreground hidden sm:block">Los campos requeridos están marcados en rojo</span>
-          <div className="flex gap-2 ml-auto">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
+          <div className="flex gap-2">
             <Button
               variant="default"
               size="sm"
@@ -1470,7 +1458,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white border-0"
+              variant="primary" className="text-xs h-9 gap-1.5"
               onClick={handleSubmit}
               disabled={loading}
               >
@@ -1649,7 +1637,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
               <Shield className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-card-foreground">
+              <h2 className="ds-title-md text-content-high">
                 Permisos de menús
               </h2>
               <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
@@ -1717,7 +1705,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
                     checked={capturaHabilitada}
                     onCheckedChange={(v) => {
                       setCapturaHabilitada(v)
-                      if (!v) { setRegimenCap(""); setPeriodoCap(""); setCaptSaved(false) }
+                      if (!v) { setRegimenCap(""); setPeriodoCap("") }
                     }}
                     className="shrink-0"
                   />
@@ -1798,7 +1786,10 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
             </>
           )}
         </div>
-        <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
+          {permisosSaveError && (
+            <span className="text-sm text-destructive">{permisosSaveError}</span>
+          )}
           <Button
             variant="default"
             size="sm"
@@ -1807,23 +1798,16 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
           >
             Cerrar
           </Button>
-          <div className="flex items-center gap-3">
-            {!permisosLoading && permisos != null && (
-              <>
-                <Button variant="primary"
-                  onClick={() => void handleSavePermisos()}
-                  disabled={permisosSaveLoading}
-                  className="min-w-[140px]"
-                  >
-                  {permisosSaveLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  Guardar permisos
-                </Button>
-                {permisosSaveError && (
-                  <span className="text-sm text-destructive">{permisosSaveError}</span>
-                )}
-              </>
-            )}
-          </div>
+          {!permisosLoading && permisos != null && (
+            <Button variant="primary"
+              onClick={() => void handleSavePermisos()}
+              disabled={permisosSaveLoading}
+              className="min-w-[140px] text-xs h-9"
+            >
+              {permisosSaveLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Guardar permisos
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -1908,6 +1892,8 @@ export function UsuariosPage() {
   const hasActivePermiso = (id: string) =>
     permisos.some((p) => p.userId === id && p.active && !p.used)
 
+  const [confirmToggleUser, setConfirmToggleUser] = useState<Usuario | null>(null)
+
   const toggleEstatus = async (u: Usuario) => {
     try {
       await actualizarUsuario(u.id, { activo: u.estatus !== "Activo" })
@@ -1923,14 +1909,6 @@ export function UsuariosPage() {
       title="Usuarios"
       description="Administración de usuarios del sistema"
     >
-      {}
-      <div className="flex items-center justify-end">
-        <Button className="bg-[#773357] hover:bg-[#773357]/90 text-white gap-2" onClick={() => setShowNewForm(true)}>
-          Nuevo Usuario
-        </Button>
-      </div>
-
-      {}
       {showNewForm && (
         <NuevoUsuarioModal
           key={newFormKey}
@@ -1953,33 +1931,31 @@ export function UsuariosPage() {
         />
       )}
 
-      <div className="flex w-full justify-center">
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">
+      <div className="flex w-full justify-start">
+        <div className="flex items-center gap-0.5 rounded-2xl border border-border bg-muted/60 p-1 w-fit">
           <button
             onClick={() => setTabEstatus("activos")}
-            className={`rounded-md px-5 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 border ${
-              tabEstatus === "activos" ? "bg-[#e4e3d6] border-[#c2d4a8] text-[#3a4a2a]" : "border-transparent text-muted-foreground hover:text-card-foreground"
+            className={`rounded-xl px-5 py-2 text-sm font-light transition-all flex items-center gap-1.5 text-content-high ${
+              tabEstatus === "activos" ? "bg-card shadow-sm" : "hover:bg-black/5"
             }`}
           >
             <Power className="h-3.5 w-3.5" />
             Activos
-            <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "activos" ? "bg-[#f3f4f6] text-[#1f1f1f]" : "bg-muted"}`}>
+            <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[#773357] text-white">
               {activos.length}
             </span>
           </button>
           <button
             onClick={() => setTabEstatus("deshabilitados")}
-            className={`rounded-md px-5 py-2 text-xs font-medium transition-colors flex items-center gap-1.5 border ${
-              tabEstatus === "deshabilitados" ? "bg-[#e4e3d6] border-[#c2d4a8] text-[#3a4a2a]" : "border-transparent text-muted-foreground hover:text-card-foreground"
+            className={`rounded-xl px-5 py-2 text-sm font-light transition-all flex items-center gap-1.5 text-content-high ${
+              tabEstatus === "deshabilitados" ? "bg-card shadow-sm" : "hover:bg-black/5"
             }`}
           >
             <PowerOff className="h-3.5 w-3.5" />
             Deshabilitados
-            {deshabilitados.length > 0 && (
-              <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono ${tabEstatus === "deshabilitados" ? "bg-[#f3f4f6] text-[#1f1f1f]" : "bg-muted"}`}>
-                {deshabilitados.length}
-              </span>
-            )}
+            <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[#773357] text-white">
+              {deshabilitados.length}
+            </span>
           </button>
         </div>
       </div>
@@ -1992,6 +1968,9 @@ export function UsuariosPage() {
           containerClassName="flex-1 max-w-sm"
         />
         <TipoAdminSelect value={filtroAdmin} onChange={setFiltroAdmin} />
+        <Button variant="primary" className="ml-auto gap-2" onClick={() => setShowNewForm(true)}>
+          Nuevo Usuario
+        </Button>
       </div>
 
       <Card className="shadow-sm border-border">
@@ -2006,7 +1985,7 @@ export function UsuariosPage() {
               {loadError}
             </div>
           )}
-          <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr>
@@ -2017,11 +1996,13 @@ export function UsuariosPage() {
                   <th>Administracion</th>
                   <th>Secretaría</th>
                   <th>Estatus</th>
-                  <th>Acciones</th>
+                  <th className="px-4 py-3 font-semibold"><div className="flex justify-end">Acciones</div></th>
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((row) => (
+                {paginated.length === 0 ? (
+                  <tr><td colSpan={8}><EmptyState icon={Inbox} title={filtered.length === 0 && !usuarios.length ? "No hay usuarios registrados" : "Sin resultados"} description="Ajusta los filtros para ver más resultados." /></td></tr>
+                ) : paginated.map((row) => (
                   <tr key={row.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-bold text-card-foreground">
                       <div className="flex items-center gap-2">
@@ -2038,7 +2019,7 @@ export function UsuariosPage() {
                     <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
                     <td className="px-4 py-3">
                       {row.tipoAdministracion === "centralizada" ? (
-                        <StatusBadge label="Centralizada" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
+                        <StatusBadge label="Centralizada" color={C_AZUL_REVISION} bgColor={C_AZUL_REVISION_BG} />
                       ) : (
                         <StatusBadge label="Paraestatal" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
                       )}
@@ -2053,14 +2034,14 @@ export function UsuariosPage() {
                         <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-right">
   <div className="flex items-center justify-end">
     <DropdownMenu>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="hover:bg-stone-200 hover:text-foreground" aria-label="Acciones">
-                                <MoreVertical className="h-4 w-4" />
+                              <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 bg-bg-surface-low border border-border-low" aria-label="Acciones">
+                                <MoreHorizontal className="h-4 w-4 text-content-low" />
                               </Button>
                             </DropdownMenuTrigger>
                           </TooltipTrigger>
@@ -2078,7 +2059,7 @@ export function UsuariosPage() {
           Editar
         </DropdownMenuItem>
 
-        <DropdownMenuItem onClick={() => toggleEstatus(row)}>
+        <DropdownMenuItem onClick={() => setConfirmToggleUser(row)}>
           {row.estatus === "Activo" ? (
             <>
               <PowerOff className="mr-2 h-4 w-4" />
@@ -2103,6 +2084,17 @@ export function UsuariosPage() {
         </CardContent>
       </Card>
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+      <ConfirmDialog
+        open={!!confirmToggleUser}
+        onClose={() => setConfirmToggleUser(null)}
+        onConfirm={() => { if (confirmToggleUser) { toggleEstatus(confirmToggleUser); setConfirmToggleUser(null) } }}
+        variant={confirmToggleUser?.estatus === "Activo" ? "eliminar" : "default"}
+        title={confirmToggleUser?.estatus === "Activo" ? "¿Deshabilitar usuario?" : "¿Habilitar usuario?"}
+        description={confirmToggleUser?.estatus === "Activo"
+          ? `El usuario ${confirmToggleUser?.nombre} perderá acceso al sistema.`
+          : `El usuario ${confirmToggleUser?.nombre} podrá acceder nuevamente al sistema.`}
+        confirmLabel={confirmToggleUser?.estatus === "Activo" ? "Sí, deshabilitar" : "Sí, habilitar"}
+      />
     </PageLayout>
   )
 }
