@@ -31,8 +31,9 @@ import {
   FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   ArrowLeft, ChevronDown, ChevronRight,
-  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil, X,
+  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil, X, Inbox,
 } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { useAuth } from "@/lib/auth-context"
@@ -481,7 +482,8 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
             Cancelar
           </Button>
           <Button
-            className="h-10 flex-1 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+            variant="primary"
+            className="h-10 flex-1"
             onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
             disabled={!obs.trim()}
           >
@@ -565,10 +567,10 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
             </Button>
             <Button
               size="sm"
+              variant="primary"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5 text-white rounded-full hover:opacity-90"
-              style={{ backgroundColor: "#773357" }}
+              className="gap-1.5"
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Aprobar y asignar
@@ -658,10 +660,10 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
             </Button>
             <Button
               size="sm"
+              variant="primary"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="rounded-2xl h-11 px-6 min-w-[120px] font-medium gap-1.5 hover:opacity-90"
-              style={{ backgroundColor: "#773357", color: "#fff", border: "none" }}
+              className="h-11 px-6 min-w-[120px] gap-1.5"
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Asignar
@@ -972,7 +974,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           <Separator orientation="vertical" className="h-6" />
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2 className="ds-title-md text-content-high">
                 {folioFormateado || <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>}
               </h2>
               {estadoBadge(solicitud.estado)}
@@ -1015,7 +1017,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             disabled={guardando}
             className="gap-1.5"
             size="sm"
-            style={{ backgroundColor: "#773357", color: "#fff" }}
+            variant="primary"
             >
             {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
             {labelAprobar}
@@ -1598,10 +1600,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
               <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-secondary text-secondary-foreground">
+                  <tr className="bg-bg-base text-content-high">
                     <th className="px-4 py-3 text-left font-semibold">Estatus</th>
                     <th className="px-4 py-3 text-left font-semibold">Folio Recepción</th>
                     <th className="px-4 py-3 text-left font-semibold">Régimen de Contratación</th>
@@ -1611,18 +1613,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                     <th className="px-4 py-3 text-left font-semibold">Ult. Observo</th>
                     <th className="px-4 py-3 text-left font-semibold">Plazo máximo de atención</th>
                     {!(filtro === 3 && activeTab === "nuevas") && (
-                      <th className="px-4 py-3 text-left font-semibold">Acción</th>
+                      <th className="px-4 py-3 font-semibold"><div className="flex justify-end">Acción</div></th>
                     )}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={filtro === 3 && activeTab === "nuevas" ? 8 : 9} className="px-4 py-12 text-center text-muted-foreground">
-                        <div className="flex flex-col items-center gap-2">
-                          <Filter className="h-8 w-8 text-muted-foreground/40" />
-                          <span>No hay solicitudes en esta clasificación</span>
-                        </div>
+                    <tr className="empty-row">
+                      <td colSpan={filtro === 3 && activeTab === "nuevas" ? 8 : 9}>
+                        <EmptyState icon={Inbox} title="No hay solicitudes en esta clasificación" description="Ajusta los filtros para ver más resultados." />
                       </td>
                     </tr>
                   ) : paginated.map(sol => {
@@ -1679,8 +1678,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                         </td>
                         <td className="px-4 py-3"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
                         {!(filtro === 3 && activeTab === "nuevas") && (
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
                             {filtro === 2 ? (
                               tab === "pendientes_asignacion" ? (
                                 <Button

@@ -10,21 +10,21 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          'border-transparent bg-[#2A3B29] text-white [a&]:hover:bg-[#2A3B29]/90',
+          'border-transparent bg-bg-surface-inverse text-content-inverse [a&]:hover:opacity-90',
         secondary:
-          'border-transparent bg-[#f0ede6] text-[#2A3B29] [a&]:hover:bg-[#f0ede6]/80',
+          'border-transparent bg-bg-surface-md text-content-high [a&]:hover:opacity-80',
         destructive:
-          'border-transparent bg-[#773357] text-white [a&]:hover:bg-[#773357]/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
+          'border-transparent bg-accent-primary text-accent-on-primary [a&]:hover:opacity-90',
         outline:
           'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
         success:
-          'border-transparent bg-[#d2fad2] text-[#1c7d29]',
+          'border-transparent bg-support-success-low text-support-on-success-low',
         warning:
-          'border-transparent bg-[#ffefb6] text-[#936901]',
+          'border-transparent bg-support-warning-low text-support-on-warning-low',
         info:
-          'border-transparent bg-[#ecf2ff] text-[#3266cb]',
+          'border-transparent bg-support-info-low text-support-on-info-low',
         rose:
-          'border-transparent bg-[#ffeaea] text-[#87090c]',
+          'border-transparent bg-support-error-low text-support-on-error-low',
       },
     },
     defaultVariants: {

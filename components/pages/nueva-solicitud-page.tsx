@@ -738,7 +738,7 @@ function ReadonlyField({ label, value, hint }: { label: string; value: string; h
         {label}
         <Lock className="h-3 w-3 text-muted-foreground" />
       </Label>
-      <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
         <span className="text-sm text-muted-foreground truncate">{value || "—"}</span>
       </div>
       {hint && <p className="text-xs text-muted-foreground flex items-center gap-1"><img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />{hint}</p>}
@@ -888,11 +888,11 @@ function DynamicList({
         </div>
       ))}
       {!readonly && items.length < maxEfectivo && (
-        <Button type="button" variant="outline" size="sm"
-          className="w-fit mt-1 bg-transparent text-[#773357] hover:bg-transparent hover:text-[#773357] active:bg-transparent active:text-[#773357] focus:bg-transparent focus:text-[#773357]"
+        <button type="button"
+          className="flex h-6 w-6 mt-1 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors"
           onClick={() => { internalAddRef.current = true; onChange([...items, ""]) }}>
-          <Plus className="mr-1 h-4 w-4" />Agregar
-        </Button>
+          <Plus className="h-4 w-4" />
+        </button>
       )}
       {!readonly && (
         <p className={`text-xs font-medium flex items-center gap-1 mt-0.5 ${hasDups ? "text-destructive" : belowMin ? "text-[#936901]" : "text-muted-foreground"}`}>
@@ -1003,7 +1003,7 @@ function TagInput({
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add() } }}
             placeholder={atMax ? `Máximo ${max} elementos alcanzado` : placeholder}
-            className="bg-background"
+            className=""
             disabled={atMax}
           />
           <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={add} disabled={!draft.trim() || atMax}>
@@ -1147,18 +1147,22 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
               </div>
             )}
             {seleccionado && (
-              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#22C55E] bg-[#F0FDF4] px-4 py-3">
-                <CheckCircle2 className="h-4 w-4 text-[#16A34A] shrink-0 mt-0.5" />
-                <span className="text-sm font-medium text-[#374151]">
-                  Nivel seleccionado: <strong>{seleccionado.nivel}</strong>
+              <div className="flex items-center justify-center gap-2 rounded-xl bg-[#d2fad2] px-4 py-3">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1c7d29]">
+                  <span className="text-[12px] font-bold text-white leading-none">i</span>
+                </div>
+                <span className="text-sm font-light text-[#1c7d29]">
+                  Nivel seleccionado: {seleccionado.nivel}
                   {seleccionado.categoria ? ` — categoría ${seleccionado.categoria}` : ""}
                 </span>
               </div>
             )}
             {busqueda.trim() === "" ? (
-              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#9CA3AF] bg-[#F9FAFB] px-4 py-3">
-                <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5 opacity-60" />
-                <span className="text-sm text-[#374151]">Ingrese el importe para ver coincidencias</span>
+              <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
+                  <span className="text-[12px] font-bold text-white leading-none">i</span>
+                </div>
+                <span className="text-sm font-light text-[#3266cb]">Ingrese el importe para ver coincidencias</span>
               </div>
             ) : coincidencias.length === 0 ? (
               <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
@@ -1375,7 +1379,7 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
 
         {/* ── Contenido / Tabla ── */}
         <div className="overflow-auto px-6 py-4" style={{ maxHeight: "65vh" }}>
-          <table className="w-full text-sm" style={{ borderCollapse: "collapse", border: "1px solid #E5E7EB" }}>
+          <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
             <tbody>
               {filas.map((fila, i) => (
                 <tr key={i} style={{ borderBottom: "1px solid #E5E7EB" }}>
@@ -1767,7 +1771,7 @@ function FormularioPrestacion({
                 Secretaría / Dependencia / Organismo
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              <div className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#ccc] bg-muted/40 px-4 py-3 min-h-[44px]">
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                 <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
               </div>
             </div>
@@ -1778,7 +1782,7 @@ function FormularioPrestacion({
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground font-semibold font-mono">{fmtClave(numeroUA)}</span>
                 </div>
               ) : catalogoUAsConGuardada.some((u) => u.clave !== "") ? (
@@ -1792,7 +1796,7 @@ function FormularioPrestacion({
                     setTipoActividadSeleccionado("")
                   }}
                    >
-                  <SelectTrigger className="bg-background w-full font-mono">
+                  <SelectTrigger className="w-full font-mono">
                     <SelectValue placeholder="Seleccione clave" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1806,7 +1810,7 @@ function FormularioPrestacion({
                   value={claveUA}
                   onChange={(e) => { setClaveUA(e.target.value); setProgramaSeleccionado(""); setTipoActividadSeleccionado("") }}
                   placeholder="Ingrese clave de la unidad administrativa"
-                  className="bg-background font-mono"
+                  className="font-mono"
                 />
               )}
             </div>
@@ -1817,7 +1821,7 @@ function FormularioPrestacion({
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground">{urgSeleccionada || "—"}</span>
                 </div>
               ) : catalogoUAs.length > 0 ? (
@@ -1841,7 +1845,7 @@ function FormularioPrestacion({
                   value={urgSeleccionada}
                   onChange={(e) => setUrgSeleccionada(e.target.value)}
                   placeholder="Ingrese unidad responsable del gasto"
-                  className="bg-background"
+                  className=""
                   disabled={!camposDependientesHabilitados}
                 />
               )}
@@ -1853,7 +1857,7 @@ function FormularioPrestacion({
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground">{programaSeleccionado || "—"}</span>
                 </div>
               ) : programas.length > 0 ? (
@@ -1868,7 +1872,7 @@ function FormularioPrestacion({
                 <Input
                   value={programaSeleccionado}
                   onChange={(e) => handleProgramaChange(e.target.value)}
-                  placeholder="Nombre del programa" className="bg-background"
+                  placeholder="Nombre del programa"
                   maxLength={200}
                   disabled={!esRenovacion && !camposDependientesHabilitados}
                 />
@@ -1881,7 +1885,7 @@ function FormularioPrestacion({
                 {regimenBloqueado && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground capitalize">
                     {regimenEfectivo === "asimilados" ? "Honorarios Asimilados a Salarios" : regimenEfectivo || "—"}
                   </span>
@@ -1892,7 +1896,7 @@ function FormularioPrestacion({
                   onValueChange={regimenBloqueado ? undefined : handleRegimenChange}
                   disabled={regimenBloqueado}
                 >
-                  <SelectTrigger className={`bg-background w-full ${regimenBloqueado ? "opacity-70 cursor-not-allowed" : ""}`}>
+                  <SelectTrigger className={`w-full ${regimenBloqueado ? "opacity-70 cursor-not-allowed" : ""}`}>
                     <SelectValue placeholder="Seleccione régimen" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1912,7 +1916,7 @@ function FormularioPrestacion({
                 onValueChange={handleTipoActividadChange}
                 disabled={!regimenEfectivo}
               >
-                <SelectTrigger className={`bg-background w-full ${!regimenEfectivo ? "opacity-60 cursor-not-allowed" : ""}`}>
+                <SelectTrigger className={`w-full ${!regimenEfectivo ? "opacity-60 cursor-not-allowed" : ""}`}>
                   <span className="block truncate text-sm pr-1">
                     {tipoActividadLabel ?? <span className="text-muted-foreground">{!regimenEfectivo ? "Seleccione primero un régimen" : "Según unidad administrativa"}</span>}
                   </span>
@@ -1936,7 +1940,7 @@ function FormularioPrestacion({
                 onChange={(e) => setNumeroPrestadores(e.target.value.replace(/[^0-9]/g, ""))}
                 onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Tab"].includes(e.key)) e.preventDefault() }}
                 placeholder="Ej. 5"
-                className="ns-ds-field bg-background"
+                className=""
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -1945,12 +1949,12 @@ function FormularioPrestacion({
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground capitalize">{tipoImporte}</span>
                 </div>
               ) : (
                 <Select value={tipoImporte} onValueChange={setTipoImporte}>
-                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Mensual">Mensual</SelectItem>
                     <SelectItem value="Unico">Único</SelectItem>
@@ -1976,7 +1980,7 @@ function FormularioPrestacion({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`ns-ds-field pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
@@ -2083,7 +2087,7 @@ function FormularioPrestacion({
               }
             }}
             placeholder="Describa el objeto de la contratación de manera detallada..."
-            className={`min-h-28 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : "bg-background"}`}
+            className={`min-h-28 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : ""}`}
             readOnly={bloqueadoPorRenovacion}
           />
         </CardContent>
@@ -2510,7 +2514,7 @@ function FormularioNombramiento({
                 Secretaría / Dependencia / Organismo
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              <div className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#ccc] bg-muted/40 px-4 py-3 min-h-[44px]">
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                 <span className="text-sm text-muted-foreground">{secretariaInput || "—"}</span>
               </div>
             </div>
@@ -2521,7 +2525,7 @@ function FormularioNombramiento({
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground font-semibold font-mono">{fmtClave(numeroUA)}</span>
                 </div>
               ) : clavesAdscripcion.length > 0 ? (
@@ -2533,7 +2537,7 @@ function FormularioNombramiento({
                     setUnidadAdscripcion(ua?.nombre ?? "")
                   }}
                 >
-                  <SelectTrigger className="bg-background w-full font-mono">
+                  <SelectTrigger className="w-full font-mono">
                     <SelectValue placeholder={!camposDependientesHabilitados ? "Seleccione primero la secretaría" : "Seleccione clave"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -2547,7 +2551,7 @@ function FormularioNombramiento({
                   value={claveUA}
                   onChange={(e) => setClaveUA(e.target.value)}
                   placeholder="Ingrese clave de la unidad administrativa"
-                  className="bg-background font-mono"
+                  className="font-mono"
                   disabled={!camposDependientesHabilitados}
                 />
               )}
@@ -2559,7 +2563,7 @@ function FormularioNombramiento({
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground">{urgSeleccionada || "—"}</span>
                 </div>
               ) : catalogoUAs.length > 0 ? (
@@ -2583,7 +2587,7 @@ function FormularioNombramiento({
                   value={urgSeleccionada}
                   onChange={(e) => setUrgSeleccionada(e.target.value)}
                   placeholder="Ingrese unidad responsable del gasto"
-                  className="bg-background"
+                  className=""
                   disabled={!camposDependientesHabilitados}
                 />
               )}
@@ -2598,7 +2602,7 @@ function FormularioNombramiento({
                 onChange={(e) => { if (!bloqueadoPorRenovacion) setProgramaInput(e.target.value) }}
                 placeholder="Nombre del programa"
                 maxLength={200}
-                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
                 readOnly={bloqueadoPorRenovacion}
                 disabled={!bloqueadoPorRenovacion && !camposDependientesHabilitados}
               />
@@ -2615,7 +2619,7 @@ function FormularioNombramiento({
                 Régimen de Contratación
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              <div className="flex items-center gap-2 rounded-xl border-[1.5px] border-[#ccc] bg-muted/40 px-4 py-3 min-h-[44px]">
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                 <span className="text-sm text-muted-foreground">
                   {regimenPeriodo === "honorarios"    ? "Honorarios"
                   : regimenPeriodo === "asimilados"   ? "Honorarios asimilados a Salarios"
@@ -2636,7 +2640,7 @@ function FormularioNombramiento({
                   onChange={(e) => { if (!bloqueadoPorRenovacion) setDenominacion(e.target.value) }}
                   placeholder="Ej. Subdirector de Área"
                   maxLength={200}
-                  className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
@@ -2651,7 +2655,7 @@ function FormularioNombramiento({
                   onChange={(e) => { if (!bloqueadoPorRenovacion) setPuestoJefeInmediato(e.target.value) }}
                   placeholder="Ej. Director General"
                   maxLength={200}
-                  className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
@@ -2664,7 +2668,7 @@ function FormularioNombramiento({
                   value={tipoActividadSeleccionado}
                   onValueChange={setTipoActividadSeleccionado}
                 >
-                  <SelectTrigger className="bg-background w-full">
+                  <SelectTrigger className="w-full">
                     <span className="block truncate text-sm pr-1">
                       {tipoActividadNomLabel ?? <span className="text-muted-foreground">Seleccione tipo de actividad</span>}
                     </span>
@@ -2688,7 +2692,7 @@ function FormularioNombramiento({
                   onChange={(e) => setNumeroPrestadores(e.target.value.replace(/[^0-9]/g, ""))}
                   onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !["Backspace","Delete","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Tab"].includes(e.key)) e.preventDefault() }}
                   placeholder="Ej. 2"
-                  className="bg-background"
+                  className=""
                 />
               </div>
             </>
@@ -2699,12 +2703,12 @@ function FormularioNombramiento({
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 min-h-9">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground capitalize">{tipoImporte}</span>
                 </div>
               ) : (
                 <Select value={tipoImporte} onValueChange={setTipoImporte}>
-                  <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Mensual">Mensual</SelectItem>
                     <SelectItem value="Unico">Único</SelectItem>
@@ -2730,7 +2734,7 @@ function FormularioNombramiento({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`ns-ds-field pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "bg-background"}`}
+                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
@@ -2826,7 +2830,7 @@ function FormularioNombramiento({
               }
             }}
             placeholder="Describa el objeto del nombramiento de manera detallada..."
-            className={`min-h-24 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : "bg-background"}`}
+            className={`min-h-24 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed resize-none" : ""}`}
             readOnly={bloqueadoPorRenovacion}
           />
         </CardContent>
@@ -2903,7 +2907,7 @@ function FormularioNombramiento({
             value={marcoNormativo.join("\n")}
             onChange={(e) => handleMarcoNormativoChange(e.target.value.split("\n"))}
             placeholder="Describa el marco normativo aplicable..."
-            className="min-h-24 bg-background"
+            className="min-h-24"
           />
         </CardContent>
       </Card>
@@ -2917,7 +2921,7 @@ function FormularioNombramiento({
         <CardContent className="flex flex-col gap-4 px-4 pb-4 pt-0">
           <div>
             <Label className="text-sm font-medium mb-3 block">Condiciones de Trabajo</Label>
-            <div className="overflow-x-auto overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+            <div className="overflow-x-auto">
               <table className="w-full table-fixed text-sm conditions-table">
                 <colgroup>
                   <col style={{ width: "50%" }} />
@@ -2925,7 +2929,7 @@ function FormularioNombramiento({
                   <col style={{ width: "25%" }} />
                 </colgroup>
                 <thead>
-                  <tr className="bg-secondary text-secondary-foreground">
+                  <tr className="bg-bg-base text-content-high">
                     <th className="px-4 py-2.5 text-left font-medium text-card-foreground">Condición</th>
                     <th className="py-2.5 font-medium">Sí</th>
                     <th className="py-2.5 font-medium">No</th>
@@ -2968,7 +2972,7 @@ function FormularioNombramiento({
           {/* ── Tabla de Riesgos ── */}
           <div>
             <Label className="text-sm font-medium mb-3 block">Tabla de Riesgos</Label>
-            <div className="overflow-x-auto overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+            <div className="overflow-x-auto">
               <table className="w-full table-fixed text-sm conditions-table">
                 <colgroup>
                   <col style={{ width: "50%" }} />
@@ -2977,7 +2981,7 @@ function FormularioNombramiento({
                   <col style={{ width: "16.67%" }} />
                 </colgroup>
                 <thead>
-                  <tr className="bg-secondary text-secondary-foreground">
+                  <tr className="bg-bg-base text-content-high">
                     <th className="px-4 py-2.5 text-left font-medium">Riesgo</th>
                     <th className="py-2.5 font-medium">Bajo</th>
                     <th className="py-2.5 font-medium">Medio</th>
@@ -3201,7 +3205,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5"><ArrowLeft className="h-4 w-4" />Volver</Button>
         <Separator orientation="vertical" className="h-6" />
         <div>
-          <h2 className="text-xl font-semibold text-foreground">Excepción DO</h2>
+          <h2 className="ds-title-md text-content-high">Excepción DO</h2>
           <p className="text-sm text-muted-foreground">Captura directa por la Dirección de Organización</p>
         </div>
       </div>
@@ -3212,7 +3216,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RadioGroup value={subTipo} onValueChange={() => setSubTipo(v as "captura" | "regularizacion")} className="flex flex-col gap-3">
+          <RadioGroup value={subTipo} onValueChange={(v) => setSubTipo(v as "captura" | "regularizacion")} className="flex flex-col gap-3">
             <label className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors ${subTipo === "captura" ? "border-accent bg-accent/5" : "border-border hover:border-secondary/50"}`}>
               <RadioGroupItem value="captura" id="sub-captura" className="mt-0.5" />
               <div className="flex flex-col gap-1">
@@ -4019,7 +4023,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               </div>
             </div>
           )}
-                <Card className={`shadow-sm border-secondary/30 border-2 ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
+                <Card className={`shadow-sm border border-border ${!calendarioCompleto ? "opacity-50 pointer-events-none" : ""}`}>
               <CardHeader className="px-4 pt-3 pb-1">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
               Período de Aplicación
@@ -4036,7 +4040,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     if (nuevo === "nombramiento") setTipo("nombramiento")
                     else setTipo("prestacion")
                   }}>
-                    <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
+                    <SelectTrigger className="w-full vino-force"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
                     <SelectContent className="vino-force">
                       <SelectItem value="honorarios">Honorarios</SelectItem>
                       <SelectItem value="asimilados">Honorarios asimilados a Salarios</SelectItem>
@@ -4048,7 +4052,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Mes de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
-                      <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione mes" /></SelectTrigger>
+                      <SelectTrigger className="w-full vino-force"><SelectValue placeholder="Seleccione mes" /></SelectTrigger>
                       <SelectContent className="vino-force">{calHonorarios.map((r) => <SelectItem key={r.mes} value={r.mes}>{r.mes}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
@@ -4057,7 +4061,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
-                      <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
+                      <SelectTrigger className="w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
                       <SelectContent className="vino-force">{calAsimilados.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
@@ -4066,7 +4070,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
-                      <SelectTrigger className="bg-background w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
+                      <SelectTrigger className="w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
                       <SelectContent className="vino-force">{calNombramiento.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
@@ -4113,8 +4117,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             </CardContent>
             <CardContent className="flex justify-end px-4 pb-3 pt-2">
               <Button onClick={handleContinueToRenovacion} disabled={!puedeAvanzarDeTipo}
-                className="disabled:opacity-50"
-                style={{ backgroundColor: "#773357", color: "#fff" }}>
+                variant="primary"
+                className="disabled:opacity-50">
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
             </CardContent>
@@ -4194,7 +4198,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     </div>
                   ) : (
                     <Select value={folioSeleccionado} onValueChange={setFolioSeleccionado}>
-                      <SelectTrigger className="bg-background w-full"><SelectValue placeholder="Seleccione folio anterior" /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione folio anterior" /></SelectTrigger>
                       <SelectContent className="max-h-72">
                         {foliosReales.map((f) => (
                           <SelectItem key={f.id} value={f.id}>
@@ -4236,7 +4240,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                           else setShowModalMismasCondiciones(true)
                         }}
                         >
-                        <Checkbox checked={condicionRenovacion === "mismas"} className="mt-0.5 shrink-0 pointer-events-none" readOnly />
+                        <Checkbox checked={condicionRenovacion === "mismas"} className="mt-0.5 shrink-0 pointer-events-none" />
                         <div className="flex flex-col gap-0.5">
                           <span className="text-sm font-medium text-card-foreground">Se solicita bajo mismas condiciones técnicas y funcionales</span>
                           <span className="text-xs text-muted-foreground">Marque si confirma que no hay cambios respecto al dictamen anterior</span>
@@ -4349,9 +4353,9 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                 disabled={
                   !esRenovacion ||
                   (esRenovacion === "si" && !folioSeleccionado) ||
-                  (esRenovacion === "si" && folioSeleccionado && condicionRenovacion !== "mismas")
+                  (esRenovacion === "si" && !!folioSeleccionado && condicionRenovacion !== "mismas")
                 }
-                style={{ backgroundColor: "#773357", color: "#fff" }}
+                variant="primary"
               >
                 Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>
@@ -4467,9 +4471,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                   </Button>
                   <div className="flex items-center gap-3">
                     {isEditingBorrador ? (
-                      <Button className="min-w-[160px]"
-                        disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}
-                        style={{ backgroundColor: "#773357", color: "#fff" }}>
+                      <Button className="min-w-[160px]" variant="primary"
+                        disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}>
                         {guardandoBorrador
                           ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Guardando...</>
                           : "Guardar Cambios"
@@ -4484,9 +4487,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                             : "Guardar Borrador"
                           }
                         </Button>
-                        <Button className="min-w-[160px]"
-                          disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}
-                          style={{ backgroundColor: "#773357", color: "#fff" }}>
+                        <Button className="min-w-[160px]" variant="primary"
+                          disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
                           {enviando
                             ? <><Clock className="mr-1.5 h-4 w-4 animate-spin" />Enviando...</>
                             : "Enviar a Validación"

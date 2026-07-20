@@ -184,7 +184,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <Card className="w-full max-w-md border-accent/40 border-2">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <AlertCircle className="h-10 w-10 text-accent-foreground" />
-            <h2 className="text-lg font-semibold">Link en uso</h2>
+            <h2 className="ds-title-md text-content-high">Link en uso</h2>
             <p className="text-sm text-muted-foreground text-center">
               Este link ya fue abierto por otra persona y estamos esperando a que firme. Si tú eres quien debe firmar, solicita un nuevo link al responsable.
             </p>
@@ -200,7 +200,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <Card className="w-full max-w-md border-destructive/40 border-2">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <AlertCircle className="h-10 w-10 text-destructive" />
-            <h2 className="text-lg font-semibold text-destructive">Link inválido</h2>
+            <h2 className="ds-title-md text-destructive">Link inválido</h2>
             <p className="text-sm text-muted-foreground text-center">
               El link no existe o el token no es correcto. Pide uno nuevo al responsable.
             </p>
@@ -216,7 +216,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <Card className="w-full max-w-md border-secondary/40 border-2">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <CheckCircle2 className="h-10 w-10 text-secondary" />
-            <h2 className="text-lg font-semibold">Proceso completado</h2>
+            <h2 className="ds-title-md text-content-high">Proceso completado</h2>
             <p className="text-sm text-muted-foreground text-center">Todas las firmas ya fueron registradas. Ya puedes cerrar esta pestaña.</p>
           </CardContent>
         </Card>
@@ -264,7 +264,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <Card className="w-full max-w-md border-destructive/40 border-2">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <Clock className="h-10 w-10 text-destructive" />
-            <h2 className="text-lg font-semibold text-destructive">Link expirado</h2>
+            <h2 className="ds-title-md text-destructive">Link expirado</h2>
             <p className="text-sm text-muted-foreground text-center">
               El plazo de 30 minutos para firmar se agotó. Solicita un nuevo link al responsable del proceso.
             </p>
@@ -280,7 +280,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         <Card className="w-full max-w-md border-secondary/40 border-2">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <CheckCircle2 className="h-14 w-14 text-secondary" />
-            <h2 className="text-lg font-semibold">¡Firma registrada!</h2>
+            <h2 className="ds-title-md text-content-high">¡Firma registrada!</h2>
             <p className="text-sm text-muted-foreground text-center">
               Tu firma quedó registrada correctamente.{" "}
               {exito.estado === "completado"

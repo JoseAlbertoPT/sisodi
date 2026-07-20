@@ -103,7 +103,7 @@ function resolverFolioDictamen(item: any): string | null {
     null
   )
 }
-interface SolicitudDetalle {
+export interface SolicitudDetalle {
   id: number
   folio: string | null
   folioJustificacion: string
@@ -482,7 +482,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -500,7 +500,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -1217,10 +1217,10 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
             </Button>
             <Button
               size="sm"
+              variant="primary"
               disabled={!selectedId || guardando || loading}
               onClick={() => onConfirm(selectedId)}
-              className="gap-1.5 h-10 rounded-full text-sm font-medium text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
-              style={{ backgroundColor: "#773357" }}
+              className="gap-1.5 h-10"
             >
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Aprobar y asignar
@@ -1625,7 +1625,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           <AlertCircle className="h-8 w-8 text-[#9ca3af]" />
         </div>
         <div className="text-center max-w-sm">
-          <h2 className="text-lg font-semibold text-foreground">{error ?? "Solicitud no encontrada"}</h2>
+          <h2 className="ds-title-md text-content-high">{error ?? "Solicitud no encontrada"}</h2>
         </div>
         <button
           type="button"
@@ -1640,7 +1640,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
   return (
     <PageLayout noContainer>
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4 h-full p-6">
       <ConfirmationModal
         open={showAvanceModal}
         type={esObservada ? "error" : "success"}
@@ -1660,7 +1660,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 <Shield className="h-7 w-7 text-primary" />
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-semibold text-card-foreground">Modalidad de Firma</h3>
+                <h3 className="ds-title-md text-content-high">Modalidad de Firma</h3>
                 <p className="text-sm text-muted-foreground mt-2">
                   Selecciona cómo se firmará el dictamen. Esta decisión aplicará a todas las firmas del flujo; no se puede mezclar electrónica y autógrafa.
                 </p>
@@ -1690,7 +1690,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                   Cancelar
                 </Button>
                 <Button
-                  className="h-10 flex-1 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+                  variant="primary"
+                  className="h-10 flex-1"
                   onClick={() => setShowFirmaSeleccionConfirm(true)}
                   disabled={guardando}
                 >
@@ -1753,7 +1754,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           <Separator orientation="vertical" className="h-6" />
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2 className="ds-title-md text-content-high">
                 {solicitud.folio ?? <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>}
               </h2>
               <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>

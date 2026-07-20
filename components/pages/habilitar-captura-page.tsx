@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Unlock, Trash2, CheckCircle2 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAutorizaciones, type PermisoCaptura } from "@/lib/autorizaciones-store"
 import { useCalendario } from "@/lib/calendario-store"
 import { useAuth } from "@/lib/auth-context"
@@ -31,6 +32,7 @@ export function HabilitarCapturaPage() {
   const [regimen,           setRegimen]           = useState<"honorarios" | "asimilados" | "nombramiento" | "">("")
   const [periodo,           setPeriodo]           = useState("")
   const [saved,             setSaved]             = useState(false)
+  const [confirmRevoke, setConfirmRevoke] = useState<PermisoCaptura | null>(null)
 
   useEffect(() => {
     fetchUsuarios()
@@ -166,7 +168,7 @@ export function HabilitarCapturaPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => revocarPermiso(p.id)}
+                      onClick={() => setConfirmRevoke(p)}
                       className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                       title="Revocar permiso"
                     >
@@ -201,7 +203,7 @@ export function HabilitarCapturaPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => revocarPermiso(p.id)}
+                      onClick={() => setConfirmRevoke(p)}
                       className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                       title="Revocar permiso"
                     >
@@ -214,6 +216,15 @@ export function HabilitarCapturaPage() {
           </Card>
         </>
       )}
+      <ConfirmDialog
+        open={!!confirmRevoke}
+        onClose={() => setConfirmRevoke(null)}
+        onConfirm={() => { if (confirmRevoke) { revocarPermiso(confirmRevoke.id); setConfirmRevoke(null) } }}
+        variant="eliminar"
+        title="¿Revocar permiso?"
+        description={confirmRevoke ? `Se revocará el permiso de captura para ${confirmRevoke.regimen} · ${confirmRevoke.periodo}.` : ""}
+        confirmLabel="Sí, revocar"
+      />
     </PageLayout>
   )
 }

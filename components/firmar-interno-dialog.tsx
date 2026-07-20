@@ -107,7 +107,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
   const ejecutarFirma = async () => {
     setTrabajando(true); setError(null)
     try {
-      const [cerB64, keyB64] = await Promise.all([fileToBase64(cerFile), fileToBase64(keyFile)])
+      const [cerB64, keyB64] = await Promise.all([fileToBase64(cerFile!), fileToBase64(keyFile!)])
       const res = await fetch("/api/firma-efirma/firmar-interno", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

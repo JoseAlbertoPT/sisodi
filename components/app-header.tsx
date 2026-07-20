@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { PanelLeftClose, PanelLeft, Bell } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface HeaderProps {
   onToggleSidebar: () => void
@@ -12,6 +14,7 @@ interface HeaderProps {
 export function AppHeader({ onToggleSidebar, sidebarCollapsed }: HeaderProps) {
   const { user, logout } = useAuth()
   const inicial = user?.rfc?.charAt(0).toUpperCase() ?? "?"
+  const [confirmLogout, setConfirmLogout] = useState(false)
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 shadow-sm">
@@ -80,12 +83,21 @@ export function AppHeader({ onToggleSidebar, sidebarCollapsed }: HeaderProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={logout}
+          onClick={() => setConfirmLogout(true)}
           className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1.5 rounded-lg"
         >
           <span className="text-xs">Salir</span>
         </Button>
       </div>
+      <ConfirmDialog
+        open={confirmLogout}
+        onClose={() => setConfirmLogout(false)}
+        onConfirm={() => { setConfirmLogout(false); void logout() }}
+        title="¿Cerrar sesión?"
+        description="Se cerrará tu sesión actual y volverás a la pantalla de inicio."
+        confirmLabel="Sí, cerrar sesión"
+        variant="eliminar"
+      />
     </header>
   )
 }

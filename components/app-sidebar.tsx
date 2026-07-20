@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 export type PageKey =
   | "dashboard"
@@ -135,10 +136,10 @@ function SidebarItem({
             onClick={onClick}
             aria-label={label}
             className={cn(
-              "flex w-full justify-center rounded-lg p-2.5 transition-colors",
+              "flex w-9 h-9 mx-auto justify-center items-center rounded-xl transition-colors",
               isActive
-                ? "bg-white text-[#2D3B2D] shadow-sm"
-                : "text-[#5a6c5a] hover:bg-white/60 hover:text-[#2D3B2D]"
+                ? "bg-bg-base text-content-high shadow-sm"
+                : "text-content-low hover:bg-reactive-surface-hover"
             )}
           >
             <span className="[&>svg]:h-[18px] [&>svg]:w-[18px]">{icon}</span>
@@ -154,14 +155,14 @@ function SidebarItem({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors text-left",
+        "flex w-full items-center gap-6 rounded-xl px-3 py-2.5 transition-colors text-left",
         isActive
-          ? "bg-white text-[#2D3B2D] font-bold shadow-sm"
-          : "text-[#4a5c4a] font-medium hover:bg-white/60 hover:text-[#2D3B2D]"
+          ? "bg-bg-base text-content-high shadow-sm"
+          : "text-content-low hover:bg-reactive-surface-hover"
       )}
     >
       <span className="shrink-0 [&>svg]:h-[18px] [&>svg]:w-[18px]">{icon}</span>
-      <span className="leading-tight truncate">{label}</span>
+      <span className="flex-1 truncate font-sans text-[14px] font-normal leading-[120%]">{label}</span>
     </button>
   )
 }
@@ -172,6 +173,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
   const [menusLoading, setMenusLoading] = useState(true)
   const [menusError, setMenusError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [confirmLogout, setConfirmLogout] = useState(false)
  
 
   useEffect(() => {
@@ -211,34 +213,41 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "flex h-screen flex-col border-r border-[#E0DED8] transition-all duration-300 overflow-hidden",
-          collapsed ? "w-[64px]" : "w-[220px]"
+          "flex h-full flex-col bg-bg-surface-low rounded-xl transition-all duration-300 overflow-hidden flex-shrink-0",
+          collapsed ? "w-[93px]" : "w-[280px]"
         )}
-        style={{ backgroundColor: "transparent" }}
         aria-label="Navegación principal"
       >
         <div
           className={cn(
-            "flex shrink-0 items-center border-b border-[#E0DED8]",
-            collapsed ? "h-[64px] justify-center px-2" : "h-[64px] gap-2 px-3"
+            "flex shrink-0 items-center justify-center p-3 pb-4 gap-2",
+            collapsed ? "px-0 py-3" : ""
           )}
         >
           {collapsed ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#f1f1f0", borderRadius: 8, padding: 8, width: 48, height: 48, flexShrink: 0 }}>
-              <img src="/logo-quetzal-icono.svg" alt="Quetzal" style={{ width: 65, height: 65, objectFit: "contain" }} />
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-bg-surface-md flex-shrink-0">
+              <img src="/logo-quetzal-icono.svg" alt="Quetzal" style={{ width: 36, height: 36, objectFit: "contain" }} />
             </div>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px" }}>
+            <div className="flex items-center gap-2.5 px-1">
               <img src="/logo-quetzal-icono.svg" alt="Quetzal" style={{ width: 40, height: 40, objectFit: "contain", flexShrink: 0 }} />
               <img src="/finanzas-logo-cortado.svg" alt="Finanzas" style={{ width: 130, height: 45, objectFit: "contain", objectPosition: "left" }} />
             </div>
           )}
         </div>
 
+        {collapsed ? (
+          <div className="mb-2 flex justify-center">
+            <div className="w-12 border-t border-border-low" />
+          </div>
+        ) : (
+          <div className="mb-2 border-t border-border-low" />
+        )}
 
-        <nav className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-0.5" aria-label="Menú">
+
+        <nav className="flex flex-1 flex-col overflow-y-auto px-2 pt-1 pb-2 gap-1" aria-label="Menú">
           {menusLoading && (
-            <p className="text-xs text-[#9CA3AF] px-3 py-2">Cargando…</p>
+            <p className="text-xs text-content-low px-3 py-2">Cargando…</p>
           )}
           {!menusLoading && menusError && (
             <div className="flex flex-col gap-1 px-3 py-2">
@@ -246,7 +255,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
               <button
                 type="button"
                 onClick={() => setRetryCount((n) => n + 1)}
-                className="text-xs text-[#6B7280] underline hover:text-[#2D3B2D] text-left"
+                className="text-xs text-content-low underline hover:text-content-high text-left"
               >
                 Reintentar
               </button>
@@ -269,14 +278,14 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
           )}
         </nav>
 
-        <div className="shrink-0 border-t border-[#E0DED8] px-2 py-3">
+        <div className="shrink-0 border-t border-border-low px-2 py-2">
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => void logout()}
-                  className="flex w-full justify-center rounded-lg p-2.5 text-[#9CA3AF] hover:bg-white/60 hover:text-red-500 transition-colors"
+                  onClick={() => setConfirmLogout(true)}
+                  className="flex w-9 h-9 mx-auto items-center justify-center rounded-xl text-content-low hover:bg-reactive-surface-hover transition-colors"
                   aria-label="Cerrar sesión"
                 >
                   <LogOut className="h-[18px] w-[18px]" />
@@ -287,16 +296,25 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
           ) : (
             <button
               type="button"
-              onClick={() => void logout()}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] text-[#9CA3AF] hover:bg-white/60 hover:text-red-500 transition-colors"
+              onClick={() => setConfirmLogout(true)}
+              className="flex w-full items-center gap-6 px-3 py-2.5 rounded-xl text-content-low hover:bg-reactive-surface-hover transition-colors font-sans text-[14px] font-normal leading-[120%]"
               aria-label="Cerrar sesión"
             >
               <LogOut className="h-[18px] w-[18px] shrink-0" />
-              <span className="leading-tight">Cerrar sesión</span>
+              <span>Cerrar sesión</span>
             </button>
           )}
         </div>
       </aside>
+      <ConfirmDialog
+        open={confirmLogout}
+        onClose={() => setConfirmLogout(false)}
+        onConfirm={() => { setConfirmLogout(false); void logout() }}
+        title="¿Cerrar sesión?"
+        description="Se cerrará tu sesión actual y volverás a la pantalla de inicio."
+        confirmLabel="Sí, cerrar sesión"
+        variant="eliminar"
+      />
     </TooltipProvider>
   )
 }

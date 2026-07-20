@@ -28,6 +28,7 @@ import {
   RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
   Shield, FileSignature, X, MoreHorizontal,
 } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -723,7 +724,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
     v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -741,7 +742,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -947,7 +948,8 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
             Cancelar
           </Button>
           <Button
-            className="h-10 flex-1 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+            variant="primary"
+            className="h-10 flex-1"
             onClick={() => { if (!obs.trim()) return; onConfirm(obs.trim()); setStep("confirm"); setObs("") }}
             disabled={!obs.trim()}
           >
@@ -1043,7 +1045,8 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
             <Button
               onClick={() => { if (seleccionado) { onConfirm(seleccionado); handleClose() } }}
               disabled={!seleccionado || cargando}
-              className="gap-1.5 h-10 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+              variant="primary"
+              className="gap-1.5 h-10"
             >
               Confirmar
             </Button>
@@ -1084,37 +1087,37 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
   const folioMostrar = folioRecepcionValido ?? solicitud.folioJustificacion
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-6">
       {showDictamen && (
         <DictamenModal solicitud={solicitud} onClose={() => setShowDictamen(false)} />
       )}
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
-            <ArrowLeft className="h-4 w-4" />Volver a bandeja
+          <Button variant="ghost" onClick={onBack} className="gap-1.5">
+            <ArrowLeft className="h-5 w-5" />Volver a bandeja
           </Button>
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-7" />
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-semibold text-foreground">{folioMostrar}</h2>
+              <h2 className="ds-title-md text-content-high">{folioMostrar}</h2>
               <UefaEstadoBadge estado={solicitud.estado} />
               {folioDictamenMostrar && (
-                <Badge className="bg-secondary/15 text-secondary border-0 text-xs gap-1">
-                  <Stamp className="h-3 w-3" />Dict. {folioDictamenMostrar}
+                <Badge className="bg-secondary/15 text-secondary border-0 text-sm gap-1">
+                  <Stamp className="h-3.5 w-3.5" />Dict. {folioDictamenMostrar}
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">{solicitud.tipo} — {solicitud.secretaria}</p>
+            <p className="text-sm text-muted-foreground">{solicitud.tipo} — {solicitud.secretaria}</p>
             {solicitud.denominacion && solicitud.denominacion !== "—" && solicitud.denominacion !== solicitud.tipo && (
-              <p className="text-xs text-muted-foreground font-medium">{solicitud.denominacion}</p>
+              <p className="text-sm text-muted-foreground font-medium">{solicitud.denominacion}</p>
             )}
           </div>
         </div>
         <div className="flex items-center gap-3">
           <Button
             variant="default"
-            size="sm" className="gap-1.5"
+            className="gap-1.5"
             onClick={() => setShowDescargarConfirm(true)}
           >
             Descargar Justificación
@@ -1132,9 +1135,9 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
               <Button
                 onClick={() => setShowAprobarConfirm(true)}
                 disabled={guardando}
+                variant="primary"
                 className="gap-1.5"
                 size="sm"
-                style={{ backgroundColor: "#773357", color: "#fff" }}
               >
                 {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
                 Aprobar
@@ -1145,9 +1148,9 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
             <Button
               onClick={() => setShowFirmarConfirm(true)}
               disabled={guardando}
+              variant="primary"
               className="gap-1.5"
               size="sm"
-              style={{ backgroundColor: "#773357", color: "#fff" }}
             >
               {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
               Firmar Justificación
@@ -1222,26 +1225,26 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
 
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
-            <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+            <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1">
               <button
                 onClick={() => setRightTab("historial")}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
                   rightTab === "historial"
-                    ? "bg-card text-card-foreground shadow-sm"
+                    ? "bg-card shadow-sm text-[#3a4a2a]"
                     : "text-muted-foreground hover:text-card-foreground"
                 }`}
               >
-                <History className="mr-1.5 inline h-4 w-4" />Historial
+                <History className="h-4 w-4" />Historial
               </button>
               <button
                 onClick={() => setRightTab("observaciones")}
-                className={`relative flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                className={`relative flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
                   rightTab === "observaciones"
-                    ? "bg-card text-card-foreground shadow-sm"
+                    ? "bg-card shadow-sm text-[#3a4a2a]"
                     : "text-muted-foreground hover:text-card-foreground"
                 }`}
               >
-                <AlertTriangle className="mr-1.5 inline h-4 w-4" />Observaciones
+                <AlertTriangle className="h-4 w-4" />Observaciones
                 {tieneObsActivas && (
                   <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white">
                     {solicitud.todasObservaciones.length}
@@ -1623,8 +1626,7 @@ export function ValidacionUefaPage() {
       {}
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <Inbox className="h-4 w-4 text-secondary" />
+          <CardTitle className="text-sm font-semibold text-card-foreground">
             {loading ? "Cargando solicitudes..." : `${filtered.length} solicitud${filtered.length !== 1 ? "es" : ""}`}
           </CardTitle>
         </CardHeader>
@@ -1635,10 +1637,10 @@ export function ValidacionUefaPage() {
               <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-secondary text-secondary-foreground">
+                  <tr className="bg-bg-base text-content-high">
                     <th className="px-4 py-3 text-left font-semibold">Folio de Justificación</th>
                     <th className="px-4 py-3 text-left font-semibold">Régimen de Contratación</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Creación</th>
@@ -1647,7 +1649,7 @@ export function ValidacionUefaPage() {
                     {activeTab === "Emitidas" && (
                       <th className="px-4 py-3 text-left font-semibold">Modalidad</th>
                     )}
-                    <th className="px-4 py-3 text-left font-semibold">Acciones</th>
+                    <th className="px-4 py-3 font-semibold"><div className="flex justify-end">Acciones</div></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1693,12 +1695,13 @@ export function ValidacionUefaPage() {
                             )}
                           </td>
                         )}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end">
                           {solTab === "Pendiente Firma" ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
+                                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 bg-bg-surface-low border border-border-low">
+                                  <MoreHorizontal className="h-4 w-4 text-content-low" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -1723,17 +1726,15 @@ export function ValidacionUefaPage() {
                               <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
                             </Button>
                           )}
+                          </div>
                         </td>
                       </tr>
                     )
                   })}
                   {filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                        <div className="flex flex-col items-center gap-2">
-                          <Inbox className="h-8 w-8 text-muted-foreground/40" />
-                          <span>No hay solicitudes en esta categoría</span>
-                        </div>
+                    <tr className="empty-row">
+                      <td colSpan={7}>
+                        <EmptyState icon={Inbox} title="No hay solicitudes en esta categoría" description="Ajusta los filtros para ver más resultados." />
                       </td>
                     </tr>
                   )}

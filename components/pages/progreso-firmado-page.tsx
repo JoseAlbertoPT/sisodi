@@ -134,7 +134,7 @@ export function ProgresoFirmadoPage() {
           {procesos.length === 0 ? (
             <p className="text-sm text-muted-foreground">No hay procesos de firma aún.</p>
           ) : (
-            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground border-b">

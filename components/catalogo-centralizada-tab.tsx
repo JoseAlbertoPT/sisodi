@@ -5,15 +5,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
+import { EmptyState } from "@/components/ui/empty-state"
 import { Label } from "@/components/ui/label"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
+  Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   Plus, Pencil, Trash2, MoreHorizontal,
-  Building2, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Search, X,
+  Building2, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Inbox,
 } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
@@ -30,17 +31,12 @@ const VINO = "#773357"
 const VINO_HOVER = "#773357"
 const UA_PAGE_SIZE = 10
 
-// ---- Estilo estándar de botones de modal (usado en toda la app) ----
-// Cancelar: gris
-const BTN_CANCEL: React.CSSProperties = {}
 const BTN_CANCEL_CLASS =
-    "rounded-full h-10 px-6 font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb] hover:text-[#4b5563] active:bg-[#f3f4f6] active:text-[#4b5563] focus:bg-[#f3f4f6] focus:text-[#4b5563]"
+    "rounded-full h-10 px-6 font-normal border border-[#e4e3d6] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
 
-// Crear / Guardar / Agregar: fondo vino sólido, texto blanco
-const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-medium shadow-sm"
+const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-normal shadow-sm"
 
-// Footer del modal: más aire respecto al contenido y separación clara entre botones
-const DIALOG_FOOTER_CLASS = "gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]"
+const DIALOG_FOOTER_CLASS = ""
 
 function reorder<T>(list: T[], from: number, to: number): T[] {
   const result = [...list]
@@ -289,14 +285,11 @@ function SecretariaRow({
                 <DropdownMenuTrigger asChild>
                   <button
                       type="button"
-                      className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
-                      style={{ color: VINO }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${VINO}15`)}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-surface-low border border-border-low transition-colors hover:bg-bg-surface-md"
                       onClick={(e) => e.stopPropagation()}
                       aria-label="Más opciones"
                   >
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="h-4 w-4 text-content-low" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -322,25 +315,12 @@ function SecretariaRow({
               {/* Search bar */}
               {uas.length > 0 && (
                   <div className="flex items-center gap-2 py-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 pointer-events-none" />
-                      <input
-                          type="text"
-                          placeholder="Buscar unidad..."
-                          value={uaSearch}
-                          onChange={(e) => setUaSearch(e.target.value)}
-                          className="w-full h-8 rounded-lg border border-[#e4e3dc] bg-white pl-8 pr-8 text-xs outline-none transition-colors focus:border-[#773357]/50 placeholder:text-muted-foreground/40"
-                      />
-                      {uaSearch && (
-                          <button
-                              type="button"
-                              onClick={() => setUaSearch("")}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                      )}
-                    </div>
+                    <SearchInput
+                      placeholder="Buscar unidad..."
+                      value={uaSearch}
+                      onChange={(e) => setUaSearch(e.target.value)}
+                      containerClassName="flex-1 max-w-sm"
+                    />
                     {uaSearch && (
                         <span className="shrink-0 text-xs text-muted-foreground">
                     {uasFiltered.length} resultado{uasFiltered.length !== 1 ? "s" : ""}
@@ -369,7 +349,7 @@ function SecretariaRow({
                           ].join(" ")}
                       >
                         <GripVertical className={`h-3.5 w-3.5 shrink-0 ${uaSearch ? "invisible" : "text-muted-foreground/25 cursor-grab"}`} />
-                        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: VINO, opacity: 0.5 }} />
+                        <img src="/Iconos1/dots.svg" alt="" className="h-3.5 w-3.5 shrink-0 opacity-50" />
                         <div className="flex-1 min-w-0 flex items-center gap-2">
                           <span className="text-sm truncate text-foreground">{ua.nombre}</span>
                           {clave && (
@@ -378,18 +358,15 @@ function SecretariaRow({
                         </span>
                           )}
                         </div>
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
                                   type="button"
-                                  className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
-                                  style={{ color: VINO }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${VINO}15`)}
-                                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                                  className="flex h-7 w-7 items-center justify-center rounded-full bg-bg-surface-low border border-border-low transition-colors hover:bg-bg-surface-md"
                                   aria-label="Más opciones"
                               >
-                                <MoreHorizontal className="h-3.5 w-3.5" />
+                                <MoreHorizontal className="h-3.5 w-3.5 text-content-low" />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -407,10 +384,10 @@ function SecretariaRow({
                 })}
 
                 {uasFiltered.length === 0 && uaSearch && (
-                    <p className="text-xs text-muted-foreground ml-4 py-2 italic">Sin resultados para &quot;{uaSearch}&quot;</p>
+                  <EmptyState icon={Inbox} title="Sin resultados" description={`No hay UAs que coincidan con "${uaSearch}".`} className="py-6" />
                 )}
-                {uas.length === 0 && (
-                    <p className="text-xs text-muted-foreground ml-4 py-2 italic">Sin unidades administrativas</p>
+                {uas.length === 0 && !uaSearch && (
+                  <EmptyState icon={Inbox} title="Sin unidades administrativas" description="Agrega una unidad con el botón de arriba." className="py-6" />
                 )}
               </div>
 
@@ -422,23 +399,23 @@ function SecretariaRow({
                           type="button"
                           disabled={safePage === 0}
                           onClick={() => setUaPage(p => Math.max(0, p - 1))}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 disabled:opacity-30 hover:bg-gray-200 transition-colors"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[#2A3B29] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eae9e6] transition-colors"
                       >
-                        <ChevronLeft className="h-3.5 w-3.5" />
+                        <ChevronLeft className="h-4 w-4" />
                       </button>
                       {paginationPages(uaTotalPages, safePage).map((p, idx) =>
                           p === "..." ? (
-                              <span key={`el-${idx}`} className="flex h-8 w-8 items-center justify-center text-xs text-gray-400">…</span>
+                              <span key={`el-${idx}`} className="px-2 text-sm text-muted-foreground">…</span>
                           ) : (
                               <button
                                   key={p}
                                   type="button"
                                   onClick={() => setUaPage(p as number)}
                                   className={[
-                                    "flex h-8 w-8 items-center justify-center rounded-md text-xs font-medium transition-colors",
+                                    "flex h-9 w-9 items-center justify-center rounded-md text-sm font-light transition-colors text-content-high",
                                     p === safePage
-                                        ? "border border-gray-300 bg-white text-gray-700 font-semibold"
-                                        : "text-gray-500 hover:bg-gray-50",
+                                        ? "border border-border bg-white shadow-sm"
+                                        : "hover:bg-muted",
                                   ].join(" ")}
                               >
                                 {(p as number) + 1}
@@ -449,9 +426,9 @@ function SecretariaRow({
                           type="button"
                           disabled={safePage === uaTotalPages - 1}
                           onClick={() => setUaPage(p => Math.min(uaTotalPages - 1, p + 1))}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 disabled:opacity-30 hover:bg-gray-200 transition-colors"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[#2A3B29] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eae9e6] transition-colors"
                       >
-                        <ChevronRight className="h-3.5 w-3.5" />
+                        <ChevronRight className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
@@ -464,19 +441,21 @@ function SecretariaRow({
         <Dialog open={addUaOpen} onOpenChange={setAddUaOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Agregar Unidad Administrativa</DialogTitle></DialogHeader>
-            <p className="text-xs text-muted-foreground px-6 pt-3">Secretaría: <strong>{node.nombre}</strong></p>
-            <div className="flex flex-col gap-3 px-6 pt-2 pb-1">
-              <div className="flex flex-col gap-1.5">
-                <Label>Nombre <span className="text-destructive">*</span></Label>
-                <Input value={uaNombre} onChange={(e) => setUaNombre(e.target.value)} placeholder="Ej. Dirección General de..." onKeyDown={(e) => e.key === "Enter" && handleAddUa()} autoFocus />
+            <DialogBody>
+              <p className="text-xs text-muted-foreground mb-3">Secretaría: <strong>{node.nombre}</strong></p>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label>Nombre <span className="text-destructive">*</span></Label>
+                  <Input value={uaNombre} onChange={(e) => setUaNombre(e.target.value)} placeholder="Ej. Dirección General de..." onKeyDown={(e) => e.key === "Enter" && handleAddUa()} autoFocus />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>Clave Reporte Plazas <span className="text-destructive">*</span></Label>
+                  <ClaveInput value={uaClave} onChange={setUaClave} />
+                </div>
+                {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
               </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Clave Reporte Plazas <span className="text-destructive">*</span></Label>
-                <ClaveInput value={uaClave} onChange={setUaClave} />
-              </div>
-              {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
-            </div>
-            <DialogFooter className={DIALOG_FOOTER_CLASS}>
+            </DialogBody>
+            <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
@@ -490,14 +469,16 @@ function SecretariaRow({
         <Dialog open={editSecOpen} onOpenChange={setEditSecOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Editar Secretaría</DialogTitle></DialogHeader>
-            <div className="flex flex-col gap-3 px-6 pt-4 pb-1">
-              <div className="flex flex-col gap-1.5">
-                <Label>Nombre <span className="text-destructive">*</span></Label>
-                <Input value={secNombre} onChange={(e) => setSecNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditSec()} autoFocus />
+            <DialogBody>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label>Nombre <span className="text-destructive">*</span></Label>
+                  <Input value={secNombre} onChange={(e) => setSecNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditSec()} autoFocus />
+                </div>
+                {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
               </div>
-              {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
-            </div>
-            <DialogFooter className={DIALOG_FOOTER_CLASS}>
+            </DialogBody>
+            <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
@@ -527,18 +508,20 @@ function SecretariaRow({
         <Dialog open={editUaOpen} onOpenChange={setEditUaOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Editar Unidad Administrativa</DialogTitle></DialogHeader>
-            <div className="flex flex-col gap-3 px-6 pt-4 pb-1">
-              <div className="flex flex-col gap-1.5">
-                <Label>Nombre <span className="text-destructive">*</span></Label>
-                <Input value={uaNombre} onChange={(e) => setUaNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditUa()} autoFocus />
+            <DialogBody>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label>Nombre <span className="text-destructive">*</span></Label>
+                  <Input value={uaNombre} onChange={(e) => setUaNombre(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleEditUa()} autoFocus />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>Clave Reporte Plazas</Label>
+                  <ClaveInput value={uaClave} onChange={setUaClave} />
+                </div>
+                {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
               </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Clave Reporte Plazas</Label>
-                <ClaveInput value={uaClave} onChange={setUaClave} />
-              </div>
-              {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
-            </div>
-            <DialogFooter className={DIALOG_FOOTER_CLASS}>
+            </DialogBody>
+            <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
@@ -564,7 +547,7 @@ function SecretariaRow({
   )
 }
 
-export function CatalogoCentralizadaTab() {
+export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -578,10 +561,14 @@ export function CatalogoCentralizadaTab() {
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
-    try { setTree(await fetchCentralizadaTree()) }
+    try {
+      const data = await fetchCentralizadaTree()
+      setTree(data)
+      onCountChange?.(data.length)
+    }
     catch (e) { setLoadError(e instanceof Error ? e.message : "Error al cargar el catálogo") }
     finally { setLoading(false) }
-  }, [])
+  }, [onCountChange])
 
   useEffect(() => { void load() }, [load])
 
@@ -613,36 +600,19 @@ export function CatalogoCentralizadaTab() {
   const totalUas = tree.reduce((s, n) => s + n.children.length, 0)
 
   return (
-      <>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <SearchInput placeholder="Buscar secretaría o unidad..." value={search} onChange={(e) => setSearch(e.target.value)} containerClassName="flex-1 max-w-sm" />
+          <Button
+              size="sm"
+              variant="primary"
+              className="shrink-0 gap-1.5"
+              onClick={() => { setNewSecNombre(""); setFormError(""); setAddSecOpen(true) }}
+          >
+            Agregar Secretaría
+          </Button>
+        </div>
         <Card className="shadow-sm border-[#e4e3dc] overflow-hidden">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-[#e4e3dc] bg-[#f9f8f5]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#773357]/10 shrink-0">
-                <Building2 className="h-5 w-5" style={{ color: VINO }} />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground leading-tight">Administración Pública Centralizada</h3>
-                {!loading && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {tree.length} secretaría{tree.length !== 1 ? "s" : ""} · {totalUas} unidad{totalUas !== 1 ? "es" : ""} administrativa{totalUas !== 1 ? "s" : ""}
-                    </p>
-                )}
-              </div>
-            </div>
-            <Button
-                size="sm"
-                className="shrink-0 rounded-full text-white font-medium gap-1.5 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white border-0"
-                onClick={() => { setNewSecNombre(""); setFormError(""); setAddSecOpen(true) }}
-            >
-              Agregar Secretaría
-            </Button>
-          </div>
-
-          {/* Búsqueda */}
-          <div className="px-6 py-3 border-b border-[#e4e3dc]">
-            <SearchInput placeholder="Buscar secretaría o unidad..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
 
           {/* Lista */}
           <CardContent className="p-4">
@@ -659,9 +629,11 @@ export function CatalogoCentralizadaTab() {
                   </div>
                 </div>
             ) : filtered.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-12">
-                  {search ? "Sin resultados para esa búsqueda." : "No hay secretarías. Agrega una con el botón de arriba."}
-                </p>
+                <EmptyState
+                  icon={Building2}
+                  title={search ? "Sin resultados para esa búsqueda" : "No hay secretarías registradas"}
+                  description={search ? "Ajusta los filtros para ver más resultados." : "Agrega una secretaría con el botón de arriba."}
+                />
             ) : (
                 <div className="space-y-2">
                   {filtered.map((node, i) => (
@@ -682,14 +654,16 @@ export function CatalogoCentralizadaTab() {
         <Dialog open={addSecOpen} onOpenChange={setAddSecOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Nueva Secretaría</DialogTitle></DialogHeader>
-            <div className="flex flex-col gap-3 px-6 pt-4 pb-1">
-              <div className="flex flex-col gap-1.5">
-                <Label>Nombre <span className="text-destructive">*</span></Label>
-                <Input className="h-9 w-4/5 self-center text-sm" value={newSecNombre} onChange={(e) => setNewSecNombre(e.target.value)} placeholder="Ej. Secretaría de Educación" onKeyDown={(e) => e.key === "Enter" && handleAddSec()} autoFocus />
+            <DialogBody>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label>Nombre <span className="text-destructive">*</span></Label>
+                  <Input className="h-9 text-sm font-light" value={newSecNombre} onChange={(e) => setNewSecNombre(e.target.value)} placeholder="Ej. Secretaría de Educación" onKeyDown={(e) => e.key === "Enter" && handleAddSec()} autoFocus />
+                </div>
+                {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
               </div>
-              {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
-            </div>
-            <DialogFooter className={DIALOG_FOOTER_CLASS}>
+            </DialogBody>
+            <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
               </DialogClose>
@@ -699,6 +673,6 @@ export function CatalogoCentralizadaTab() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </>
+      </div>
   )
 }

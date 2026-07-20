@@ -12,11 +12,12 @@ import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { Separator } from "@/components/ui/separator"
 import { FilterTabs } from "@/components/ui/filter-tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageLayout } from "@/components/page-layout"
 import {
   Eye, Edit3, Download, FileCheck,
   ChevronDown, ChevronRight, History, FileText,
-  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw,
+  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw, Info,
 } from "lucide-react"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
@@ -1059,7 +1060,7 @@ function DetalleView({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack}
@@ -1071,10 +1072,9 @@ function DetalleView({
           {estadoBadge(sol.estado)}
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-1.5 rounded-full"
-            style={{ backgroundColor: "#773357", color: "#fff" }}
+          <Button size="sm" variant="primary" className="gap-1.5 rounded-full"
             onClick={() => setShowDescargarConfirm(true)}>
-           Descagar Justificacion
+           Descargar Justificación
           </Button>
           {canEdit && !periodoConfirmado && (
             <>
@@ -1114,17 +1114,14 @@ function DetalleView({
 
       {(n.includes("en validacion justificaciones") || n.includes("enviada a validacion") ||
         n.includes("pendiente firma justificacion")) && (
-        <Card className="border-2 border-blue-400/40 shadow-sm">
-          <CardContent className="flex items-start gap-3 py-4">
-            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0 mt-0.5" />
-            <div>
-              <span className="text-sm font-medium text-blue-700">Solicitud en revisión por UEFA</span>
-              <p className="text-sm text-muted-foreground mt-1">
-                No se puede modificar mientras esté en proceso de aprobación.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light text-[#3266cb]">
+            <strong className="font-medium">Solicitud en revisión por UEFA</strong> — No se puede modificar mientras esté en proceso de aprobación.
+          </span>
+        </div>
       )}
 
       {isBorradorFueraDeTiempo && (
@@ -1327,64 +1324,62 @@ function DetalleView({
 
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
-            <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-              <button
-                onClick={() => setRightTab("historial")}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  rightTab === "historial"
-                    ? "bg-card text-card-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-card-foreground"
-                }`}
-              >
-                <History className="mr-1.5 inline h-4 w-4" />Historial
-              </button>
-              <button
-                onClick={() => setRightTab("bitacora")}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  rightTab === "bitacora"
-                    ? "bg-card text-card-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-card-foreground"
-                }`}
-              >
-                <img src="/iconos2/Icon.svg" alt="" className="mr-1.5 inline h-4 w-4" />Bitácora
-              </button>
-              <button
-                onClick={() => setRightTab("observaciones")}
-                className={`relative flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  rightTab === "observaciones"
-                    ? "bg-card text-card-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-card-foreground"
-                }`}
-              >
-                <AlertTriangle className="mr-1.5 inline h-4 w-4" />Observaciones
-                {hasObs && (
-                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white">
-                    {sol.todasObservaciones.length || 1}
-                  </span>
-                )}
-              </button>
-            </div>
+            <Tabs value={rightTab} onValueChange={(v) => setRightTab(v as "historial" | "bitacora" | "observaciones")}>
+              <TabsList className="w-full">
+                <TabsTrigger value="historial" className="flex-1">
+                  <History className="h-4 w-4" />Historial
+                </TabsTrigger>
+                <TabsTrigger value="bitacora" className="flex-1">
+                  <Info className="h-4 w-4" />Bitácora
+                </TabsTrigger>
+                <TabsTrigger value="observaciones" className="flex-1 relative">
+                  <AlertTriangle className="h-4 w-4" />Observaciones
+                  {hasObs && (
+                    <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#773357] px-1 text-[11px] font-normal text-white">
+                      {sol.todasObservaciones.length || 1}
+                    </span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
             {rightTab === "historial" && (
-              <div className="rounded-lg border border-border bg-card px-4 py-3">
-                <HistorialTimeline entries={sol.historial} />
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#dfe6c3] shadow-sm">
+                    <History className="h-5 w-5 text-[#2d331b]" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-content-high">Historial de Solicitud</span>
+                    <span className="text-[10px] text-content-low">
+                      {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""} registrado{sol.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-[#e4e3d6] px-3">
+                    <span className="text-[11px] font-semibold text-content-medium">
+                      {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-card px-4 py-3">
+                  <HistorialTimeline entries={sol.historial} />
+                </div>
               </div>
             )}
 
             {rightTab === "bitacora" && (
               <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                {/* Header */}
-                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #A0845C 0%, #C4A882 100%)" }}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 brightness-0 invert" />
+                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ffefb6] shadow-sm">
+                    <Info className="h-5 w-5 text-[#936901]" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">Bitácora de Captura</span>
-                    <span className="text-[10px] text-white/60">
+                    <span className="text-sm font-bold text-content-high">Bitácora de Captura</span>
+                    <span className="text-[10px] text-content-low">
                       {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} eventos registrados
                     </span>
                   </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                    <span className="text-[11px] font-semibold text-white/90">
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-[#e4e3d6] px-3">
+                    <span className="text-[11px] font-semibold text-content-medium">
                       {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} evento{sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0) !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -1409,12 +1404,12 @@ function DetalleView({
 
             {rightTab === "observaciones" && (
               <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <AlertTriangle className="h-5 w-5 text-white" />
+                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ffeaea] shadow-sm">
+                    <AlertTriangle className="h-5 w-5 text-[#87090c]" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">
+                    <span className="text-sm font-bold text-content-high">
                       {(() => {
                         const obs = getObservador(sol.estado)
                         if (!obs) return "Observaciones"
@@ -1422,14 +1417,14 @@ function DetalleView({
                         return `${tipo} — ${obs}`
                       })()}
                     </span>
-                    <span className="text-[10px] text-white/60">
+                    <span className="text-[10px] text-content-low">
                       {sol.todasObservaciones.length > 0
                         ? `${sol.todasObservaciones.length} observación${sol.todasObservaciones.length !== 1 ? "es" : ""}`
                         : sol.observacionMotivo ? "1 observación" : "Sin observaciones"}
                     </span>
                   </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                    <span className="text-[11px] font-semibold text-white/90">
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-[#e4e3d6] px-3">
+                    <span className="text-[11px] font-semibold text-content-medium">
                       {sol.todasObservaciones.length > 0 ? sol.todasObservaciones.length : sol.observacionMotivo ? 1 : 0} obs.
                     </span>
                   </div>

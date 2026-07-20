@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, RefreshCw, Shield, AlertCircle, Stamp } from "lucide-react"
+import { Loader2, RefreshCw, Shield, AlertCircle, Stamp, Inbox } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
 
 interface FirmanteInfo {
@@ -119,7 +120,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
       )}
 
       {!loading && items.length === 0 && !error && (
-        <p className="text-sm text-muted-foreground text-center py-12">No tienes firmas pendientes en este filtro.</p>
+        <EmptyState icon={Inbox} title="Sin firmas pendientes" description="No tienes firmas pendientes en este filtro." />
       )}
 
       {items.length > 0 && (

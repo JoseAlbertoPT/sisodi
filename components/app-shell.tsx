@@ -3,7 +3,6 @@
 import { useEffect, useState,useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { AppSidebar, type PageKey } from "@/components/app-sidebar"
-import { SidebarProvider } from "@/lib/sidebar-context"
 import { DashboardPage } from "@/components/pages/dashboard-page"
 import { BandejaFiltroPage } from "@/components/pages/bandeja-filtro-page"
 import { RevisionDOPage } from "@/components/pages/revision-do-page"
@@ -163,14 +162,14 @@ export function AppShell() {
 
   return (
     <SidebarContext.Provider value={{ collapsed , toggle }}>
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="flex h-screen overflow-hidden bg-bg-surface-low p-2 gap-4">
         <AppSidebar
           currentPage={sidebarCurrentPage}
           onNavigate={handleNavigate}
           collapsed={collapsed}
           onMenuReady={setMenuReady}
         />
-        <main className={`flex flex-1 flex-col overflow-y-auto ${showSplash ? "" : "p-6"}`}>
+        <main className="flex flex-1 flex-col overflow-y-auto bg-bg-base rounded-xl">
           {showSplash && user
             ? <WelcomePage userName={user.nombre} userRole={user.rol} />
             : menuReady ? renderPage() : null

@@ -242,18 +242,17 @@ export function CalendarioPage() {
       >
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/10">
-              <CalendarDays className="h-5 w-5 text-secondary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-card-foreground">Ejercicio Fiscal</h3>
-                <Badge variant="outline" className="text-xs font-mono tabular-nums">{ejercicio}</Badge>
-              </div>
-              <p className="text-[11px] text-muted-foreground">Fechas límite de recepción para dictaminación</p>
-            </div>
-          </div>
+          {!loading && (!isEmpty || editing) ? (
+            <FilterTabs
+              value={tabRecepcion}
+              onValueChange={(v) => setTabRecepcion(v as TabRecepcion)}
+              items={[
+                { value: "honorarios", label: "Honorarios", count: filledCount.honorarios || undefined },
+                { value: "asimilados", label: "Honorarios asimilados a salarios", count: filledCount.asimilados || undefined },
+                { value: "nombramiento", label: "Nombramiento por tiempo determinado", count: filledCount.nombramiento || undefined },
+              ]}
+            />
+          ) : <div />}
           <div className="flex flex-wrap items-center gap-2">
             <Select value={String(ejercicio)} onValueChange={(v) => setEjercicio(Number(v))} disabled={editing}>
               <SelectTrigger className="w-[100px] h-9 py-2 text-xs font-mono"><SelectValue placeholder="Año" /></SelectTrigger>
@@ -273,7 +272,7 @@ export function CalendarioPage() {
               )
             ) : (
               <div className="flex items-center gap-1.5 rounded-lg border border-secondary/30 bg-secondary/5 p-1">
-                <Button size="sm" className="gap-1.5 text-xs h-7 rounded-full shadow-sm bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white border-0" onClick={handleSaveEdit} disabled={saving}>
+                <Button size="sm" variant="primary" className="gap-1.5 text-xs h-7" onClick={handleSaveEdit} disabled={saving}>
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}Guardar
                 </Button>
                 <Button
@@ -289,7 +288,7 @@ export function CalendarioPage() {
             )}
             {!editing && !showNewYearInput && <div className="h-5 w-px bg-border" />}
             {!editing && !showNewYearInput && (
-              <Button size="sm" className="gap-1.5 text-xs h-9 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white border-0" onClick={() => setShowNewYearInput(true)}>
+              <Button size="sm" variant="primary" className="gap-1.5 text-xs h-9" onClick={() => setShowNewYearInput(true)}>
                 Nuevo año
               </Button>
             )}
@@ -333,7 +332,7 @@ export function CalendarioPage() {
                   Cree el calendario para generar automáticamente los 12 meses y 24 quincenas. Solo deberá completar el día de cada fecha límite.
                 </p>
               </div>
-              <Button className="gap-2 bg-[#773357] hover:bg-[#773357] active:bg-[#773357] active:text-white text-white" onClick={handleCreateYear}>
+              <Button variant="primary" className="gap-2" onClick={handleCreateYear}>
                 <CalendarPlus className="h-4 w-4" />Crear calendario {ejercicio}
               </Button>
             </CardContent>
@@ -341,16 +340,6 @@ export function CalendarioPage() {
         )}
         {!loading && (!isEmpty || editing) && (
           <>
-            <FilterTabs
-              value={tabRecepcion}
-              onValueChange={(v) => setTabRecepcion(v as TabRecepcion)}
-              items={[
-                { value: "honorarios", label: "Honorarios", count: filledCount.honorarios || undefined },
-                { value: "asimilados", label: "Honorarios asimilados a salarios", count: filledCount.asimilados || undefined },
-                { value: "nombramiento", label: "Nombramiento por tiempo determinado", count: filledCount.nombramiento || undefined },
-              ]}
-            />
-
             {editing && (
               <div className="flex items-center gap-2 rounded-lg bg-secondary/5 border border-secondary/20 px-4 py-2.5">
                 <Pencil className="h-3.5 w-3.5 text-secondary shrink-0" />
@@ -361,10 +350,10 @@ export function CalendarioPage() {
             )}
 
             {tabRecepcion === "honorarios" && (
-              <div className="overflow-x-auto overflow-y-hidden rounded-[8px] border border-[#E5E7EB]">
+              <div className="overflow-x-auto overflow-y-hidden rounded-[8px] border border-border-low">
                 <table className="w-full min-w-[640px] text-sm table-fixed">
                   <thead>
-                    <tr className="bg-secondary text-secondary-foreground">
+                    <tr className="bg-bg-base text-content-high">
                       <th className="px-5 py-3 text-left font-semibold align-middle w-1/5">Mes de aplicación</th>
                       <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
                         Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)
@@ -414,11 +403,11 @@ export function CalendarioPage() {
             )}
 
             {(tabRecepcion === "asimilados" || tabRecepcion === "nombramiento") && (
-              <div className="overflow-x-auto overflow-y-hidden rounded-[8px] border border-[#E5E7EB]">
+              <div className="overflow-x-auto overflow-y-hidden rounded-[8px] border border-border-low">
                 <table className="w-full min-w-[640px] text-sm table-fixed">
 
                   <thead>
-                    <tr className="bg-secondary text-secondary-foreground">
+                    <tr className="bg-bg-base text-content-high">
                       <th className="px-5 py-3 text-left font-semibold align-middle w-1/5">Quincena de Aplicacion</th>
                       <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
                         Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)

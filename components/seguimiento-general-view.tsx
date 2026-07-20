@@ -226,10 +226,10 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
               <span className="text-sm">No hay solicitudes que coincidan.</span>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-secondary text-secondary-foreground">
+                  <tr className="bg-bg-base text-content-high">
                     <th className="px-3 py-2.5 text-left font-semibold">Folio</th>
                     <th className="px-3 py-2.5 text-left font-semibold">Secretaría</th>
                     <th className="px-3 py-2.5 text-left font-semibold">Régimen</th>
