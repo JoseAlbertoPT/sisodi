@@ -17,7 +17,7 @@ const PRESTACION_SERVICIOS: FirmanteTemplate[] = [
     cargo: "Persona Titular de la Unidad Administrativa u Organismo Auxiliar",
   },
   {
-    orden: 2, rol: "Revisó (UEFA)", tipo: "interno", bandeja: "uefa",
+    orden: 2, rol: "Revisó", tipo: "interno", bandeja: "uefa",
     cargo: "Persona Titular de la Unidad de Enlace Financiero Administrativo o Equivalente",
   },
   {
@@ -44,7 +44,7 @@ const NOMBRAMIENTO_TIEMPO_DET: FirmanteTemplate[] = [
     cargo: "Persona Titular de la Unidad Administrativa u Organismo Auxiliar",
   },
   {
-    orden: 3, rol: "Revisó (UEFA)", tipo: "interno", bandeja: "uefa",
+    orden: 3, rol: "Revisó", tipo: "interno", bandeja: "uefa",
     cargo: "Persona Titular de la Unidad de Enlace Financiero Administrativo o Equivalente",
   },
   {
