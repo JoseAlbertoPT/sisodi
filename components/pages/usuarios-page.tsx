@@ -4,7 +4,7 @@ import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG } from "@/components/ui/status-badge"
+import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
@@ -567,6 +567,14 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     return e
   }
 
+  const stepHasProgress = (s: number): boolean => {
+    if (s === 1) return !!(form.nombre.trim() || form.correo.trim() || form.rfc.trim())
+    if (s === 2) return !!(form.password.trim() || form.rol)
+    if (s === 3) return !!form.secretariaId
+    if (s === 4) return selectedPermisos.menuIds.length > 0
+    return false
+  }
+
   const handleNext = () => {
     const e = validateStep(step)
     if (Object.keys(e).length) { setErrors(e); return }
@@ -783,11 +791,11 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             const circleStyle = done
               ? { width: 32, height: 32, flexShrink: 0, position: 'relative' as const, zIndex: 1 }
               : active
-              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
+              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#773357', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
               : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
 
             const labelStyle = active
-              ? { fontSize: 12, fontWeight: 600, color: '#773357', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
+              ? { fontSize: 12, fontWeight: 400, color: '#374151', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
               : done
               ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
               : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
@@ -800,7 +808,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     left: '-50%',
                     width: '100%',
                     height: 2,
-                    backgroundColor: done ? '#2A3B29' : '#D1D5DB',
+                    backgroundColor: (done || active) ? '#15803d' : (step === idx && stepHasProgress(step)) ? '#773357' : '#D1D5DB',
                     zIndex: 0,
                   }} />
                 )}
@@ -809,7 +817,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     {done ? (
                       <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
                     ) : (
-                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#773357' : '#9CA3AF', lineHeight: 1 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#ffffff' : '#9CA3AF', lineHeight: 1 }}>
                         {n}
                       </span>
                     )}
@@ -1252,7 +1260,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 Centralizada
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-light" style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}>
+              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-light" style={{ backgroundColor: C_AMARILLO_BG, color: C_AMARILLO }}>
                 Paraestatal
               </span>
             )}
@@ -2021,7 +2029,7 @@ export function UsuariosPage() {
                       {row.tipoAdministracion === "centralizada" ? (
                         <StatusBadge label="Centralizada" color={C_AZUL_REVISION} bgColor={C_AZUL_REVISION_BG} />
                       ) : (
-                        <StatusBadge label="Paraestatal" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
+                        <StatusBadge label="Paraestatal" color={C_AMARILLO} bgColor={C_AMARILLO_BG} />
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px]">

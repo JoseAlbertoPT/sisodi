@@ -23,7 +23,7 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion"
 import {
-  CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
+  CheckCircle2, RotateCcw, Download, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
   RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
   Shield, FileSignature, X, MoreHorizontal,
@@ -37,9 +37,13 @@ import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/
 import { FirmaModal } from "@/components/firma-modal"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
-import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { type HistorialEntryData } from "@/components/historial-timeline"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
+import {
+  StatusTabsList, HistorialPanel, BitacoraPanel, ObservacionesPanel,
+  type BitacoraEntry, type StatusTabKey,
+} from "@/components/solicitud-status-tabs"
 
 type UefaEstado = string
 
@@ -527,63 +531,6 @@ function DictamenModal({
 
 function UefaEstadoBadge({ estado }: { estado: string }) {
   return estadoBadge(estado)
-}
-
-function DevolucionObs({ comentario }: { comentario: string }) {
-  const lineas = comentario.split("\n").filter(Boolean)
-  const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
-  const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join("\n").trim()
-  const tieneChecks  = itemsChecklist.length > 0
-  const tieneGeneral = comentarioGeneral.length > 0
-  return (
-    <div className="flex flex-col gap-0">
-      {tieneChecks && (
-        <div className="flex flex-col gap-0">
-          {itemsChecklist.map((linea, idx) => {
-            const [titulo, obs] = linea.split("::")
-            const numMatch = titulo.match(/^(\d+)\./)
-            const num   = numMatch ? numMatch[1] : String(idx + 1)
-            const label = titulo.replace(/^\d+\.\s*/, "").trim()
-            const isLast = idx === itemsChecklist.length - 1
-            return (
-              <div key={idx} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/50 bg-[#832B56]/5 text-[10px] font-bold text-[#832B56]">
-                    {num}
-                  </div>
-                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[#832B56]/15 my-0.5" />}
-                </div>
-                <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
-                  <span className="text-xs font-semibold text-[#832B56] leading-snug">{label}</span>
-                  {obs?.trim() && (
-                    <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
-                      {obs.trim()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-      {tieneChecks && tieneGeneral && (
-        <div className="flex gap-3">
-          <div className="flex flex-col items-center">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/30 bg-white text-[10px] text-[#832B56]/50">
-              <span className="text-[8px]">✎</span>
-            </div>
-          </div>
-          <div className="flex flex-col gap-0.5 flex-1 pb-0">
-            <span className="text-[10px] font-semibold text-[#832B56]/60 uppercase tracking-wide">Observación general</span>
-            <p className="text-xs text-[#832B56]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
-          </div>
-        </div>
-      )}
-      {!tieneChecks && tieneGeneral && (
-        <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
-      )}
-    </div>
-  )
 }
 
 function ObservacionTimeline({ comentario }: { comentario: string }) {
@@ -1076,9 +1023,29 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
   const isDevuelta         = !isObservada && (_n.includes("observad") || _n.includes("devuelta"))
   const tieneObsActivas    = (isObservada || isDevuelta) && solicitud.todasObservaciones.length > 0
 
-  const [rightTab, setRightTab] = useState<"historial" | "observaciones">(
+  const [rightTab, setRightTab] = useState<StatusTabKey>(
     tieneObsActivas ? "observaciones" : "historial"
   )
+  const bitacora: BitacoraEntry[] = useMemo(() => {
+    const cambios: BitacoraEntry = {
+      seccion: "Historial de cambios",
+      eventos: solicitud.historial.map((h) => ({
+        fecha: h.fecha, usuario: h.usuario, descripcion: h.estadoNuevo,
+      })),
+    }
+    const adjuntosRaw: any[] = solicitud._raw?.adjunto ?? []
+    const adjuntos: BitacoraEntry = {
+      seccion: "Documentos Adjuntos",
+      eventos: adjuntosRaw.map((a: any) => ({
+        fecha: a.fecha_subida
+          ? new Date(a.fecha_subida).toISOString().replace("T", " ").slice(0, 16)
+          : "",
+        usuario: "Sistema",
+        descripcion: `Archivo cargado: ${a.nombre_archivo}`,
+      })),
+    }
+    return adjuntos.eventos.length > 0 ? [cambios, adjuntos] : [cambios]
+  }, [solicitud])
   const isEnProceso        = tab === "En Proceso"
 
   const folioDictamenMostrar = solicitud.numeroDictamen
@@ -1203,17 +1170,14 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
       )}
 
       {isEmitida && folioDictamenMostrar && (
-        <Card className="border-2 border-primary/30 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <FileCheck className="h-5 w-5 text-primary" />
-            <div>
-              <span className="text-sm font-medium text-primary">Dictamen Emitido</span>
-              <p className="text-xs text-muted-foreground">
-                No. {folioDictamenMostrar}{solicitud.fechaDictamen ? ` — ${solicitud.fechaDictamen}` : ""}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light text-[#3266cb]">
+            Dictamen Emitido — No. {folioDictamenMostrar}{solicitud.fechaDictamen ? ` — ${solicitud.fechaDictamen}` : ""}
+          </span>
+        </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
@@ -1225,112 +1189,36 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
 
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
-            <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1">
-              <button
-                onClick={() => setRightTab("historial")}
-                className={`flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
-                  rightTab === "historial"
-                    ? "bg-card shadow-sm text-[#3a4a2a]"
-                    : "text-muted-foreground hover:text-card-foreground"
-                }`}
-              >
-                <History className="h-4 w-4" />Historial
-              </button>
-              <button
-                onClick={() => setRightTab("observaciones")}
-                className={`relative flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
-                  rightTab === "observaciones"
-                    ? "bg-card shadow-sm text-[#3a4a2a]"
-                    : "text-muted-foreground hover:text-card-foreground"
-                }`}
-              >
-                <AlertTriangle className="h-4 w-4" />Observaciones
-                {tieneObsActivas && (
-                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white">
-                    {solicitud.todasObservaciones.length}
-                  </span>
-                )}
-              </button>
-            </div>
+            <StatusTabsList
+              value={rightTab}
+              onChange={setRightTab}
+              obsCount={tieneObsActivas ? solicitud.todasObservaciones.length : 0}
+            />
 
             {rightTab === "historial" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <History className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">Historial de Estatus</span>
-                    <span className="text-[10px] text-white/60">
-                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""} registrada{solicitud.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                    <span className="text-[11px] font-semibold text-white/90">
-                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-card px-5 pt-4 pb-2">
-                  <HistorialTimeline entries={solicitud.historial} />
-                </div>
-              </div>
+              <HistorialPanel entries={solicitud.historial} title="Historial de Estatus" />
+            )}
+
+            {rightTab === "bitacora" && (
+              <BitacoraPanel bitacora={bitacora} />
             )}
 
             {rightTab === "observaciones" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <AlertTriangle className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">
-                      {isObservada
-                        ? "Observación de Validacion UEFA"
-                        : isDevuelta
-                          ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
-                          : "Observaciones"}
-                    </span>
-                    <span className="text-[10px] text-white/60">
-                      {tieneObsActivas
-                        ? `${solicitud.todasObservaciones.length} observación${solicitud.todasObservaciones.length !== 1 ? "es" : ""}`
-                        : "Sin observaciones activas"}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                    <span className="text-[11px] font-semibold text-white/90">
-                      {tieneObsActivas ? solicitud.todasObservaciones.length : 0} obs.
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-card p-4">
-                  {tieneObsActivas ? (
-                    <div className="flex flex-col gap-2">
-                      {solicitud.todasObservaciones.map((obs, i) => (
-                        <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
-                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
-                          </div>
-                          <DevolucionObs comentario={obs.comentario} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (isObservada || isDevuelta) && solicitud.observacionesUefa ? (
-                    <div className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
-                      {solicitud.fechaObservacion && (
-                        <span className="text-[10px] text-muted-foreground">{solicitud.fechaObservacion}</span>
-                      )}
-                      {solicitud.observadoPor && (
-                        <span className="text-[10px] text-muted-foreground">Por: {solicitud.observadoPor}</span>
-                      )}
-                      <DevolucionObs comentario={solicitud.observacionesUefa} />
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
-                  )}
-                </div>
-              </div>
+              <ObservacionesPanel
+                title={
+                  isObservada
+                    ? "Observación de Validacion UEFA"
+                    : isDevuelta
+                      ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
+                      : "Observaciones"
+                }
+                todasObservaciones={tieneObsActivas ? solicitud.todasObservaciones : []}
+                single={
+                  !tieneObsActivas && (isObservada || isDevuelta) && solicitud.observacionesUefa
+                    ? { motivo: solicitud.observacionesUefa, fecha: solicitud.fechaObservacion, usuario: solicitud.observadoPor }
+                    : null
+                }
+              />
             )}
           </div>
         </ScrollArea>

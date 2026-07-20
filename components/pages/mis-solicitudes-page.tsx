@@ -12,12 +12,11 @@ import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { Separator } from "@/components/ui/separator"
 import { FilterTabs } from "@/components/ui/filter-tabs"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageLayout } from "@/components/page-layout"
 import {
   Eye, Edit3, Download, FileCheck,
-  ChevronDown, ChevronRight, History, FileText,
-  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw, Info,
+  ChevronDown, ChevronRight, FileText,
+  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw,
 } from "lucide-react"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
@@ -45,9 +44,13 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
-import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { type HistorialEntryData } from "@/components/historial-timeline"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useRealtime } from "@/hooks/use-realtime"
+import {
+  StatusTabsList, HistorialPanel, BitacoraPanel, ObservacionesPanel, DevolucionObs,
+  type BitacoraEntry, type StatusTabKey,
+} from "@/components/solicitud-status-tabs"
 type UrgTab =
   | "Borradores"
   | "En aprobación"
@@ -87,11 +90,6 @@ type UrgEstado =
   | "En proceso DO"
   | "Aprobado"
   | "Emitido"
-
-interface BitacoraEntry {
-  seccion: string
-  eventos: { fecha: string; usuario: string; descripcion: string }[]
-}
 
 const INICIALES_MES: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
@@ -565,64 +563,6 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
           </div>
         )
       })}
-    </div>
-  )
-}
-
-function DevolucionObs({ comentario }: { comentario: string }) {
-  const lineas = comentario.split("\n").filter(Boolean)
-  const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
-  const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join("\n").trim()
-  const tieneChecks   = itemsChecklist.length > 0
-  const tieneGeneral  = comentarioGeneral.length > 0
-  return (
-    <div className="flex flex-col gap-0">
-      {tieneChecks && (
-        <div className="flex flex-col gap-0">
-          {itemsChecklist.map((linea, idx) => {
-            const [titulo, obs] = linea.split("::")
-            const numMatch = titulo.match(/^(\d+)\./)
-            const num   = numMatch ? numMatch[1] : String(idx + 1)
-            const label = titulo.replace(/^\d+\.\s*/, "").trim()
-            const isLast = idx === itemsChecklist.length - 1
-            return (
-              <div key={idx} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/50 bg-[#832B56]/5 text-[10px] font-bold text-[#832B56]">
-                    {num}
-                  </div>
-                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[#832B56]/15 my-0.5" />}
-                </div>
-                <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
-                  <span className="text-xs font-semibold text-[#832B56] leading-snug">{label}</span>
-                  {obs?.trim() && (
-                    <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
-                      {obs.trim()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {tieneChecks && tieneGeneral && (
-        <div className="flex gap-3">
-          <div className="flex flex-col items-center">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/30 bg-white text-[10px] text-[#832B56]/50">
-              <span className="text-[8px]">✎</span>
-            </div>
-          </div>
-          <div className="flex flex-col gap-0.5 flex-1 pb-0">
-            <span className="text-[10px] font-semibold text-[#832B56]/60 uppercase tracking-wide">Observación general</span>
-            <p className="text-xs text-[#832B56]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
-          </div>
-        </div>
-      )}
-      {!tieneChecks && tieneGeneral && (
-        <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
-      )}
     </div>
   )
 }
@@ -1301,17 +1241,14 @@ function DetalleView({
         </Card>
       )}
       {isEmitido && sol.numeroDictamen && (
-        <Card className="border-2 border-emerald-400/40 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <FileCheck className="h-5 w-5 text-emerald-600" />
-            <div>
-              <span className="text-sm font-medium text-emerald-700">Dictamen Emitido</span>
-              <p className="text-xs text-muted-foreground">
-                No. {sol.numeroDictamen} — Fecha: {sol.fechaDictamen}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light text-[#3266cb]">
+            Dictamen Emitido — No. {sol.numeroDictamen} — Fecha: {sol.fechaDictamen}
+          </span>
+        </div>
       )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
         <ScrollArea className="h-[calc(100vh-220px)]">
@@ -1324,135 +1261,32 @@ function DetalleView({
 
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
-            <Tabs value={rightTab} onValueChange={(v) => setRightTab(v as "historial" | "bitacora" | "observaciones")}>
-              <TabsList className="w-full">
-                <TabsTrigger value="historial" className="flex-1">
-                  <History className="h-4 w-4" />Historial
-                </TabsTrigger>
-                <TabsTrigger value="bitacora" className="flex-1">
-                  <Info className="h-4 w-4" />Bitácora
-                </TabsTrigger>
-                <TabsTrigger value="observaciones" className="flex-1 relative">
-                  <AlertTriangle className="h-4 w-4" />Observaciones
-                  {hasObs && (
-                    <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#773357] px-1 text-[11px] font-normal text-white">
-                      {sol.todasObservaciones.length || 1}
-                    </span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <StatusTabsList
+              value={rightTab}
+              onChange={setRightTab}
+              obsCount={hasObs ? (sol.todasObservaciones.length || 1) : 0}
+            />
             {rightTab === "historial" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#dfe6c3] shadow-sm">
-                    <History className="h-5 w-5 text-[#2d331b]" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-content-high">Historial de Solicitud</span>
-                    <span className="text-[10px] text-content-low">
-                      {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""} registrado{sol.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-[#e4e3d6] px-3">
-                    <span className="text-[11px] font-semibold text-content-medium">
-                      {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-card px-4 py-3">
-                  <HistorialTimeline entries={sol.historial} />
-                </div>
-              </div>
+              <HistorialPanel entries={sol.historial} title="Historial de Solicitud" />
             )}
 
             {rightTab === "bitacora" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ffefb6] shadow-sm">
-                    <Info className="h-5 w-5 text-[#936901]" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-content-high">Bitácora de Captura</span>
-                    <span className="text-[10px] text-content-low">
-                      {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} eventos registrados
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-[#e4e3d6] px-3">
-                    <span className="text-[11px] font-semibold text-content-medium">
-                      {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} evento{sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0) !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Timeline */}
-                <div className="bg-card px-5 pt-4 pb-2">
-                  <HistorialTimeline
-                    entries={sol.bitacora.flatMap((entry) =>
-                      entry.eventos.map((ev) => ({
-                        fecha: ev.fecha,
-                        usuario: ev.usuario,
-                        estadoAnterior: null,
-                        estadoNuevo: ev.descripcion.replace("Archivo cargado: ", ""),
-                        comentario: null,
-                      } satisfies HistorialEntryData))
-                    )}
-                  />
-                </div>
-              </div>
+              <BitacoraPanel bitacora={sol.bitacora} title="Bitácora de Captura" />
             )}
 
             {rightTab === "observaciones" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ffeaea] shadow-sm">
-                    <AlertTriangle className="h-5 w-5 text-[#87090c]" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-content-high">
-                      {(() => {
-                        const obs = getObservador(sol.estado)
-                        if (!obs) return "Observaciones"
-                        const tipo = obs === "Validacion UEFA" || obs === "Validacion DGDO" ? "Observación" : "Devolución"
-                        return `${tipo} — ${obs}`
-                      })()}
-                    </span>
-                    <span className="text-[10px] text-content-low">
-                      {sol.todasObservaciones.length > 0
-                        ? `${sol.todasObservaciones.length} observación${sol.todasObservaciones.length !== 1 ? "es" : ""}`
-                        : sol.observacionMotivo ? "1 observación" : "Sin observaciones"}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-[#e4e3d6] px-3">
-                    <span className="text-[11px] font-semibold text-content-medium">
-                      {sol.todasObservaciones.length > 0 ? sol.todasObservaciones.length : sol.observacionMotivo ? 1 : 0} obs.
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-card p-4">
-                  {sol.todasObservaciones.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {sol.todasObservaciones.map((obs, i) => (
-                        <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
-                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
-                          </div>
-                          <DevolucionObs comentario={obs.comentario} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : sol.observacionMotivo ? (
-                    <div className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
-                      {sol.observacionFecha && <span className="text-[10px] text-muted-foreground">{sol.observacionFecha}</span>}
-                      {sol.observacionUsuario && <span className="text-[10px] text-muted-foreground">Por: {sol.observacionUsuario}</span>}
-                      <DevolucionObs comentario={sol.observacionMotivo} />
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
-                  )}
-                </div>
-              </div>
+              <ObservacionesPanel
+                title={(() => {
+                  const obs = getObservador(sol.estado)
+                  if (!obs) return "Observaciones"
+                  const tipo = obs === "Validacion UEFA" || obs === "Validacion DGDO" ? "Observación" : "Devolución"
+                  return `${tipo} — ${obs}`
+                })()}
+                todasObservaciones={sol.todasObservaciones}
+                single={sol.observacionMotivo
+                  ? { motivo: sol.observacionMotivo, fecha: sol.observacionFecha, usuario: sol.observacionUsuario }
+                  : null}
+              />
             )}
           </div>
         </ScrollArea>

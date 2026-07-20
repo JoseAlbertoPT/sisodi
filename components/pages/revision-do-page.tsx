@@ -36,10 +36,11 @@ import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 import { FirmaModal } from "@/components/firma-modal"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
-import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { type HistorialEntryData } from "@/components/historial-timeline"
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
 import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
 import { C_VERDE_ESTADO, C_ROSA_VINO, C_AMARILLO } from "@/components/ui/status-badge"
+import { HistorialPanel, BitacoraPanel, ObservacionesPanel, type BitacoraEntry } from "@/components/solicitud-status-tabs"
 const COLOR_SI        = "#6E795A"
 const COLOR_SI_TEXT   = "#283c2a"
 const COLOR_NO        = "#832B56"
@@ -136,7 +137,7 @@ export interface SolicitudDetalle {
   _raw: any
 }
 type ChecklistValor = "si" | "no" | "noAplica" | null
-type ActiveTab = "review" | "emision" | "observaciones" | "historial"
+type ActiveTab = "review" | "emision" | "observaciones" | "historial" | "bitacora"
 interface RevisionDOPageProps {
   solicitudId: string
   filtro: 1 | 2 | 3
@@ -1305,6 +1306,27 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     const to   = dateA <= dateB ? dateB : dateA
     return { from, to }
   }, [solicitud, calData])
+  const bitacora: BitacoraEntry[] = useMemo(() => {
+    if (!solicitud) return []
+    const cambios: BitacoraEntry = {
+      seccion: "Historial de cambios",
+      eventos: solicitud.historial.map((h) => ({
+        fecha: h.fecha, usuario: h.usuario, descripcion: h.estadoNuevo,
+      })),
+    }
+    const adjuntosRaw: any[] = solicitud._raw?.adjunto ?? []
+    const adjuntos: BitacoraEntry = {
+      seccion: "Documentos Adjuntos",
+      eventos: adjuntosRaw.map((a: any) => ({
+        fecha: a.fecha_subida
+          ? new Date(a.fecha_subida).toISOString().replace("T", " ").slice(0, 16)
+          : "",
+        usuario: "Sistema",
+        descripcion: `Archivo cargado: ${a.nombre_archivo}`,
+      })),
+    }
+    return adjuntos.eventos.length > 0 ? [cambios, adjuntos] : [cambios]
+  }, [solicitud])
   const [modalidadFirma,        setModalidadFirma]        = useState<"electronica" | "autografa">("electronica")
   const [selectedDestinatarios, setSelectedDestinatarios] = useState<string[]>([])
   const [selladoEmisionSubido,  setSelladoEmisionSubido]  = useState(false)
@@ -1835,6 +1857,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "historial" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
                 <History className="mr-1.5 inline h-4 w-4" />Historial
               </button>
+              <button onClick={() => setActiveTab("bitacora")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "bitacora" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
+                <FileText className="mr-1.5 inline h-4 w-4" />Bitácora
+              </button>
             </div>
 
             {activeTab === "review" && !isEmitido && (
@@ -2042,21 +2068,21 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
                 {filtro !== 1 && (
                   <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                    <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #A0845C 0%, #C4A882 100%)" }}>
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                        <Shield className="h-5 w-5 text-white" />
+                    <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#f0e6d2] shadow-sm">
+                        <Shield className="h-5 w-5 text-[#8a6d3f]" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-white flex items-center gap-2">
+                        <span className="text-sm font-bold text-content-high flex items-center gap-2">
                           Revisión de Dirección General
                         </span>
-                        <span className="text-xs font-semibold text-white/90">
+                        <span className="text-[10px] text-content-low">
                           Determine si procede la emisión o requiere observaciones.
                         </span>
                       </div>
                       {sinObservacion && (
-                        <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                          <span className="text-[11px] font-semibold text-white/90">Sin obs.</span>
+                        <div className="ml-auto flex h-7 items-center rounded-full bg-[#e4e3d6] px-3">
+                          <span className="text-[11px] font-semibold text-content-medium">Sin obs.</span>
                         </div>
                       )}
                     </div>
@@ -2260,55 +2286,18 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
             )}
 
             {activeTab === "observaciones" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <AlertCircle className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">Observaciones</span>
-                    <span className="text-[10px] text-white/60">
-                      {solicitud.observacionesTodas.length} observación{solicitud.observacionesTodas.length !== 1 ? "es" : ""}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                    <span className="text-[11px] font-semibold text-white/90">{solicitud.observacionesTodas.length} obs.</span>
-                  </div>
-                </div>
-                <div className="bg-card p-4 flex flex-col gap-2">
-                  {solicitud.observacionesTodas.map((obs, i) => (
-                    <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
-                        <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
-                      </div>
-                      <p className="text-xs text-card-foreground leading-relaxed whitespace-pre-line">{obs.comentario}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ObservacionesPanel
+                title="Observaciones"
+                todasObservaciones={solicitud.observacionesTodas}
+              />
             )}
 
             {activeTab === "historial" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <History className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">Historial del Expediente</span>
-                    <span className="text-[10px] text-white/60">
-                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""} registrada{solicitud.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                    <span className="text-[11px] font-semibold text-white/90">{solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""}</span>
-                  </div>
-                </div>
-                <div className="bg-card px-5 pt-4 pb-2">
-                  <HistorialTimeline entries={solicitud.historial} />
-                </div>
-              </div>
+              <HistorialPanel entries={solicitud.historial} title="Historial del Expediente" />
+            )}
+
+            {activeTab === "bitacora" && (
+              <BitacoraPanel bitacora={bitacora} />
             )}
           </div>
         </ScrollArea>
