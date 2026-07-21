@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge, T_INFO, T_INFO_BG, T_SUCCESS, T_SUCCESS_BG } from "@/components/ui/status-badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Loader2, RefreshCw, ClipboardCheck, Shield, CheckCircle2, AlertCircle } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
@@ -90,6 +91,17 @@ export function ProgresoFirmadoPage() {
   const totalPages = Math.max(1, Math.ceil(procesos.length / ITEMS_PER_PAGE))
   useEffect(() => { if (page > totalPages) setPage(totalPages) }, [totalPages, page])
   const paginated = procesos.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+
+  const estadoProcesoBadge = (estado: string) => {
+    const completado = estado === "completado"
+    return (
+      <StatusBadge
+        label={completado ? "Completado" : "Iniciado"}
+        color={completado ? T_SUCCESS : T_INFO}
+        bgColor={completado ? T_SUCCESS_BG : T_INFO_BG}
+      />
+    )
+  }
 
   const faseDe = (p: Proceso) => {
     if (p.estado === "completado") return "Completado"
@@ -181,7 +193,7 @@ export function ProgresoFirmadoPage() {
                       <td className="py-2.5 pr-4 font-mono">{p.folio_recepcion ?? p.folio_justificacion ?? `SOL-${p.solicitud_id}`}</td>
                       <td className="py-2.5 pr-4">{p.tipo_solicitud ?? "—"}</td>
                       <td className="py-2.5 pr-4">{p.modalidad_firma === "electronica" ? "Electrónica" : p.modalidad_firma === "autografa" ? "Autógrafa" : "—"}</td>
-                      <td className="py-2.5 pr-4"><Badge variant="outline">{p.estado}</Badge></td>
+                      <td className="py-2.5 pr-4">{estadoProcesoBadge(p.estado)}</td>
                       <td className="py-2.5 pr-4 font-mono">{p.firmados}/{p.total_firmantes}</td>
                       <td className="py-2.5 pr-4">{faseDe(p)}</td>
                       <td className="py-2.5 pr-4 text-muted-foreground text-xs">{new Date(p.fecha_creacion).toLocaleDateString("es-MX")}</td>
@@ -210,7 +222,7 @@ export function ProgresoFirmadoPage() {
             </DialogHeader>
             <div className="flex flex-col gap-4 text-sm px-6 pb-6">
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <Badge variant="outline">{detalle.estado}</Badge>
+                {estadoProcesoBadge(detalle.estado)}
                 <span>{detalle.firmados}/{detalle.total_firmantes} firmas</span>
                 <span>·</span>
                 <span>{faseDe(detalle)}</span>

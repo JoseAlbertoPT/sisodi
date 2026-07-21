@@ -192,7 +192,7 @@ export function estadoBadge(estado: string): React.ReactElement {
   else if (n.includes("observado por uefa") || (n.includes("observado por validacion") && !n.includes("final")))
                                                                          { label = "Obs. UEFA";        color = T_MORA;     bgColor = T_MORA_BG }
   else if (n.includes("devuelta por do") || n.includes("observado do filtro") || n.includes("observado por do"))
-                                                                         { label = "Devuelta por DO";  color = T_ON_ERROR_LOW; bgColor = T_ERROR_BG }
+                                                                         { label = "Devuelta por DO";  color = T_MORA;     bgColor = T_MORA_BG }
   else if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion"))
                                                                          { label = "En Aprobación";    color = T_INFO;     bgColor = T_INFO_BG }
   else if (n.includes("en revision revisor") || n === "aprobado por revisor" || n === "aceptado por revisor")

@@ -75,6 +75,9 @@ type UrgEstado =
   | "En Revision Emisor"
   | "Observado por Emisor"
   | "Pendiente Firma Dictamen"
+  | "Pendiente Firma Revision"
+  | "Pendiente Firma Validacion"
+  | "Pendiente Firma Emisor"
   | "En Validacion Final"
   | "Observado por Validacion Final"
   | "En revision DO Filtro 1"
@@ -87,6 +90,8 @@ type UrgEstado =
   | "En proceso DO"
   | "Aprobado"
   | "Emitido"
+  | "Modificada"
+  | "Rechazado"
 
 interface BitacoraEntry {
   seccion: string
@@ -256,8 +261,6 @@ function getSubEstadoDGDO(estado: UrgEstado): string | null {
   const n = (estado ?? "").toLowerCase()
   if (n === "pendiente do" || n.includes("en revision do"))
     return "En Revisión"
-  if (n.includes("pendiente firma dictamen"))
-    return "En Emisión"
   return null
 }
 
@@ -352,12 +355,12 @@ function mapApiItem(item: any): UrgSolicitud {
     "En Revision Revisor", "Aceptado por Revisor", "Aprobado por Revisor", "Observado por Revisor",
     "Observado por DO",
     "En Revision Emisor", "Observado por Emisor",
-    "Pendiente Firma Dictamen",
+    "Pendiente Firma Dictamen", "Pendiente Firma Revision", "Pendiente Firma Validacion", "Pendiente Firma Emisor",
     "En Validacion Final", "Observado por Validacion Final",
     "En revision DO Filtro 1", "En revision DO Filtro 2", "En revision DO Filtro 3",
     "Observado DO Filtro 1", "Observado DO Filtro 2", "Observado DO Filtro 3",
     "Devuelta por DO",
-    "En proceso DO", "Aprobado", "Emitido",
+    "En proceso DO", "Aprobado", "Emitido", "Modificada", "Rechazado",
   ]
   const estado: UrgEstado = (
     estadosValidos.find((e) => e.toLowerCase() === rawEstado.toLowerCase()) ?? "Borrador"

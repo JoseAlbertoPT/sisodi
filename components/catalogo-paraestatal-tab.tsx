@@ -284,7 +284,7 @@ function OrganoRow({
                     ].join(" ")}
                   >
                     <GripVertical className={`h-3.5 w-3.5 shrink-0 ${areaSearch ? "invisible" : "text-muted-foreground/25 cursor-grab"}`} />
-                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: VINO, opacity: 0.5 }} />
+                    <img src="/Iconos1/dots.svg" alt="" className="h-3.5 w-3.5 shrink-0 opacity-50" />
                     <span className="text-sm flex-1 truncate text-foreground">{area.nombre}</span>
                     <div>
                       <DropdownMenu>
