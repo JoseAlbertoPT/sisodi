@@ -556,6 +556,20 @@
   color: var(--sem-accent-primary) !important;
 }
 
+/* ── Fondo opaco forzado para los selects del formulario de Nueva Solicitud ──
+   (se veían transparentes al desplegarse; ver .ns-select en NuevaSolicitudPage) */
+.ns-select [data-slot="select-content"] {
+  background-color: var(--sem-bg-base) !important;
+  opacity: 1 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.ns-select [data-slot="select-trigger"] {
+  background-color: var(--sem-bg-base) !important;
+}
+.vino-force[data-slot="select-trigger"] {
+  border-color: var(--sem-accent-primary) !important;
+}
+
 /* ── Textarea ─────────────────────────────────────────────────────────────── */
 [data-slot="textarea"]:focus {
   border-color: var(--sem-content-high) !important;

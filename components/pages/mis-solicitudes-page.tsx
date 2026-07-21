@@ -16,8 +16,9 @@ import { PageLayout } from "@/components/page-layout"
 import {
   Eye, Edit3, Download, FileCheck,
   ChevronDown, ChevronRight, FileText,
-  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw,
+  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw, Inbox,
 } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
   Tooltip,
@@ -254,8 +255,6 @@ function getSubEstadoDGDO(estado: UrgEstado): string | null {
   const n = (estado ?? "").toLowerCase()
   if (n === "pendiente do" || n.includes("en revision do"))
     return "En Revisión"
-  if (n.includes("pendiente firma dictamen"))
-    return "En Emisión"
   return null
 }
 
@@ -1628,9 +1627,9 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                 })}
 
                 {!loading && filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                      No se encontraron solicitudes.
+                  <tr className="empty-row">
+                    <td colSpan={7}>
+                      <EmptyState icon={Inbox} title="No hay solicitudes en esta clasificación" description="Ajusta los filtros para ver más resultados." />
                     </td>
                   </tr>
                 )}

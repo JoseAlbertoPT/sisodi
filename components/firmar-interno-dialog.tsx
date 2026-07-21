@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
+import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -183,7 +184,14 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
       confirmLabel="Entendido"
       hideCancel
     />
-    <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
+    <ConfirmationModal
+      open={exito}
+      type="success"
+      title={requiereSellado ? "¡Dictamen emitido!" : "¡Firma registrada!"}
+      message={requiereSellado ? "El dictamen fue sellado y emitido correctamente." : "Tu firma quedó registrada correctamente."}
+      onClose={() => { onFirmado?.(); reset(); onClose() }}
+    />
+    <Dialog open={open && !exito} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -193,14 +201,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
           {subtitulo && <p className="text-xs text-muted-foreground mt-1">{subtitulo}</p>}
         </DialogHeader>
 
-        {exito ? (
-          <div className="flex flex-col items-center gap-3 py-8">
-            <CheckCircle2 className="h-12 w-12 text-secondary" />
-            <p className="text-sm font-medium">
-              {requiereSellado ? "¡Dictamen emitido!" : "¡Firma registrada!"}
-            </p>
-          </div>
-        ) : firmaCompleta ? (
+        {firmaCompleta ? (
           <div className="flex flex-col gap-4 pt-2">
             <div className="rounded-md border border-secondary/40 bg-secondary/10 p-3 flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
@@ -246,7 +247,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3 pt-2">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-6 pt-4 pb-6">
             {esEmisor && (
               <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
@@ -265,41 +266,44 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               <Input
                 ref={cargoInputRef}
                 value={cargo}
-                readOnly={!cargoHabilitado}
-                onMouseDown={e => { if (!cargoHabilitado) { e.preventDefault(); setAvisoCargoAbierto(true) } }}
-                onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
-                onChange={e => setCargo(e.target.value.toUpperCase())}
+                onChange={e => {
+                  const val = e.target.value.toUpperCase()
+                  setCargo(val)
+                  if (!cargoHabilitado && val.length > 0) {
+                    setCargoHabilitado(true)
+                    setAvisoCargoAbierto(true)
+                  }
+                }}
                 placeholder="EJ. DIRECTOR DE ANÁLISIS NORMATIVO"
-                className={`uppercase ${!cargoHabilitado ? "cursor-pointer" : ""}`}
+                className="uppercase"
                 autoComplete="off"
                 name="cargo-firmante-interno"
               />
-              <p className="text-[10px] text-accent-foreground flex items-center gap-1">
+              <p className="text-[10px] text-support-warning flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
                 Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
               </p>
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               <Label className="text-xs flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
               <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} />
               {cerFile && <span className="text-xs text-muted-foreground truncate">{cerFile.name}</span>}
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
               <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} />
               {keyFile && <span className="text-xs text-muted-foreground truncate">{keyFile.name}</span>}
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               <Label className="text-xs">Contraseña de la clave privada</Label>
               <Input type="password" value={password} onChange={e => setPassword(e.target.value)} />
             </div>
 
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => { reset(); onClose() }} disabled={trabajando}>Cancelar</Button>
-              <Button type="submit" disabled={trabajando}
-                className="gap-1.5">
-                {trabajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+              <Button variant="default" onClick={() => { reset(); onClose() }} disabled={trabajando}>Cancelar</Button>
+              <Button type="submit" variant="vino" disabled={trabajando}>
+                {trabajando && <Loader2 className="h-4 w-4 animate-spin" />}
                 Firmar
               </Button>
             </div>

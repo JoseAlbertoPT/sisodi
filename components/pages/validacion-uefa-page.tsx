@@ -1146,27 +1146,25 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
 
 
       {isPendienteFirma && (
-        <Card className="border-2 border-accent/30 bg-accent/5 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <Stamp className="h-5 w-5 text-accent-foreground" />
-            <div>
-              <span className="text-sm font-medium text-accent-foreground">Pendiente de Firma</span>
-              <p className="text-xs text-muted-foreground">El Revisor aprobó la justificación. Debe firmarla para continuar al paso de Validación Final.</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light text-[#3266cb]">
+            <strong className="font-medium">Pendiente de Firma</strong> — El Revisor aprobó la justificación. Debe firmarla para continuar al paso de Validación Final.
+          </span>
+        </div>
       )}
 
       {isEnProceso && (
-        <Card className="border-2 border-primary/30 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0" />
-            <div>
-              <span className="text-sm font-medium text-primary">En Proceso</span>
-              <p className="text-xs text-muted-foreground">La solicitud está en revisión por Validación Final o Emisor. Solo lectura.</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light text-[#3266cb]">
+            <strong className="font-medium">En Proceso</strong> — La solicitud está en revisión por Validación Final o Emisor. Solo lectura.
+          </span>
+        </div>
       )}
 
       {isEmitida && folioDictamenMostrar && (
@@ -1367,38 +1365,20 @@ export function ValidacionUefaPage() {
   }, [observarTargetId, user])
 
   const handleFirmarJustificacion = useCallback(async (id: number) => {
+    // Nota: aquí solo se registra la firma de UEFA dentro del proceso de firma
+    // electrónica (ya hecho por /api/firma-efirma/firmar-interno antes de llegar
+    // aquí). No se debe tocar el estado de la solicitud: ya está en
+    // "Pendiente Firma Dictamen" desde que Emisión aprobó, y sobreescribirlo aquí
+    // generaba un historial falso de "enviada a Emisión" en cada firma de UEFA.
     setGuardando(true)
     try {
-      const res = await fetch("/api/validacion", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          solicitudId: id,
-          nuevoEstado: "Pendiente Firma Dictamen",
-          usuarioId:   (user as any)?.id ?? "",
-          comentario:  "Justificacion firmada por Validacion — enviada a Emision (Filtro 3) para firma dictamen",
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok || !json.ok) { showToast("error", "Error al firmar", json.error ?? "No se pudo firmar la justificación."); return }
-      showToast("success", "Justificación firmada", "La justificación fue firmada y enviada a Emisión.")
-      setSolicitudes(prev => prev.map(s => s.id === id ? {
-        ...s,
-        estado: "Pendiente Firma Dictamen",
-        historial: [...s.historial, {
-          fecha:          new Date().toISOString(),
-          usuario:        (user as any)?.nombre ?? "Validacion",
-          estadoAnterior: s.estado,
-          estadoNuevo:    "Pendiente Firma Dictamen",
-        }],
-      } : s))
+      showToast("success", "Firma registrada", "Tu firma quedó registrada en el proceso de firma del dictamen.")
+      await cargarSolicitudes()
       setSelectedId(null)
-    } catch {
-      showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
       setGuardando(false)
     }
-  }, [user])
+  }, [cargarSolicitudes])
 
   const tabDefs: { key: UefaTab; label: string }[] = [
     { key: "Nuevas",               label: "Nuevas" },

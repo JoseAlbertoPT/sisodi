@@ -9,6 +9,7 @@ import { Loader2, RefreshCw, ClipboardCheck, Shield, CheckCircle2, AlertCircle }
 import { useAuth } from "@/lib/auth-context"
 import { PageLayout } from "@/components/page-layout"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 
 interface Firmante {
   id: number
@@ -47,11 +48,13 @@ interface Proceso {
 export function ProgresoFirmadoPage() {
   const { user } = useAuth()
   const usuarioId = (user as any)?.id ?? ""
+  const isAdmin = (user as any)?.rol === "Administrador"
   const [procesos, setProcesos] = useState<Proceso[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [detalle, setDetalle] = useState<Proceso | null>(null)
   const [firmarTarget, setFirmarTarget] = useState<{ firmanteId: number; rol: string; cargo: string } | null>(null)
+  const [page, setPage] = useState(1)
 
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
@@ -72,10 +75,21 @@ export function ProgresoFirmadoPage() {
 
   useEffect(() => { cargar() }, [cargar])
 
-  const pendientes = useMemo(
-    () => procesos.filter(p => p.mi_firmante_pendiente && !p.mi_firmante_pendiente.bloqueado),
-    [procesos]
-  )
+  const pendientes = useMemo(() => {
+    if (isAdmin) {
+      // El administrador ve los pendientes de todos los apartados, no solo los suyos.
+      return procesos.filter(p =>
+        p.modalidad_firma === "electronica" &&
+        p.externos_completos &&
+        p.firmantes.some(f => f.tipo === "interno" && !f.firmado)
+      )
+    }
+    return procesos.filter(p => p.modalidad_firma === "electronica" && p.mi_firmante_pendiente && !p.mi_firmante_pendiente.bloqueado)
+  }, [procesos, isAdmin])
+
+  const totalPages = Math.max(1, Math.ceil(procesos.length / ITEMS_PER_PAGE))
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [totalPages, page])
+  const paginated = procesos.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
 
   const faseDe = (p: Proceso) => {
     if (p.estado === "completado") return "Completado"
@@ -100,29 +114,42 @@ export function ProgresoFirmadoPage() {
       <Card className="border-secondary/30 border-2">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Shield className="h-4 w-4 text-secondary" /> Pendientes por mí ({pendientes.length})
+            <Shield className="h-4 w-4 text-secondary" /> {isAdmin ? "Pendientes (todos los apartados)" : "Pendientes por mí"} ({pendientes.length})
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {pendientes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No tienes firmas pendientes.</p>
-          ) : pendientes.map(p => (
-            <div key={p.id} className="rounded-md border p-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">{p.folio_recepcion ?? p.folio_justificacion ?? `SOL-${p.solicitud_id}`} · {p.tipo_solicitud ?? "—"}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Firmar como <span className="font-semibold">{p.mi_firmante_pendiente!.rol}</span> — {p.mi_firmante_pendiente!.cargo}</p>
+            <p className="text-sm text-muted-foreground">No hay firmas pendientes.</p>
+          ) : pendientes.map(p => {
+            const miPendiente = p.mi_firmante_pendiente
+            const siguiente = miPendiente
+              ?? p.firmantes.filter(f => f.tipo === "interno" && !f.firmado).sort((a, b) => a.orden - b.orden)[0]
+              ?? null
+            return (
+              <div key={p.id} className="rounded-md border p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">{p.folio_recepcion ?? p.folio_justificacion ?? `SOL-${p.solicitud_id}`} · {p.tipo_solicitud ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {miPendiente ? "Firmar como" : "Pendiente:"} <span className="font-semibold">{siguiente?.rol}</span> — {siguiente?.cargo}
+                  </p>
+                </div>
+                {miPendiente ? (
+                  <Button size="sm" variant="vino"
+                    onClick={() => setFirmarTarget({
+                      firmanteId: miPendiente.id,
+                      rol: miPendiente.rol,
+                      cargo: miPendiente.cargo,
+                    })}>
+                    Firmar
+                  </Button>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={() => setDetalle(p)} className="gap-1.5">
+                    <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" /> Ver
+                  </Button>
+                )}
               </div>
-              <Button size="sm"
-                onClick={() => setFirmarTarget({
-                  firmanteId: p.mi_firmante_pendiente!.id,
-                  rol: p.mi_firmante_pendiente!.rol,
-                  cargo: p.mi_firmante_pendiente!.cargo,
-                })}
-                className="gap-1.5">
-                <Shield className="h-4 w-4" /> Firmar
-              </Button>
-            </div>
-          ))}
+            )
+          })}
         </CardContent>
       </Card>
 
@@ -149,7 +176,7 @@ export function ProgresoFirmadoPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {procesos.map(p => (
+                  {paginated.map(p => (
                     <tr key={p.id} className="border-b last:border-b-0">
                       <td className="py-2.5 pr-4 font-mono">{p.folio_recepcion ?? p.folio_justificacion ?? `SOL-${p.solicitud_id}`}</td>
                       <td className="py-2.5 pr-4">{p.tipo_solicitud ?? "—"}</td>
@@ -171,6 +198,7 @@ export function ProgresoFirmadoPage() {
           )}
         </CardContent>
       </Card>
+      <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
 
       {detalle && (
         <Dialog open onOpenChange={v => { if (!v) setDetalle(null) }}>

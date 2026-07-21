@@ -32,7 +32,7 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
   const pages = buildPages(currentPage, totalPages)
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex w-full items-center justify-center gap-3">
       <button
         type="button"
         onClick={() => onPageChange(currentPage - 1)}

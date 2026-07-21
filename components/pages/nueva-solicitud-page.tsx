@@ -908,7 +908,7 @@ function DynamicList({
   )
 }
 
-function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
+function StepIndicator({ step, tipo, progreso = 0 }: { step: Step; tipo: TipoSolicitud; progreso?: number }) {
   const steps = [
     { key: "tipo",       label: "Tipo de Solicitud" },
     { key: "formulario", label: tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento" },
@@ -940,15 +940,15 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
 
             {/* ── Connector line (between circles) ────────── */}
             {i > 0 && (
-              <div style={{
-                position: 'absolute',
-                top: 16,
-                left: '-50%',
-                width: '100%',
-                height: 2,
-                backgroundColor: currentIndex >= i ? '#15803d' : '#773357',
-                zIndex: 0,
-              }} />
+              <div style={{ position: 'absolute', top: 16, left: '-50%', width: '100%', height: 2, zIndex: 0 }}>
+                <div style={{ position: 'absolute', inset: 0, backgroundColor: '#D1D5DB' }} />
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, bottom: 0,
+                  width: `${(currentIndex >= i ? 1 : Math.min(1, Math.max(0, progreso))) * 100}%`,
+                  backgroundColor: currentIndex >= i ? '#15803d' : '#773357',
+                  transition: 'width 0.25s ease',
+                }} />
+              </div>
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -3996,7 +3996,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       {!isEditMode && (
         <div className="py-2 -mx-4 px-4 -mt-3 mb-1">
           <div className="max-w-4xl mx-auto w-full flex justify-center">
-            <StepIndicator step={step} tipo={tipo} />
+            <StepIndicator step={step} tipo={tipo} progreso={regimenPeriodo ? (periodoSeleccionado ? 1 : 0.5) : 0} />
           </div>
         </div>
       )}

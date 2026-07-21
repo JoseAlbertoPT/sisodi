@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, RefreshCw, Shield, AlertCircle, Stamp, Inbox } from "lucide-react"
+import { Loader2, RefreshCw, AlertCircle, Stamp, Inbox } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
 
@@ -177,9 +177,8 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                     </td>
                     <td className="px-4 py-2 text-right">
                       <Button size="sm" onClick={() => p.mi_firmante_pendiente && setFirmanteDialogId(p.mi_firmante_pendiente.id)}
-                        disabled={!esMiTurno}
-                        className="gap-1.5">
-                        <Shield className="h-3.5 w-3.5" /> Firmar
+                        disabled={!esMiTurno}>
+                        Firmar
                       </Button>
                     </td>
                   </tr>

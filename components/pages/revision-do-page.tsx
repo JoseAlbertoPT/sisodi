@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils"
 import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -1839,37 +1840,34 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         </ScrollArea>
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
-            <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-              {!isEmitido && !ocultarRevisionTrasAprobar && (
-                <button onClick={() => setActiveTab("review")}
-                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "review" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
-                  <ClipboardCheck className="mr-1.5 inline h-4 w-4" />Revisión
-                </button>
-              )}
-              {showEmisionTab && (
-                <button onClick={() => setActiveTab("emision")}
-                  className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "emision" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
-                  <Stamp className="mr-1.5 inline h-4 w-4" />Emisión
-                </button>
-              )}
-              {solicitud.observacionesTodas.length > 0 && (
-                <button onClick={() => setActiveTab("observaciones")}
-                  className={`relative flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "observaciones" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
-                  <AlertCircle className="mr-1.5 inline h-4 w-4" />Observaciones
-                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white">
-                    {solicitud.observacionesTodas.length}
-                  </span>
-                </button>
-              )}
-              <button onClick={() => setActiveTab("historial")}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "historial" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
-                <History className="mr-1.5 inline h-4 w-4" />Historial
-              </button>
-              <button onClick={() => setActiveTab("bitacora")}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "bitacora" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
-                <FileText className="mr-1.5 inline h-4 w-4" />Bitácora
-              </button>
-            </div>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActiveTab)}>
+              <TabsList className="w-full">
+                {!isEmitido && !ocultarRevisionTrasAprobar && (
+                  <TabsTrigger value="review" className="flex-1">
+                    <ClipboardCheck className="h-4 w-4" />Revisión
+                  </TabsTrigger>
+                )}
+                {showEmisionTab && (
+                  <TabsTrigger value="emision" className="flex-1">
+                    <Stamp className="h-4 w-4" />Emisión
+                  </TabsTrigger>
+                )}
+                {solicitud.observacionesTodas.length > 0 && (
+                  <TabsTrigger value="observaciones" className="flex-1 relative">
+                    <AlertCircle className="h-4 w-4" />Observaciones
+                    <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#773357] px-1 text-[11px] font-normal text-white">
+                      {solicitud.observacionesTodas.length}
+                    </span>
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="historial" className="flex-1">
+                  <History className="h-4 w-4" />Historial
+                </TabsTrigger>
+                <TabsTrigger value="bitacora" className="flex-1">
+                  <FileText className="h-4 w-4" />Bitácora
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
             {activeTab === "review" && !isEmitido && !ocultarRevisionTrasAprobar && (
               <>
@@ -2209,7 +2207,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       />
                     </CardContent>
                   </Card>
-                  {solicitud?.modalidadFirma !== "electronica" && (
+                  {solicitud?.modalidadFirma && (
                     <Card className="shadow-sm border-border">
                       <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2221,8 +2219,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                         <div className="flex items-center gap-3 rounded-lg border-2 border-secondary bg-secondary/5 p-3">
                           <img src="/Iconos1/step-check.svg" width={16} height={16} alt="" className="shrink-0" />
                           <div>
-                            <span className="text-sm font-medium text-card-foreground">Firma Autógrafa</span>
-                            <p className="text-xs font-light text-muted-foreground">Descargue, firme y suba el documento</p>
+                            <span className="text-sm font-medium text-card-foreground">
+                              {solicitud.modalidadFirma === "electronica" ? "Firma Electrónica" : "Firma Autógrafa"}
+                            </span>
+                            <p className="text-xs font-light text-muted-foreground">
+                              {solicitud.modalidadFirma === "electronica" ? "Está en proceso de firma" : "Descargue, firme y suba el documento"}
+                            </p>
                           </div>
                         </div>
                       </CardContent>
