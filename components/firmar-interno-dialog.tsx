@@ -234,14 +234,14 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
 
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => { reset(); onClose() }} disabled={emitiendo}>Cerrar</Button>
+              <Button variant="default" onClick={() => { reset(); onClose() }} disabled={emitiendo}>Cerrar</Button>
               <Button
                 type="button"
+                variant="vino"
                 onClick={() => setConfirmEmitirAbierto(true)}
                 disabled={emitiendo || !selladoSubido}
-                className="gap-1.5"
               >
-                {emitiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                {emitiendo && <Loader2 className="h-4 w-4 animate-spin" />}
                 Emitir Dictamen
               </Button>
             </div>
