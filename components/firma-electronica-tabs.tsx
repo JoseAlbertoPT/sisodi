@@ -53,9 +53,6 @@ interface Props {
   onGenerarPdfBase64: () => Promise<string>
   onFinalizar: () => Promise<void> | void
   guardandoFinal: boolean
-  /** Si se define, después de que el usuario complete su firma se requiere
-   *  descargar el documento, sellarlo fuera del sistema y volver a subirlo
-   *  antes de habilitar "Enviar". */
   selladoEtapa?: SelladoEtapa
   onCancelar?: () => void
 }

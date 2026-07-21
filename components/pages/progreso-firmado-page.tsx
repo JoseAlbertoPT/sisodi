@@ -164,7 +164,7 @@ export function ProgresoFirmadoPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground border-b">
+                  <tr className="text-left text-xs font-semibold text-muted-foreground border-b">
                     <th className="py-2.5 pr-4">Folio</th>
                     <th className="py-2.5 pr-4">Tipo</th>
                     <th className="py-2.5 pr-4">Modalidad</th>
