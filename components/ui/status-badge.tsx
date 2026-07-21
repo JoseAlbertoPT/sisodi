@@ -1,73 +1,105 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-// ─── Mapa de estados → color hexadecimal ─────────────────────────────────────
-export const C_AMARILLO = "#D97706"
-export const C_ROSA_VINO = "#773357"
-export const C_ROSA_VINO_BG = "#ffd8e7"
+// ─── Tokens del DS (var(--…)) ────────────────────────────────────────────────
+// Regla: usar tokens SIEMPRE, nunca hex directos.
+export const T_MORA        = "var(--color-core-mora-40)"
+export const T_MORA_BG     = "var(--color-core-mora-95)"
+export const T_VERDE_TIERRA    = "var(--color-core-verde-tierra-40)"
+export const T_VERDE_TIERRA_BG = "var(--color-core-verde-tierra-90)"
+export const T_SUCCESS     = "var(--sem-support-success)"
+export const T_SUCCESS_BG  = "var(--sem-support-success-low)"
+export const T_WARNING     = "var(--sem-support-warning)"
+export const T_WARNING_BG  = "var(--sem-support-warning-low)"
+export const T_INFO        = "var(--sem-support-info)"
+export const T_INFO_BG     = "var(--sem-support-info-low)"
+export const T_ERROR       = "var(--sem-support-error)"
+export const T_ERROR_BG    = "var(--sem-support-error-low)"
+export const T_ON_ERROR_LOW= "var(--sem-support-on-error-low)"
+export const T_DISABLED    = "var(--sem-content-low)"
+export const T_DISABLED_BG = "var(--sem-support-disabled-low)"
+
+// Aliases legacy (compat con código que importaba constantes viejas)
+export const C_AMARILLO      = T_WARNING
+export const C_ROSA_VINO     = T_MORA
+export const C_ROSA_VINO_BG  = T_MORA_BG
 
 const STATUS_COLOR: Record<string, string> = {
   // Solicitud flow
-  borrador:           "#94a3b8",
-  "en captura":       "#94a3b8",
-  "en aprobación":    "#15803d",
-  "en aprobacion":    "#15803d",
-  "en revisión":      C_AMARILLO,
-  "en revision":      C_AMARILLO,
-  "en validación":    C_AMARILLO,
-  "en validacion":    C_AMARILLO,
-  "en emisión":       C_AMARILLO,
-  "en emision":       C_AMARILLO,
-  "en proceso dgdo":  C_AMARILLO,
-  "pendiente firma":  C_AMARILLO,
-  "obs. uefa":        C_ROSA_VINO,
-  "obs. revisión":    C_ROSA_VINO,
-  "obs. revision":    C_ROSA_VINO,
-  "obs. validación":  C_ROSA_VINO,
-  "obs. validacion":  C_ROSA_VINO,
-  "obs. emisión":     C_ROSA_VINO,
-  "obs. emision":     C_ROSA_VINO,
-  observada:          C_ROSA_VINO,
-  "devuelta por do":  C_ROSA_VINO,
-  emitido:            "#15803d",
+  borrador:           T_DISABLED,
+  "en aprobación":    T_VERDE_TIERRA,
+  "en aprobacion":    T_VERDE_TIERRA,
+  "en revisión":      T_INFO,
+  "en revision":      T_INFO,
+  "en validación":    T_WARNING,
+  "en validacion":    T_WARNING,
+  "en emisión":       T_SUCCESS,
+  "en emision":       T_SUCCESS,
+  "en proceso dgdo":  T_WARNING,
+  "pendiente firma":  T_SUCCESS,
+  "obs. uefa":        T_MORA,
+  "obs. revisión":    T_MORA,
+  "obs. revision":    T_MORA,
+  "obs. validación":  T_MORA,
+  "obs. validacion":  T_MORA,
+  "obs. emisión":     T_MORA,
+  "obs. emision":     T_MORA,
+  observada:          T_MORA,
+  "devuelta por do":  T_ERROR,
+  emitido:            T_VERDE_TIERRA,
   // Usuarios
-  activo:             "#1c7d29",
-  inactivo:           "#773357",
+  activo:             T_SUCCESS,
+  inactivo:           T_ON_ERROR_LOW,
   // Dictamenes tipo
-  dictamen:           "#2d4a3e",
-  opinión:            "#7C3AED",
-  opinion:            "#7C3AED",
+  dictamen:           T_VERDE_TIERRA,
+  opinión:            T_MORA,
+  opinion:            T_MORA,
   // Dictamenes modalidad
-  electrónica:        "#0891B2",
-  electronica:        "#0891B2",
-  autógrafa:          "#64748b",
-  autografa:          "#64748b",
+  electrónica:        T_INFO,
+  electronica:        T_INFO,
+  autógrafa:          T_DISABLED,
+  autografa:          T_DISABLED,
   // Tipo administración
-  centralizada:       "#1c7d29",
-  paraestatal:        C_ROSA_VINO,
+  centralizada:       T_WARNING,
+  paraestatal:        T_INFO,
 }
 
-function resolveColor(label: string, fallback = "#64748b"): string {
+// text color → bg color pair (mismo par usado por estadoBadge)
+const BG_FOR: Record<string, string> = {
+  [T_MORA]:         T_MORA_BG,
+  [T_VERDE_TIERRA]: T_VERDE_TIERRA_BG,
+  [T_SUCCESS]:      T_SUCCESS_BG,
+  [T_WARNING]:      T_WARNING_BG,
+  [T_INFO]:         T_INFO_BG,
+  [T_ERROR]:        T_ERROR_BG,
+  [T_ON_ERROR_LOW]: T_ERROR_BG,
+  [T_DISABLED]:     T_DISABLED_BG,
+}
+
+function resolveBg(color: string): string {
+  return BG_FOR[color] ?? "var(--sem-bg-surface-low)"
+}
+
+function resolveColor(label: string, fallback = T_DISABLED): string {
   const key = label.toLowerCase().trim()
   if (STATUS_COLOR[key]) return STATUS_COLOR[key]
-  // fuzzy: emitido, en validación final, etc.
-  if (key.includes("emitido"))             return "#15803d"
-  if (key.includes("inactivo"))            return C_ROSA_VINO
-  if (key.includes("activo"))              return "#1c7d29"
-  if (key.includes("borrador") || key.includes("en captura")) return "#94a3b8"
-  if (key.includes("en aprobac"))          return "#15803d"
-  if (key.includes("obs"))                 return C_ROSA_VINO
-  if (key.includes("devuelta") || key.includes("regreso")) return C_ROSA_VINO
-  if (key.includes("emision") || key.includes("emisión")) return C_AMARILLO
-  if (key.includes("revision") || key.includes("revisión")) return C_AMARILLO
-  if (key.includes("validaci"))            return C_AMARILLO
-  if (key.includes("firma"))               return C_AMARILLO
-  if (key.includes("dgdo") || key.includes("proceso do")) return C_AMARILLO
-  if (key.includes("dictamen"))            return "#2d4a3e"
-  if (key.includes("opini"))               return "#7C3AED"
-  if (key.includes("electr"))              return "#0891B2"
-  if (key.includes("centraliz"))           return "#1c7d29"
-  if (key.includes("paraestatal"))         return C_ROSA_VINO
+  if (key.includes("emitido"))             return T_VERDE_TIERRA
+  if (key.includes("inactivo"))            return T_ON_ERROR_LOW
+  if (key.includes("activo"))              return T_SUCCESS
+  if (key.includes("borrador"))            return T_DISABLED
+  if (key.includes("en aprobac"))          return T_VERDE_TIERRA
+  if (key.includes("obs"))                 return T_MORA
+  if (key.includes("devuelta") || key.includes("regreso")) return T_ERROR
+  if (key.includes("emision") || key.includes("emisión")) return T_SUCCESS
+  if (key.includes("revision") || key.includes("revisión")) return T_INFO
+  if (key.includes("validaci"))            return T_WARNING
+  if (key.includes("firma"))               return T_SUCCESS
+  if (key.includes("dgdo") || key.includes("proceso do")) return T_WARNING
+  if (key.includes("dictamen"))            return T_VERDE_TIERRA
+  if (key.includes("opini"))               return T_MORA
+  if (key.includes("electr"))              return T_INFO
+  if (key.includes("centraliz"))           return T_WARNING
+  if (key.includes("paraestatal"))         return T_INFO
   return fallback
 }
 
@@ -83,17 +115,16 @@ interface StatusBadgeProps {
   className?: string
 }
 
-const C_VERDE = "#15803d"
-
 export function StatusBadge({ label, color, bgColor, className }: StatusBadgeProps) {
-  const c = color ?? C_VERDE
+  const c = color ?? resolveColor(label)
+  const bg = bgColor ?? resolveBg(c)
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit",
         className,
       )}
-      style={{ backgroundColor: bgColor ?? `${c}18`, color: c }}
+      style={{ backgroundColor: bg, color: c }}
     >
       {label}
     </span>
@@ -102,8 +133,8 @@ export function StatusBadge({ label, color, bgColor, className }: StatusBadgePro
 
 // ─── FolioBadge ──────────────────────────────────────────────────────────────
 
-const C_VERDE_FOLIO = "#2d4a3e"
-const C_VINO_FOLIO  = "#7b2d5e"
+const C_VERDE_FOLIO = "var(--color-core-bosque-30)"
+const C_VINO_FOLIO  = "var(--color-core-mora-30)"
 
 /** Verde si todo OK, vino si hay observación o SLA vencido */
 export function getFolioColor(estado: string, slaRestante?: number | null): string {
@@ -139,40 +170,38 @@ export function FolioBadge({ folio, estado, slaRestante, className }: FolioBadge
 
 // ─── Helpers de dominio (misma lógica que antes pero retornan <StatusBadge>) ─
 
-export const C_AZUL_REVISION = "#3266cb"
-export const C_AZUL_REVISION_BG = "#ecf2ff"
-export const C_VIOLETA_EMISION = "#6d28d9"    // Tailwind violet-700
-export const C_VIOLETA_EMISION_BG = "#f5f3ff" // Tailwind violet-50
-export const C_VERDE_ESTADO = "#1c7d29"
-export const C_VERDE_ESTADO_BG = "#d2fad2"
-export const C_AMARILLO_BG = "#fffbeb" // Tailwind amber-50
+export const C_AZUL_REVISION     = T_INFO
+export const C_AZUL_REVISION_BG  = T_INFO_BG
+export const C_VIOLETA_EMISION   = "var(--color-core-mora-40)"
+export const C_VIOLETA_EMISION_BG= "var(--color-core-mora-95)"
+export const C_VERDE_ESTADO      = T_SUCCESS
+export const C_VERDE_ESTADO_BG   = T_SUCCESS_BG
+export const C_AMARILLO_BG       = T_WARNING_BG
 
 export function estadoBadge(estado: string): React.ReactElement {
   const n = (estado ?? "").toLowerCase()
   let label = estado ?? "—"
-  let color = "#6b7280"
-  let bgColor = "#f3f4f6"
+  let color = T_DISABLED
+  let bgColor = T_DISABLED_BG
 
-  if (n === "borrador" || n === "en captura")
-                                                                         { label = "Borrador";         color = "#6b7280";  bgColor = "#f3f4f6" }
-  else if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion") || n.includes("pendiente firma justificacion"))
-                                                                         { label = "En Aprobación";    color = "#3a5a2a";  bgColor = "#dfe6c3" }
-  else if (n.includes("observado por revisor"))                          { label = "Obs. Revisión";    color = "#9d3f6e";  bgColor = "#fce4ef" }
-  else if (n.includes("observado por validacion final"))                 { label = "Obs. Validación";  color = "#9d3f6e";  bgColor = "#fce4ef" }
-  else if (n.includes("observado por emisor"))                          { label = "Obs. Emisión";     color = "#9d3f6e";  bgColor = "#fce4ef" }
+  if (n === "borrador")                                                  { label = "Borrador";         color = T_DISABLED; bgColor = T_DISABLED_BG }
+  else if (n.includes("pendiente firma"))                                { label = "Pendiente Firma";  color = T_WARNING;  bgColor = T_WARNING_BG }
+  else if (n.includes("observado por revisor"))                          { label = "Obs. Revisión";    color = T_MORA;     bgColor = T_MORA_BG }
+  else if (n.includes("observado por validacion final"))                 { label = "Obs. Validación";  color = T_MORA;     bgColor = T_MORA_BG }
+  else if (n.includes("observado por emisor"))                           { label = "Obs. Emisión";     color = T_MORA;     bgColor = T_MORA_BG }
   else if (n.includes("observado por uefa") || (n.includes("observado por validacion") && !n.includes("final")))
-                                                                         { label = "Obs. UEFA";        color = "#9d3f6e";  bgColor = "#fce4ef" }
+                                                                         { label = "Obs. UEFA";        color = T_MORA;     bgColor = T_MORA_BG }
   else if (n.includes("devuelta por do") || n.includes("observado do filtro") || n.includes("observado por do"))
-                                                                         { label = "Devuelta por DO";  color = "#87090c";  bgColor = "#ffeaea" }
+                                                                         { label = "Devuelta por DO";  color = T_ON_ERROR_LOW; bgColor = T_ERROR_BG }
+  else if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion"))
+                                                                         { label = "En Aprobación";    color = T_INFO;     bgColor = T_INFO_BG }
   else if (n.includes("en revision revisor") || n === "aprobado por revisor" || n === "aceptado por revisor")
-                                                                         { label = "En Revisión";      color = "#3266cb";  bgColor = "#ecf2ff" }
-  else if (n.includes("en validacion final") || n === "aprobado")       { label = "En Validación";    color = "#936901";  bgColor = "#ffefb6" }
-  else if (n.includes("en revision emisor"))                            { label = "En Emisión";       color = "#1c7d29";  bgColor = "#d2fad2" }
-  else if (n.includes("pendiente firma dictamen") || n.includes("pendiente firma"))
-                                                                         { label = "Pendiente Firma";  color = "#1c7d29";  bgColor = "#d2fad2" }
+                                                                         { label = "En Revisión";      color = T_INFO;     bgColor = T_INFO_BG }
+  else if (n.includes("en validacion final") || n === "aprobado")        { label = "En Validación";    color = T_INFO;     bgColor = T_INFO_BG }
+  else if (n.includes("en revision emisor"))                             { label = "En Emisión";       color = T_INFO;     bgColor = T_INFO_BG }
   else if (n.includes("en revision do") || n === "en proceso do" || n === "pendiente do")
-                                                                         { label = "En Proceso DGDO";  color = "#936901";  bgColor = "#ffefb6" }
-  else if (n === "emitido" || n.includes("emitido"))                    { label = "Emitido";          color = "#3a5a2a";  bgColor = "#dfe6c3" }
+                                                                         { label = "En Proceso DGDO";  color = T_INFO;     bgColor = T_INFO_BG }
+  else if (n === "emitido" || n.includes("emitido"))                     { label = "Emitido";          color = T_SUCCESS;  bgColor = T_SUCCESS_BG }
 
   return <StatusBadge label={label} color={color} bgColor={bgColor} />
 }

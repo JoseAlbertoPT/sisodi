@@ -42,7 +42,7 @@ function Calendar({
           'hover:bg-muted transition-colors outline-none',
           'focus-visible:ring-2 focus-visible:ring-ring',
         ),
-        selected: '[&>button]:bg-[#773357] [&>button]:text-white [&>button]:hover:opacity-90',
+        selected: '[&>button]:bg-[var(--sem-accent-primary)] [&>button]:text-white [&>button]:hover:opacity-90',
         today: '[&>button]:border [&>button]:border-border',
         outside: 'opacity-30',
         disabled: 'opacity-30 pointer-events-none',

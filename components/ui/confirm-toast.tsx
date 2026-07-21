@@ -52,7 +52,7 @@ export function ConfirmToast({ variant, title, description, duration = 40000 }: 
         >
           {isSuccess
             ? <CheckCircle2 style={{ width: 20, height: 20, color: '#16A34A' }} />
-            : <FileText style={{ width: 20, height: 20, color: '#DC2626' }} />
+            : <FileText style={{ width: 20, height: 20, color: 'var(--sem-support-error)' }} />
           }
         </div>
         <div className="flex-1 min-w-0 pt-0.5">
@@ -60,15 +60,15 @@ export function ConfirmToast({ variant, title, description, duration = 40000 }: 
             {title}
           </p>
           {description && (
-            <p className="text-xs mt-1 leading-snug" style={{ color: '#6B7280' }}>
+            <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--sem-content-low)' }}>
               {description}
             </p>
           )}
         </div>
         <button
           onClick={handleClose}
-          className="shrink-0 flex items-center justify-center rounded-full hover:bg-[#F3F4F6] transition-colors"
-          style={{ width: 24, height: 24, color: '#9CA3AF', marginTop: -2 }}
+          className="shrink-0 flex items-center justify-center rounded-full hover:bg-[var(--sem-support-disabled-low)] transition-colors"
+          style={{ width: 24, height: 24, color: 'var(--sem-border-high)', marginTop: -2 }}
         >
           <X style={{ width: 13, height: 13 }} />
         </button>

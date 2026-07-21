@@ -39,7 +39,7 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
         disabled={currentPage === 1}
         aria-label="Página anterior"
         className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[#2A3B29] transition-colors",
+          "flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[var(--color-core-bosque-20)] transition-colors",
           "hover:bg-[#eae9e6] disabled:opacity-40 disabled:cursor-not-allowed",
         )}
       >
@@ -73,7 +73,7 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
         disabled={currentPage === totalPages}
         aria-label="Página siguiente"
         className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[#2A3B29] transition-colors",
+          "flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[var(--color-core-bosque-20)] transition-colors",
           "hover:bg-[#eae9e6] disabled:opacity-40 disabled:cursor-not-allowed",
         )}
       >

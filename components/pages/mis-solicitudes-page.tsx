@@ -12,13 +12,13 @@ import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { Separator } from "@/components/ui/separator"
 import { FilterTabs } from "@/components/ui/filter-tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageLayout } from "@/components/page-layout"
 import {
   Eye, Edit3, Download, FileCheck,
-  ChevronDown, ChevronRight, FileText,
-  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw, Inbox,
+  ChevronDown, ChevronRight, History, FileText,
+  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw, Info,
 } from "lucide-react"
-import { EmptyState } from "@/components/ui/empty-state"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
   Tooltip,
@@ -45,13 +45,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
-import { type HistorialEntryData } from "@/components/historial-timeline"
+import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useRealtime } from "@/hooks/use-realtime"
-import {
-  StatusTabsList, HistorialPanel, BitacoraPanel, ObservacionesPanel, DevolucionObs,
-  type BitacoraEntry, type StatusTabKey,
-} from "@/components/solicitud-status-tabs"
 type UrgTab =
   | "Borradores"
   | "En aprobación"
@@ -79,9 +75,6 @@ type UrgEstado =
   | "En Revision Emisor"
   | "Observado por Emisor"
   | "Pendiente Firma Dictamen"
-  | "Pendiente Firma Revision"
-  | "Pendiente Firma Validacion"
-  | "Pendiente Firma Emisor"
   | "En Validacion Final"
   | "Observado por Validacion Final"
   | "En revision DO Filtro 1"
@@ -94,8 +87,11 @@ type UrgEstado =
   | "En proceso DO"
   | "Aprobado"
   | "Emitido"
-  | "Modificada"
-  | "Rechazado"
+
+interface BitacoraEntry {
+  seccion: string
+  eventos: { fecha: string; usuario: string; descripcion: string }[]
+}
 
 const INICIALES_MES: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
@@ -260,6 +256,8 @@ function getSubEstadoDGDO(estado: UrgEstado): string | null {
   const n = (estado ?? "").toLowerCase()
   if (n === "pendiente do" || n.includes("en revision do"))
     return "En Revisión"
+  if (n.includes("pendiente firma dictamen"))
+    return "En Emisión"
   return null
 }
 
@@ -354,12 +352,12 @@ function mapApiItem(item: any): UrgSolicitud {
     "En Revision Revisor", "Aceptado por Revisor", "Aprobado por Revisor", "Observado por Revisor",
     "Observado por DO",
     "En Revision Emisor", "Observado por Emisor",
-    "Pendiente Firma Dictamen", "Pendiente Firma Revision", "Pendiente Firma Validacion", "Pendiente Firma Emisor",
+    "Pendiente Firma Dictamen",
     "En Validacion Final", "Observado por Validacion Final",
     "En revision DO Filtro 1", "En revision DO Filtro 2", "En revision DO Filtro 3",
     "Observado DO Filtro 1", "Observado DO Filtro 2", "Observado DO Filtro 3",
     "Devuelta por DO",
-    "En proceso DO", "Aprobado", "Emitido", "Modificada", "Rechazado",
+    "En proceso DO", "Aprobado", "Emitido",
   ]
   const estado: UrgEstado = (
     estadosValidos.find((e) => e.toLowerCase() === rawEstado.toLowerCase()) ?? "Borrador"
@@ -535,12 +533,12 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
   const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
   if (itemsChecklist.length === 0) {
-    return <p className="text-sm text-[#832B56] leading-relaxed">{comentario}</p>
+    return <p className="text-sm text-[var(--color-core-mora-20)] leading-relaxed">{comentario}</p>
   }
   return (
     <div className="flex flex-col gap-0 mt-1">
       {comentarioGeneral && (
-        <p className="text-xs text-[#832B56]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
+        <p className="text-xs text-[var(--color-core-mora-20)]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
       )}
       {itemsChecklist.map((linea, idx) => {
         const [titulo, obs] = linea.split("::")
@@ -551,15 +549,15 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
         return (
           <div key={idx} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/60 bg-white text-[10px] font-bold text-[#832B56]">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/60 bg-white text-[10px] font-bold text-[var(--color-core-mora-20)]">
                 {num}
               </div>
-              {!isLast && <div className="w-px flex-1 bg-[#832B56]/20 my-0.5" />}
+              {!isLast && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/20 my-0.5" />}
             </div>
             <div className={`flex flex-col gap-1 flex-1 ${!isLast ? "pb-3" : "pb-1"}`}>
-              <span className="text-xs font-semibold text-[#832B56]/90 leading-snug">{label}</span>
+              <span className="text-xs font-semibold text-[var(--color-core-mora-20)]/90 leading-snug">{label}</span>
               {obs?.trim() && (
-                <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
                   {obs.trim()}
                 </span>
               )}
@@ -567,6 +565,64 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function DevolucionObs({ comentario }: { comentario: string }) {
+  const lineas = comentario.split("\n").filter(Boolean)
+  const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
+  const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join("\n").trim()
+  const tieneChecks   = itemsChecklist.length > 0
+  const tieneGeneral  = comentarioGeneral.length > 0
+  return (
+    <div className="flex flex-col gap-0">
+      {tieneChecks && (
+        <div className="flex flex-col gap-0">
+          {itemsChecklist.map((linea, idx) => {
+            const [titulo, obs] = linea.split("::")
+            const numMatch = titulo.match(/^(\d+)\./)
+            const num   = numMatch ? numMatch[1] : String(idx + 1)
+            const label = titulo.replace(/^\d+\.\s*/, "").trim()
+            const isLast = idx === itemsChecklist.length - 1
+            return (
+              <div key={idx} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/50 bg-[var(--color-core-mora-20)]/5 text-[10px] font-bold text-[var(--color-core-mora-20)]">
+                    {num}
+                  </div>
+                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/15 my-0.5" />}
+                </div>
+                <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
+                  <span className="text-xs font-semibold text-[var(--color-core-mora-20)] leading-snug">{label}</span>
+                  {obs?.trim() && (
+                    <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
+                      {obs.trim()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {tieneChecks && tieneGeneral && (
+        <div className="flex gap-3">
+          <div className="flex flex-col items-center">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/30 bg-white text-[10px] text-[var(--color-core-mora-20)]/50">
+              <span className="text-[8px]">✎</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-0.5 flex-1 pb-0">
+            <span className="text-[10px] font-semibold text-[var(--color-core-mora-20)]/60 uppercase tracking-wide">Observación general</span>
+            <p className="text-xs text-[var(--color-core-mora-20)]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+          </div>
+        </div>
+      )}
+      {!tieneChecks && tieneGeneral && (
+        <p className="text-sm text-[var(--color-core-mora-20)] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+      )}
     </div>
   )
 }
@@ -579,8 +635,8 @@ function ParsedObservacion({ comentario, borderColor = "orange" }: { comentario:
     ? lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
     : comentario
   const c = borderColor === "red"
-    ? { wrap: "border-[#832B56]/30 bg-[#832B56]/5", title: "text-[#832B56]", text: "text-[#832B56]", item: "border-[#832B56]/20 bg-[#832B56]/5", itemTitle: "text-[#832B56]/90", itemText: "text-[#832B56]" }
-    : { wrap: "border-[#832B56]/30 bg-[#832B56]/5", title: "text-[#832B56]", text: "text-[#832B56]/80", item: "border-[#832B56]/20 bg-white/60", itemTitle: "text-[#832B56]", itemText: "text-[#832B56]/80" }
+    ? { wrap: "border-[var(--color-core-mora-20)]/30 bg-[var(--color-core-mora-20)]/5", title: "text-[var(--color-core-mora-20)]", text: "text-[var(--color-core-mora-20)]", item: "border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/5", itemTitle: "text-[var(--color-core-mora-20)]/90", itemText: "text-[var(--color-core-mora-20)]" }
+    : { wrap: "border-[var(--color-core-mora-20)]/30 bg-[var(--color-core-mora-20)]/5", title: "text-[var(--color-core-mora-20)]", text: "text-[var(--color-core-mora-20)]/80", item: "border-[var(--color-core-mora-20)]/20 bg-white/60", itemTitle: "text-[var(--color-core-mora-20)]", itemText: "text-[var(--color-core-mora-20)]/80" }
   return (
     <div className={`rounded-md border ${c.wrap} px-3 py-2 flex flex-col gap-2`}>
       <p className={`text-[10px] font-semibold ${c.title} uppercase tracking-wide`}>Observaciones</p>
@@ -677,7 +733,7 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
     v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+      <div className="overflow-hidden rounded-[8px] border border-[var(--sem-border-md)]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -695,7 +751,7 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-[8px] border border-[#E5E7EB]">
+      <div className="overflow-hidden rounded-[8px] border border-[var(--sem-border-md)]">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -1145,8 +1201,8 @@ function DetalleView({
         <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
           <AlertTriangle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
           <div>
-            <span className="text-sm font-semibold text-[#374151]">Régimen incompatible</span>
-            <p className="text-sm text-[#374151] mt-0.5">
+            <span className="text-sm font-semibold text-[var(--sem-content-high)]">Régimen incompatible</span>
+            <p className="text-sm text-[var(--sem-content-high)] mt-0.5">
               El régimen <strong>{regimenLabel}</strong> no corresponde al tipo <strong>{sol.tipo}</strong>.
             </p>
           </div>
@@ -1245,14 +1301,17 @@ function DetalleView({
         </Card>
       )}
       {isEmitido && sol.numeroDictamen && (
-        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
-            <span className="text-[12px] font-bold text-white leading-none">i</span>
-          </div>
-          <span className="text-sm font-light text-[#3266cb]">
-            Dictamen Emitido — No. {sol.numeroDictamen} — Fecha: {sol.fechaDictamen}
-          </span>
-        </div>
+        <Card className="border-2 border-emerald-400/40 shadow-sm">
+          <CardContent className="flex items-center gap-3 py-4">
+            <FileCheck className="h-5 w-5 text-emerald-600" />
+            <div>
+              <span className="text-sm font-medium text-emerald-700">Dictamen Emitido</span>
+              <p className="text-xs text-muted-foreground">
+                No. {sol.numeroDictamen} — Fecha: {sol.fechaDictamen}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
         <ScrollArea className="h-[calc(100vh-220px)]">
@@ -1265,32 +1324,135 @@ function DetalleView({
 
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
-            <StatusTabsList
-              value={rightTab}
-              onChange={setRightTab}
-              obsCount={hasObs ? (sol.todasObservaciones.length || 1) : 0}
-            />
+            <Tabs value={rightTab} onValueChange={(v) => setRightTab(v as "historial" | "bitacora" | "observaciones")}>
+              <TabsList className="w-full">
+                <TabsTrigger value="historial" className="flex-1">
+                  <History className="h-4 w-4" />Historial
+                </TabsTrigger>
+                <TabsTrigger value="bitacora" className="flex-1">
+                  <Info className="h-4 w-4" />Bitácora
+                </TabsTrigger>
+                <TabsTrigger value="observaciones" className="flex-1 relative">
+                  <AlertTriangle className="h-4 w-4" />Observaciones
+                  {hasObs && (
+                    <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--sem-accent-primary)] px-1 text-[11px] font-normal text-white">
+                      {sol.todasObservaciones.length || 1}
+                    </span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
             {rightTab === "historial" && (
-              <HistorialPanel entries={sol.historial} title="Historial de Solicitud" />
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#dfe6c3] shadow-sm">
+                    <History className="h-5 w-5 text-[#2d331b]" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-content-high">Historial de Solicitud</span>
+                    <span className="text-[10px] text-content-low">
+                      {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""} registrado{sol.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
+                    <span className="text-[11px] font-semibold text-content-medium">
+                      {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-card px-4 py-3">
+                  <HistorialTimeline entries={sol.historial} />
+                </div>
+              </div>
             )}
 
             {rightTab === "bitacora" && (
-              <BitacoraPanel bitacora={sol.bitacora} title="Bitácora de Captura" />
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ffefb6] shadow-sm">
+                    <Info className="h-5 w-5 text-[#936901]" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-content-high">Bitácora de Captura</span>
+                    <span className="text-[10px] text-content-low">
+                      {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} eventos registrados
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
+                    <span className="text-[11px] font-semibold text-content-medium">
+                      {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} evento{sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0) !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Timeline */}
+                <div className="bg-card px-5 pt-4 pb-2">
+                  <HistorialTimeline
+                    entries={sol.bitacora.flatMap((entry) =>
+                      entry.eventos.map((ev) => ({
+                        fecha: ev.fecha,
+                        usuario: ev.usuario,
+                        estadoAnterior: null,
+                        estadoNuevo: ev.descripcion.replace("Archivo cargado: ", ""),
+                        comentario: null,
+                      } satisfies HistorialEntryData))
+                    )}
+                  />
+                </div>
+              </div>
             )}
 
             {rightTab === "observaciones" && (
-              <ObservacionesPanel
-                title={(() => {
-                  const obs = getObservador(sol.estado)
-                  if (!obs) return "Observaciones"
-                  const tipo = obs === "Validacion UEFA" || obs === "Validacion DGDO" ? "Observación" : "Devolución"
-                  return `${tipo} — ${obs}`
-                })()}
-                todasObservaciones={sol.todasObservaciones}
-                single={sol.observacionMotivo
-                  ? { motivo: sol.observacionMotivo, fecha: sol.observacionFecha, usuario: sol.observacionUsuario }
-                  : null}
-              />
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--sem-support-error-low)] shadow-sm">
+                    <AlertTriangle className="h-5 w-5 text-[var(--sem-support-on-error-low)]" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-content-high">
+                      {(() => {
+                        const obs = getObservador(sol.estado)
+                        if (!obs) return "Observaciones"
+                        const tipo = obs === "Validacion UEFA" || obs === "Validacion DGDO" ? "Observación" : "Devolución"
+                        return `${tipo} — ${obs}`
+                      })()}
+                    </span>
+                    <span className="text-[10px] text-content-low">
+                      {sol.todasObservaciones.length > 0
+                        ? `${sol.todasObservaciones.length} observación${sol.todasObservaciones.length !== 1 ? "es" : ""}`
+                        : sol.observacionMotivo ? "1 observación" : "Sin observaciones"}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
+                    <span className="text-[11px] font-semibold text-content-medium">
+                      {sol.todasObservaciones.length > 0 ? sol.todasObservaciones.length : sol.observacionMotivo ? 1 : 0} obs.
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-card p-4">
+                  {sol.todasObservaciones.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {sol.todasObservaciones.map((obs, i) => (
+                        <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
+                          </div>
+                          <DevolucionObs comentario={obs.comentario} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : sol.observacionMotivo ? (
+                    <div className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
+                      {sol.observacionFecha && <span className="text-[10px] text-muted-foreground">{sol.observacionFecha}</span>}
+                      {sol.observacionUsuario && <span className="text-[10px] text-muted-foreground">Por: {sol.observacionUsuario}</span>}
+                      <DevolucionObs comentario={sol.observacionMotivo} />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </ScrollArea>
@@ -1508,12 +1670,12 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3 mb-4">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
-              <span className="text-sm text-[#DC2626]">{error}</span>
+            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[var(--sem-support-error)] bg-[#FFF5F5] px-4 py-3 mb-4">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--sem-support-error)] mt-0.5" />
+              <span className="text-sm text-[var(--sem-support-error)]">{error}</span>
             </div>
           )}
-          <div className="overflow-x-auto rounded-[8px] border border-[#E5E7EB] overflow-hidden">
+          <div className="overflow-x-auto rounded-[8px] border border-[var(--sem-border-md)] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-secondary text-secondary-foreground">
@@ -1632,9 +1794,9 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                 })}
 
                 {!loading && filtered.length === 0 && (
-                  <tr className="empty-row">
-                    <td colSpan={7}>
-                      <EmptyState icon={Inbox} title="No hay solicitudes en esta clasificación" description="Ajusta los filtros para ver más resultados." />
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                      No se encontraron solicitudes.
                     </td>
                   </tr>
                 )}

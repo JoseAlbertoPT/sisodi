@@ -23,7 +23,7 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion"
 import {
-  CheckCircle2, RotateCcw, Download, FileText, Inbox,
+  CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
   RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
   Shield, FileSignature, X, MoreHorizontal,
@@ -37,13 +37,9 @@ import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/
 import { FirmaModal } from "@/components/firma-modal"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
-import { type HistorialEntryData } from "@/components/historial-timeline"
+import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
-import {
-  StatusTabsList, HistorialPanel, BitacoraPanel, ObservacionesPanel,
-  type BitacoraEntry, type StatusTabKey,
-} from "@/components/solicitud-status-tabs"
 
 type UefaEstado = string
 
@@ -369,11 +365,11 @@ function DictamenModal({
       <style>
         body { font-family: sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; font-size: 11pt; line-height: 1.5 }
         h2   { font-size: 12pt; margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 4px }
-        .header { text-align: center; border-bottom: 2px solid #283c2a; padding-bottom: 16px; margin-bottom: 20px }
+        .header { text-align: center; border-bottom: 2px solid var(--color-core-bosque-20); padding-bottom: 16px; margin-bottom: 20px }
         .header p { margin: 2px 0; font-size: 9pt; color: #555 }
         .header h1 { font-size: 14pt; margin-bottom: 4px; letter-spacing: 1px }
-        .sello { text-align: center; margin-top: 30px; padding: 12px; border: 2px solid #283c2a;
-                 color: #283c2a; font-weight: bold; letter-spacing: 3px; font-size: 14pt }
+        .sello { text-align: center; margin-top: 30px; padding: 12px; border: 2px solid var(--color-core-bosque-20);
+                 color: var(--color-core-bosque-20); font-weight: bold; letter-spacing: 3px; font-size: 14pt }
         .firmas { display: flex; justify-content: space-between; margin-top: 60px }
         .firma-block { text-align: center; width: 200px }
         .firma-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 4px }
@@ -533,18 +529,75 @@ function UefaEstadoBadge({ estado }: { estado: string }) {
   return estadoBadge(estado)
 }
 
+function DevolucionObs({ comentario }: { comentario: string }) {
+  const lineas = comentario.split("\n").filter(Boolean)
+  const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
+  const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join("\n").trim()
+  const tieneChecks  = itemsChecklist.length > 0
+  const tieneGeneral = comentarioGeneral.length > 0
+  return (
+    <div className="flex flex-col gap-0">
+      {tieneChecks && (
+        <div className="flex flex-col gap-0">
+          {itemsChecklist.map((linea, idx) => {
+            const [titulo, obs] = linea.split("::")
+            const numMatch = titulo.match(/^(\d+)\./)
+            const num   = numMatch ? numMatch[1] : String(idx + 1)
+            const label = titulo.replace(/^\d+\.\s*/, "").trim()
+            const isLast = idx === itemsChecklist.length - 1
+            return (
+              <div key={idx} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/50 bg-[var(--color-core-mora-20)]/5 text-[10px] font-bold text-[var(--color-core-mora-20)]">
+                    {num}
+                  </div>
+                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/15 my-0.5" />}
+                </div>
+                <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
+                  <span className="text-xs font-semibold text-[var(--color-core-mora-20)] leading-snug">{label}</span>
+                  {obs?.trim() && (
+                    <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
+                      {obs.trim()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {tieneChecks && tieneGeneral && (
+        <div className="flex gap-3">
+          <div className="flex flex-col items-center">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/30 bg-white text-[10px] text-[var(--color-core-mora-20)]/50">
+              <span className="text-[8px]">✎</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-0.5 flex-1 pb-0">
+            <span className="text-[10px] font-semibold text-[var(--color-core-mora-20)]/60 uppercase tracking-wide">Observación general</span>
+            <p className="text-xs text-[var(--color-core-mora-20)]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+          </div>
+        </div>
+      )}
+      {!tieneChecks && tieneGeneral && (
+        <p className="text-sm text-[var(--color-core-mora-20)] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+      )}
+    </div>
+  )
+}
+
 function ObservacionTimeline({ comentario }: { comentario: string }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
   const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
 
   if (itemsChecklist.length === 0) {
-    return <p className="text-sm text-[#832B56] leading-relaxed">{comentario}</p>
+    return <p className="text-sm text-[var(--color-core-mora-20)] leading-relaxed">{comentario}</p>
   }
   return (
     <div className="flex flex-col gap-0 mt-1">
       {comentarioGeneral && (
-        <p className="text-xs text-[#832B56]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
+        <p className="text-xs text-[var(--color-core-mora-20)]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
       )}
       {itemsChecklist.map((linea, idx) => {
         const [titulo, obs] = linea.split("::")
@@ -555,15 +608,15 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
         return (
           <div key={idx} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/60 bg-white text-[10px] font-bold text-[#832B56]">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/60 bg-white text-[10px] font-bold text-[var(--color-core-mora-20)]">
                 {num}
               </div>
-              {!isLast && <div className="w-px flex-1 bg-[#832B56]/20 my-0.5" />}
+              {!isLast && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/20 my-0.5" />}
             </div>
             <div className={`flex flex-col gap-1 flex-1 ${!isLast ? "pb-3" : "pb-1"}`}>
-              <span className="text-xs font-semibold text-[#832B56]/90 leading-snug">{label}</span>
+              <span className="text-xs font-semibold text-[var(--color-core-mora-20)]/90 leading-snug">{label}</span>
               {obs?.trim() && (
-                <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
                   {obs.trim()}
                 </span>
               )}
@@ -870,11 +923,11 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[#e4e3d6] shadow-lg p-6"
+        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[var(--sem-bg-surface-high)] shadow-lg p-6"
       >
         <div className="flex flex-col gap-3">
-          <AlertTriangle className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+          <AlertTriangle className="h-7 w-7 text-[var(--sem-content-high)]" strokeWidth={1.75} />
+          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[var(--sem-content-high)]">
             Observar — {folio}
           </DialogTitle>
           <p className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">
@@ -889,7 +942,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
         </div>
         <div className="flex gap-3 pt-3">
           <Button
-            className="h-10 flex-1 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+            className="h-10 flex-1 rounded-full border-0 bg-[var(--sem-support-error-low)] text-sm font-medium text-[var(--sem-support-on-error-low)] hover:bg-[var(--sem-support-error-low)] hover:text-[var(--sem-support-on-error-low)] focus-visible:outline-[var(--sem-support-focus)]"
             onClick={handleClose}
           >
             Cancelar
@@ -970,7 +1023,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
                         ? "text-white"
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
-                    style={seleccionado === r.id ? { backgroundColor: "#773357" } : undefined}
+                    style={seleccionado === r.id ? { backgroundColor: "var(--sem-accent-primary)" } : undefined}
                   >
                     {seleccionado === r.id
                       ? <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -985,7 +1038,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
           <div className="flex justify-between pt-1">
             <Button
               onClick={handleClose}
-              className="h-10 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+              className="h-10 rounded-full border-0 bg-[var(--sem-support-error-low)] text-sm font-medium text-[var(--sem-support-on-error-low)] hover:bg-[var(--sem-support-error-low)] hover:text-[var(--sem-support-on-error-low)] focus-visible:outline-[var(--sem-support-focus)]"
             >
               Cancelar
             </Button>
@@ -1023,29 +1076,9 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
   const isDevuelta         = !isObservada && (_n.includes("observad") || _n.includes("devuelta"))
   const tieneObsActivas    = (isObservada || isDevuelta) && solicitud.todasObservaciones.length > 0
 
-  const [rightTab, setRightTab] = useState<StatusTabKey>(
+  const [rightTab, setRightTab] = useState<"historial" | "observaciones">(
     tieneObsActivas ? "observaciones" : "historial"
   )
-  const bitacora: BitacoraEntry[] = useMemo(() => {
-    const cambios: BitacoraEntry = {
-      seccion: "Historial de cambios",
-      eventos: solicitud.historial.map((h) => ({
-        fecha: h.fecha, usuario: h.usuario, descripcion: h.estadoNuevo,
-      })),
-    }
-    const adjuntosRaw: any[] = solicitud._raw?.adjunto ?? []
-    const adjuntos: BitacoraEntry = {
-      seccion: "Documentos Adjuntos",
-      eventos: adjuntosRaw.map((a: any) => ({
-        fecha: a.fecha_subida
-          ? new Date(a.fecha_subida).toISOString().replace("T", " ").slice(0, 16)
-          : "",
-        usuario: "Sistema",
-        descripcion: `Archivo cargado: ${a.nombre_archivo}`,
-      })),
-    }
-    return adjuntos.eventos.length > 0 ? [cambios, adjuntos] : [cambios]
-  }, [solicitud])
   const isEnProceso        = tab === "En Proceso"
 
   const folioDictamenMostrar = solicitud.numeroDictamen
@@ -1129,7 +1162,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                 size="sm"
                 onClick={() => setShowDictamen(true)}
                 className="gap-1.5 rounded-2xl font-medium hover:opacity-90"
-                style={{ backgroundColor: "#722F37", color: "#ffffff", border: "1px solid #5a252c" }}
+                style={{ backgroundColor: "#722F37", color: "var(--sem-bg-base)", border: "1px solid #5a252c" }}
               >
                 <FileCheck className="h-4 w-4" />Ver Dictamen
               </Button>
@@ -1146,36 +1179,41 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
 
 
       {isPendienteFirma && (
-        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
-            <span className="text-[12px] font-bold text-white leading-none">i</span>
-          </div>
-          <span className="text-sm font-light text-[#3266cb]">
-            <strong className="font-medium">Pendiente de Firma</strong> — El Revisor aprobó la justificación. Debe firmarla para continuar al paso de Validación Final.
-          </span>
-        </div>
+        <Card className="border-2 border-accent/30 bg-accent/5 shadow-sm">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Stamp className="h-5 w-5 text-accent-foreground" />
+            <div>
+              <span className="text-sm font-medium text-accent-foreground">Pendiente de Firma</span>
+              <p className="text-xs text-muted-foreground">El Revisor aprobó la justificación. Debe firmarla para continuar al paso de Validación Final.</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {isEnProceso && (
-        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
-            <span className="text-[12px] font-bold text-white leading-none">i</span>
-          </div>
-          <span className="text-sm font-light text-[#3266cb]">
-            <strong className="font-medium">En Proceso</strong> — La solicitud está en revisión por Validación Final o Emisor. Solo lectura.
-          </span>
-        </div>
+        <Card className="border-2 border-primary/30 shadow-sm">
+          <CardContent className="flex items-center gap-3 py-4">
+            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0" />
+            <div>
+              <span className="text-sm font-medium text-primary">En Proceso</span>
+              <p className="text-xs text-muted-foreground">La solicitud está en revisión por Validación Final o Emisor. Solo lectura.</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {isEmitida && folioDictamenMostrar && (
-        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
-            <span className="text-[12px] font-bold text-white leading-none">i</span>
-          </div>
-          <span className="text-sm font-light text-[#3266cb]">
-            Dictamen Emitido — No. {folioDictamenMostrar}{solicitud.fechaDictamen ? ` — ${solicitud.fechaDictamen}` : ""}
-          </span>
-        </div>
+        <Card className="border-2 border-primary/30 shadow-sm">
+          <CardContent className="flex items-center gap-3 py-4">
+            <FileCheck className="h-5 w-5 text-primary" />
+            <div>
+              <span className="text-sm font-medium text-primary">Dictamen Emitido</span>
+              <p className="text-xs text-muted-foreground">
+                No. {folioDictamenMostrar}{solicitud.fechaDictamen ? ` — ${solicitud.fechaDictamen}` : ""}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
@@ -1187,36 +1225,112 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
 
         <ScrollArea className="h-[calc(100vh-220px)]">
           <div className="flex flex-col gap-4 pr-4">
-            <StatusTabsList
-              value={rightTab}
-              onChange={setRightTab}
-              obsCount={tieneObsActivas ? solicitud.todasObservaciones.length : 0}
-            />
+            <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1">
+              <button
+                onClick={() => setRightTab("historial")}
+                className={`flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                  rightTab === "historial"
+                    ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
+                    : "text-muted-foreground hover:text-card-foreground"
+                }`}
+              >
+                <History className="h-4 w-4" />Historial
+              </button>
+              <button
+                onClick={() => setRightTab("observaciones")}
+                className={`relative flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                  rightTab === "observaciones"
+                    ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
+                    : "text-muted-foreground hover:text-card-foreground"
+                }`}
+              >
+                <AlertTriangle className="h-4 w-4" />Observaciones
+                {tieneObsActivas && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white">
+                    {solicitud.todasObservaciones.length}
+                  </span>
+                )}
+              </button>
+            </div>
 
             {rightTab === "historial" && (
-              <HistorialPanel entries={solicitud.historial} title="Historial de Estatus" />
-            )}
-
-            {rightTab === "bitacora" && (
-              <BitacoraPanel bitacora={bitacora} />
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                    <History className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white">Historial de Estatus</span>
+                    <span className="text-[10px] text-white/60">
+                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""} registrada{solicitud.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">
+                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-card px-5 pt-4 pb-2">
+                  <HistorialTimeline entries={solicitud.historial} />
+                </div>
+              </div>
             )}
 
             {rightTab === "observaciones" && (
-              <ObservacionesPanel
-                title={
-                  isObservada
-                    ? "Observación de Validacion UEFA"
-                    : isDevuelta
-                      ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
-                      : "Observaciones"
-                }
-                todasObservaciones={tieneObsActivas ? solicitud.todasObservaciones : []}
-                single={
-                  !tieneObsActivas && (isObservada || isDevuelta) && solicitud.observacionesUefa
-                    ? { motivo: solicitud.observacionesUefa, fecha: solicitud.fechaObservacion, usuario: solicitud.observadoPor }
-                    : null
-                }
-              />
+              <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                    <AlertTriangle className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-white">
+                      {isObservada
+                        ? "Observación de Validacion UEFA"
+                        : isDevuelta
+                          ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
+                          : "Observaciones"}
+                    </span>
+                    <span className="text-[10px] text-white/60">
+                      {tieneObsActivas
+                        ? `${solicitud.todasObservaciones.length} observación${solicitud.todasObservaciones.length !== 1 ? "es" : ""}`
+                        : "Sin observaciones activas"}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">
+                      {tieneObsActivas ? solicitud.todasObservaciones.length : 0} obs.
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-card p-4">
+                  {tieneObsActivas ? (
+                    <div className="flex flex-col gap-2">
+                      {solicitud.todasObservaciones.map((obs, i) => (
+                        <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
+                          </div>
+                          <DevolucionObs comentario={obs.comentario} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (isObservada || isDevuelta) && solicitud.observacionesUefa ? (
+                    <div className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
+                      {solicitud.fechaObservacion && (
+                        <span className="text-[10px] text-muted-foreground">{solicitud.fechaObservacion}</span>
+                      )}
+                      {solicitud.observadoPor && (
+                        <span className="text-[10px] text-muted-foreground">Por: {solicitud.observadoPor}</span>
+                      )}
+                      <DevolucionObs comentario={solicitud.observacionesUefa} />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </ScrollArea>
@@ -1365,20 +1479,38 @@ export function ValidacionUefaPage() {
   }, [observarTargetId, user])
 
   const handleFirmarJustificacion = useCallback(async (id: number) => {
-    // Nota: aquí solo se registra la firma de UEFA dentro del proceso de firma
-    // electrónica (ya hecho por /api/firma-efirma/firmar-interno antes de llegar
-    // aquí). No se debe tocar el estado de la solicitud: ya está en
-    // "Pendiente Firma Dictamen" desde que Emisión aprobó, y sobreescribirlo aquí
-    // generaba un historial falso de "enviada a Emisión" en cada firma de UEFA.
     setGuardando(true)
     try {
-      showToast("success", "Firma registrada", "Tu firma quedó registrada en el proceso de firma del dictamen.")
-      await cargarSolicitudes()
+      const res = await fetch("/api/validacion", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          solicitudId: id,
+          nuevoEstado: "Pendiente Firma Dictamen",
+          usuarioId:   (user as any)?.id ?? "",
+          comentario:  "Justificacion firmada por Validacion — enviada a Emision (Filtro 3) para firma dictamen",
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) { showToast("error", "Error al firmar", json.error ?? "No se pudo firmar la justificación."); return }
+      showToast("success", "Justificación firmada", "La justificación fue firmada y enviada a Emisión.")
+      setSolicitudes(prev => prev.map(s => s.id === id ? {
+        ...s,
+        estado: "Pendiente Firma Dictamen",
+        historial: [...s.historial, {
+          fecha:          new Date().toISOString(),
+          usuario:        (user as any)?.nombre ?? "Validacion",
+          estadoAnterior: s.estado,
+          estadoNuevo:    "Pendiente Firma Dictamen",
+        }],
+      } : s))
       setSelectedId(null)
+    } catch {
+      showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
     } finally {
       setGuardando(false)
     }
-  }, [cargarSolicitudes])
+  }, [user])
 
   const tabDefs: { key: UefaTab; label: string }[] = [
     { key: "Nuevas",               label: "Nuevas" },

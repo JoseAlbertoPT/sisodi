@@ -862,7 +862,7 @@ function DynamicList({
       ))}
       {!readonly && items.length < maxEfectivo && (
         <Button type="button" variant="outline" size="sm"
-          className="w-fit mt-1 bg-transparent text-[#773357] hover:bg-transparent hover:text-[#773357] active:bg-transparent active:text-[#773357] focus:bg-transparent focus:text-[#773357]"
+          className="w-fit mt-1 bg-transparent text-[var(--sem-accent-primary)] hover:bg-transparent hover:text-[var(--sem-accent-primary)] active:bg-transparent active:text-[var(--sem-accent-primary)] focus:bg-transparent focus:text-[var(--sem-accent-primary)]"
           onClick={() => onChange([...items, ""])}>
           Agregar
         </Button>

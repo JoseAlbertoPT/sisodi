@@ -223,7 +223,7 @@ outside:
   "[&>button]:text-gray-300",
 
 selected:
-  "[&>button]:!border-transparent [&>button]:!bg-[#773357] [&>button]:!text-white [&>button:hover]:!bg-[#773357] [&>button:hover]:!text-white",
+  "[&>button]:!border-transparent [&>button]:!bg-[var(--sem-accent-primary)] [&>button]:!text-white [&>button:hover]:!bg-[var(--sem-accent-primary)] [&>button:hover]:!text-white",
 
 today:
   "[&>button]:font-semibold",

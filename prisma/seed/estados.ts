@@ -2,7 +2,6 @@ import type { PrismaClient } from "../../lib/generated/prisma"
 import { isMain, runStandalone } from "./_runner"
 
 export const ESTADOS = [
-  "En Captura",
   "Borrador",
   "En Validacion Justificaciones",
   "Observado por Validacion",
@@ -18,7 +17,6 @@ export const ESTADOS = [
   "Observado por Emisor",
   "Pendiente Firma Dictamen",
   "Emitido",
-  "Rechazado",
 ]
 
 export async function seedEstados(prisma: PrismaClient) {

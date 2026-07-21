@@ -35,12 +35,12 @@ export function ConfirmAlertDialog({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent
-        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[#e4e3d6] shadow-lg"
+        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[var(--sem-bg-surface-high)] shadow-lg"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <AlertDialogHeader className="items-start gap-3 text-left">
-          <Info className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-          <AlertDialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+          <Info className="h-7 w-7 text-[var(--sem-content-high)]" strokeWidth={1.75} />
+          <AlertDialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[var(--sem-content-high)]">
             {title}
           </AlertDialogTitle>
           <AlertDialogDescription className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">
@@ -49,13 +49,13 @@ export function ConfirmAlertDialog({
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-row gap-3">
           <AlertDialogCancel
-            className="h-10 flex-1 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+            className="h-10 flex-1 rounded-full border-0 bg-[var(--sem-support-error-low)] text-sm font-medium text-[var(--sem-support-on-error-low)] hover:bg-[var(--sem-support-error-low)] hover:text-[var(--sem-support-on-error-low)] focus-visible:outline-[var(--sem-support-focus)]"
           >
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => { e.preventDefault(); onConfirm() }}
-            className="h-10 flex-1 rounded-full bg-[#773357] text-sm font-medium text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]"
+            className="h-10 flex-1 rounded-full bg-[var(--sem-accent-primary)] text-sm font-medium text-white hover:bg-[var(--sem-accent-primary)] hover:text-white hover:opacity-90 focus-visible:outline-[var(--sem-support-focus)]"
           >
             {confirmLabel}
           </AlertDialogAction>

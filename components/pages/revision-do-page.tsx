@@ -1855,7 +1855,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {solicitud.observacionesTodas.length > 0 && (
                   <TabsTrigger value="observaciones" className="flex-1 relative">
                     <AlertCircle className="h-4 w-4" />Observaciones
-                    <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#773357] px-1 text-[11px] font-normal text-white">
+<span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] px-1 text-[11px] font-normal text-white">
                       {solicitud.observacionesTodas.length}
                     </span>
                   </TabsTrigger>

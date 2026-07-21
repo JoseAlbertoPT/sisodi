@@ -37,13 +37,13 @@ interface DashboardData {
   prestadoresPorRegimen:     { regimen: string; prestadores: number }[]
 }
 
-const C_VERDE_OSCURO  = "#283c2a"
+const C_VERDE_OSCURO  = "var(--color-core-bosque-20)"
 const C_OLIVA         = "#6e795a"
 const C_DORADO        = "#b5883a"
 const C_VERDE_MEDIO   = "#3a5c3a"
 const C_AMBAR         = "#c57a2a"
 const C_GRIS_VERDE    = "#5a5c4a"
-const C_BURDEOS       = "#832b56"
+const C_BURDEOS       = "var(--color-core-mora-20)"
 const C_MORA10       = "#3c0126"
 const C_MORA50       = "#ab5e84"
 const C_MORA90       = "#ffd8e7"
@@ -999,10 +999,10 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
       </p>
     </DialogHeader>
 
-    <DialogFooter className="gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]">
+    <DialogFooter className="gap-3 pt-6 pb-1 mt-2 border-t border-[var(--color-core-piedra-90)]">
       <Button
         type="button"
-        className="rounded-full h-10 px-6 font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
+        className="rounded-full h-10 px-6 font-medium border-[1.5px] border-[var(--sem-accent-primary)] shadow-sm bg-[#fce4f0] text-[var(--sem-accent-primary)] hover:bg-[#f7cde5] hover:text-[var(--sem-accent-primary)] active:bg-[#fce4f0] active:text-[var(--sem-accent-primary)] focus:bg-[#fce4f0] focus:text-[var(--sem-accent-primary)]"
         onClick={() => setConfirmarDescarga(false)} >
         Cancelar
       </Button>

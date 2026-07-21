@@ -38,7 +38,7 @@ export function FileTypeIcon({ name, size = 'md' }: { name: string; size?: 'sm' 
     return <img src="/Iconos1/doc word.svg" alt="Word" className={cls} />
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext))
     return <img src="/Iconos1/doc img-jpg.svg" alt="Imagen" className={cls} />
-  return <File className={cn(cls, 'text-[#9CA3AF]')} />
+  return <File className={cn(cls, 'text-[var(--sem-border-high)]')} />
 }
 
 export function FileDropZone({
@@ -99,13 +99,13 @@ export function FileDropZone({
 
   /* ── Visual state ── */
   let borderColor = '#d1d5db'          // normal: gray-300
-  let bgColor     = '#ffffff'          // normal: white
+  let bgColor     = 'var(--sem-bg-base)'          // normal: white
   if (disabled || loading) {
-    borderColor = '#e5e7eb'; bgColor = '#f9fafb'
+    borderColor = 'var(--sem-border-md)'; bgColor = '#f9fafb'
   } else if (hasError) {
     borderColor = '#f87171'; bgColor = '#fef2f2'
   } else if (dragOver) {
-    borderColor = '#773357'; bgColor = '#fdf5f8'
+    borderColor = 'var(--sem-accent-primary)'; bgColor = '#fdf5f8'
   }
 
   const showDropZone = multiple || files.length === 0
@@ -160,7 +160,7 @@ export function FileDropZone({
             />
           )}
           {files.length > 0 && !loading && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#773357] text-[11px] font-bold text-white leading-none">
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--sem-accent-primary)] text-[11px] font-bold text-white leading-none">
               {files.length}
             </span>
           )}
@@ -172,7 +172,7 @@ export function FileDropZone({
             {loading ? loadingText : 'Arrastra tu archivo aquí, o'}
           </p>
           {!loading && (
-            <span className={cn('text-sm font-medium underline underline-offset-2', disabled ? 'text-gray-300' : 'text-[#773357]')}>
+            <span className={cn('text-sm font-medium underline underline-offset-2', disabled ? 'text-gray-300' : 'text-[var(--sem-accent-primary)]')}>
               {selectLabel}
             </span>
           )}
@@ -252,7 +252,7 @@ export function UploadedFileRow({
         <button
           type="button"
           onClick={onVer ?? (() => ruta && window.open(ruta, '_blank'))}
-          className="shrink-0 text-xs font-medium text-[#773357] hover:underline"
+          className="shrink-0 text-xs font-medium text-[var(--sem-accent-primary)] hover:underline"
         >
           Ver
         </button>

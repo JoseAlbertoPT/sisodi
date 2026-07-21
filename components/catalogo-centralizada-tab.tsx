@@ -27,12 +27,12 @@ import {
   type OrganoCentralizadoNode,
 } from "@/lib/catalogo-api"
 
-const VINO = "#773357"
-const VINO_HOVER = "#773357"
+const VINO = "var(--sem-accent-primary)"
+const VINO_HOVER = "var(--sem-accent-primary)"
 const UA_PAGE_SIZE = 10
 
 const BTN_CANCEL_CLASS =
-    "rounded-full h-10 px-6 font-normal border border-[#e4e3d6] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+    "rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
 
 const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-normal shadow-sm"
 
@@ -261,7 +261,7 @@ function SecretariaRow({
               onDragOver={(e) => onDragOver(e, index)}
               onDrop={() => onDrop(index)}
               className={[
-                "flex items-center gap-2 py-3 px-4 rounded-xl border bg-white transition-all border-[#e4e3dc] shadow-sm",
+                "flex items-center gap-2 py-3 px-4 rounded-xl border bg-white transition-all border-[var(--color-core-piedra-90)] shadow-sm",
                 isDragging ? "opacity-40 border-dashed" : "",
               ].join(" ")}
           >
@@ -310,7 +310,7 @@ function SecretariaRow({
 
           {/* Unidades Administrativas */}
           <CollapsibleContent>
-            <div className="mt-2 mb-2 ml-6 border-l-2 border-[#773357]/15 pl-3">
+            <div className="mt-2 mb-2 ml-6 border-l-2 border-[var(--sem-accent-primary)]/15 pl-3">
 
               {/* Search bar */}
               {uas.length > 0 && (
@@ -344,8 +344,8 @@ function SecretariaRow({
                           className={[
                             "group flex items-center gap-2 py-2 px-3 rounded-lg border transition-all",
                             !uaSearch && uaDragging === globalIdx
-                                ? "opacity-40 border-dashed border-[#e4e3dc]"
-                                : "border-transparent hover:border-[#e4e3dc] hover:bg-[#f9f8f5]",
+                                ? "opacity-40 border-dashed border-[var(--color-core-piedra-90)]"
+                                : "border-transparent hover:border-[var(--color-core-piedra-90)] hover:bg-[#f9f8f5]",
                           ].join(" ")}
                       >
                         <GripVertical className={`h-3.5 w-3.5 shrink-0 ${uaSearch ? "invisible" : "text-muted-foreground/25 cursor-grab"}`} />
@@ -393,13 +393,13 @@ function SecretariaRow({
 
               {/* Pagination */}
               {uaTotalPages > 1 && (
-                  <div className="mt-2 pt-2 border-t border-[#e4e3dc]/60">
+                  <div className="mt-2 pt-2 border-t border-[var(--color-core-piedra-90)]/60">
                     <div className="flex justify-center items-center gap-1">
                       <button
                           type="button"
                           disabled={safePage === 0}
                           onClick={() => setUaPage(p => Math.max(0, p - 1))}
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[#2A3B29] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eae9e6] transition-colors"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[var(--color-core-bosque-20)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eae9e6] transition-colors"
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </button>
@@ -426,7 +426,7 @@ function SecretariaRow({
                           type="button"
                           disabled={safePage === uaTotalPages - 1}
                           onClick={() => setUaPage(p => Math.min(uaTotalPages - 1, p + 1))}
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[#2A3B29] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eae9e6] transition-colors"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F4F2] text-[var(--color-core-bosque-20)] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eae9e6] transition-colors"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </button>
@@ -612,7 +612,7 @@ export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n:
             Agregar Secretaría
           </Button>
         </div>
-        <Card className="shadow-sm border-[#e4e3dc] overflow-hidden">
+        <Card className="shadow-sm border-[var(--color-core-piedra-90)] overflow-hidden">
 
           {/* Lista */}
           <CardContent className="p-4">

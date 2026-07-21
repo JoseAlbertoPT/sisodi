@@ -172,8 +172,8 @@ export function SelladoDocumentoSection({
                 disabled={descargando}
                 className="gap-1.5"
                 style={sellado
-                  ? { backgroundColor: "#fff", color: "#773357", border: "1.5px solid #773357" }
-                  : { backgroundColor: "#773357", color: "#fff", border: "none" }}
+                  ? { backgroundColor: "#fff", color: "var(--sem-accent-primary)", border: "1.5px solid var(--sem-accent-primary)" }
+                  : { backgroundColor: "var(--sem-accent-primary)", color: "#fff", border: "none" }}
               >
                 {descargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 {labelDescargar}

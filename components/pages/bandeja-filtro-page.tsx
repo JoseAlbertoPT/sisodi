@@ -28,7 +28,7 @@ import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
-  FileSearch, Filter, RotateCcw, CircleDot, Eye,
+  FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
   AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
   ArrowLeft, ChevronDown, ChevronRight,
   FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil, X, Inbox,
@@ -42,11 +42,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
 import { ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
-import { type HistorialEntryData } from "@/components/historial-timeline"
+import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { useRealtime } from "@/hooks/use-realtime"
-import { HistorialPanel, BitacoraPanel, ObservacionesPanel, type BitacoraEntry } from "@/components/solicitud-status-tabs"
 
 interface FiltroSolicitud {
   id: string
@@ -226,21 +225,21 @@ const TAB_CONFIG_REVISION: TabCfg = {
   revision:        { label: "En revisión",         icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: C_AZUL_REVISION_BG, color: C_AZUL_REVISION } },
   observadas:      { label: "Observadas",          icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO } },
   pendientes_firma:{ label: "Pendiente de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
-  todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
+  todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "var(--sem-bg-base)" } },
 }
 const TAB_CONFIG_EMISION: TabCfg = {
   nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO } },
   revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
   observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO } },
   pendientes_firma:{ label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
-  todas:           { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
+  todas:           { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "var(--sem-bg-base)" } },
 }
 const TAB_CONFIG_DO: TabCfg = {
   pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600",      badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
   en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary",         badgeStyle: { backgroundColor: C_AMARILLO_BG, color: C_AMARILLO } },
   observadas:            { label: "Observadas",               icon: <AlertTriangle className="h-3.5 w-3.5" />,  activeBg: "bg-destructive/10", activeText: "text-destructive",     badgeStyle: { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO } },
   pendientes_firma:      { label: "Pendientes de firma",      icon: <Stamp className="h-3.5 w-3.5" />,          activeBg: "bg-secondary/10",   activeText: "text-secondary",       badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
-  todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
+  todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "var(--sem-bg-base)" } },
 }
 
 
@@ -458,11 +457,11 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[#e4e3d6] shadow-lg p-6"
+        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[var(--sem-bg-surface-high)] shadow-lg p-6"
       >
         <div className="flex flex-col gap-3">
-          <AlertTriangle className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+          <AlertTriangle className="h-7 w-7 text-[var(--sem-content-high)]" strokeWidth={1.75} />
+          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[var(--sem-content-high)]">
             Observar — {folio}
           </DialogTitle>
           <p className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">
@@ -477,7 +476,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
         </div>
         <div className="flex gap-3 pt-3">
           <Button
-            className="h-10 flex-1 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+            className="h-10 flex-1 rounded-full border-0 bg-[var(--sem-support-error-low)] text-sm font-medium text-[var(--sem-support-on-error-low)] hover:bg-[var(--sem-support-error-low)] hover:text-[var(--sem-support-on-error-low)] focus-visible:outline-[var(--sem-support-focus)]"
             onClick={handleClose}
           >
             Cancelar
@@ -655,7 +654,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               onClick={onClose}
               disabled={guardando}
-              className="rounded-full h-10 px-6 min-w-[120px] font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb] hover:text-[#4b5563] active:bg-[#f3f4f6] active:text-[#4b5563] focus:bg-[#f3f4f6] focus:text-[#4b5563]"
+              className="rounded-full h-10 px-6 min-w-[120px] font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[var(--sem-support-disabled-low)] text-[var(--sem-content-low)] hover:bg-[var(--sem-border-md)] hover:text-[var(--sem-content-low)] active:bg-[var(--sem-support-disabled-low)] active:text-[var(--sem-content-low)] focus:bg-[var(--sem-support-disabled-low)] focus:text-[var(--sem-content-low)]"
             >
               Cancelar
             </Button>
@@ -870,7 +869,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
   const [showObservarModal,       setShowObservarModal]       = useState(false)
   const [showEditarConfirm,       setShowEditarConfirm]       = useState(false)
-  const [activePanel,             setActivePanel]             = useState<"revision" | "observaciones" | "historial" | "bitacora">("revision")
+  const [activePanel,             setActivePanel]             = useState<"revision" | "observaciones" | "historial">("revision")
   const [folioDictamen,           setFolioDictamen]           = useState<string | null>(
     solicitud._raw?.folio_dictamen ?? solicitud._raw?.dictamen?.folio ?? null
   )
@@ -909,24 +908,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
       estadoNuevo:    h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "—",
       comentario:     h.comentario ?? null,
     }))
-  const bitacora: BitacoraEntry[] = (() => {
-    const cambios: BitacoraEntry = {
-      seccion: "Historial de cambios",
-      eventos: historial.map((h) => ({ fecha: h.fecha, usuario: h.usuario, descripcion: h.estadoNuevo })),
-    }
-    const adjuntosRaw: any[] = raw?.adjunto ?? []
-    const adjuntos: BitacoraEntry = {
-      seccion: "Documentos Adjuntos",
-      eventos: adjuntosRaw.map((a: any) => ({
-        fecha: a.fecha_subida
-          ? new Date(a.fecha_subida).toISOString().replace("T", " ").slice(0, 16)
-          : "",
-        usuario: "Sistema",
-        descripcion: `Archivo cargado: ${a.nombre_archivo}`,
-      })),
-    }
-    return adjuntos.eventos.length > 0 ? [cambios, adjuntos] : [cambios]
-  })()
   const observacionesUefa: string = raw?.observaciones_uefa ?? raw?.observacion_uefa ?? ""
   const observacionesUefaActiva: boolean = (() => {
     if (!observacionesUefa) return false
@@ -1053,11 +1034,11 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
       </div>
 
       {observacionesUefaActiva && (
-        <Card className="border-2 border-[#832B56]/30 shadow-sm">
+        <Card className="border-2 border-[var(--color-core-mora-20)]/30 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-[#832B56] shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-[var(--color-core-mora-20)] shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-semibold text-[#832B56]">Observaciones UEFA</span>
+              <span className="text-sm font-semibold text-[var(--color-core-mora-20)]">Observaciones UEFA</span>
               <p className="text-sm text-card-foreground mt-1">{observacionesUefa}</p>
             </div>
           </CardContent>
@@ -1074,7 +1055,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               onClick={() => setActivePanel("revision")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
                 activePanel === "revision"
-                  ? "bg-[#e4e3d6] text-[#3a4a2a]"
+                  ? "bg-[var(--sem-bg-surface-high)] text-[var(--color-core-bosque-30)]"
                   : "bg-card text-muted-foreground hover:bg-muted"
               }`}
             >
@@ -1085,12 +1066,12 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 onClick={() => setActivePanel("observaciones")}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors relative ${
                   activePanel === "observaciones"
-                    ? "bg-[#832B56] text-white"
-                    : "bg-card text-[#832B56] hover:bg-[#832B56]/10"
+                    ? "bg-[var(--color-core-mora-20)] text-white"
+                    : "bg-card text-[var(--color-core-mora-20)] hover:bg-[var(--color-core-mora-20)]/10"
                 }`}
               >
                 <AlertTriangle className="h-4 w-4" />Observaciones
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white leading-none">
+                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white leading-none">
                   {observacionesFiltro.length}
                 </span>
               </button>
@@ -1099,30 +1080,42 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               onClick={() => setActivePanel("historial")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
                 activePanel === "historial"
-                  ? "bg-[#e4e3d6] text-[#3a4a2a]"
+                  ? "bg-[var(--sem-bg-surface-high)] text-[var(--color-core-bosque-30)]"
                   : "bg-card text-muted-foreground hover:bg-muted"
               }`}
               >
               <History className="h-4 w-4" />Historial
             </button>
-            <button
-              onClick={() => setActivePanel("bitacora")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
-                activePanel === "bitacora"
-                  ? "bg-[#e4e3d6] text-[#3a4a2a]"
-                  : "bg-card text-muted-foreground hover:bg-muted"
-              }`}
-              >
-              <FileText className="h-4 w-4" />Bitácora
-            </button>
           </div>
 
           {activePanel === "observaciones" && observacionesFiltro.length > 0 && (
-            <ObservacionesPanel title="Observaciones" todasObservaciones={observacionesFiltro} />
-          )}
-
-          {activePanel === "bitacora" && (
-            <BitacoraPanel bitacora={bitacora} />
+            <div className="overflow-hidden rounded-xl border border-border shadow-md">
+              <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                  <AlertTriangle className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-white">Observaciones</span>
+                  <span className="text-[10px] text-white/60">
+                    {observacionesFiltro.length} observación{observacionesFiltro.length !== 1 ? "es" : ""}
+                  </span>
+                </div>
+                <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                  <span className="text-[11px] font-semibold text-white/90">{observacionesFiltro.length} obs.</span>
+                </div>
+              </div>
+              <div className="bg-card p-4 flex flex-col gap-2">
+                {observacionesFiltro.map((obs, i) => (
+                  <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                      <span className="text-[10px] text-muted-foreground">{obs.fecha}{obs.usuario && ` — ${obs.usuario}`}</span>
+                    </div>
+                    <p className="text-xs text-card-foreground leading-relaxed whitespace-pre-line">{obs.comentario}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {activePanel === "revision" && (
@@ -1179,7 +1172,25 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           )}
 
           {activePanel === "historial" && (
-            <HistorialPanel entries={historial} title="Historial de Estatus" />
+            <div className="overflow-hidden rounded-xl border border-border shadow-md sticky top-4">
+              <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
+                  <Clock className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-white">Historial de Estatus</span>
+                  <span className="text-[10px] text-white/60">
+                    {historial.length} entrada{historial.length !== 1 ? "s" : ""} registrada{historial.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                  <span className="text-[11px] font-semibold text-white/90">{historial.length} entrada{historial.length !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+              <div className="bg-card px-5 pt-4 pb-2">
+                <HistorialTimeline entries={historial} />
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -1703,7 +1714,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                 onClick={() => handleAceptar(sol.id)}
                                 disabled={guardando}
                                 className="gap-1.5 font-medium"
-                                style={{ color: "#6B7280" }}
+                                style={{ color: "var(--sem-content-low)" }}
                               >
                                 <ClipboardCheck className="h-4 w-4" />Aceptar
                               </Button>

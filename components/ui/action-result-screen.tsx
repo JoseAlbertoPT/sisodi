@@ -48,7 +48,7 @@ export function ActionResultScreen({
         </div>
       ) : (
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#d2fad2]">
-          <CheckCircle2 className="h-8 w-8 text-[#1c7d29]" />
+          <CheckCircle2 className="h-8 w-8 text-[var(--sem-support-success)]" />
         </div>
       )}
 
@@ -58,13 +58,13 @@ export function ActionResultScreen({
       </div>
 
       {folio && (
-        <span className="text-sm rounded-full px-4 py-1.5 bg-[#F3F4F6]">Folio: {folio}</span>
+        <span className="text-sm rounded-full px-4 py-1.5 bg-[var(--sem-support-disabled-low)]">Folio: {folio}</span>
       )}
 
       {action ?? (onBack && (
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-full border border-[#773357] px-5 py-2 text-sm font-medium text-[#773357] transition-colors hover:bg-[#773357]/5"
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--sem-accent-primary)] px-5 py-2 text-sm font-medium text-[var(--sem-accent-primary)] transition-colors hover:bg-[var(--sem-accent-primary)]/5"
           onClick={onBack}
         >
           <ArrowLeft className="h-4 w-4" /> {backLabel}

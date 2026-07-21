@@ -244,7 +244,7 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-[#C4A882]/50 bg-[#F5F0E8] px-2.5 py-1 text-[10px] font-semibold text-[#A0845C] transition-all hover:bg-[#EDE8DE] hover:border-[#A0845C]/60 hover:shadow-sm">
+        <button className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-[#C4A882]/50 bg-[#F5F0E8] px-2.5 py-1 text-[10px] font-semibold text-[var(--color-core-arena-60)] transition-all hover:bg-[#EDE8DE] hover:border-[var(--color-core-arena-60)]/60 hover:shadow-sm">
           <Pencil className="h-2.5 w-2.5" />
           {cambios.length} campo{cambios.length !== 1 ? "s" : ""} modificado{cambios.length !== 1 ? "s" : ""}
         </button>
@@ -253,8 +253,8 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
 
         {/* Header */}
         <div className="relative flex items-center gap-4 bg-white px-6 py-5 border-b border-border/60">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#A0845C]/10 border border-[#A0845C]/20">
-            <Pencil className="h-5 w-5 text-[#A0845C]" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-core-arena-60)]/10 border border-[var(--color-core-arena-60)]/20">
+            <Pencil className="h-5 w-5 text-[var(--color-core-arena-60)]" />
           </div>
           <div className="flex flex-col gap-1 min-w-0 flex-1">
             <DialogHeader>
@@ -269,8 +269,8 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
               <span>{fecha}</span>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#A0845C]/10 px-3 py-1 text-[11px] font-semibold text-[#A0845C] shrink-0">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#A0845C] text-[9px] font-black text-white">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-core-arena-60)]/10 px-3 py-1 text-[11px] font-semibold text-[var(--color-core-arena-60)] shrink-0">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-arena-60)] text-[9px] font-black text-white">
               {cambios.length}
             </span>
             campo{cambios.length !== 1 ? "s" : ""} modificado{cambios.length !== 1 ? "s" : ""}
@@ -287,7 +287,7 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
             {cambios.map((c, i) => (
               <div key={i} className="px-6 py-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#A0845C]/15 text-[10px] font-black text-[#A0845C]">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-core-arena-60)]/15 text-[10px] font-black text-[var(--color-core-arena-60)]">
                     {i + 1}
                   </span>
                   <span className="text-[13px] font-bold text-foreground">{c.campo}</span>
@@ -355,7 +355,7 @@ function TimelineDot({ tipo }: { tipo: Tipo }) {
     )
   if (tipo === "observacion")
     return (
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#773357] ring-4 ring-[#773357]/15">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--sem-accent-primary)] ring-4 ring-[var(--sem-accent-primary)]/15">
         <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
@@ -397,12 +397,12 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
         const isLast = i === visible.length - 1 && !showToggle
 
         const labelColor =
-          tipo === "observacion" ? "text-[#773357]"
+          tipo === "observacion" ? "text-[var(--sem-accent-primary)]"
           : tipo === "edicion"    ? "text-[#8B6F47]"
           : "text-[#2D3B2D]"
 
         const rowBg =
-          tipo === "observacion" ? "bg-[#773357]/[0.06] border border-[#773357]/20 rounded-lg px-3 py-2"
+          tipo === "observacion" ? "bg-[var(--sem-accent-primary)]/[0.06] border border-[var(--sem-accent-primary)]/20 rounded-lg px-3 py-2"
           : tipo === "edicion"    ? "bg-[#F5EFE3] border border-[#C4A882]/30 rounded-lg px-3 py-2"
           : "px-3 py-2"
 
@@ -411,15 +411,15 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
             {/* ── Left col: dot + vertical line ── */}
             <div className="flex flex-col items-center">
               <TimelineDot tipo={tipo} />
-              {!isLast && <div className="w-px flex-1 bg-[#E5E7EB] mt-1 mb-1 min-h-[20px]" />}
+              {!isLast && <div className="w-px flex-1 bg-[var(--sem-border-md)] mt-1 mb-1 min-h-[20px]" />}
             </div>
 
             {/* ── Right col: content ── */}
             <div className={`flex flex-col gap-0.5 pb-4 flex-1 min-w-0 ${isLast ? 'pb-0' : ''}`}>
               <div className={rowBg}>
                 <span className={`text-[13px] font-semibold leading-snug ${labelColor}`}>{label}</span>
-                <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-[#9CA3AF] mt-0.5">
-                  <span className="font-medium text-[#6B7280]">{entry.usuario}</span>
+                <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-[var(--sem-border-high)] mt-0.5">
+                  <span className="font-medium text-[var(--sem-content-low)]">{entry.usuario}</span>
                   <span>·</span>
                   <span>{fmtFecha(entry.fecha)}</span>
                 </div>
