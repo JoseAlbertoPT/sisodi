@@ -202,22 +202,22 @@ export function ProgresoFirmadoPage() {
 
       {detalle && (
         <Dialog open onOpenChange={v => { if (!v) setDetalle(null) }}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-base">
                 {detalle.folio_recepcion ?? detalle.folio_justificacion ?? `SOL-${detalle.solicitud_id}`} — {detalle.tipo_solicitud}
               </DialogTitle>
             </DialogHeader>
-            <div className="flex flex-col gap-2 text-sm">
+            <div className="flex flex-col gap-4 text-sm px-6 pb-6">
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <Badge variant="outline">{detalle.estado}</Badge>
                 <span>{detalle.firmados}/{detalle.total_firmantes} firmas</span>
                 <span>·</span>
                 <span>{faseDe(detalle)}</span>
               </div>
-              <div className="flex flex-col gap-2 mt-2">
+              <div className="flex flex-col gap-4">
                 {detalle.firmantes.map(f => (
-                  <div key={f.id} className="rounded-md border p-3">
+                  <div key={f.id} className="rounded-md border p-5">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-mono text-muted-foreground">#{f.orden}</span>
                       <span className="text-sm font-semibold">{f.rol}</span>
@@ -226,16 +226,16 @@ export function ProgresoFirmadoPage() {
                         ? <Badge className="bg-secondary/15 text-secondary border-0 text-[11px] gap-1"><CheckCircle2 className="h-3 w-3" />Firmado</Badge>
                         : <Badge variant="outline" className="text-[11px]">Pendiente</Badge>}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">{f.cargo}</p>
+                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{f.cargo}</p>
                     {(f.nombre || f.rfc) && (
-                      <p className="text-xs mt-1.5">
+                      <p className="text-xs mt-3 leading-relaxed">
                         {f.nombre ?? "—"}
                         {f.rfc && <span className="text-muted-foreground ml-1 font-mono">({f.rfc})</span>}
                         {f.fecha_firma && <span className="text-muted-foreground ml-2">{new Date(f.fecha_firma).toLocaleString("es-MX")}</span>}
                       </p>
                     )}
                     {f.cargo_firmante && (
-                      <p className="text-xs mt-1 text-muted-foreground">
+                      <p className="text-xs mt-2 text-muted-foreground leading-relaxed">
                         Cargo capturado: <span className="text-card-foreground font-medium">{f.cargo_firmante}</span>
                       </p>
                     )}
