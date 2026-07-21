@@ -79,6 +79,9 @@ type UrgEstado =
   | "En Revision Emisor"
   | "Observado por Emisor"
   | "Pendiente Firma Dictamen"
+  | "Pendiente Firma Revision"
+  | "Pendiente Firma Validacion"
+  | "Pendiente Firma Emisor"
   | "En Validacion Final"
   | "Observado por Validacion Final"
   | "En revision DO Filtro 1"
@@ -91,6 +94,8 @@ type UrgEstado =
   | "En proceso DO"
   | "Aprobado"
   | "Emitido"
+  | "Modificada"
+  | "Rechazado"
 
 const INICIALES_MES: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
@@ -349,12 +354,12 @@ function mapApiItem(item: any): UrgSolicitud {
     "En Revision Revisor", "Aceptado por Revisor", "Aprobado por Revisor", "Observado por Revisor",
     "Observado por DO",
     "En Revision Emisor", "Observado por Emisor",
-    "Pendiente Firma Dictamen",
+    "Pendiente Firma Dictamen", "Pendiente Firma Revision", "Pendiente Firma Validacion", "Pendiente Firma Emisor",
     "En Validacion Final", "Observado por Validacion Final",
     "En revision DO Filtro 1", "En revision DO Filtro 2", "En revision DO Filtro 3",
     "Observado DO Filtro 1", "Observado DO Filtro 2", "Observado DO Filtro 3",
     "Devuelta por DO",
-    "En proceso DO", "Aprobado", "Emitido",
+    "En proceso DO", "Aprobado", "Emitido", "Modificada", "Rechazado",
   ]
   const estado: UrgEstado = (
     estadosValidos.find((e) => e.toLowerCase() === rawEstado.toLowerCase()) ?? "Borrador"
