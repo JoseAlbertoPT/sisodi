@@ -136,7 +136,7 @@ export function FirmaAutografaPanel({
                     <FileTypeIcon name={firma?.archivo_firmado?.split("/").pop() ?? "archivo.pdf"} size="sm" />
                   </div>
                   <span className="flex-1 truncate text-sm font-medium text-gray-800 leading-snug">{firma?.archivo_firmado?.split("/").pop()}</span>
-                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs font-medium text-[#773357] hover:underline shrink-0">Ver</a>
+                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs font-medium text-[var(--sem-accent-primary)] hover:underline shrink-0">Ver</a>
                   <button
                     type="button"
                     onClick={handleClear}
@@ -167,7 +167,7 @@ export function FirmaAutografaPanel({
         </CardContent>
       </Card>
 
-      <div className="flex justify-end px-6 py-4 border-t border-[#E5E7EB]">
+      <div className="flex justify-end px-6 py-4 border-t border-[var(--sem-border-md)]">
         <Button
           onClick={() => setShowEnviarConfirm(true)}
           disabled={!archivoSubido || guardandoFinal}

@@ -18,14 +18,14 @@ interface FilterTabsProps {
   className?: string
   /** Distribuye las tabs ocupando todo el ancho disponible (flex-1 por tab) en vez de agruparlas a su tamaño natural. */
   fullWidth?: boolean
-  /** Sobreescribe el color de la tab activa (por defecto el esquema de catálogo: bg-[#e4e3d6] border-[#c2d4a8] text-[#3a4a2a]). */
+  /** Sobreescribe el color de la tab activa (por defecto el esquema de catálogo: bg-[var(--sem-bg-surface-high)] border-[#c2d4a8] text-[var(--color-core-bosque-30)]). */
   activeClassName?: string
-  /** Sobreescribe el color del contador de la tab activa (por defecto bg-[#f3f4f6] text-[#1f1f1f]). */
+  /** Sobreescribe el color del contador de la tab activa (por defecto bg-[var(--sem-support-disabled-low)] text-[#1f1f1f]). */
   activeCountClassName?: string
 }
 
-const DEFAULT_ACTIVE_TAB_CLASS = "bg-card shadow-sm text-[#3a4a2a]"
-const DEFAULT_ACTIVE_COUNT_CLASS = "bg-[#773357] text-white"
+const DEFAULT_ACTIVE_TAB_CLASS = "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
+const DEFAULT_ACTIVE_COUNT_CLASS = "bg-[var(--sem-accent-primary)] text-white"
 
 export function FilterTabs({ value, onValueChange, items, sectionLabel, className, fullWidth, activeClassName, activeCountClassName }: FilterTabsProps) {
   return (
@@ -62,7 +62,7 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel, classNam
               <span
                 className={cn(
                   "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal",
-                  isActive ? (activeCountClassName ?? DEFAULT_ACTIVE_COUNT_CLASS) : "bg-[#773357] text-white"
+                  isActive ? (activeCountClassName ?? DEFAULT_ACTIVE_COUNT_CLASS) : "bg-[var(--sem-accent-primary)] text-white"
                 )}
               >
                 {item.count}

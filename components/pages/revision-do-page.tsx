@@ -40,10 +40,10 @@ import { HistorialTimeline, type HistorialEntryData } from "@/components/histori
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
 import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
 import { C_VERDE_ESTADO, C_ROSA_VINO, C_AMARILLO } from "@/components/ui/status-badge"
-const COLOR_SI        = "#6E795A"
-const COLOR_SI_TEXT   = "#283c2a"
-const COLOR_NO        = "#832B56"
-const COLOR_NO_APLICA = "#B8860B"
+const COLOR_SI        = "var(--color-core-verde-tierra-50)"
+const COLOR_SI_TEXT   = "var(--sem-content-high)"
+const COLOR_NO        = "var(--color-core-mora-20)"
+const COLOR_NO_APLICA = "var(--sem-support-warning)"
 const INICIALES_MES_MAP: Record<string, string> = {
   "01": "EN",
   "02": "FE",
@@ -389,7 +389,7 @@ function getSlaSubtitle(dias: number | null) {
 function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) {
   const bg = diasRestantes === null ? "#64748b" : diasRestantes <= 7 ? C_ROSA_VINO : diasRestantes <= 15 ? C_AMARILLO : C_VERDE_ESTADO
   return (
-    <div className="flex items-center gap-2 rounded-lg px-4 py-2.5" style={{ backgroundColor: bg, color: "#FFFFFF" }}>
+    <div className="flex items-center gap-2 rounded-lg px-4 py-2.5" style={{ backgroundColor: bg, color: "var(--sem-bg-base)" }}>
       <Clock className="h-5 w-5" />
       <div className="flex flex-col">
         <span className="text-sm font-semibold">{getSlaLabel(diasRestantes)}</span>
@@ -404,12 +404,12 @@ function ObservacionChecklist({ comentario }: { comentario: string }) {
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
   const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
   if (itemsChecklist.length === 0) {
-    return <p className="text-xs text-[#832B56]/90 leading-relaxed">{comentario}</p>
+    return <p className="text-xs text-[var(--color-core-mora-20)]/90 leading-relaxed">{comentario}</p>
   }
   return (
     <div className="flex flex-col gap-0 mt-1">
       {comentarioGeneral && (
-        <p className="text-xs text-[#832B56]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
+        <p className="text-xs text-[var(--color-core-mora-20)]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
       )}
       {itemsChecklist.map((linea, idx) => {
         const [titulo, obs] = linea.split("::")
@@ -420,15 +420,15 @@ function ObservacionChecklist({ comentario }: { comentario: string }) {
         return (
           <div key={idx} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/60 bg-white text-[10px] font-bold text-[#832B56]">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/60 bg-white text-[10px] font-bold text-[var(--color-core-mora-20)]">
                 {num}
               </div>
-              {!isLast && <div className="w-px flex-1 bg-[#832B56]/20 my-0.5" />}
+              {!isLast && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/20 my-0.5" />}
             </div>
             <div className={`flex flex-col gap-1 flex-1 ${!isLast ? "pb-3" : "pb-1"}`}>
-              <span className="text-xs font-semibold text-[#832B56]/90 leading-snug">{label}</span>
+              <span className="text-xs font-semibold text-[var(--color-core-mora-20)]/90 leading-snug">{label}</span>
               {obs?.trim() && (
-                <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
                   {obs.trim()}
                 </span>
               )}
@@ -546,7 +546,7 @@ function RadioOption({ value, selected, onChange, label, style }: {
     <button
       type="button"
       onClick={onChange}
-      style={selected ? style : { backgroundColor: "transparent", color: "#4B5563", borderColor: "#D1D5DB" }}
+      style={selected ? style : { backgroundColor: "transparent", color: "var(--sem-content-low)", borderColor: "#D1D5DB" }}
       className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors hover:bg-gray-100"
     >
       {value === "si"       && <CheckCircle2 className="h-3.5 w-3.5" />}
@@ -1211,7 +1211,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               onClick={onClose}
               disabled={guardando}
-              className="h-10 rounded-full border-0 bg-[#F3F4F6] text-sm font-medium text-[#374151] hover:bg-[#E5E7EB] focus-visible:outline-[#e7b400]"
+              className="h-10 rounded-full border-0 bg-[var(--sem-support-disabled-low)] text-sm font-medium text-[var(--sem-content-high)] hover:bg-[var(--sem-border-md)] focus-visible:outline-[var(--sem-support-focus)]"
             >
               Cancelar
             </Button>
@@ -1621,15 +1621,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   if ((error && !showAvanceModal) || !solicitud) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f3f4f6]">
-          <AlertCircle className="h-8 w-8 text-[#9ca3af]" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--sem-support-disabled-low)]">
+          <AlertCircle className="h-8 w-8 text-[var(--sem-border-high)]" />
         </div>
         <div className="text-center max-w-sm">
           <h2 className="ds-title-md text-content-high">{error ?? "Solicitud no encontrada"}</h2>
         </div>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-full border border-[#773357] px-5 py-2 text-sm font-medium text-[#773357] transition-colors hover:bg-[#773357]/5"
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--sem-accent-primary)] px-5 py-2 text-sm font-medium text-[var(--sem-accent-primary)] transition-colors hover:bg-[var(--sem-accent-primary)]/5"
           onClick={() => onBack(filtro)}
         >
           <ArrowLeft className="mr-1.5 h-4 w-4" />Regresar a bandeja
@@ -1684,7 +1684,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               </RadioGroup>
               <div className="flex items-center gap-3 w-full">
                 <Button
-                  className="h-10 flex-1 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+                  className="h-10 flex-1 rounded-full border-0 bg-[var(--sem-support-error-low)] text-sm font-medium text-[var(--sem-support-on-error-low)] hover:bg-[var(--sem-support-error-low)] hover:text-[var(--sem-support-on-error-low)] focus-visible:outline-[var(--sem-support-focus)]"
                   onClick={() => setShowEmitConfirm(false)}
                 >
                   Cancelar
@@ -1826,7 +1826,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 <button onClick={() => setActiveTab("observaciones")}
                   className={`relative flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${activeTab === "observaciones" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:text-card-foreground"}`}>
                   <AlertCircle className="mr-1.5 inline h-4 w-4" />Observaciones
-                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white">
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white">
                     {solicitud.observacionesTodas.length}
                   </span>
                 </button>
@@ -1964,21 +1964,21 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                                               selected={valor === "si"}
                                               onChange={() => updateChecklist(item.key, valor === "si" ? null : "si", "")}
                                               label="Sí"
-                                              style={{ backgroundColor: "#d2fad2", color: "#1c7d29", borderColor: "#1c7d29" }}
+                                              style={{ backgroundColor: "#d2fad2", color: "var(--sem-support-success)", borderColor: "var(--sem-support-success)" }}
                                             />
                                             <RadioOption
                                               value="no"
                                               selected={valor === "no"}
                                               onChange={() => updateChecklist(item.key, valor === "no" ? null : "no")}
                                               label="No"
-                                              style={{ backgroundColor: "#ffd6d7", color: "#87090c", borderColor: "#87090c" }}
+                                              style={{ backgroundColor: "#ffd6d7", color: "var(--sem-support-on-error-low)", borderColor: "var(--sem-support-on-error-low)" }}
                                             />
                                             <RadioOption
                                               value="noAplica"
                                               selected={valor === "noAplica"}
                                               onChange={() => updateChecklist(item.key, valor === "noAplica" ? null : "noAplica", "")}
                                               label="No Aplica"
-                                              style={{ backgroundColor: "#f3f2ee", color: "#4B5563", borderColor: "#9CA3AF" }}
+                                              style={{ backgroundColor: "#f3f2ee", color: "var(--sem-content-low)", borderColor: "var(--sem-border-high)" }}
                                             />
                                           </div>
 
@@ -2042,7 +2042,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
 
                 {filtro !== 1 && (
                   <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                    <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #A0845C 0%, #C4A882 100%)" }}>
+                    <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, var(--color-core-arena-60) 0%, #C4A882 100%)" }}>
                       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
                         <Shield className="h-5 w-5 text-white" />
                       </div>
@@ -2277,9 +2277,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 </div>
                 <div className="bg-card p-4 flex flex-col gap-2">
                   {solicitud.observacionesTodas.map((obs, i) => (
-                    <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                    <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                        <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
                         <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
                       </div>
                       <p className="text-xs text-card-foreground leading-relaxed whitespace-pre-line">{obs.comentario}</p>

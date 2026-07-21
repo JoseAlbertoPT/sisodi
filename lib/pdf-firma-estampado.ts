@@ -115,7 +115,7 @@ async function generarQRPng(text: string, size = 220): Promise<Buffer> {
   return QRCode.toBuffer(text, {
     type: "png", errorCorrectionLevel: "M",
     margin: 1, width: size,
-    color: { dark: "#1a1208", light: "#FFFFFF" },
+    color: { dark: "#1a1208", light: "var(--sem-bg-base)" },
   })
 }
 

@@ -4,7 +4,7 @@ import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG } from "@/components/ui/status-badge"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
@@ -755,7 +755,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             </Button>
             <Button
               size="sm"
-              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#72243E] hover:bg-[#72243E] active:bg-[#72243E] active:text-white text-white border-0"
+              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[var(--sem-accent-primary)] hover:bg-[var(--sem-accent-primary)] active:bg-[var(--sem-accent-primary)] active:text-white text-white border-0"
               onClick={handleSubmit}
               disabled={loading}
             >
@@ -783,14 +783,14 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             const circleStyle = done
               ? { width: 32, height: 32, flexShrink: 0, position: 'relative' as const, zIndex: 1 }
               : active
-              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
-              : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
+              ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: 'var(--sem-bg-base)', border: '2px solid var(--sem-accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
+              : { width: 32, height: 32, borderRadius: '50%', backgroundColor: 'var(--sem-bg-base)', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' as const, zIndex: 1 }
 
             const labelStyle = active
-              ? { fontSize: 12, fontWeight: 600, color: '#773357', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
+              ? { fontSize: 12, fontWeight: 600, color: 'var(--sem-accent-primary)', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
               : done
-              ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
-              : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
+              ? { fontSize: 12, fontWeight: 400, color: 'var(--sem-content-low)', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
+              : { fontSize: 12, fontWeight: 400, color: 'var(--sem-border-high)', textAlign: 'center' as const, maxWidth: 120, lineHeight: 1.3 }
             return (
               <div key={n} className="flex flex-1 flex-col items-center" style={{ position: 'relative' }}>
                 {idx > 0 && (
@@ -800,7 +800,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     left: '-50%',
                     width: '100%',
                     height: 2,
-                    backgroundColor: done ? '#2A3B29' : '#D1D5DB',
+                    backgroundColor: done ? 'var(--color-core-bosque-20)' : '#D1D5DB',
                     zIndex: 0,
                   }} />
                 )}
@@ -809,7 +809,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     {done ? (
                       <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
                     ) : (
-                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#773357' : '#9CA3AF', lineHeight: 1 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: active ? 'var(--sem-accent-primary)' : 'var(--sem-border-high)', lineHeight: 1 }}>
                         {n}
                       </span>
                     )}
@@ -1243,18 +1243,14 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           </div>
           <div className="flex flex-row items-center gap-1.5 shrink-0">
             {usuario.estatus === "Activo" ? (
-              <StatusBadge label="Activo" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} className="text-[11px]" />
+              <StatusBadge label="Activo" className="text-[11px]" />
             ) : (
-              <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} className="text-[11px]" />
+              <StatusBadge label="Inactivo" className="text-[11px]" />
             )}
             {usuario.tipoAdministracion === "centralizada" ? (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-light" style={{ backgroundColor: C_AZUL_REVISION_BG, color: C_AZUL_REVISION }}>
-                Centralizada
-              </span>
+              <StatusBadge label="Centralizada" className="text-[9px]" />
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-md px-2.5 py-2 text-[9px] font-light" style={{ backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO }}>
-                Paraestatal
-              </span>
+              <StatusBadge label="Paraestatal" className="text-[9px]" />
             )}
           </div>
         </div>
@@ -1941,7 +1937,7 @@ export function UsuariosPage() {
           >
             <Power className="h-3.5 w-3.5" />
             Activos
-            <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[#773357] text-white">
+            <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[var(--sem-accent-primary)] text-white">
               {activos.length}
             </span>
           </button>
@@ -1953,7 +1949,7 @@ export function UsuariosPage() {
           >
             <PowerOff className="h-3.5 w-3.5" />
             Deshabilitados
-            <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[#773357] text-white">
+            <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[var(--sem-accent-primary)] text-white">
               {deshabilitados.length}
             </span>
           </button>
@@ -2001,7 +1997,7 @@ export function UsuariosPage() {
               </thead>
               <tbody>
                 {paginated.length === 0 ? (
-                  <tr><td colSpan={8}><EmptyState icon={Inbox} title={filtered.length === 0 && !usuarios.length ? "No hay usuarios registrados" : "Sin resultados"} description="Ajusta los filtros para ver más resultados." /></td></tr>
+                  <tr className="empty-row"><td colSpan={8}><EmptyState icon={Inbox} title={filtered.length === 0 && !usuarios.length ? "No hay usuarios registrados" : "Sin resultados"} description="Ajusta los filtros para ver más resultados." /></td></tr>
                 ) : paginated.map((row) => (
                   <tr key={row.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-bold text-card-foreground">
@@ -2019,9 +2015,9 @@ export function UsuariosPage() {
                     <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
                     <td className="px-4 py-3">
                       {row.tipoAdministracion === "centralizada" ? (
-                        <StatusBadge label="Centralizada" color={C_AZUL_REVISION} bgColor={C_AZUL_REVISION_BG} />
+                        <StatusBadge label="Centralizada" />
                       ) : (
-                        <StatusBadge label="Paraestatal" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
+                        <StatusBadge label="Paraestatal" />
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px]">
@@ -2029,9 +2025,9 @@ export function UsuariosPage() {
                     </td>
                     <td className="px-4 py-3">
                       {row.estatus === "Activo" ? (
-                        <StatusBadge label="Activo" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
+                        <StatusBadge label="Activo" />
                       ) : (
-                        <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
+                        <StatusBadge label="Inactivo" />
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">

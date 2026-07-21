@@ -91,9 +91,9 @@ export function ProgresoFirmadoPage() {
     >
 
       {error && (
-        <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
-          <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
-          <span className="text-sm text-[#DC2626]">{error}</span>
+        <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[var(--sem-support-error)] bg-[#FFF5F5] px-4 py-3">
+          <AlertCircle className="h-4 w-4 shrink-0 text-[var(--sem-support-error)] mt-0.5" />
+          <span className="text-sm text-[var(--sem-support-error)]">{error}</span>
         </div>
       )}
 

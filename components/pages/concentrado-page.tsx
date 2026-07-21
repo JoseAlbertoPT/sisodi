@@ -86,7 +86,7 @@ export function ConcentradoPage() {
                 <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: "#86857e" }} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#ffffff",
+                    backgroundColor: "var(--sem-bg-base)",
                     border: "1px solid #d6d5cf",
                     borderRadius: "8px",
                     fontSize: "12px",
@@ -95,7 +95,7 @@ export function ConcentradoPage() {
                 <Legend wrapperStyle={{ fontSize: "12px" }} />
                 <Bar dataKey="Emitidas" fill="#6e795a" radius={[0, 4, 4, 0]} />
                 <Bar dataKey="En proceso" fill="#c69c6d" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="Rechazadas" fill="#832b56" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="Rechazadas" fill="var(--color-core-mora-20)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

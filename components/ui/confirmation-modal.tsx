@@ -23,8 +23,8 @@ export interface ConfirmationModalProps {
 }
 
 const STYLES: Record<ConfirmationModalType, { Icon: ComponentType<{ className?: string; style?: React.CSSProperties }>; bg: string; fg: string }> = {
-  success: { Icon: CheckCircle2,  bg: "#d2fad2", fg: "#1c7d29" },
-  error:   { Icon: XCircle,       bg: "#ffd8e7", fg: "#773357" },
+  success: { Icon: CheckCircle2,  bg: "#d2fad2", fg: "var(--sem-support-success)" },
+  error:   { Icon: XCircle,       bg: "#ffd8e7", fg: "var(--sem-accent-primary)" },
   warning: { Icon: AlertTriangle, bg: "#fffbeb", fg: "#D97706" },
   info:    { Icon: Info,          bg: "#ecf2ff", fg: "#3266cb" },
 }
@@ -73,7 +73,7 @@ export function ConfirmationModal({
           </div>
 
           {folio && (
-            <span className="text-sm rounded-full px-4 py-1.5 bg-[#F3F4F6]">Folio: {folio}</span>
+            <span className="text-sm rounded-full px-4 py-1.5 bg-[var(--sem-support-disabled-low)]">Folio: {folio}</span>
           )}
 
           {(primaryAction || secondaryAction) && (
@@ -81,7 +81,7 @@ export function ConfirmationModal({
               {secondaryAction && (
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#F3F4F6] px-5 py-2 text-sm font-medium text-[#374151] transition-colors hover:bg-[#E5E7EB]"
+                  className="inline-flex items-center gap-2 rounded-full bg-[var(--sem-support-disabled-low)] px-5 py-2 text-sm font-medium text-[var(--sem-content-high)] transition-colors hover:bg-[var(--sem-border-md)]"
                   onClick={secondaryAction.onClick}
                 >
                   {secondaryAction.label}
@@ -90,7 +90,7 @@ export function ConfirmationModal({
               {primaryAction && (
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#773357] px-5 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
+                  className="inline-flex items-center gap-2 rounded-full bg-[var(--sem-accent-primary)] px-5 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
                   onClick={primaryAction.onClick}
                 >
                   {primaryAction.label}

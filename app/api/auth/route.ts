@@ -24,11 +24,11 @@ async function enviarCodigoRecuperacion(correo: string, codigo: string) {
         <p>Use el siguiente código para restablecer su contraseña.
            Es válido por <strong>10 minutos</strong>.</p>
         <div style="font-size:36px;font-weight:bold;letter-spacing:12px;
-                    text-align:center;padding:24px;background:#f3f4f6;
+                    text-align:center;padding:24px;background:var(--sem-support-disabled-low);
                     border-radius:8px;color:#1e3a5f;margin:24px 0">
           ${codigo}
         </div>
-        <p style="color:#6b7280;font-size:13px">
+        <p style="color:var(--sem-content-low);font-size:13px">
           Si no solicitó este código, ignore este mensaje.
         </p>
       </div>

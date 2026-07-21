@@ -48,7 +48,7 @@ export function getEstadoVariant(estado: Estado) {
     case "En Validacion Justificaciones":
       return { bg: "bg-primary/10", text: "text-primary" }
     case "Observado por Validacion":
-      return { bg: "bg-[#832B56]/10", text: "text-[#832B56]" }
+      return { bg: "bg-[var(--color-core-mora-20)]/10", text: "text-[var(--color-core-mora-20)]" }
     case "En Revision Revisor":
     case "En Validacion Final":
     case "En Revision Emisor":
@@ -56,7 +56,7 @@ export function getEstadoVariant(estado: Estado) {
     case "Observado por Revisor":
     case "Observado por Validacion Final":
     case "Observado por Emisor":
-      return { bg: "bg-[#832B56]/10", text: "text-[#832B56]" }
+      return { bg: "bg-[var(--color-core-mora-20)]/10", text: "text-[var(--color-core-mora-20)]" }
     case "Pendiente Firma Justificacion":
       return { bg: "bg-accent/10", text: "text-accent-foreground" }
     case "Pendiente Firma Dictamen":

@@ -90,7 +90,7 @@ export function DonutChart({
               onMouseLeave={() => setActiveIndex(null)}
             />
           ))}
-          <text x={cx} y={cy - 10} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 26, fontWeight: 700, fill: "#283c2a" }}>
+          <text x={cx} y={cy - 10} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 26, fontWeight: 700, fill: "var(--color-core-bosque-20)" }}>
             {total.toLocaleString("es-MX")}
           </text>
           <text x={cx} y={cy + 16} textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 11, fill: "#86857e" }}>

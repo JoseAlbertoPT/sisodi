@@ -138,7 +138,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
         <div key={n} className="contents">
           {i > 0 && <div className={`h-px flex-1 ${n <= pasoNumero ? "bg-white/30" : "bg-white/10"}`} />}
           <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold
-            ${n < pasoNumero ? "bg-white/30 text-white" : n === pasoNumero ? "bg-white text-[#4A5249]" : "bg-white/10 text-white/50"}`}>
+            ${n < pasoNumero ? "bg-white/30 text-white" : n === pasoNumero ? "bg-white text-[var(--color-core-verde-tierra-40)]" : "bg-white/10 text-white/50"}`}>
             {n < pasoNumero ? <CheckCircle2 className="h-3.5 w-3.5" /> : n}
           </div>
         </div>
@@ -179,7 +179,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
               <div className="flex gap-3">
                 <button type="button" onClick={onClose} className="flex-1 h-12 rounded-full border border-white/20 text-white/70 hover:text-white text-sm transition-colors">Cancelar</button>
                 <button type="button" onClick={handleValidarRfc} disabled={!rfcValido || rfcLoading}
-                  className="flex-1 h-12 rounded-full bg-[#4A5249] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors disabled:opacity-50">
+                  className="flex-1 h-12 rounded-full bg-[var(--color-core-verde-tierra-40)] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors disabled:opacity-50">
                   {rfcLoading ? "Verificando..." : "Verificar RFC"}
                 </button>
               </div>
@@ -197,7 +197,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
                 {codigo.map((digit, i) => (
                   <input key={i} id={`code-${i}`} type="text" inputMode="numeric" maxLength={1}
                     value={digit} onChange={(e) => handleCodigoChange(i, e.target.value)} onKeyDown={(e) => handleCodigoKeyDown(i, e)}
-                    className="w-11 h-14 text-center text-xl font-semibold rounded-xl bg-white text-[#283C2A] focus:outline-none focus:ring-2 focus:ring-white/50" />
+                    className="w-11 h-14 text-center text-xl font-semibold rounded-xl bg-white text-[var(--color-core-bosque-20)] focus:outline-none focus:ring-2 focus:ring-white/50" />
                 ))}
               </div>
               <div className="text-center">
@@ -209,7 +209,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
               <div className="flex gap-3">
                 <button type="button" onClick={() => setPaso("rfc")} className="flex-1 h-12 rounded-full border border-white/20 text-white/70 hover:text-white text-sm transition-colors">Atrás</button>
                 <button type="button" onClick={handleVerificarCodigo} disabled={!codigoCompleto || codigoLoading}
-                  className="flex-1 h-12 rounded-full bg-[#4A5249] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors disabled:opacity-50">
+                  className="flex-1 h-12 rounded-full bg-[var(--color-core-verde-tierra-40)] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors disabled:opacity-50">
                   {codigoLoading ? "Verificando..." : "Verificar código"}
                 </button>
               </div>
@@ -252,7 +252,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
               <div className="flex gap-3">
                 <button type="button" onClick={() => setPaso("codigo")} className="flex-1 h-12 rounded-full border border-white/20 text-white/70 hover:text-white text-sm transition-colors">Atrás</button>
                 <button type="button" onClick={handleGuardar} disabled={!todasOk || saveLoading}
-                  className="flex-1 h-12 rounded-full bg-[#4A5249] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors disabled:opacity-50">
+                  className="flex-1 h-12 rounded-full bg-[var(--color-core-verde-tierra-40)] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors disabled:opacity-50">
                   {saveLoading ? "Guardando..." : "Guardar contraseña"}
                 </button>
               </div>
@@ -266,7 +266,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
               <span className="text-base font-semibold text-white">¡Contraseña actualizada!</span>
               <span className="text-sm text-white/60 text-center">Ya puede iniciar sesión con sus nuevas credenciales.</span>
               <button type="button" onClick={onClose}
-                className="h-12 w-full rounded-full bg-[#4A5249] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors">
+                className="h-12 w-full rounded-full bg-[var(--color-core-verde-tierra-40)] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors">
                 Ir al inicio de sesión
               </button>
             </div>
@@ -359,7 +359,7 @@ function ModalCambioContrasena({
             <div className="flex gap-3">
               <button type="button" onClick={onCancel} className="flex-1 h-12 rounded-full border border-white/20 text-white/70 hover:text-white text-sm transition-colors">Cerrar sesión</button>
               <button type="button" onClick={handleGuardar} disabled={!passwordActual || !todasOk || loading}
-                className="flex-1 h-12 rounded-full bg-[#4A5249] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors disabled:opacity-50">
+                className="flex-1 h-12 rounded-full bg-[var(--color-core-verde-tierra-40)] hover:bg-[#3d443c] text-white font-medium text-sm transition-colors disabled:opacity-50">
                 {loading ? "Guardando..." : "Guardar contraseña"}
               </button>
             </div>

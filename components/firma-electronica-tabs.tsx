@@ -434,7 +434,7 @@ export function FirmaElectronicaTabs({
         />
       )}
 
-      <div className="flex justify-end px-6 py-4 border-t border-[#E5E7EB]">
+      <div className="flex justify-end px-6 py-4 border-t border-[var(--sem-border-md)]">
         <Button
           onClick={() => onFinalizar()}
           disabled={!puedeContinuar || guardandoFinal || (!!selladoEtapa && !selladoSubido)}

@@ -925,15 +925,15 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
         const circleStyle: React.CSSProperties = isDone
           ? { width: 32, height: 32, flexShrink: 0, position: 'relative', zIndex: 1 }
           : isActive
-          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#773357', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
-          : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
+          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: 'var(--sem-accent-primary)', border: '2px solid var(--sem-accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
+          : { width: 32, height: 32, borderRadius: '50%', backgroundColor: 'var(--sem-bg-base)', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
 
         /* Label style */
         const labelStyle: React.CSSProperties = isActive
-          ? { fontSize: 12, fontWeight: 400, color: '#374151', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          ? { fontSize: 12, fontWeight: 400, color: 'var(--sem-content-high)', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : isDone
-          ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
-          : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          ? { fontSize: 12, fontWeight: 400, color: 'var(--sem-content-low)', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          : { fontSize: 12, fontWeight: 400, color: 'var(--sem-border-high)', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
 
         return (
           <div key={s.key} className="flex flex-1 flex-col items-center" style={{ position: 'relative' }}>
@@ -946,7 +946,7 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
                 left: '-50%',
                 width: '100%',
                 height: 2,
-                backgroundColor: currentIndex >= i ? '#15803d' : '#773357',
+                backgroundColor: currentIndex >= i ? '#15803d' : 'var(--sem-accent-primary)',
                 zIndex: 0,
               }} />
             )}
@@ -956,7 +956,7 @@ function StepIndicator({ step, tipo }: { step: Step; tipo: TipoSolicitud }) {
                 {isDone ? (
                   <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
                 ) : (
-                  <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#ffffff' : '#9CA3AF', lineHeight: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? 'var(--sem-bg-base)' : 'var(--sem-border-high)', lineHeight: 1 }}>
                     {i + 1}
                   </span>
                 )}
@@ -1141,17 +1141,17 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
             {!seleccionado && coincidencias.length > 1 && (
               <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
                 <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
-                <span className="text-sm font-medium text-[#374151]">
+                <span className="text-sm font-medium text-[var(--sem-content-high)]">
                   Hay varias coincidencias — seleccione el nivel que corresponda.
                 </span>
               </div>
             )}
             {seleccionado && (
               <div className="flex items-center justify-center gap-2 rounded-xl bg-[#d2fad2] px-4 py-3">
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1c7d29]">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--sem-support-success)]">
                   <span className="text-[12px] font-bold text-white leading-none">i</span>
                 </div>
-                <span className="text-sm font-light text-[#1c7d29]">
+                <span className="text-sm font-light text-[var(--sem-support-success)]">
                   Nivel seleccionado: {seleccionado.nivel}
                   {seleccionado.categoria ? ` — categoría ${seleccionado.categoria}` : ""}
                 </span>
@@ -1165,9 +1165,9 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
                 <span className="text-sm font-light text-[#3266cb]">Ingrese el importe para ver coincidencias</span>
               </div>
             ) : coincidencias.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
-                <AlertCircle className="h-4 w-4 text-[#DC2626] shrink-0 mt-0.5" />
-                <span className="text-sm text-[#DC2626]">Sin coincidencias en el tabulador.</span>
+              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[var(--sem-support-error)] bg-[#FFF5F5] px-4 py-3">
+                <AlertCircle className="h-4 w-4 text-[var(--sem-support-error)] shrink-0 mt-0.5" />
+                <span className="text-sm text-[var(--sem-support-error)]">Sin coincidencias en el tabulador.</span>
               </div>
             ) : (
               <div className="flex flex-col gap-1.5">
@@ -1234,30 +1234,30 @@ function SelectConBusqueda({
           {selectedLabel ?? <span className="text-muted-foreground">{placeholder}</span>}
         </span>
       </SelectTrigger>
-      <SelectContent className="rounded-[12px] border-[#E5E7EB] shadow-lg p-1.5">
+      <SelectContent className="rounded-[12px] border-[var(--sem-border-md)] shadow-lg p-1.5">
         {/* ── Buscador interno ── */}
         <div className="sticky top-0 z-10 bg-white pb-1.5 px-0.5">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#9CA3AF] pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--sem-border-high)] pointer-events-none" />
             <Input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar…"
-              className="h-9 rounded-full border-[#E5E7EB] bg-white text-sm pl-9 pr-8 focus:border-[#2D3B2D]"
+              className="h-9 rounded-full border-[var(--sem-border-md)] bg-white text-sm pl-9 pr-8 focus:border-[#2D3B2D]"
               onKeyDown={(e) => e.stopPropagation()}
               autoFocus
             />
             {busqueda && (
               <button
                 onClick={() => setBusqueda("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#374151]"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--sem-border-high)] hover:text-[var(--sem-content-high)]"
               >
                 <X className="h-3 w-3" />
               </button>
             )}
           </div>
           {busqueda && (
-            <p className="text-[10px] text-[#9CA3AF] mt-1 pl-3">
+            <p className="text-[10px] text-[var(--sem-border-high)] mt-1 pl-3">
               {filtradas.length} resultado{filtradas.length !== 1 ? "s" : ""}
             </p>
           )}
@@ -1270,7 +1270,7 @@ function SelectConBusqueda({
               <SelectItem
                 key={o.value}
                 value={o.value}
-                className="rounded-[8px] focus:bg-[#f0ede6] focus:text-[#773357] data-[state=checked]:bg-[#f0ede6] data-[state=checked]:text-[#773357]"
+                className="rounded-[8px] focus:bg-[#f0ede6] focus:text-[var(--sem-accent-primary)] data-[state=checked]:bg-[#f0ede6] data-[state=checked]:text-[var(--sem-accent-primary)]"
               >
                 {o.label}
               </SelectItem>
@@ -1290,40 +1290,40 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
         style={{ borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 pt-6 pb-4" style={{ borderBottom: "1px solid #E5E7EB" }}>
+        <div className="flex items-center gap-3 px-6 pt-6 pb-4" style={{ borderBottom: "1px solid var(--sem-border-md)" }}>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
             style={{ backgroundColor: "#F3E8F0", border: "1px solid #E8D0E0" }}>
             <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5" />
           </div>
           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
             <span className="text-base font-bold text-[#111827]">Marco Normativo</span>
-            <span className="text-sm text-[#6B7280]">Aviso importante antes de continuar</span>
+            <span className="text-sm text-[var(--sem-content-low)]">Aviso importante antes de continuar</span>
           </div>
           <button onClick={onDismiss}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]">
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--sem-content-low)] transition-colors hover:bg-[var(--sem-support-disabled-low)] hover:text-[#111827]">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Body */}
         <div className="px-6 py-6 flex flex-col gap-3">
-          <p className="text-sm text-[#374151]">
+          <p className="text-sm text-[var(--sem-content-high)]">
             Este apartado deberá contar con <strong>validación previa por la UEF</strong> o su equivalente antes de su envío.
           </p>
-          <p className="text-sm text-[#374151]">
+          <p className="text-sm text-[var(--sem-content-high)]">
             La información registrada será <strong>responsabilidad de la persona titular</strong> de la Unidad de Enlace Financiero Administrativo o equivalente.
           </p>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-6 py-4" style={{ borderTop: "1px solid #E5E7EB" }}>
+        <div className="flex justify-end px-6 py-4" style={{ borderTop: "1px solid var(--sem-border-md)" }}>
           <button
             type="button"
             onClick={onAccept}
             style={{
               border: "none",
               borderRadius: 9999,
-              background: "#773357",
+              background: "var(--sem-accent-primary)",
               padding: "10px 24px",
               fontSize: 14,
               fontWeight: 600,
@@ -1362,36 +1362,36 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
         {/* ── Header ── */}
         <div className="flex items-start justify-between px-6 py-5">
           <div className="flex flex-col gap-1.5">
-            <Info className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-            <span className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">Fórmula de llenado</span>
+            <Info className="h-7 w-7 text-[var(--sem-content-high)]" strokeWidth={1.75} />
+            <span className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[var(--sem-content-high)]">Fórmula de llenado</span>
             <span className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">Guía para redactar correctamente el campo</span>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--sem-content-low)] transition-colors hover:bg-[var(--sem-support-disabled-low)] hover:text-[#111827]"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* ── Separador ── */}
-        <div style={{ borderBottom: "1px solid #E5E7EB" }} />
+        <div style={{ borderBottom: "1px solid var(--sem-border-md)" }} />
 
         {/* ── Contenido / Tabla ── */}
         <div className="overflow-auto px-6 py-4" style={{ maxHeight: "65vh" }}>
           <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
             <tbody>
               {filas.map((fila, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #E5E7EB" }}>
+                <tr key={i} style={{ borderBottom: "1px solid var(--sem-border-md)" }}>
                   <td
                     className="align-top"
                     style={{
                       width: "40%",
                       padding: "12px 16px",
                       backgroundColor: "#F9FAFB",
-                      color: "#6B7280",
+                      color: "var(--sem-content-low)",
                       fontWeight: 400,
-                      borderRight: "1px solid #E5E7EB",
+                      borderRight: "1px solid var(--sem-border-md)",
                     }}
                   >
                     {fila.elemento}
@@ -1400,7 +1400,7 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
                     className="align-top leading-relaxed"
                     style={{
                       padding: "12px 16px",
-                      backgroundColor: "#ffffff",
+                      backgroundColor: "var(--sem-bg-base)",
                       color: "#5d5e5f",
                       fontWeight: 400,
                     }}
@@ -1416,12 +1416,12 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
         {/* ── Footer ── */}
         <div
           className="flex justify-center px-6 py-4"
-          style={{ borderTop: "1px solid #E5E7EB" }}
+          style={{ borderTop: "1px solid var(--sem-border-md)" }}
         >
           <button
             onClick={onClose}
             className="h-10 min-w-[220px] rounded-full text-sm font-medium text-white hover:opacity-90"
-            style={{ border: "none", background: "#773357", cursor: "pointer" }}
+            style={{ border: "none", background: "var(--sem-accent-primary)", cursor: "pointer" }}
           >
             Cerrar
           </button>
@@ -1760,7 +1760,7 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.I ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.I ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
              I. Datos Generales
           </CardTitle>
         </CardHeader>
@@ -2066,10 +2066,10 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.II ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[var(--sem-border-high)] hover:text-[var(--color-core-mora-30)] transition-colors" title="Ver fórmula de llenado">
               <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
@@ -2095,10 +2095,10 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.III ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[var(--sem-border-high)] hover:text-[var(--color-core-mora-30)] transition-colors" title="Ver fórmula de llenado">
               <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
@@ -2128,7 +2128,7 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.IV ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.IV ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
             Responsabilidades
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
@@ -2147,7 +2147,7 @@ function FormularioPrestacion({
           />
 
           <div className="flex flex-col items-start gap-1.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#4b5563]">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--sem-content-low)]">
               <Info className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas.
             </span>
           </div>
@@ -2156,7 +2156,7 @@ function FormularioPrestacion({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.V ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>V</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.V ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>V</span>
             Perfil
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
@@ -2502,7 +2502,7 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.I ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.I ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>I</span>
             Datos Generales
           </CardTitle>
         </CardHeader>
@@ -2809,10 +2809,10 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.II ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto del Nombramiento
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[var(--sem-border-high)] hover:text-[var(--color-core-mora-30)] transition-colors" title="Ver fórmula de llenado">
               <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
@@ -2838,10 +2838,10 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.III ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[var(--sem-border-high)] hover:text-[var(--color-core-mora-30)] transition-colors" title="Ver fórmula de llenado">
               <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
@@ -2870,7 +2870,7 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.IV ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.IV ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>IV</span>
             Responsabilidades
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
           </CardTitle>
@@ -2888,7 +2888,7 @@ function FormularioNombramiento({
             forbiddenTexts={forbiddenTextsNom.responsabilidades}
           />
           <div className="flex flex-col items-start gap-1.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#4b5563]">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[var(--sem-content-low)]">
               <Info className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas
             </span>
           </div>
@@ -2949,8 +2949,8 @@ function FormularioNombramiento({
                               aria-label={`${c}: ${opt === "si" ? "Sí" : "No"}`}
                               className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border-2 transition-colors ${
                                 condiciones[key] === opt
-                                  ? "border-[#7B2D5E] bg-[#7B2D5E]"
-                                  : "border-[#ccc] bg-white hover:border-[#7B2D5E]"
+                                  ? "border-[var(--color-core-mora-30)] bg-[var(--color-core-mora-30)]"
+                                  : "border-[#ccc] bg-white hover:border-[var(--color-core-mora-30)]"
                               }`}
                             >
                               {condiciones[key] === opt && (
@@ -3002,8 +3002,8 @@ function FormularioNombramiento({
                               aria-label={`${r}: ${nivel}`}
                               className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border-2 transition-colors ${
                                 riesgos[key] === nivel
-                                  ? "border-[#7B2D5E] bg-[#7B2D5E]"
-                                  : "border-[#ccc] bg-white hover:border-[#7B2D5E]"
+                                  ? "border-[var(--color-core-mora-30)] bg-[var(--color-core-mora-30)]"
+                                  : "border-[#ccc] bg-white hover:border-[var(--color-core-mora-30)]"
                               }`}
                             >
                               {riesgos[key] === nivel && (
@@ -3068,7 +3068,7 @@ function FormularioNombramiento({
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.VIII ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>VIII</span>
+            <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.VIII ? "bg-[var(--color-core-mora-30)]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>VIII</span>
             Perfil
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
@@ -4013,11 +4013,11 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             </Card>
           )}
           {!calCargando && !calendarioCompleto && (
-            <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
-              <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+            <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[var(--sem-support-error)] bg-[#FFF5F5] px-4 py-3">
+              <AlertCircle className="h-4 w-4 shrink-0 text-[var(--sem-support-error)] mt-0.5" />
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-[#DC2626]">Calendario de Recepción Incompleto</span>
-                <span className="text-sm text-[#374151]">
+                <span className="text-sm font-semibold text-[var(--sem-support-error)]">Calendario de Recepción Incompleto</span>
+                <span className="text-sm text-[var(--sem-content-high)]">
                   Para continuar con el registro es necesario contar con las fechas de los <strong>3 Regímenes</strong> (Honorarios, Asimilados y Nombramiento). <strong>Todos los Meses/Quincenas</strong> deben tener fecha configurada.
                 </span>
               </div>
@@ -4259,38 +4259,38 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
 
                           {/* ── Header ── */}
                           <div className="flex flex-col items-center gap-3 px-6 pt-6 pb-4"
-                            style={{ borderBottom: "1px solid #E5E7EB" }}>
+                            style={{ borderBottom: "1px solid var(--sem-border-md)" }}>
                             <div className="flex h-12 w-12 items-center justify-center rounded-full"
                               style={{ backgroundColor: "#F3E8F0", border: "1px solid #E8D0E0" }}>
                               <img src="/iconos2/Icon.svg" alt="" className="h-6 w-6" />
                             </div>
                             <div className="flex flex-col items-center gap-1 text-center">
                               <span className="text-base font-bold text-[#111827]">¿Confirmar mismas condiciones?</span>
-                              <span className="text-sm text-[#6B7280]">Esta acción bloqueará los campos del formulario</span>
+                              <span className="text-sm text-[var(--sem-content-low)]">Esta acción bloqueará los campos del formulario</span>
                             </div>
                           </div>
 
                           {/* ── Cuerpo ── */}
                           <div className="flex flex-col gap-3 px-6 py-6">
-                            <p className="text-sm text-center text-[#374151]">
+                            <p className="text-sm text-center text-[var(--sem-content-high)]">
                               a) La persona Titular de la Unidad de Enlace Financiero Administrativo se compromete a que la justificación cuente con las mismas condiciones técnico funcionales.
                             </p>
-                            <p className="text-sm text-center text-[#374151]">
+                            <p className="text-sm text-center text-[var(--sem-content-high)]">
                               b) La Dirección General de Desarrollo Organizacional emitirá la dictaminación correspondiente a la presente Justificación.
                             </p>
-                            <div className="flex flex-col gap-2 rounded-[8px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
-                              <span className="text-[11px] font-semibold uppercase tracking-wide text-[#6B7280]">
+                            <div className="flex flex-col gap-2 rounded-[8px] border border-[var(--sem-border-md)] bg-[#F9FAFB] px-4 py-3">
+                              <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--sem-content-low)]">
                                 Campos editables en renovación
                               </span>
                               <ul className="flex flex-col gap-1.5">
-                                <li className="flex items-center gap-2 text-sm text-[#374151]">
+                                <li className="flex items-center gap-2 text-sm text-[var(--sem-content-high)]">
                                   <img src="/iconos2/calender-alt-1.svg" alt="" className="h-3.5 w-3.5 shrink-0 opacity-60" />Vigencia
                                 </li>
-                                <li className="flex items-center gap-2 text-sm text-[#374151]">
-                                  <FileText className="h-3.5 w-3.5 text-[#6B7280] shrink-0" />Oficio de Suficiencia
+                                <li className="flex items-center gap-2 text-sm text-[var(--sem-content-high)]">
+                                  <FileText className="h-3.5 w-3.5 text-[var(--sem-content-low)] shrink-0" />Oficio de Suficiencia
                                 </li>
-                                <li className="flex items-center gap-2 text-sm text-[#374151]">
-                                  <ClipboardList className="h-3.5 w-3.5 text-[#6B7280] shrink-0" />Número de Prestadores de Servicios
+                                <li className="flex items-center gap-2 text-sm text-[var(--sem-content-high)]">
+                                  <ClipboardList className="h-3.5 w-3.5 text-[var(--sem-content-low)] shrink-0" />Número de Prestadores de Servicios
                                 </li>
                               </ul>
                             </div>
@@ -4298,7 +4298,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
 
                           {/* ── Footer ── */}
                           <div className="flex items-center justify-center gap-3 px-6 py-4"
-                            style={{ borderTop: "1px solid #E5E7EB" }}>
+                            style={{ borderTop: "1px solid var(--sem-border-md)" }}>
                             <button
                               type="button"
                               onClick={() => setShowModalMismasCondiciones(false)}
@@ -4309,7 +4309,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                                 padding: "10px 24px",
                                 fontSize: 14,
                                 fontWeight: 500,
-                                color: "#374151",
+                                color: "var(--sem-content-high)",
                                 cursor: "pointer",
                               }}
                             >
@@ -4447,19 +4447,19 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             return (
               <div className="flex flex-col gap-3">
                 {errorBorrador && (
-                  <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
-                    <span className="text-sm text-[#DC2626]">{errorBorrador}</span>
+                  <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[var(--sem-support-error)] bg-[#FFF5F5] px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-[var(--sem-support-error)] mt-0.5" />
+                    <span className="text-sm text-[var(--sem-support-error)]">{errorBorrador}</span>
                   </div>
                 )}
                 {/* {esRenovacion !== "si" && camposFaltantes.length > 0 && (
                   <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
                     <AlertCircle className="h-4 w-4 shrink-0 text-[#D97706] mt-0.5" />
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-semibold text-[#374151]">
+                      <span className="text-sm font-semibold text-[var(--sem-content-high)]">
                         Campos obligatorios pendientes ({camposFaltantes.length}):
                       </span>
-                      <span className="text-xs text-[#6B7280]">
+                      <span className="text-xs text-[var(--sem-content-low)]">
                         {camposFaltantes.join(" · ")}
                       </span>
                     </div>
@@ -4481,7 +4481,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     ) : (
                       <>
                         <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}
-                          className="gap-1.5 bg-[#F3F4F6] text-[#4B5563] border-[#D1D5DB] hover:bg-[#F3F4F6] hover:text-[#4B5563] active:bg-[#F3F4F6] active:text-[#4B5563] focus:bg-[#F3F4F6] focus:text-[#4B5563]">
+                          className="gap-1.5 bg-[var(--sem-support-disabled-low)] text-[var(--sem-content-low)] border-[#D1D5DB] hover:bg-[var(--sem-support-disabled-low)] hover:text-[var(--sem-content-low)] active:bg-[var(--sem-support-disabled-low)] active:text-[var(--sem-content-low)] focus:bg-[var(--sem-support-disabled-low)] focus:text-[var(--sem-content-low)]">
                           {guardandoBorrador
                             ? <><Clock className="h-4 w-4 animate-spin" />Guardando...</>
                             : "Guardar Borrador"

@@ -31,11 +31,11 @@ import {
   type OrganoParaestatalItem,
 } from "@/lib/catalogo-api"
 
-const VINO = "#773357"
-const VINO_HOVER = "#773357"
+const VINO = "var(--sem-accent-primary)"
+const VINO_HOVER = "var(--sem-accent-primary)"
 const AREA_PAGE_SIZE = 10
 const BTN_CANCEL_CLASS =
-  "rounded-full h-10 px-6 font-normal border border-[#e4e3d6] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+  "rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
 const BTN_CONFIRM_CLASS = "rounded-full h-10 px-6 font-normal shadow-sm"
 const DIALOG_FOOTER_CLASS = ""
 
@@ -184,7 +184,7 @@ function OrganoRow({
           onDragOver={(e) => onDragOver(e, index)}
           onDrop={() => onDrop(index)}
           className={[
-            "flex items-center gap-2 py-3 px-4 rounded-xl border bg-white transition-all border-[#e4e3dc] shadow-sm",
+            "flex items-center gap-2 py-3 px-4 rounded-xl border bg-white transition-all border-[var(--color-core-piedra-90)] shadow-sm",
             isDragging ? "opacity-40 border-dashed" : "",
           ].join(" ")}
         >
@@ -233,7 +233,7 @@ function OrganoRow({
 
         {/* ── Áreas ── */}
         <CollapsibleContent>
-          <div className="mt-2 mb-2 ml-6 border-l-2 border-[#773357]/15 pl-3">
+          <div className="mt-2 mb-2 ml-6 border-l-2 border-[var(--sem-accent-primary)]/15 pl-3">
 
             {/* Search bar */}
             {areas.length > 0 && (
@@ -245,7 +245,7 @@ function OrganoRow({
                     placeholder="Buscar área..."
                     value={areaSearch}
                     onChange={(e) => setAreaSearch(e.target.value)}
-                    className="w-full h-8 rounded-lg border border-[#e4e3dc] bg-white pl-8 pr-8 text-xs outline-none transition-colors focus:border-[#773357]/50 placeholder:text-muted-foreground/40"
+                    className="w-full h-8 rounded-lg border border-[var(--color-core-piedra-90)] bg-white pl-8 pr-8 text-xs outline-none transition-colors focus:border-[var(--sem-accent-primary)]/50 placeholder:text-muted-foreground/40"
                   />
                   {areaSearch && (
                     <button
@@ -279,8 +279,8 @@ function OrganoRow({
                     className={[
                       "group flex items-center gap-2 py-2 px-3 rounded-lg border transition-all",
                       !areaSearch && areaDragging === globalIdx
-                        ? "opacity-40 border-dashed border-[#e4e3dc]"
-                        : "border-transparent hover:border-[#e4e3dc] hover:bg-[#f9f8f5]",
+                        ? "opacity-40 border-dashed border-[var(--color-core-piedra-90)]"
+                        : "border-transparent hover:border-[var(--color-core-piedra-90)] hover:bg-[#f9f8f5]",
                     ].join(" ")}
                   >
                     <GripVertical className={`h-3.5 w-3.5 shrink-0 ${areaSearch ? "invisible" : "text-muted-foreground/25 cursor-grab"}`} />
@@ -321,7 +321,7 @@ function OrganoRow({
 
             {/* Pagination */}
             {areaTotalPages > 1 && (
-              <div className="mt-2 pt-2 border-t border-[#e4e3dc]/60">
+              <div className="mt-2 pt-2 border-t border-[var(--color-core-piedra-90)]/60">
                 <div className="flex justify-center items-center gap-1">
                   <button
                     type="button"
@@ -528,7 +528,7 @@ export function CatalogoParaestatalTab({ onCountChange }: { onCountChange?: (n: 
           Agregar Organismo
         </Button>
       </div>
-      <Card className="shadow-sm border-[#e4e3dc] overflow-hidden">
+      <Card className="shadow-sm border-[var(--color-core-piedra-90)] overflow-hidden">
 
         {/* ── Lista ── */}
         <CardContent className="p-4">

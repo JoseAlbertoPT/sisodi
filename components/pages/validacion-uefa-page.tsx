@@ -365,11 +365,11 @@ function DictamenModal({
       <style>
         body { font-family: sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; font-size: 11pt; line-height: 1.5 }
         h2   { font-size: 12pt; margin-top: 20px; border-bottom: 1px solid #ccc; padding-bottom: 4px }
-        .header { text-align: center; border-bottom: 2px solid #283c2a; padding-bottom: 16px; margin-bottom: 20px }
+        .header { text-align: center; border-bottom: 2px solid var(--color-core-bosque-20); padding-bottom: 16px; margin-bottom: 20px }
         .header p { margin: 2px 0; font-size: 9pt; color: #555 }
         .header h1 { font-size: 14pt; margin-bottom: 4px; letter-spacing: 1px }
-        .sello { text-align: center; margin-top: 30px; padding: 12px; border: 2px solid #283c2a;
-                 color: #283c2a; font-weight: bold; letter-spacing: 3px; font-size: 14pt }
+        .sello { text-align: center; margin-top: 30px; padding: 12px; border: 2px solid var(--color-core-bosque-20);
+                 color: var(--color-core-bosque-20); font-weight: bold; letter-spacing: 3px; font-size: 14pt }
         .firmas { display: flex; justify-content: space-between; margin-top: 60px }
         .firma-block { text-align: center; width: 200px }
         .firma-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 4px }
@@ -548,15 +548,15 @@ function DevolucionObs({ comentario }: { comentario: string }) {
             return (
               <div key={idx} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/50 bg-[#832B56]/5 text-[10px] font-bold text-[#832B56]">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/50 bg-[var(--color-core-mora-20)]/5 text-[10px] font-bold text-[var(--color-core-mora-20)]">
                     {num}
                   </div>
-                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[#832B56]/15 my-0.5" />}
+                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/15 my-0.5" />}
                 </div>
                 <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
-                  <span className="text-xs font-semibold text-[#832B56] leading-snug">{label}</span>
+                  <span className="text-xs font-semibold text-[var(--color-core-mora-20)] leading-snug">{label}</span>
                   {obs?.trim() && (
-                    <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                    <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
                       {obs.trim()}
                     </span>
                   )}
@@ -569,18 +569,18 @@ function DevolucionObs({ comentario }: { comentario: string }) {
       {tieneChecks && tieneGeneral && (
         <div className="flex gap-3">
           <div className="flex flex-col items-center">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/30 bg-white text-[10px] text-[#832B56]/50">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/30 bg-white text-[10px] text-[var(--color-core-mora-20)]/50">
               <span className="text-[8px]">✎</span>
             </div>
           </div>
           <div className="flex flex-col gap-0.5 flex-1 pb-0">
-            <span className="text-[10px] font-semibold text-[#832B56]/60 uppercase tracking-wide">Observación general</span>
-            <p className="text-xs text-[#832B56]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+            <span className="text-[10px] font-semibold text-[var(--color-core-mora-20)]/60 uppercase tracking-wide">Observación general</span>
+            <p className="text-xs text-[var(--color-core-mora-20)]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
           </div>
         </div>
       )}
       {!tieneChecks && tieneGeneral && (
-        <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+        <p className="text-sm text-[var(--color-core-mora-20)] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
       )}
     </div>
   )
@@ -592,12 +592,12 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
   const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
 
   if (itemsChecklist.length === 0) {
-    return <p className="text-sm text-[#832B56] leading-relaxed">{comentario}</p>
+    return <p className="text-sm text-[var(--color-core-mora-20)] leading-relaxed">{comentario}</p>
   }
   return (
     <div className="flex flex-col gap-0 mt-1">
       {comentarioGeneral && (
-        <p className="text-xs text-[#832B56]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
+        <p className="text-xs text-[var(--color-core-mora-20)]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
       )}
       {itemsChecklist.map((linea, idx) => {
         const [titulo, obs] = linea.split("::")
@@ -608,15 +608,15 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
         return (
           <div key={idx} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/60 bg-white text-[10px] font-bold text-[#832B56]">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/60 bg-white text-[10px] font-bold text-[var(--color-core-mora-20)]">
                 {num}
               </div>
-              {!isLast && <div className="w-px flex-1 bg-[#832B56]/20 my-0.5" />}
+              {!isLast && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/20 my-0.5" />}
             </div>
             <div className={`flex flex-col gap-1 flex-1 ${!isLast ? "pb-3" : "pb-1"}`}>
-              <span className="text-xs font-semibold text-[#832B56]/90 leading-snug">{label}</span>
+              <span className="text-xs font-semibold text-[var(--color-core-mora-20)]/90 leading-snug">{label}</span>
               {obs?.trim() && (
-                <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
                   {obs.trim()}
                 </span>
               )}
@@ -923,11 +923,11 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[#e4e3d6] shadow-lg p-6"
+        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[var(--sem-bg-surface-high)] shadow-lg p-6"
       >
         <div className="flex flex-col gap-3">
-          <AlertTriangle className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+          <AlertTriangle className="h-7 w-7 text-[var(--sem-content-high)]" strokeWidth={1.75} />
+          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[var(--sem-content-high)]">
             Observar — {folio}
           </DialogTitle>
           <p className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">
@@ -942,7 +942,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
         </div>
         <div className="flex gap-3 pt-3">
           <Button
-            className="h-10 flex-1 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+            className="h-10 flex-1 rounded-full border-0 bg-[var(--sem-support-error-low)] text-sm font-medium text-[var(--sem-support-on-error-low)] hover:bg-[var(--sem-support-error-low)] hover:text-[var(--sem-support-on-error-low)] focus-visible:outline-[var(--sem-support-focus)]"
             onClick={handleClose}
           >
             Cancelar
@@ -1023,7 +1023,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
                         ? "text-white"
                         : "hover:bg-gray-100 text-gray-700"
                     }`}
-                    style={seleccionado === r.id ? { backgroundColor: "#773357" } : undefined}
+                    style={seleccionado === r.id ? { backgroundColor: "var(--sem-accent-primary)" } : undefined}
                   >
                     {seleccionado === r.id
                       ? <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -1038,7 +1038,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
           <div className="flex justify-between pt-1">
             <Button
               onClick={handleClose}
-              className="h-10 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+              className="h-10 rounded-full border-0 bg-[var(--sem-support-error-low)] text-sm font-medium text-[var(--sem-support-on-error-low)] hover:bg-[var(--sem-support-error-low)] hover:text-[var(--sem-support-on-error-low)] focus-visible:outline-[var(--sem-support-focus)]"
             >
               Cancelar
             </Button>
@@ -1162,7 +1162,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                 size="sm"
                 onClick={() => setShowDictamen(true)}
                 className="gap-1.5 rounded-2xl font-medium hover:opacity-90"
-                style={{ backgroundColor: "#722F37", color: "#ffffff", border: "1px solid #5a252c" }}
+                style={{ backgroundColor: "#722F37", color: "var(--sem-bg-base)", border: "1px solid #5a252c" }}
               >
                 <FileCheck className="h-4 w-4" />Ver Dictamen
               </Button>
@@ -1230,7 +1230,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                 onClick={() => setRightTab("historial")}
                 className={`flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
                   rightTab === "historial"
-                    ? "bg-card shadow-sm text-[#3a4a2a]"
+                    ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
                     : "text-muted-foreground hover:text-card-foreground"
                 }`}
               >
@@ -1240,13 +1240,13 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                 onClick={() => setRightTab("observaciones")}
                 className={`relative flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
                   rightTab === "observaciones"
-                    ? "bg-card shadow-sm text-[#3a4a2a]"
+                    ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
                     : "text-muted-foreground hover:text-card-foreground"
                 }`}
               >
                 <AlertTriangle className="h-4 w-4" />Observaciones
                 {tieneObsActivas && (
-                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white">
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white">
                     {solicitud.todasObservaciones.length}
                   </span>
                 )}
@@ -1307,9 +1307,9 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                   {tieneObsActivas ? (
                     <div className="flex flex-col gap-2">
                       {solicitud.todasObservaciones.map((obs, i) => (
-                        <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                        <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                            <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
                             <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
                           </div>
                           <DevolucionObs comentario={obs.comentario} />
@@ -1317,7 +1317,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
                       ))}
                     </div>
                   ) : (isObservada || isDevuelta) && solicitud.observacionesUefa ? (
-                    <div className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                    <div className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
                       {solicitud.fechaObservacion && (
                         <span className="text-[10px] text-muted-foreground">{solicitud.fechaObservacion}</span>
                       )}

@@ -12,10 +12,10 @@ const alertVariants = cva(
         info:        'bg-[#EFF6FF] border-l-[#3B82F6] [&>svg]:text-[#3B82F6]',
         success:     'bg-[#F0FDF4] border-l-[#22C55E] [&>svg]:text-[#16A34A]',
         warning:     'bg-[#FFFBEB] border-l-[#F5A800] [&>svg]:text-[#D97706]',
-        error:       'bg-[#FFF5F5] border-l-[#EF4444] [&>svg]:text-[#DC2626]',
-        generic:     'bg-[#F9FAFB] border-l-[#9CA3AF] [&>svg]:text-[#6B7280]',
+        error:       'bg-[#FFF5F5] border-l-[var(--sem-support-error)] [&>svg]:text-[var(--sem-support-error)]',
+        generic:     'bg-[#F9FAFB] border-l-[var(--sem-border-high)] [&>svg]:text-[var(--sem-content-low)]',
         default:     'bg-card border-l-[#ccc] text-card-foreground [&>svg]:text-muted-foreground',
-        destructive: 'bg-[#FFF5F5] border-l-[#EF4444] [&>svg]:text-[#DC2626]',
+        destructive: 'bg-[#FFF5F5] border-l-[var(--sem-support-error)] [&>svg]:text-[var(--sem-support-error)]',
       },
     },
     defaultVariants: {

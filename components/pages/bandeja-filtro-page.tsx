@@ -225,21 +225,21 @@ const TAB_CONFIG_REVISION: TabCfg = {
   revision:        { label: "En revisión",         icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: C_AZUL_REVISION_BG, color: C_AZUL_REVISION } },
   observadas:      { label: "Observadas",          icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO } },
   pendientes_firma:{ label: "Pendiente de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
-  todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
+  todas:           { label: "Todas",               icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "var(--sem-bg-base)" } },
 }
 const TAB_CONFIG_EMISION: TabCfg = {
   nuevas:          { label: "Estatus de recibidas", icon: <CircleDot className="h-3.5 w-3.5" />,    activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_VERDE_ESTADO_BG, color: C_VERDE_ESTADO } },
   revision:        { label: "En emisión",           icon: <Eye className="h-3.5 w-3.5" />,           activeBg: "bg-primary/10",     activeText: "text-primary",        badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
   observadas:      { label: "Observadas",           icon: <AlertTriangle className="h-3.5 w-3.5" />, activeBg: "bg-destructive/10", activeText: "text-destructive",    badgeStyle: { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO } },
   pendientes_firma:{ label: "Pendientes de firma",  icon: <Stamp className="h-3.5 w-3.5" />,         activeBg: "bg-secondary/10",   activeText: "text-secondary",      badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
-  todas:           { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
+  todas:           { label: "Todas",                icon: <ListFilter className="h-3.5 w-3.5" />,    activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "var(--sem-bg-base)" } },
 }
 const TAB_CONFIG_DO: TabCfg = {
   pendientes_asignacion: { label: "Pendientes de asignación", icon: <UserCheck className="h-3.5 w-3.5" />,     activeBg: "bg-orange-500/10",  activeText: "text-orange-600",      badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
   en_validacion:         { label: "En validación",            icon: <ClipboardCheck className="h-3.5 w-3.5" />, activeBg: "bg-primary/10",     activeText: "text-primary",         badgeStyle: { backgroundColor: C_AMARILLO_BG, color: C_AMARILLO } },
   observadas:            { label: "Observadas",               icon: <AlertTriangle className="h-3.5 w-3.5" />,  activeBg: "bg-destructive/10", activeText: "text-destructive",     badgeStyle: { backgroundColor: C_ROSA_VINO_BG, color: C_ROSA_VINO } },
   pendientes_firma:      { label: "Pendientes de firma",      icon: <Stamp className="h-3.5 w-3.5" />,          activeBg: "bg-secondary/10",   activeText: "text-secondary",       badgeStyle: { backgroundColor: C_VIOLETA_EMISION_BG, color: C_VIOLETA_EMISION } },
-  todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "#FFFFFF" } },
+  todas:                 { label: "Todas",                    icon: <ListFilter className="h-3.5 w-3.5" />,      activeBg: "bg-muted",          activeText: "text-card-foreground", badgeStyle: { backgroundColor: "#94a3b8", color: "var(--sem-bg-base)" } },
 }
 
 
@@ -457,11 +457,11 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose() }}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[#e4e3d6] shadow-lg p-6"
+        className="max-w-[min(24rem,calc(100%-2rem))] sm:max-w-[min(24rem,calc(100%-2rem))] border border-[var(--sem-bg-surface-high)] shadow-lg p-6"
       >
         <div className="flex flex-col gap-3">
-          <AlertTriangle className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">
+          <AlertTriangle className="h-7 w-7 text-[var(--sem-content-high)]" strokeWidth={1.75} />
+          <DialogTitle className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[var(--sem-content-high)]">
             Observar — {folio}
           </DialogTitle>
           <p className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">
@@ -476,7 +476,7 @@ function ObservarModal({ open, onClose, onConfirm, folio }: {
         </div>
         <div className="flex gap-3 pt-3">
           <Button
-            className="h-10 flex-1 rounded-full border-0 bg-[#ffeaea] text-sm font-medium text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]"
+            className="h-10 flex-1 rounded-full border-0 bg-[var(--sem-support-error-low)] text-sm font-medium text-[var(--sem-support-on-error-low)] hover:bg-[var(--sem-support-error-low)] hover:text-[var(--sem-support-on-error-low)] focus-visible:outline-[var(--sem-support-focus)]"
             onClick={handleClose}
           >
             Cancelar
@@ -654,7 +654,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
               size="sm"
               onClick={onClose}
               disabled={guardando}
-              className="rounded-full h-10 px-6 min-w-[120px] font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb] hover:text-[#4b5563] active:bg-[#f3f4f6] active:text-[#4b5563] focus:bg-[#f3f4f6] focus:text-[#4b5563]"
+              className="rounded-full h-10 px-6 min-w-[120px] font-medium border-[1.5px] border-[#d1d5db] shadow-sm bg-[var(--sem-support-disabled-low)] text-[var(--sem-content-low)] hover:bg-[var(--sem-border-md)] hover:text-[var(--sem-content-low)] active:bg-[var(--sem-support-disabled-low)] active:text-[var(--sem-content-low)] focus:bg-[var(--sem-support-disabled-low)] focus:text-[var(--sem-content-low)]"
             >
               Cancelar
             </Button>
@@ -1034,11 +1034,11 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
       </div>
 
       {observacionesUefaActiva && (
-        <Card className="border-2 border-[#832B56]/30 shadow-sm">
+        <Card className="border-2 border-[var(--color-core-mora-20)]/30 shadow-sm">
           <CardContent className="flex items-start gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-[#832B56] shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-[var(--color-core-mora-20)] shrink-0 mt-0.5" />
             <div>
-              <span className="text-sm font-semibold text-[#832B56]">Observaciones UEFA</span>
+              <span className="text-sm font-semibold text-[var(--color-core-mora-20)]">Observaciones UEFA</span>
               <p className="text-sm text-card-foreground mt-1">{observacionesUefa}</p>
             </div>
           </CardContent>
@@ -1055,7 +1055,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               onClick={() => setActivePanel("revision")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
                 activePanel === "revision"
-                  ? "bg-[#e4e3d6] text-[#3a4a2a]"
+                  ? "bg-[var(--sem-bg-surface-high)] text-[var(--color-core-bosque-30)]"
                   : "bg-card text-muted-foreground hover:bg-muted"
               }`}
             >
@@ -1066,12 +1066,12 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 onClick={() => setActivePanel("observaciones")}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors relative ${
                   activePanel === "observaciones"
-                    ? "bg-[#832B56] text-white"
-                    : "bg-card text-[#832B56] hover:bg-[#832B56]/10"
+                    ? "bg-[var(--color-core-mora-20)] text-white"
+                    : "bg-card text-[var(--color-core-mora-20)] hover:bg-[var(--color-core-mora-20)]/10"
                 }`}
               >
                 <AlertTriangle className="h-4 w-4" />Observaciones
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#832B56] text-[9px] font-bold text-white leading-none">
+                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white leading-none">
                   {observacionesFiltro.length}
                 </span>
               </button>
@@ -1080,7 +1080,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               onClick={() => setActivePanel("historial")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors ${
                 activePanel === "historial"
-                  ? "bg-[#e4e3d6] text-[#3a4a2a]"
+                  ? "bg-[var(--sem-bg-surface-high)] text-[var(--color-core-bosque-30)]"
                   : "bg-card text-muted-foreground hover:bg-muted"
               }`}
               >
@@ -1106,9 +1106,9 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               </div>
               <div className="bg-card p-4 flex flex-col gap-2">
                 {observacionesFiltro.map((obs, i) => (
-                  <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+                  <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                      <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
                       <span className="text-[10px] text-muted-foreground">{obs.fecha}{obs.usuario && ` — ${obs.usuario}`}</span>
                     </div>
                     <p className="text-xs text-card-foreground leading-relaxed whitespace-pre-line">{obs.comentario}</p>
@@ -1714,7 +1714,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                 onClick={() => handleAceptar(sol.id)}
                                 disabled={guardando}
                                 className="gap-1.5 font-medium"
-                                style={{ color: "#6B7280" }}
+                                style={{ color: "var(--sem-content-low)" }}
                               >
                                 <ClipboardCheck className="h-4 w-4" />Aceptar
                               </Button>

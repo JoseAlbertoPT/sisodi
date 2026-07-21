@@ -104,7 +104,7 @@ interface AdminRecord extends CatalogoRecord {
 
 const C_VERDE: string = "#2d4a3e"
 const C_BEIGE: string = "#f0ede4"
-const C_VINO: string  = "#773357"
+const C_VINO: string  = "var(--sem-accent-primary)"
 function fmt(val: string | null | undefined) {
   return val ?? "—"
 }
@@ -530,22 +530,22 @@ function ConsultaTab() {
       </Dialog>
       <Dialog open={showSol} onOpenChange={setShowSol}>
         <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#E5E7EB]">
+          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
             <DialogTitle className="ds-title-md text-content-high">
               Generar dictamen
             </DialogTitle>
           </div>
           {solRec && (
             <div className="flex flex-col gap-4 px-6 py-5">
-              <p className="text-xs text-[#6B7280]">
+              <p className="text-xs text-[var(--sem-content-low)]">
                 {isParaestatal(solRec)
                   ? "Ajusta la vigencia y el número de personas. Se descargará el PDF del dictamen sin firmas."
                   : "Ajusta la vigencia y el número de prestadores de servicio. Se descargará el PDF del dictamen sin firmas."}
               </p>
-              <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[#F3F4F6] border border-[#E5E7EB]">
+              <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
                 <p className="font-semibold text-[#1F2937]">{entidadNombre(solRec)}</p>
-                <p className="text-[#6B7280]">{fmt(solRec.programa_proyecto)}</p>
-                <p className="text-[#6B7280]">
+                <p className="text-[var(--sem-content-low)]">{fmt(solRec.programa_proyecto)}</p>
+                <p className="text-[var(--sem-content-low)]">
                   Vigencia actual:{" "}
                   <span className="font-medium text-[#1F2937]">{fmt(solRec.vigencia)}</span>
                 </p>
@@ -609,7 +609,7 @@ function ConsultaTab() {
                   <AlertCircle className="h-4 w-4 shrink-0" />{solError}
                 </div>
               )}
-              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#E5E7EB]">
+              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[var(--sem-border-md)]">
                 <Button
                   variant="default"
                   onClick={() => setShowSol(false)}
@@ -823,9 +823,9 @@ function AdministracionTab() {
                   </td>
                   <td className="px-4 py-3">
                     {rec.activo ? (
-                      <StatusBadge label="Activo" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
+                      <StatusBadge label="Activo" />
                     ) : (
-                      <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
+                      <StatusBadge label="Inactivo" />
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -865,7 +865,7 @@ function AdministracionTab() {
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       <Dialog open={showReutilizaciones} onOpenChange={setShowReutilizaciones}>
         <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl bg-white p-0 gap-0 overflow-hidden">
-          <DialogHeader className="px-5 py-4 border-b border-[#E5E7EB]">
+          <DialogHeader className="px-5 py-4 border-b border-[var(--sem-border-md)]">
             <DialogTitle className="ds-title-md text-content-high">
               Reutilizaciones{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
             </DialogTitle>
