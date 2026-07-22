@@ -14,9 +14,9 @@ function cookieNameFor(token: string) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { uuid, token, usuario, cargoFirmante, certificado, clavePrivada, fraseClavePrivada } = body
+    const { uuid, token, usuario, nombre, cargoFirmante, certificado, clavePrivada, fraseClavePrivada } = body
 
-    if (!uuid || !token || !usuario || !cargoFirmante) {
+    if (!uuid || !token || !usuario || !nombre || !cargoFirmante) {
       return NextResponse.json({ ok: false, error: "Faltan campos requeridos" }, { status: 400 })
     }
     if (!BYPASS && (!certificado || !clavePrivada || !fraseClavePrivada)) {
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     const portalRes = BYPASS
-      ? { firma: { responsable: String(usuario).toUpperCase() }, estado: "iniciado", bypass: true }
+      ? { firma: { responsable: String(nombre).trim() }, estado: "iniciado", bypass: true }
       : await efirmaClient.firmar({
           procesoId: firmante.firma_proceso.proceso_id,
           usuario: String(usuario).toUpperCase(),
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
           firmado: true,
           fecha_firma: ahora,
           rfc: String(usuario).toUpperCase(),
-          nombre: portalRes?.firma?.responsable ?? portalRes?.responsable ?? null,
+          nombre: portalRes?.firma?.responsable ?? portalRes?.responsable ?? String(nombre).trim(),
           cargo_firmante: String(cargoFirmante).trim(),
         },
       })

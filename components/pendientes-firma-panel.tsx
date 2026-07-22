@@ -76,6 +76,10 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
       const procesos: ProcesoItem[] = json.procesos ?? []
       const filtrados = procesos.filter(p => {
         if (bandejaActual === "emision" && p.pendiente_emision_por_mi) return true
+        // Si la solicitud ya llegó a "Emitido" por su propio flujo, el proceso de
+        // firma quedó obsoleto (aunque queden firmantes internos sin marcar) y no
+        // debe seguir apareciendo como pendiente en ningún apartado.
+        if ((p.estado_solicitud ?? "").toLowerCase() === "emitido") return false
         // Se busca directo en la lista de firmantes (no solo mi_firmante_pendiente, que la
         // API solo resuelve para el primer pendiente en orden) para poder ver el proceso
         // aunque todavía no sea mi turno.
@@ -148,7 +152,6 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                           label={p.sellado_emision_subido ? "Listo para emitir" : "Falta sellar"}
                           color={C_AZUL_REVISION}
                           bgColor={C_AZUL_REVISION_BG}
-                          className="text-[10px] px-2 py-1"
                         />
                       </td>
                       <td className="px-4 py-2 text-right">
@@ -186,7 +189,6 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                         label={esMiTurno ? "Tu turno" : `Esperando #${siguiente?.orden} · ${siguiente?.rol}`}
                         color={C_AZUL_REVISION}
                         bgColor={C_AZUL_REVISION_BG}
-                        className="text-[10px] px-2 py-1"
                       />
                     </td>
                     <td className="px-4 py-2 text-right">

@@ -1121,6 +1121,17 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, g
       </div>
 
 
+      {isObservada && (
+        <div className="flex items-center justify-center gap-2 rounded-xl px-4 py-3" style={{ backgroundColor: "var(--color-core-mora-95)" }}>
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: "var(--color-core-mora-40)" }}>
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light" style={{ color: "var(--color-core-mora-40)" }}>
+            <strong className="font-medium">Observada</strong> — La solicitud fue observada. Solo lectura.
+          </span>
+        </div>
+      )}
+
       {isPendienteFirma && (
         <Card className="border-2 border-accent/30 bg-accent/5 shadow-sm">
           <CardContent className="flex items-center gap-3 py-4">
@@ -1134,29 +1145,25 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, g
       )}
 
       {isEnProceso && (
-        <Card className="border-2 border-primary/30 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <img src="/iconos2/Icon.svg" alt="" className="h-5 w-5 shrink-0" />
-            <div>
-              <span className="text-sm font-medium text-primary">En Proceso</span>
-              <p className="text-xs text-muted-foreground">La solicitud está en revisión por Validación Final o Emisor. Solo lectura.</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light text-[#3266cb]">
+            <strong className="font-medium">En Proceso</strong> — La solicitud está siendo revisada. Solo lectura.
+          </span>
+        </div>
       )}
 
       {isEmitida && folioDictamenMostrar && (
-        <Card className="border-2 border-primary/30 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <FileCheck className="h-5 w-5 text-primary" />
-            <div>
-              <span className="text-sm font-medium text-primary">Dictamen Emitido</span>
-              <p className="text-xs text-muted-foreground">
-                No. {folioDictamenMostrar}{solicitud.fechaDictamen ? ` — ${solicitud.fechaDictamen}` : ""}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-support-success-low px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-support-success">
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light text-support-success">
+            <strong className="font-medium">Dictamen Emitido</strong> — No. {folioDictamenMostrar}{solicitud.fechaDictamen ? ` — ${solicitud.fechaDictamen}` : ""}
+          </span>
+        </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">

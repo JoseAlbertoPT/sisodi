@@ -93,17 +93,8 @@ export function FirmaProgresoDialog({
                     : <Badge variant="warning" className="text-[11px]">Pendiente</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{f.cargo}</p>
-                {(f.nombre || f.rfc) && (
-                  <p className="text-xs mt-3 leading-relaxed">
-                    {f.nombre ?? "—"}
-                    {f.rfc && <span className="text-muted-foreground ml-1 font-mono">({f.rfc})</span>}
-                    {f.fecha_firma && <span className="text-muted-foreground ml-2">{new Date(f.fecha_firma).toLocaleString("es-MX")}</span>}
-                  </p>
-                )}
-                {f.cargo_firmante && (
-                  <p className="text-xs mt-2 text-muted-foreground leading-relaxed">
-                    Cargo capturado: <span className="text-card-foreground font-medium">{f.cargo_firmante}</span>
-                  </p>
+                {f.nombre && (
+                  <p className="text-xs mt-3 leading-relaxed">{f.nombre}</p>
                 )}
               </div>
             ))}

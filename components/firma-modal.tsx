@@ -32,6 +32,7 @@ export function FirmaModal({
   selladoEtapa,
 }: Props) {
   const [finalizando, setFinalizando] = useState(false)
+  const [procesoIniciado, setProcesoIniciado] = useState(false)
 
   const handleFinalizar = async () => {
     setFinalizando(true)
@@ -44,19 +45,19 @@ export function FirmaModal({
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent showCloseButton={false} className={`w-[92vw] max-h-[90vh] overflow-y-auto shadow-2xl ${esElectronica && procesoIniciado ? "sm:max-w-3xl" : "sm:max-w-lg"}`}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
+          <DialogTitle className="flex items-center gap-2 text-xs">
             {esElectronica ? <Shield className="h-5 w-5 text-primary" /> : <FileSignature className="h-5 w-5 text-secondary" />}
-            <span className="flex flex-col gap-0.5">
+            {esElectronica && !procesoIniciado ? (
+              <span>
+                Iniciar proceso de Firmar Dictamen
+              </span>
+            ) : (
               <span>
                 Firmar dictamen — {folioDictamen ?? <span className="italic text-muted-foreground">sin folio</span>}
               </span>
-              <span className="text-xs font-normal text-muted-foreground">
-                Justificación: {folioJustificacion}
-                {folioRecepcion && <> · Folio Recepción: {folioRecepcion}</>}
-              </span>
-            </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -95,6 +96,7 @@ export function FirmaModal({
             onCancelar={onClose}
             guardandoFinal={finalizando || guardandoFinal}
             selladoEtapa={selladoEtapa}
+            onEstadoCargado={setProcesoIniciado}
           />
         )}
       </DialogContent>

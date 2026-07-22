@@ -38,6 +38,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
   const [firmanteInfo, setFirmanteInfo] = useState<{ rol: string; cargo: string } | null>(null)
   const [documentoInfo, setDocumentoInfo] = useState<{ secretaria: string | null; tipo: string | null; fecha: string | null; folio: string | null } | null>(null)
 
+  const [nombreFirmante, setNombreFirmante] = useState("")
   const [usuario, setUsuario] = useState("")
   const [cargo, setCargo] = useState("")
   const [cerFile, setCerFile] = useState<File | null>(null)
@@ -137,7 +138,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
 
   const handleFirmar = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!cerFile || !keyFile || !password || !usuario || !cargo.trim()) {
+    if (!cerFile || !keyFile || !password || !usuario || !cargo.trim() || !nombreFirmante.trim()) {
       setError("Completa todos los campos"); return
     }
     setError(null); setTrabajando(true)
@@ -149,6 +150,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
         body: JSON.stringify({
           uuid, token,
           usuario: usuario.toUpperCase(),
+          nombre: nombreFirmante.trim(),
           cargoFirmante: cargo.trim(),
 
           certificado: cerB64, clavePrivada: keyB64, fraseClavePrivada: password,
@@ -389,6 +391,15 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleFirmar} className={`flex flex-col gap-5 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="font-sans text-xs font-light text-gray-500">Nombre completo del firmante</Label>
+                  <Input value={nombreFirmante} onChange={e => setNombreFirmante(e.target.value)} placeholder="Nombre completo" aria-invalid={camposIncompletos && !nombreFirmante.trim()} />
+                  {camposIncompletos && !nombreFirmante.trim() && (
+                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                    </p>
+                  )}
+                </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500">RFC del firmante</Label>
                   <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" aria-invalid={camposIncompletos && !usuario} />

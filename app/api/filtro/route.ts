@@ -125,6 +125,7 @@ export async function GET(req: NextRequest) {
 
     let organoFilter: any = {}
     let esRolRevisor = false
+    let esAdmin = false
 
     if (viewerUserId) {
       const viewer = await prisma.usuario.findUnique({
@@ -138,12 +139,13 @@ export async function GET(req: NextRequest) {
       })
       if (viewer) {
         esRolRevisor = viewer.rol?.nombre?.toLowerCase() === "revisor"
+        esAdmin      = viewer.rol?.nombre?.toLowerCase() === "administrador"
 
         if (esRolRevisor && filtro !== 1) {
           return NextResponse.json({ ok: true, data: [] })
         }
 
-        if (!esRolRevisor) {
+        if (!esRolRevisor && !esAdmin) {
           if (viewer.secretaria_id) {
             organoFilter = { secretaria_id_snapshot: viewer.secretaria_id }
           } else if (viewer.secretaria_texto) {
@@ -155,6 +157,7 @@ export async function GET(req: NextRequest) {
           }
           // Filtro 3 (Emisión/DO): sin secretaría → ve todas las solicitudes
         }
+        // Administrador: sin organoFilter → ve todas las solicitudes en cualquier filtro
       }
     }
 
@@ -162,7 +165,7 @@ export async function GET(req: NextRequest) {
 
     if (esRolRevisor && viewerUserId) {
       whereClause.revisor_asignado_id = viewerUserId
-    } else if (filtro === 1 && revisorId) {
+    } else if (!esAdmin && filtro === 1 && revisorId) {
       whereClause.revisor_asignado_id = revisorId
     }
 

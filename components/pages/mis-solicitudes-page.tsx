@@ -1113,6 +1113,17 @@ function DetalleView({
         </div>
       </div>
 
+      {(n === "borrador" || n === "en captura") && !isBorradorFueraDeTiempo && (
+        <div className="flex items-center justify-center gap-2 rounded-xl px-4 py-3" style={{ backgroundColor: "var(--sem-support-disabled-low)" }}>
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: "var(--sem-content-low)" }}>
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light" style={{ color: "var(--sem-content-low)" }}>
+            <strong className="font-medium">Borrador</strong> — Aún no se ha enviado a validación.
+          </span>
+        </div>
+      )}
+
       {(n.includes("en validacion justificaciones") || n.includes("enviada a validacion") ||
         n.includes("pendiente firma justificacion")) && (
         <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
@@ -1302,17 +1313,14 @@ function DetalleView({
         </Card>
       )}
       {isEmitido && sol.numeroDictamen && (
-        <Card className="border-2 border-emerald-400/40 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <FileCheck className="h-5 w-5 text-emerald-600" />
-            <div>
-              <span className="text-sm font-medium text-emerald-700">Dictamen Emitido</span>
-              <p className="text-xs text-muted-foreground">
-                No. {sol.numeroDictamen} — Fecha: {sol.fechaDictamen}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-support-success-low px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-support-success">
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light text-support-success">
+            <strong className="font-medium">Dictamen Emitido</strong> — No. {sol.numeroDictamen} — Fecha: {sol.fechaDictamen}
+          </span>
+        </div>
       )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
         <ScrollArea className="h-[calc(100vh-220px)]">

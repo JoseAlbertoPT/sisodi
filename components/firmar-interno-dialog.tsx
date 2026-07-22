@@ -8,7 +8,7 @@ import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, Loader2, FileKey, KeyRound, CheckCircle2, Briefcase, AlertCircle } from "lucide-react"
+import { Shield, Loader2, FileKey, KeyRound, Briefcase, AlertCircle } from "lucide-react"
 import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 
 async function fileToBase64(file: File): Promise<string> {
@@ -202,22 +202,24 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
       onClose={() => { onFirmado?.(); reset(); onClose() }}
     />
     <Dialog open={open && !exito} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="w-[90vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="px-8 py-4">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Shield className="h-5 w-5 text-primary" />
             {titulo ?? "Firmar con tu e.firma"}
           </DialogTitle>
-          {subtitulo && <p className="text-xs text-muted-foreground mt-1">{subtitulo}</p>}
+          {subtitulo && <p className="text-xs text-muted-foreground mt-0.5">{subtitulo}</p>}
         </DialogHeader>
 
         {firmaCompleta ? (
-          <div className="flex flex-col gap-4 pt-2">
-            <div className="rounded-md border border-secondary/40 bg-secondary/10 p-3 flex items-start gap-2">
-              <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+          <div className="flex flex-col gap-4 px-8 pt-2 pb-6">
+            <div className="flex items-start gap-2 rounded-xl px-4 py-3" style={{ backgroundColor: "var(--sem-support-success-low)" }}>
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full mt-0.5" style={{ backgroundColor: "var(--sem-support-success)" }}>
+                <span className="text-[12px] font-bold text-white leading-none">i</span>
+              </div>
               <div className="flex flex-col gap-0.5">
-                <p className="text-xs font-semibold text-secondary">Firma registrada correctamente</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-sm font-medium" style={{ color: "var(--sem-support-success)" }}>Firma registrada correctamente</p>
+                <p className="text-xs font-light" style={{ color: "var(--sem-support-success)" }}>
                   Falta sellar el dictamen y emitirlo. Descargue, agregue el sello fuera del sistema y suba el archivo.
                 </p>
               </div>
@@ -229,6 +231,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 etapa="emision"
                 usuarioId={usuarioId}
                 nombreDescarga={`Dictamen_${folioDictamen ?? folio ?? solicitudId}`.replace(/[/\\]+/g, "-")}
+                className="max-w-2xl mx-auto w-full"
                 onCambio={setSelladoSubido}
                 onDescargar={async () => {
                   const res = await fetch("/api/pdf/justificacion", {
@@ -257,7 +260,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-6 pt-4 pb-6">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 px-8 pt-2 pb-6">
             {esEmisor && (
               <div className="flex items-center justify-center gap-2 rounded-xl bg-support-error-low px-4 py-3">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-support-error">
@@ -303,43 +306,45 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 </p>
               )}
             </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-xs flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
-              <Input
-                type="file" accept=".cer"
-                aria-invalid={camposInvalidos.cer}
-                onChange={e => {
-                  const f = e.target.files?.[0] ?? null
-                  setCerFile(f)
-                  if (camposInvalidos.cer && f) setCamposInvalidos(p => ({ ...p, cer: false }))
-                }}
-              />
-              {cerFile && <span className="text-xs text-muted-foreground truncate">{cerFile.name}</span>}
-              {camposInvalidos.cer && (
-                <p className="text-[10px] text-support-error flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Este campo es obligatorio
-                </p>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
-              <Input
-                type="file" accept=".key"
-                aria-invalid={camposInvalidos.key}
-                onChange={e => {
-                  const f = e.target.files?.[0] ?? null
-                  setKeyFile(f)
-                  if (camposInvalidos.key && f) setCamposInvalidos(p => ({ ...p, key: false }))
-                }}
-              />
-              {keyFile && <span className="text-xs text-muted-foreground truncate">{keyFile.name}</span>}
-              {camposInvalidos.key && (
-                <p className="text-[10px] text-support-error flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Este campo es obligatorio
-                </p>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label className="text-xs flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
+                <Input
+                  type="file" accept=".cer"
+                  aria-invalid={camposInvalidos.cer}
+                  onChange={e => {
+                    const f = e.target.files?.[0] ?? null
+                    setCerFile(f)
+                    if (camposInvalidos.cer && f) setCamposInvalidos(p => ({ ...p, cer: false }))
+                  }}
+                />
+                {cerFile && <span className="text-xs text-muted-foreground truncate">{cerFile.name}</span>}
+                {camposInvalidos.cer && (
+                  <p className="text-[10px] text-support-error flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Este campo es obligatorio
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
+                <Input
+                  type="file" accept=".key"
+                  aria-invalid={camposInvalidos.key}
+                  onChange={e => {
+                    const f = e.target.files?.[0] ?? null
+                    setKeyFile(f)
+                    if (camposInvalidos.key && f) setCamposInvalidos(p => ({ ...p, key: false }))
+                  }}
+                />
+                {keyFile && <span className="text-xs text-muted-foreground truncate">{keyFile.name}</span>}
+                {camposInvalidos.key && (
+                  <p className="text-[10px] text-support-error flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Este campo es obligatorio
+                  </p>
+                )}
+              </div>
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-xs">Contraseña de la clave privada</Label>
@@ -367,7 +372,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 {error}
               </p>
             )}
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2">
               <Button variant="default" onClick={() => { reset(); onClose() }} disabled={trabajando}>Cancelar</Button>
               <Button type="submit" variant="vino" disabled={trabajando}>
                 {trabajando && <Loader2 className="h-4 w-4 animate-spin" />}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, RefreshCw, ClipboardCheck, AlertCircle, Inbox } from "lucide-react"
+import { AlertCircle, Inbox } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useAuth } from "@/lib/auth-context"
 import { PageLayout } from "@/components/page-layout"
