@@ -391,7 +391,12 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
               <form onSubmit={handleFirmar} className={`flex flex-col gap-5 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500">RFC del firmante</Label>
-                  <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" className={camposIncompletos && !usuario ? "border-destructive" : ""} />
+                  <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" aria-invalid={camposIncompletos && !usuario} />
+                  {camposIncompletos && !usuario && (
+                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
@@ -404,38 +409,65 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                     onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
                     onChange={e => setCargo(e.target.value.toUpperCase())}
                     placeholder="EJ. DIRECTOR DE RECURSOS HUMANOS"
-                    className={`uppercase ${!cargoHabilitado ? "cursor-pointer" : ""} ${camposIncompletos && !cargo.trim() ? "border-destructive" : ""}`}
+                    className={`uppercase ${!cargoHabilitado ? "cursor-pointer" : ""}`}
+                    aria-invalid={camposIncompletos && !cargo.trim()}
                     autoComplete="off"
                     name="cargo-firmante-externo"
                   />
-                  <p className="font-sans text-[10px] font-light text-support-warning flex items-center gap-1 mt-1">
-                    <AlertCircle className="h-3 w-3" />
-                    Escriba su cargo correctamente. Aparecerá impreso junto a su firma en el PDF.
-                  </p>
+                  {camposIncompletos && !cargo.trim() ? (
+                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                    </p>
+                  ) : (
+                    <p className="font-sans text-[10px] font-light text-support-warning flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Escriba su cargo correctamente. Aparecerá impreso junto a su firma en el PDF.
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
-                  <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} className={camposIncompletos && !cerFile ? "border-destructive" : ""} />
+                  <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} aria-invalid={camposIncompletos && !cerFile} />
                   {cerFile && (
                     <span className="font-sans text-xs font-light text-[#773357] truncate flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />{cerFile.name}
                     </span>
                   )}
+                  {camposIncompletos && !cerFile && (
+                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
-                  <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} className={camposIncompletos && !keyFile ? "border-destructive" : ""} />
+                  <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} aria-invalid={camposIncompletos && !keyFile} />
                   {keyFile && (
                     <span className="font-sans text-xs font-light text-[#773357] truncate flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />{keyFile.name}
                     </span>
                   )}
+                  {camposIncompletos && !keyFile && (
+                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-gray-500">Contraseña de la clave privada</Label>
-                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className={camposIncompletos && !password ? "border-destructive" : ""} />
+                  <Input type="password" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} aria-invalid={camposIncompletos && !password} />
+                  {camposIncompletos && !password && (
+                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                    </p>
+                  )}
                 </div>
-                {error && <p className="text-xs text-destructive">{error}</p>}
+                {error && (
+                  <p className="text-xs text-support-error flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {error}
+                  </p>
+                )}
                 <Button type="submit" disabled={trabajando}
                   className="gap-1.5 self-end mt-1 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
                   {trabajando ? "Firmando..." : "Firmar ahora"}

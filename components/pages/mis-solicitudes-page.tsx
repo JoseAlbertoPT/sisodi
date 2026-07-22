@@ -17,8 +17,9 @@ import { PageLayout } from "@/components/page-layout"
 import {
   Eye, Edit3, Download, FileCheck,
   ChevronDown, ChevronRight, History, FileText,
-  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw, Info,
+  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw, Info, Inbox,
 } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
   Tooltip,
@@ -258,9 +259,6 @@ function getObservador(estado: UrgEstado): string | null {
   return null
 }
 function getSubEstadoDGDO(estado: UrgEstado): string | null {
-  const n = (estado ?? "").toLowerCase()
-  if (n === "pendiente do" || n.includes("en revision do"))
-    return "En Revisión"
   return null
 }
 
@@ -736,7 +734,7 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
     v ? <span className="font-semibold text-card-foreground">{v}</span> : <span className="text-muted-foreground">—</span>
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-[8px] border border-[var(--sem-border-md)]">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -754,7 +752,7 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
           </tbody>
         </table>
       </div>
-      <div className="overflow-hidden rounded-[8px] border border-[var(--sem-border-md)]">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50">
@@ -1678,10 +1676,10 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
               <span className="text-sm text-[var(--sem-support-error)]">{error}</span>
             </div>
           )}
-          <div className="overflow-x-auto rounded-[8px] border border-[var(--sem-border-md)] overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-secondary text-secondary-foreground">
+                <tr className="bg-bg-base text-content-high">
                   <th className="px-4 py-3 text-left font-semibold">
                     {getFolioHeader(activeTab)}
                   </th>
@@ -1798,8 +1796,8 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
 
                 {!loading && filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                      No se encontraron solicitudes.
+                    <td colSpan={7}>
+                      <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                     </td>
                   </tr>
                 )}

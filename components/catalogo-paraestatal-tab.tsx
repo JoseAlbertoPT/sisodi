@@ -312,10 +312,10 @@ function OrganoRow({
               })}
 
               {areasFiltered.length === 0 && areaSearch && (
-                <p className="text-xs text-muted-foreground ml-4 py-2 italic">Sin resultados para &quot;{areaSearch}&quot;</p>
+                <EmptyState icon={Inbox} title="Sin resultados" description={`No hay áreas que coincidan con "${areaSearch}".`} className="py-6" />
               )}
-              {areas.length === 0 && (
-                <p className="text-xs text-muted-foreground ml-4 py-2 italic">Sin áreas internas</p>
+              {areas.length === 0 && !areaSearch && (
+                <EmptyState icon={Inbox} title="Sin áreas internas" description="Agrega un área con el botón de arriba." className="py-6" />
               )}
             </div>
 

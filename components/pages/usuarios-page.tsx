@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
 
   Search, KeyRound, MoreVertical, MoreHorizontal, Pencil, X, PowerOff, Power,
-  ChevronRight, Building2, Check,
+  ChevronRight, Building2,
   Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
   Landmark, Factory, Inbox,
 } from "lucide-react"
@@ -325,13 +325,13 @@ function SecretariaTreeSelector({
               <div className={`
                 flex items-center justify-center h-6 w-6 rounded-full text-xs font-medium shrink-0
                 ${level.selected
-                  ? "bg-[#7A1E3A] text-white"
+                  ? ""
                   : idx === levels.length - 1 && !level.selected
                     ? "bg-[#7A1E3A]/15 text-[#7A1E3A] border border-[#7A1E3A]/30"
                     : "bg-muted text-muted-foreground"
                 }
               `}>
-                {level.selected ? <Check className="h-3.5 w-3.5" /> : idx + 1}
+                {level.selected ? <img src="/Iconos1/step-check.svg" width={24} height={24} alt="seleccionado" className="h-6 w-6" /> : idx + 1}
               </div>
               <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{level.label}</span>
               {level.selected && (
@@ -374,7 +374,8 @@ function SecretariaTreeSelector({
                         setSearchAtLevel(idx, e.target.value)
                         setAutocompleteQuery(e.target.value)
                       }}
-                      className={`pl-9 rounded-xl text-sm bg-background ${error && idx === 0 ? "border-destructive" : ""}`}
+                      aria-invalid={!!(error && idx === 0)}
+                      className="pl-9 rounded-xl text-sm bg-background"
                       autoFocus={idx !== 0}
                     />
                   </div>
@@ -438,7 +439,7 @@ function SecretariaTreeSelector({
                     </div>
                   )}
                 </div>
-                {error && idx === 0 && <span className="text-[10px] text-destructive mt-0.5 block">{error}</span>}
+                {error && idx === 0 && <span className="text-[10px] text-support-error mt-0.5 block">{error}</span>}
               </div>
             )}
           </div>
@@ -554,7 +555,8 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
       if (!form.nombre.trim()) e.nombre = "El Nombre es requerido"
       if (!form.correo.trim()) e.correo = "El Correo es requerido"
       else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
-      if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC Inválido (ej. ABCD850101XYZ)"
+      if (!form.rfc.trim()) e.rfc = "El RFC es requerido"
+      else if (!validarRFC(form.rfc)) e.rfc = "RFC Inválido (ej. ABCD850101XYZ)"
     }
     if (s === 2) {
       if (!form.password.trim()) e.password = "La Contraseña es requerida"
@@ -673,12 +675,13 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
             if (key === "correo" && form.correo.trim() && /\S+@\S+\.\S+/.test(form.correo))
               checkUnico("correo", form.correo)
           }}
-          className={`bg-background h-9 px-4 text-xs font-light ${hasError ? "border-destructive" : ""}`}
+          aria-invalid={!!hasError}
+          className="bg-background h-9 px-4 text-xs font-light"
         />
         {isChecking && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
         {!isChecking && hint && !hasError && <span className="text-[10px] text-muted-foreground">{hint}</span>}
-        {!isChecking && errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
-        {!isChecking && asyncErrors[key as string] && <span className="text-[10px] text-destructive">{asyncErrors[key as string]}</span>}
+        {!isChecking && errors[key] && <span className="text-[10px] text-support-error">{errors[key]}</span>}
+        {!isChecking && asyncErrors[key as string] && <span className="text-[10px] text-support-error">{asyncErrors[key as string]}</span>}
       </div>
     )
   }
@@ -858,13 +861,14 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     onBlur={() => {
                       if (form.rfc.trim()) checkUnico("rfc", form.rfc)
                     }}
-                    className={`bg-background h-9 py-2 px-4 pr-9 text-xs font-mono font-light tracking-widest ${errors.rfc || asyncErrors.rfc ? "border-destructive" : ""}`}
+                    aria-invalid={!!(errors.rfc || asyncErrors.rfc)}
+                    className="bg-background h-9 py-2 px-4 pr-9 text-xs font-mono font-light tracking-widest"
                     maxLength={13}
                   />
                   {checking.rfc && <span className="text-[10px] text-muted-foreground">Verificando...</span>}
-                  {!checking.rfc && !errors.rfc && !asyncErrors.rfc && <span className="text-[10px] text-muted-foreground">Opcional — 13 caracteres</span>}
-                  {!checking.rfc && errors.rfc && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
-                  {!checking.rfc && asyncErrors.rfc && <span className="text-[10px] text-destructive">{asyncErrors.rfc}</span>}
+                  {!checking.rfc && !errors.rfc && !asyncErrors.rfc && <span className="text-[10px] text-muted-foreground">13 caracteres</span>}
+                  {!checking.rfc && errors.rfc && <span className="text-[10px] text-support-error">{errors.rfc}</span>}
+                  {!checking.rfc && asyncErrors.rfc && <span className="text-[10px] text-support-error">{asyncErrors.rfc}</span>}
                 </div>
               </div>
             </div>
@@ -881,7 +885,8 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                       autoComplete="new-password"
                       value={form.password}
                       onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                      className={`bg-background h-9 py-2 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                      aria-invalid={!!errors.password}
+                      className="bg-background h-9 py-2 text-xs pr-9"
                     />
                     <button
                       type="button"
@@ -891,19 +896,19 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                       {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
                   </div>
-                  {errors.password && <span className="text-[10px] text-destructive">{errors.password}</span>}
+                  {errors.password && <span className="text-[10px] text-support-error">{errors.password}</span>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
                   <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
-                    <SelectTrigger className={`bg-background h-9 py-2 text-xs ${errors.rol ? "border-destructive" : ""}`}>
+                    <SelectTrigger aria-invalid={!!errors.rol} className="bg-background h-9 py-2 text-xs">
                       <SelectValue placeholder="Seleccione un rol" />
                     </SelectTrigger>
                     <SelectContent>
                       {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  {errors.rol && <span className="text-[10px] text-destructive">{errors.rol}</span>}
+                  {errors.rol && <span className="text-[10px] text-support-error">{errors.rol}</span>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Estatus inicial</Label>
@@ -1139,7 +1144,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     if (!form.nombre.trim()) e.nombre = "El nombre es requerido"
     if (!form.correo.trim()) e.correo = "El correo es requerido"
     else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
-    if (form.rfc.trim() && !validarRFC(form.rfc)) e.rfc = "RFC inválido (ej. ABCD850101XYZ)"
+    if (!form.rfc.trim()) e.rfc = "El RFC es requerido"
+    else if (!validarRFC(form.rfc)) e.rfc = "RFC inválido (ej. ABCD850101XYZ)"
     if (!form.rol)        e.rol        = "Seleccione un rol"
     if (!form.secretaria) e.secretaria = "Seleccione una secretaría"
     if (form.password && form.password.length < 8) e.password = "Mínimo 8 caracteres"
@@ -1207,10 +1213,11 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         autoComplete={autoComplete}
         value={form[key] as string}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-        className={`bg-background h-9 px-4 text-xs font-light ${errors[key] ? "border-destructive" : ""}`}
+        aria-invalid={!!errors[key]}
+        className="bg-background h-9 px-4 text-xs font-light"
       />
       {hint && !errors[key] && <span className="text-[10px] text-muted-foreground">{hint}</span>}
-      {errors[key] && <span className="text-[10px] text-destructive">{errors[key]}</span>}
+      {errors[key] && <span className="text-[10px] text-support-error">{errors[key]}</span>}
     </div>
   )
 
@@ -1293,24 +1300,25 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                   value={form.rfc}
                   autoComplete="off"
                   onChange={(e) => setForm((f) => ({ ...f, rfc: e.target.value.toUpperCase().replace(/\s/g, "") }))}
-                  className={`bg-background h-9 text-xs font-mono font-light tracking-widest ${errors.rfc ? "border-destructive" : ""}`}
+                  aria-invalid={!!errors.rfc}
+                  className="bg-background h-9 text-xs font-mono font-light tracking-widest"
                   maxLength={13}
                 />
-                {!errors.rfc && <span className="text-[10px] text-muted-foreground"></span>}
-                {errors.rfc && <span className="text-[10px] text-destructive">{errors.rfc}</span>}
+                {!errors.rfc && <span className="text-[10px] text-muted-foreground">13 caracteres</span>}
+                {errors.rfc && <span className="text-[10px] text-support-error">{errors.rfc}</span>}
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Rol</Label>
                 <Select value={form.rol} onValueChange={(v) => setForm((f) => ({ ...f, rol: v }))}>
-                  <SelectTrigger className={`bg-background h-9 py-2 text-xs ${errors.rol ? "border-destructive" : ""}`}>
+                  <SelectTrigger aria-invalid={!!errors.rol} className="bg-background h-9 py-2 text-xs">
                     <SelectValue placeholder="Seleccione un rol" />
                   </SelectTrigger>
                   <SelectContent>
                     {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {errors.rol && <span className="text-[10px] text-destructive">{errors.rol}</span>}
+                {errors.rol && <span className="text-[10px] text-support-error">{errors.rol}</span>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -1415,7 +1423,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className={`bg-background px-4 h-9 text-xs pr-9 ${errors.password ? "border-destructive" : ""}`}
+                    aria-invalid={!!errors.password}
+                    className="bg-background px-4 h-9 text-xs pr-9"
                   />
                   <button
                     type="button"
@@ -1425,7 +1434,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
                 </div>
-                {errors.password && <span className="text-[10px] text-destructive">{errors.password}</span>}
+                {errors.password && <span className="text-[10px] text-support-error">{errors.password}</span>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -1437,7 +1446,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     autoComplete="new-password"
                     value={form.confirmPassword}
                     onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                    className={`bg-background h-9 px-4 text-xs pr-9 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                    aria-invalid={!!errors.confirmPassword}
+                    className="bg-background h-9 px-4 text-xs pr-9"
                   />
                   <button
                     type="button"
@@ -1447,7 +1457,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                     {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
                 </div>
-                {errors.confirmPassword && <span className="text-[10px] text-destructive">{errors.confirmPassword}</span>}
+                {errors.confirmPassword && <span className="text-[10px] text-support-error">{errors.confirmPassword}</span>}
               </div>
             </div>
           </div>
@@ -2009,7 +2019,7 @@ export function UsuariosPage() {
               </thead>
               <tbody>
                 {paginated.length === 0 ? (
-                  <tr><td colSpan={8}><EmptyState icon={Inbox} title={filtered.length === 0 && !usuarios.length ? "No hay usuarios registrados" : "Sin resultados"} description="Ajusta los filtros para ver más resultados." /></td></tr>
+                  <tr className="empty-row"><td colSpan={8}><EmptyState icon={Inbox} title={filtered.length === 0 && !usuarios.length ? "No hay usuarios registrados" : "Sin resultados"} description="Ajusta los filtros para ver más resultados." /></td></tr>
                 ) : paginated.map((row) => (
                   <tr key={row.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-bold text-card-foreground">

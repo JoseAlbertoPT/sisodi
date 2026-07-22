@@ -7,7 +7,7 @@ import dynamic from "next/dynamic"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG } from "@/components/ui/status-badge"
+import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_ROSA_VINO, C_ROSA_VINO_BG } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
@@ -589,8 +589,8 @@ export function DictamenesPage() {
                       <td className="px-4 py-3">
                         <StatusBadge
                           label={d.tipoFirma === "electronica" ? "Electrónica" : "Autógrafa"}
-                          color={d.tipoFirma === "electronica" ? C_AZUL_REVISION : C_VERDE_ESTADO}
-                          bgColor={d.tipoFirma === "electronica" ? C_AZUL_REVISION_BG : C_VERDE_ESTADO_BG}
+                          color={d.tipoFirma === "electronica" ? C_AZUL_REVISION : C_ROSA_VINO}
+                          bgColor={d.tipoFirma === "electronica" ? C_AZUL_REVISION_BG : C_ROSA_VINO_BG}
                         />
                       </td>
 

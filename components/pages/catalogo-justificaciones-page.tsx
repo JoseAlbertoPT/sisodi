@@ -897,8 +897,8 @@ function AdministracionTab() {
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
                           <tr>
-                            <td colSpan={3} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                              Sin resultados para la búsqueda
+                            <td colSpan={3}>
+                              <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
                           </tr>
                         )}
@@ -924,7 +924,7 @@ function AdministracionTab() {
                 />
               </>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-6">Sin reutilizaciones registradas.</p>
+              <EmptyState icon={Inbox} title="Sin reutilizaciones registradas" description="Ajusta los filtros para ver más resultados." />
             )}
           </div>
         </DialogContent>

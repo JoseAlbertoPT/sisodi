@@ -37,7 +37,8 @@ import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/
 import { FirmaModal } from "@/components/firma-modal"
 import { useAuth } from "@/lib/auth-context"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
-import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { type HistorialEntryData } from "@/components/historial-timeline"
+import { HistorialPanel, ObservacionesPanel } from "@/components/solicitud-status-tabs"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 
@@ -529,63 +530,6 @@ function UefaEstadoBadge({ estado }: { estado: string }) {
   return estadoBadge(estado)
 }
 
-function DevolucionObs({ comentario }: { comentario: string }) {
-  const lineas = comentario.split("\n").filter(Boolean)
-  const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
-  const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join("\n").trim()
-  const tieneChecks  = itemsChecklist.length > 0
-  const tieneGeneral = comentarioGeneral.length > 0
-  return (
-    <div className="flex flex-col gap-0">
-      {tieneChecks && (
-        <div className="flex flex-col gap-0">
-          {itemsChecklist.map((linea, idx) => {
-            const [titulo, obs] = linea.split("::")
-            const numMatch = titulo.match(/^(\d+)\./)
-            const num   = numMatch ? numMatch[1] : String(idx + 1)
-            const label = titulo.replace(/^\d+\.\s*/, "").trim()
-            const isLast = idx === itemsChecklist.length - 1
-            return (
-              <div key={idx} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/50 bg-[var(--color-core-mora-20)]/5 text-[10px] font-bold text-[var(--color-core-mora-20)]">
-                    {num}
-                  </div>
-                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/15 my-0.5" />}
-                </div>
-                <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
-                  <span className="text-xs font-semibold text-[var(--color-core-mora-20)] leading-snug">{label}</span>
-                  {obs?.trim() && (
-                    <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
-                      {obs.trim()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-      {tieneChecks && tieneGeneral && (
-        <div className="flex gap-3">
-          <div className="flex flex-col items-center">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/30 bg-white text-[10px] text-[var(--color-core-mora-20)]/50">
-              <span className="text-[8px]">✎</span>
-            </div>
-          </div>
-          <div className="flex flex-col gap-0.5 flex-1 pb-0">
-            <span className="text-[10px] font-semibold text-[var(--color-core-mora-20)]/60 uppercase tracking-wide">Observación general</span>
-            <p className="text-xs text-[var(--color-core-mora-20)]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
-          </div>
-        </div>
-      )}
-      {!tieneChecks && tieneGeneral && (
-        <p className="text-sm text-[var(--color-core-mora-20)] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
-      )}
-    </div>
-  )
-}
-
 function ObservacionTimeline({ comentario }: { comentario: string }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
@@ -1057,12 +1001,11 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
   )
 }
 
-function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustificacion, guardando }: {
+function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, guardando }: {
   solicitud: UefaSolicitud; onBack: () => void
   onAprobar: (id: number) => void; onObservar: (id: number) => void
-  onFirmarJustificacion: (id: number) => void; guardando: boolean
+  onAbrirFirma: (id: number) => void; guardando: boolean
 }) {
-  const [showFirmarConfirm,  setShowFirmarConfirm]  = useState(false)
   const [showDictamen,       setShowDictamen]       = useState(false)
   const [showAprobarConfirm, setShowAprobarConfirm] = useState(false)
   const [showDescargarConfirm, setShowDescargarConfirm] = useState(false)
@@ -1146,7 +1089,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
           )}
           {isPendienteFirma && (
             <Button
-              onClick={() => setShowFirmarConfirm(true)}
+              onClick={() => onAbrirFirma(solicitud.id)}
               disabled={guardando}
               variant="primary"
               className="gap-1.5"
@@ -1254,83 +1197,23 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
             </div>
 
             {rightTab === "historial" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <History className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">Historial de Estatus</span>
-                    <span className="text-[10px] text-white/60">
-                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""} registrada{solicitud.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                    <span className="text-[11px] font-semibold text-white/90">
-                      {solicitud.historial.length} entrada{solicitud.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-card px-5 pt-4 pb-2">
-                  <HistorialTimeline entries={solicitud.historial} />
-                </div>
-              </div>
+              <HistorialPanel entries={solicitud.historial} title="Historial de Estatus" />
             )}
 
             {rightTab === "observaciones" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
-                    <AlertTriangle className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">
-                      {isObservada
-                        ? "Observación de Validacion UEFA"
-                        : isDevuelta
-                          ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
-                          : "Observaciones"}
-                    </span>
-                    <span className="text-[10px] text-white/60">
-                      {tieneObsActivas
-                        ? `${solicitud.todasObservaciones.length} observación${solicitud.todasObservaciones.length !== 1 ? "es" : ""}`
-                        : "Sin observaciones activas"}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                    <span className="text-[11px] font-semibold text-white/90">
-                      {tieneObsActivas ? solicitud.todasObservaciones.length : 0} obs.
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-card p-4">
-                  {tieneObsActivas ? (
-                    <div className="flex flex-col gap-2">
-                      {solicitud.todasObservaciones.map((obs, i) => (
-                        <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
-                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
-                          </div>
-                          <DevolucionObs comentario={obs.comentario} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (isObservada || isDevuelta) && solicitud.observacionesUefa ? (
-                    <div className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
-                      {solicitud.fechaObservacion && (
-                        <span className="text-[10px] text-muted-foreground">{solicitud.fechaObservacion}</span>
-                      )}
-                      {solicitud.observadoPor && (
-                        <span className="text-[10px] text-muted-foreground">Por: {solicitud.observadoPor}</span>
-                      )}
-                      <DevolucionObs comentario={solicitud.observacionesUefa} />
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
-                  )}
-                </div>
-              </div>
+              <ObservacionesPanel
+                title={
+                  isObservada
+                    ? "Observación de Validacion UEFA"
+                    : isDevuelta
+                      ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
+                      : "Observaciones"
+                }
+                todasObservaciones={solicitud.todasObservaciones}
+                single={(isObservada || isDevuelta) && solicitud.observacionesUefa
+                  ? { motivo: solicitud.observacionesUefa, fecha: solicitud.fechaObservacion, usuario: solicitud.observadoPor }
+                  : null}
+              />
             )}
           </div>
         </ScrollArea>
@@ -1343,14 +1226,6 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onFirmarJustifi
         title="¿Aprobar y enviar a Validación?"
         description={<>La solicitud <strong className="font-semibold">{solicitud.folioJustificacion}</strong> será enviada a la Bandeja de Validación (DO).</>}
         confirmLabel="Sí, aprobar"
-      />
-      <ConfirmModal
-        open={showFirmarConfirm}
-        onClose={() => setShowFirmarConfirm(false)}
-        onConfirm={() => { setShowFirmarConfirm(false); onFirmarJustificacion(solicitud.id) }}
-        title="¿Firmar Justificación?"
-        description={`Se firmará la justificación ${solicitud.folioJustificacion} y pasará a Validación Final.`}
-        confirmLabel="Sí, firmar"
       />
       <ConfirmModal
         open={showDescargarConfirm}
@@ -1479,38 +1354,13 @@ export function ValidacionUefaPage() {
   }, [observarTargetId, user])
 
   const handleFirmarJustificacion = useCallback(async (id: number) => {
-    setGuardando(true)
-    try {
-      const res = await fetch("/api/validacion", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          solicitudId: id,
-          nuevoEstado: "Pendiente Firma Dictamen",
-          usuarioId:   (user as any)?.id ?? "",
-          comentario:  "Justificacion firmada por Validacion — enviada a Emision (Filtro 3) para firma dictamen",
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok || !json.ok) { showToast("error", "Error al firmar", json.error ?? "No se pudo firmar la justificación."); return }
-      showToast("success", "Justificación firmada", "La justificación fue firmada y enviada a Emisión.")
-      setSolicitudes(prev => prev.map(s => s.id === id ? {
-        ...s,
-        estado: "Pendiente Firma Dictamen",
-        historial: [...s.historial, {
-          fecha:          new Date().toISOString(),
-          usuario:        (user as any)?.nombre ?? "Validacion",
-          estadoAnterior: s.estado,
-          estadoNuevo:    "Pendiente Firma Dictamen",
-        }],
-      } : s))
-      setSelectedId(null)
-    } catch {
-      showToast("error", "Error de conexión", "No se pudo conectar con el servidor.")
-    } finally {
-      setGuardando(false)
-    }
-  }, [user])
+    // No se hace PATCH de estado aquí: el flujo de firma electrónica (FirmaElectronicaTabs)
+    // ya avanza el proceso de firma internamente. Forzar el estado aquí lo mandaba
+    // prematuramente a Emisión aunque aún faltaran firmantes.
+    showToast("success", "Firma registrada", "Tu firma quedó registrada correctamente.")
+    setSelectedId(null)
+    await cargarSolicitudes()
+  }, [cargarSolicitudes])
 
   const tabDefs: { key: UefaTab; label: string }[] = [
     { key: "Nuevas",               label: "Nuevas" },
@@ -1552,7 +1402,7 @@ export function ValidacionUefaPage() {
           onBack={() => setSelectedId(null)}
           onAprobar={handleAprobar}
           onObservar={id => setObservarTargetId(id)}
-          onFirmarJustificacion={handleFirmarJustificacion}
+          onAbrirFirma={id => { setSelectedId(null); setFirmaTargetId(id) }}
           guardando={guardando}
         />
         <ObservarModal

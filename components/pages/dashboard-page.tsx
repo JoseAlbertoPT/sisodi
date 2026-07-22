@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { PageLayout } from "@/components/page-layout"
 import { PageHeader } from '@/components/page-header';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   FileText, Briefcase, FileQuestion, UserCheck,
   FileOutput, Users, Clock, RefreshCw, Loader2,
@@ -50,6 +51,19 @@ const C_MORA90       = "#ffd8e7"
 const C_PIEDRA40    = "#3f80ff"
 const C_PIEDRA70    = "#79a6ff"
 
+// ── Paleta de gráficas (vino) ──────────────────────────────────────────
+const C_VINO_HOVER  = "#6F2C4F"
+const C_ROSA_BASE   = "#C9A3B6"
+const DONUT_PALETTE = ["#4F1E37", "#8A4A6A", "#A56A86", "#C9A3B6"]
+const donutColor = (i: number) => DONUT_PALETTE[i % DONUT_PALETTE.length]
+
+// Ordena de mayor a menor y asigna la paleta en ese orden (rota si hay más categorías que colores)
+function buildDonutItems(raw: { name: string; value: number }[]): { name: string; value: number; color: string }[] {
+  return [...raw]
+    .filter(d => d.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .map((d, i) => ({ ...d, color: donutColor(i) }))
+}
 const MESES = [
 
   { value: "01", label: "Enero" },
@@ -91,16 +105,17 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 function GraficaBarrasVertical({
-  title, subtitle, data, color, dataKey = "count", nameKey = "secretaria", emptyMsg,
+  title, subtitle, data, dataKey = "count", nameKey = "secretaria", emptyMsg,
 }: {
   title: string
   subtitle?: string
   data: any[]
-  color: string
   dataKey?: string
   nameKey?: string
   emptyMsg?: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+
   if (data.length === 0) {
     return (
       <Card className="shadow-sm border-border">
@@ -149,11 +164,27 @@ function GraficaBarrasVertical({
               domain={[0, Math.ceil(maxVal * 1.18)]}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-            <Bar dataKey={dataKey} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} name="Solicitudes">
+            <Bar
+              dataKey={dataKey}
+              radius={[4, 4, 4, 4]}
+              barSize={12}
+              maxBarSize={14}
+              name="Solicitudes"
+              onMouseEnter={(_, i) => setActiveIndex(i)}
+              onMouseLeave={() => setActiveIndex(null)}
+            >
+              {data.map((_, i) => (
+                <Cell
+                  key={i}
+                  fill={activeIndex === i ? C_VINO_HOVER : C_ROSA_BASE}
+                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.5}
+                  className="transition-colors duration-200"
+                />
+              ))}
               <LabelList
                 dataKey={dataKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: color }}
+                style={{ fontSize: 10, fontWeight: 600, fill: C_VINO_HOVER }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -164,12 +195,12 @@ function GraficaBarrasVertical({
   )
 }
 
-function GraficaEmisiones({ data, title, barKey, color }: {
+function GraficaEmisiones({ data, title, barKey }: {
   data: { secretaria: string; dictamenes: number; opiniones: number }[]
   title: string
   barKey: "dictamenes" | "opiniones"
-  color: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const truncate = (s: string, n = 13) => s.length > n ? s.slice(0, n) + "…" : s
   const maxVal = Math.max(...data.map(d => d[barKey] ?? 0), 0)
   if (data.length === 0) {
@@ -219,11 +250,28 @@ function GraficaEmisiones({ data, title, barKey, color }: {
                 domain={[0, Math.ceil(maxVal * 1.18)]}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-                <Bar dataKey={barKey} name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"} fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14}>
+                <Bar
+                  dataKey={barKey}
+                  name={barKey === "dictamenes" ? "Dictámenes" : "Opiniones"}
+                  fill={C_ROSA_BASE}
+                  radius={[4, 4, 4, 4]}
+                  barSize={12}
+                  maxBarSize={14}
+                  onMouseEnter={(_, i) => setActiveIndex(i)}
+                  onMouseLeave={() => setActiveIndex(null)}
+                >
+                {data.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={activeIndex === i ? C_VINO_HOVER : C_ROSA_BASE}
+                    opacity={activeIndex === null || activeIndex === i ? 1 : 0.5}
+                    className="transition-colors duration-200"
+                  />
+                ))}
                 <LabelList
                 dataKey={barKey}
                 position="top"
-                style={{ fontSize: 10, fontWeight: 600, fill: color }}
+                style={{ fontSize: 10, fontWeight: 600, fill: C_VINO_HOVER }}
                 formatter={(v: number) => v > 0 ? v : ""}
               />
             </Bar>
@@ -243,11 +291,6 @@ const COLORES_TIPO: Record<string, string> = {
   Centralizada: C_MORA10,
 
   Paraestatal:  C_MORA50,
-}
-const COLORES_REGIMEN: Record<string, string> = {
-  "Honorarios":            C_MORA90,
-  "Honorarios Asimilados": C_MORA50,
-  "Nombramiento":          C_MORA10,
 }
 const DONUT_INNER_RADIUS = 86
 const DONUT_OUTER_RADIUS = 130
@@ -405,12 +448,12 @@ function DonutSimple({ items: rawItems, subLabel }: {
 }
 
 function BarrasPrestadoresPorTipo({
-  title, items, color,
+  title, items,
 }: {
   title: string
   items: { name: string; value: number }[]
-  color: string
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   if (items.length === 0) {
     return (
       <div className="flex flex-col h-full">
@@ -448,11 +491,29 @@ function BarrasPrestadoresPorTipo({
             domain={[0, Math.ceil(maxVal * 1.18)]}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(40,60,42,0.05)" }} />
-          <Bar dataKey="prestadores" name="Prestadores" fill={color} radius={[4, 4, 4, 4]} barSize={12} maxBarSize={14} isAnimationActive={false}>
+          <Bar
+            dataKey="prestadores"
+            name="Prestadores"
+            fill={C_ROSA_BASE}
+            radius={[4, 4, 4, 4]}
+            barSize={12}
+            maxBarSize={14}
+            isAnimationActive={false}
+            onMouseEnter={(_, i) => setActiveIndex(i)}
+            onMouseLeave={() => setActiveIndex(null)}
+          >
+            {barData.map((_, i) => (
+              <Cell
+                key={i}
+                fill={activeIndex === i ? C_VINO_HOVER : C_ROSA_BASE}
+                opacity={activeIndex === null || activeIndex === i ? 1 : 0.5}
+                className="transition-colors duration-200"
+              />
+            ))}
             <LabelList
               dataKey="prestadores"
               position="top"
-              style={{ fontSize: 10, fontWeight: 600, fill: color }}
+              style={{ fontSize: 10, fontWeight: 600, fill: C_VINO_HOVER }}
               formatter={(v: number) => v > 0 ? v : ""}
             />
           </Bar>
@@ -463,9 +524,7 @@ function BarrasPrestadoresPorTipo({
 }
 
 function GraficaPrestadoresPorRegimen({ data }: { data: { regimen: string; prestadores: number }[] }) {
-  const items = data
-    .filter(d => d.prestadores > 0)
-    .map(d => ({ name: d.regimen, value: d.prestadores, color: COLORES_REGIMEN[d.regimen] ?? C_GRIS_VERDE }))
+  const items = buildDonutItems(data.map(d => ({ name: d.regimen, value: d.prestadores })))
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
@@ -505,12 +564,10 @@ function GraficaPrestadores({
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Centralizada"
               items={centralizadas}
-              color={C_MORA10}
             />
             <BarrasPrestadoresPorTipo
               title="Secretarías de  Administración Paraestatal"
               items={paraestatales}
-              color={C_MORA50}
             />
           </div>
         )}
@@ -526,10 +583,10 @@ function GraficaSolicitudesTipo({
 }) {
   const totalC = centralizada.reduce((s, d) => s + d.count, 0)
   const totalP = paraestatal.reduce((s, d)  => s + d.count, 0)
-  const items = [
-    { name: "Centralizada", value: totalC, color: COLORES_TIPO.Centralizada },
-    { name: "Paraestatal",  value: totalP, color: COLORES_TIPO.Paraestatal },
-  ].filter(d => d.value > 0)
+  const items = buildDonutItems([
+    { name: "Centralizada", value: totalC },
+    { name: "Paraestatal",  value: totalP },
+  ])
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
@@ -550,22 +607,22 @@ function KpiCard({
 }) {
   return (
     <Card className="rounded-xl border border-border bg-card shadow-sm">
-      <CardContent className="relative h-[96px]">
+      <CardContent className="relative h-[78px] px-4 py-2.5">
         <div
-          className="absolute right-4 flex h-5 w-5 items-center font-light justify-center rounded-lg"
+          className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-lg"
         >
-          <Icon  strokeWidth={1.2}/>
+          <Icon strokeWidth={1.2} className="h-4 w-4" />
         </div>
 
-        <div className="pr-10">
-          <p className="ds-label-sm">
+        <div className="pr-8">
+          <p className="text-xs font-light leading-tight text-card-foreground truncate">
             {label}
           </p>
 
           {loading ? (
-            <div className="mt-3 h-7 w-12 animate-pulse rounded bg-muted" />
+            <div className="mt-2 h-6 w-10 animate-pulse rounded bg-muted" />
           ) : (
-            <p className="mt-3 text-5xl font-bold leading-none text-card-foreground tabular-nums">
+            <p className="mt-1.5 text-3xl font-bold leading-none text-card-foreground tabular-nums">
               {value.toLocaleString("es-MX")}
             </p>
           )}
@@ -869,7 +926,8 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
 
         <Button
           size="sm"
-          className="gap-2 ml-auto rounded-full bg-[#773357] hover:bg-[#773357] active:bg-[#773357] text-white active:text-white border-0"
+          variant="primary"
+          className="gap-2 ml-auto"
           disabled={!data || loading}
           onClick={() => setModalAbierto(true)}
         >
@@ -926,48 +984,20 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
           </p>
         </DialogContent>
       </Dialog>
-      <Dialog open={confirmarDescarga} onOpenChange={setConfirmarDescarga}>
-  <DialogContent className="max-w-md">
-    <DialogHeader>
-      <DialogTitle className="flex items-center gap-2 ds-title-md">
-        <FileSpreadsheet className="h-6 w-6 text-secondary" />
-        Confirmar descarga
-      </DialogTitle>
-      <p className="text-sm text-muted-foreground pt-1">
-        ¿Está seguro de descargar el reporte{" "}
-        <strong className="text-card-foreground">
-          {reporteSeleccionado?.titulo}
-        </strong>
-        ?
-      </p>
-    </DialogHeader>
-
-    <DialogFooter className="gap-3 pt-6 pb-1 mt-2 border-t border-[#e4e3dc]">
-      <Button
-        type="button"
-        className="rounded-full h-10 px-6 font-medium border-[1.5px] border-[#773357] shadow-sm bg-[#fce4f0] text-[#773357] hover:bg-[#f7cde5] hover:text-[#773357] active:bg-[#fce4f0] active:text-[#773357] focus:bg-[#fce4f0] focus:text-[#773357]"
-        onClick={() => setConfirmarDescarga(false)} >
-        Cancelar
-      </Button>
-      <Button
-        type="button"
-        className="rounded-full h-10 px-6 font-medium shadow-sm bg-[#773357] hover:bg-[#773357] active:bg-[#773357] text-white active:text-white border-0"
-        disabled={!reporteSeleccionado || descargando === reporteSeleccionado.id}
-        onClick={() => {
+      <ConfirmDialog
+        open={confirmarDescarga}
+        onClose={() => setConfirmarDescarga(false)}
+        onConfirm={() => {
           if (!reporteSeleccionado) return
-
           handleDescargar(reporteSeleccionado)
           setConfirmarDescarga(false)
           setModalAbierto(false)
         }}
-      >
-        {reporteSeleccionado && descargando === reporteSeleccionado.id
-          ? "Descargando..."
-          : "Descargar"}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-       </Dialog>
+        title="Confirmar descarga"
+        description={<>¿Está seguro de descargar el reporte <strong className="font-normal text-content-high">{reporteSeleccionado?.titulo}</strong>?</>}
+        confirmLabel="Descargar"
+        cancelVariant="default"
+      />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {kpis.map(kpi => (
           <KpiCard key={kpi.label} {...kpi} loading={loading} />
@@ -992,14 +1022,12 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                   title="Administración Centralizada"
                   subtitle="Solicitudes recibidas por secretaría"
                   data={data?.porSecretariaCentralizada ?? []}
-                  color={C_MORA10}
                   emptyMsg="Sin solicitudes centralizadas en el periodo."
                 />
                 <GraficaBarrasVertical
                   title="Administración Paraestatal"
                   subtitle="Solicitudes recibidas por secretaría"
                   data={data?.porSecretariaParaestatal ?? []}
-                  color={C_MORA50}
                   emptyMsg="Sin solicitudes paraestatales en el periodo."
                 />
               </div>
@@ -1010,13 +1038,11 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 title="Administración Centralizada — Dictámenes"
                 data={emisionesCentralizada}
                 barKey="dictamenes"
-                color={C_MORA10}
               />
               <GraficaEmisiones
                 title="Administración Paraestatal — Opiniones"
                 data={emisionesParaestatal}
                 barKey="opiniones"
-                color={C_MORA50}
               />
             </div>
 

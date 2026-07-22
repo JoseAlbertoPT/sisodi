@@ -185,22 +185,23 @@ export function estadoBadge(estado: string): React.ReactElement {
   let bgColor = T_DISABLED_BG
 
   if (n === "borrador")                                                  { label = "Borrador";         color = T_DISABLED; bgColor = T_DISABLED_BG }
-  else if (n.includes("pendiente firma"))                                { label = "Pendiente Firma";  color = T_WARNING;  bgColor = T_WARNING_BG }
-  else if (n.includes("observado por revisor"))                          { label = "Obs. Revisión";    color = T_MORA;     bgColor = T_MORA_BG }
-  else if (n.includes("observado por validacion final"))                 { label = "Obs. Validación";  color = T_MORA;     bgColor = T_MORA_BG }
-  else if (n.includes("observado por emisor"))                           { label = "Obs. Emisión";     color = T_MORA;     bgColor = T_MORA_BG }
+  else if (n.includes("pendiente firma"))                                { label = "En firma";         color = T_WARNING;  bgColor = T_WARNING_BG }
+  else if (n.includes("observado por revisor"))                          { label = "Observado";        color = T_MORA;     bgColor = T_MORA_BG }
+  else if (n.includes("observado por validacion final"))                 { label = "Observado";        color = T_MORA;     bgColor = T_MORA_BG }
+  else if (n.includes("observado por emisor"))                           { label = "Observado";        color = T_MORA;     bgColor = T_MORA_BG }
   else if (n.includes("observado por uefa") || (n.includes("observado por validacion") && !n.includes("final")))
-                                                                         { label = "Obs. UEFA";        color = T_MORA;     bgColor = T_MORA_BG }
+                                                                         { label = "Observado";        color = T_MORA;     bgColor = T_MORA_BG }
   else if (n.includes("devuelta por do") || n.includes("observado do filtro") || n.includes("observado por do"))
                                                                          { label = "Devuelta por DO";  color = T_MORA;     bgColor = T_MORA_BG }
-  else if (n.includes("en validacion justificaciones") || n.includes("enviada a validacion"))
-                                                                         { label = "En Aprobación";    color = T_INFO;     bgColor = T_INFO_BG }
+  else if (n.includes("en validacion justificaciones"))                  { label = "En revisión";      color = T_INFO;     bgColor = T_INFO_BG }
+  else if (n.includes("enviada a validacion"))                           { label = "En Aprobación";    color = T_INFO;     bgColor = T_INFO_BG }
   else if (n.includes("en revision revisor") || n === "aprobado por revisor" || n === "aceptado por revisor")
-                                                                         { label = "En Revisión";      color = T_INFO;     bgColor = T_INFO_BG }
-  else if (n.includes("en validacion final") || n === "aprobado")        { label = "En Validación";    color = T_INFO;     bgColor = T_INFO_BG }
-  else if (n.includes("en revision emisor"))                             { label = "En Emisión";       color = T_INFO;     bgColor = T_INFO_BG }
+                                                                         { label = "En revisión";      color = T_INFO;     bgColor = T_INFO_BG }
+  else if (n.includes("en validacion final"))                            { label = "En revisión";      color = T_INFO;     bgColor = T_INFO_BG }
+  else if (n === "aprobado")                                             { label = "En Validación";    color = T_INFO;     bgColor = T_INFO_BG }
+  else if (n.includes("en revision emisor"))                             { label = "En revisión";      color = T_INFO;     bgColor = T_INFO_BG }
   else if (n.includes("en revision do") || n === "en proceso do" || n === "pendiente do")
-                                                                         { label = "En Proceso DGDO";  color = T_INFO;     bgColor = T_INFO_BG }
+                                                                         { label = "En revisión";      color = T_INFO;     bgColor = T_INFO_BG }
   else if (n === "emitido" || n.includes("emitido"))                     { label = "Emitido";          color = T_SUCCESS;  bgColor = T_SUCCESS_BG }
 
   return <StatusBadge label={label} color={color} bgColor={bgColor} />

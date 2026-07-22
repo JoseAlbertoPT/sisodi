@@ -2,10 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Loader2, RefreshCw, AlertCircle, Stamp, Inbox } from "lucide-react"
+import { StatusBadge, C_AZUL_REVISION, C_AZUL_REVISION_BG } from "@/components/ui/status-badge"
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+import { Loader2, RefreshCw, AlertCircle, Stamp, Inbox, MoreHorizontal, Eye, Shield } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
+import { FirmaProgresoDialog } from "@/components/firma-progreso-dialog"
 
 interface FirmanteInfo {
   id: number
@@ -15,6 +19,7 @@ interface FirmanteInfo {
   tipo: string
   bandeja: string | null
   firmado: boolean
+  fecha_firma: string | null
   nombre: string | null
   rfc: string | null
   cargo_firmante?: string | null
@@ -57,6 +62,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [firmanteDialogId, setFirmanteDialogId] = useState<number | null>(null)
+  const [progresoTarget, setProgresoTarget] = useState<ProcesoItem | null>(null)
 
   const bandejaActual = bandejaParaFiltro(filtro)
 
@@ -70,13 +76,10 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
       const procesos: ProcesoItem[] = json.procesos ?? []
       const filtrados = procesos.filter(p => {
         if (bandejaActual === "emision" && p.pendiente_emision_por_mi) return true
-        if (!p.mi_firmante_pendiente || p.mi_firmante_pendiente.bandeja !== bandejaActual) return false
-        const miFirmante = p.firmantes.find(f => f.id === p.mi_firmante_pendiente!.id)
-        if (!miFirmante) return false
-        const siguiente = p.firmantes
-          .filter(f => !f.firmado)
-          .sort((a, b) => a.orden - b.orden)[0]
-        return !!siguiente && miFirmante.orden === siguiente.orden
+        // Se busca directo en la lista de firmantes (no solo mi_firmante_pendiente, que la
+        // API solo resuelve para el primer pendiente en orden) para poder ver el proceso
+        // aunque todavía no sea mi turno.
+        return p.firmantes.some(f => f.tipo === "interno" && f.bandeja === bandejaActual && !f.firmado)
       })
       setItems(filtrados)
     } catch {
@@ -107,12 +110,6 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold flex items-center gap-2">
-          <Stamp className="h-4 w-4 text-secondary" /> Justificaciones pendientes de firmar como {bandejaActual}
-        </h3>
-      </div>
-
       {error && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive flex items-center gap-2">
           <AlertCircle className="h-4 w-4" /> {error}
@@ -124,16 +121,16 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
       )}
 
       {items.length > 0 && (
-        <div className="overflow-x-auto border rounded-lg">
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
-              <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground border-b">
-                <th className="px-4 py-2">Folio</th>
-                <th className="px-4 py-2">Tipo</th>
-                <th className="px-4 py-2">Rol a firmar</th>
-                <th className="px-4 py-2">Progreso</th>
-                <th className="px-4 py-2">Turno</th>
-                <th className="px-4 py-2"></th>
+            <thead>
+              <tr className="bg-bg-base text-content-high">
+                <th className="px-4 py-3 text-left font-semibold">Folio</th>
+                <th className="px-4 py-3 text-left font-semibold">Tipo</th>
+                <th className="px-4 py-3 text-left font-semibold">Rol a firmar</th>
+                <th className="px-4 py-3 text-left font-semibold">Progreso</th>
+                <th className="px-4 py-3 text-left font-semibold">Turno</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -147,39 +144,70 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                       <td className="px-4 py-2 text-xs">{miEmisor?.rol ?? "Emitió"}</td>
                       <td className="px-4 py-2 font-mono text-xs">{p.firmados}/{p.total_firmantes}</td>
                       <td className="px-4 py-2">
-                        <Badge className="bg-accent/30 text-accent-foreground border-0 text-[10px]">
-                          {p.sellado_emision_subido ? "Listo para emitir" : "Falta sellar"}
-                        </Badge>
+                        <StatusBadge
+                          label={p.sellado_emision_subido ? "Listo para emitir" : "Falta sellar"}
+                          color={C_AZUL_REVISION}
+                          bgColor={C_AZUL_REVISION_BG}
+                          className="text-[10px] px-2 py-1"
+                        />
                       </td>
                       <td className="px-4 py-2 text-right">
-                        <Button size="sm" onClick={() => p.mi_firmante_emisor_id && setFirmanteDialogId(p.mi_firmante_emisor_id)}
-                          className="bg-secondary text-secondary-foreground hover:bg-secondary/90 gap-1.5">
-                          <Stamp className="h-3.5 w-3.5" /> Sellar y emitir
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 bg-bg-surface-low border border-border-low" aria-label="Acciones">
+                              <MoreHorizontal className="h-4 w-4 text-content-low" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setProgresoTarget(p)}>
+                              <Eye className="h-4 w-4" /> Ver progreso
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => p.mi_firmante_emisor_id && setFirmanteDialogId(p.mi_firmante_emisor_id)}>
+                              <Stamp className="h-4 w-4" /> Sellar y emitir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   )
                 }
 
-                const miOrden = p.mi_firmante_pendiente ? p.firmantes.find(f => f.id === p.mi_firmante_pendiente!.id)?.orden ?? Infinity : Infinity
+                const miFirmante = p.firmantes.find(f => f.tipo === "interno" && f.bandeja === bandejaActual && !f.firmado) ?? null
                 const siguiente = p.firmantes.filter(f => !f.firmado).sort((a, b) => a.orden - b.orden)[0] ?? null
-                const esMiTurno = siguiente && miOrden === siguiente.orden
+                const esMiTurno = !!(miFirmante && siguiente && miFirmante.id === siguiente.id)
                 return (
                   <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/20">
                     <td className="px-4 py-2 font-mono text-xs">{p.folio_recepcion ?? p.folio_justificacion ?? `SOL-${p.solicitud_id}`}</td>
                     <td className="px-4 py-2 text-xs">{p.tipo_solicitud ?? "—"}</td>
-                    <td className="px-4 py-2 text-xs">{p.mi_firmante_pendiente?.rol}</td>
+                    <td className="px-4 py-2 text-xs">{miFirmante?.rol}</td>
                     <td className="px-4 py-2 font-mono text-xs">{p.firmados}/{p.total_firmantes}</td>
                     <td className="px-4 py-2">
-                      {esMiTurno
-                        ? <Badge className="bg-primary/15 text-primary border-0 text-[10px]">Tu turno</Badge>
-                        : <Badge variant="outline" className="text-[10px]">Esperando #{siguiente?.orden} · {siguiente?.rol}</Badge>}
+                      <StatusBadge
+                        label={esMiTurno ? "Tu turno" : `Esperando #${siguiente?.orden} · ${siguiente?.rol}`}
+                        color={C_AZUL_REVISION}
+                        bgColor={C_AZUL_REVISION_BG}
+                        className="text-[10px] px-2 py-1"
+                      />
                     </td>
                     <td className="px-4 py-2 text-right">
-                      <Button size="sm" onClick={() => p.mi_firmante_pendiente && setFirmanteDialogId(p.mi_firmante_pendiente.id)}
-                        disabled={!esMiTurno}>
-                        Firmar
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 bg-bg-surface-low border border-border-low" aria-label="Acciones">
+                            <MoreHorizontal className="h-4 w-4 text-content-low" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setProgresoTarget(p)}>
+                            <Eye className="h-4 w-4" /> Ver progreso
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!esMiTurno}
+                            onClick={() => esMiTurno && miFirmante && setFirmanteDialogId(miFirmante.id)}
+                          >
+                            <Shield className="h-4 w-4" /> Firmar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 )
@@ -209,6 +237,8 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
           onFirmado={async () => { await cargar(); setFirmanteDialogId(null) }}
         />
       )}
+
+      <FirmaProgresoDialog proceso={progresoTarget} open={!!progresoTarget} onClose={() => setProgresoTarget(null)} />
     </div>
   )
 }

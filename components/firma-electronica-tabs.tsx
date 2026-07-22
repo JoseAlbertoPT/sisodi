@@ -90,12 +90,14 @@ export function FirmaElectronicaTabs({
   const [avisoCargoAbierto, setAvisoCargoAbierto] = useState(false)
   const [cargoHabilitado, setCargoHabilitado] = useState(false)
   const [ultimoCargo, setUltimoCargo] = useState<string | null>(null)
+  const [camposInvalidos, setCamposInvalidos] = useState({ cargo: false, cer: false, key: false, password: false })
   const cargoInputRef = useRef<HTMLInputElement | null>(null)
 
   const resetFirmandoInline = () => {
     setFirmandoInline(null)
     setCargoFirma(""); setCerFile(null); setKeyFile(null); setFraseKey("")
     setFirmandoError(null); setCargoHabilitado(false); setAvisoCargoAbierto(false)
+    setCamposInvalidos({ cargo: false, cer: false, key: false, password: false })
   }
 
   const aceptarAvisoCargo = () => {
@@ -112,12 +114,19 @@ export function FirmaElectronicaTabs({
   }
 
   const handleFirmarInline = async (firmanteId: number) => {
-    if (!cargoFirma.trim() || !cerFile || !keyFile || !fraseKey) {
+    const invalidos = {
+      cargo: !cargoFirma.trim(),
+      cer: !cerFile,
+      key: !keyFile,
+      password: !fraseKey,
+    }
+    setCamposInvalidos(invalidos)
+    if (invalidos.cargo || invalidos.cer || invalidos.key || invalidos.password) {
       setFirmandoError("Completa cargo, .cer, .key y contraseña"); return
     }
     setFirmandoTrabajo(true); setFirmandoError(null)
     try {
-      const [cerB64, keyB64] = await Promise.all([fileToBase64(cerFile), fileToBase64(keyFile)])
+      const [cerB64, keyB64] = await Promise.all([fileToBase64(cerFile!), fileToBase64(keyFile!)])
       const res = await fetch("/api/firma-efirma/firmar-interno", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -380,38 +389,91 @@ export function FirmaElectronicaTabs({
                     <Input
                       ref={cargoInputRef}
                       value={cargoFirma}
+                      readOnly={!cargoHabilitado}
+                      tabIndex={cargoHabilitado ? undefined : -1}
+                      onMouseDown={e => { if (!cargoHabilitado) { e.preventDefault(); setAvisoCargoAbierto(true) } }}
+                      onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
                       onChange={e => {
                         const val = e.target.value.toUpperCase()
                         setCargoFirma(val)
-                        if (!cargoHabilitado && val.length > 0) {
-                          setCargoHabilitado(true)
-                          setAvisoCargoAbierto(true)
-                        }
+                        if (camposInvalidos.cargo && val.trim()) setCamposInvalidos(p => ({ ...p, cargo: false }))
                       }}
                       placeholder="EJ. DIRECTOR DE ANÁLISIS NORMATIVO"
-                      className="uppercase"
+                      className={`uppercase ${!cargoHabilitado ? "cursor-pointer" : ""}`}
+                      aria-invalid={camposInvalidos.cargo}
                       autoComplete="off"
                       name="cargo-firmante-uefa"
                     />
-                    <p className="text-[10px] text-support-warning flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" /> Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
-                    </p>
+                    {camposInvalidos.cargo ? (
+                      <p className="text-[10px] text-support-error flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-support-warning flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" /> Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
+                      </p>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <Label className="text-xs flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
-                      <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} />
+                      <Input
+                        type="file" accept=".cer"
+                        aria-invalid={camposInvalidos.cer}
+                        onChange={e => {
+                          const f = e.target.files?.[0] ?? null
+                          setCerFile(f)
+                          if (camposInvalidos.cer && f) setCamposInvalidos(p => ({ ...p, cer: false }))
+                        }}
+                      />
+                      {camposInvalidos.cer && (
+                        <p className="text-[10px] text-support-error flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col gap-1">
                       <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
-                      <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} />
+                      <Input
+                        type="file" accept=".key"
+                        aria-invalid={camposInvalidos.key}
+                        onChange={e => {
+                          const f = e.target.files?.[0] ?? null
+                          setKeyFile(f)
+                          if (camposInvalidos.key && f) setCamposInvalidos(p => ({ ...p, key: false }))
+                        }}
+                      />
+                      {camposInvalidos.key && (
+                        <p className="text-[10px] text-support-error flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-xs">Contraseña de la clave privada</Label>
-                    <Input type="password" value={fraseKey} onChange={e => setFraseKey(e.target.value)} />
+                    <Input
+                      type="password"
+                      value={fraseKey}
+                      onChange={e => {
+                        setFraseKey(e.target.value)
+                        if (camposInvalidos.password && e.target.value) setCamposInvalidos(p => ({ ...p, password: false }))
+                      }}
+                      autoComplete="new-password"
+                      aria-invalid={camposInvalidos.password}
+                    />
+                    {camposInvalidos.password && (
+                      <p className="text-[10px] text-support-error flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                      </p>
+                    )}
                   </div>
-                  {firmandoError && <p className="text-xs text-destructive">{firmandoError}</p>}
+                  {firmandoError && (
+                    <p className="text-xs text-support-error flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {firmandoError}
+                    </p>
+                  )}
                   <div className="flex justify-end gap-2">
                     <Button variant="default" onClick={resetFirmandoInline} disabled={firmandoTrabajo}>
                       Cancelar

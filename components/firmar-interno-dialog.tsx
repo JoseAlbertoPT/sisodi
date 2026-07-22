@@ -8,7 +8,7 @@ import { ConfirmationModal } from "@/components/ui/confirmation-modal"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, Loader2, FileKey, KeyRound, CheckCircle2, Briefcase, AlertCircle, AlertTriangle, History } from "lucide-react"
+import { Shield, Loader2, FileKey, KeyRound, CheckCircle2, Briefcase, AlertCircle } from "lucide-react"
 import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 
 async function fileToBase64(file: File): Promise<string> {
@@ -55,6 +55,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
    *  pero aún falta subir el sellado y emitir. */
   const [firmaCompleta, setFirmaCompleta] = useState(!!iniciarEnSellado)
   const [emitiendo, setEmitiendo] = useState(false)
+  const [camposInvalidos, setCamposInvalidos] = useState({ cargo: false, cer: false, key: false, password: false })
   const cargoInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -95,13 +96,22 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
     setSelladoSubido(false)
     setFirmaCompleta(false)
     setEmitiendo(false)
+    setCamposInvalidos({ cargo: false, cer: false, key: false, password: false })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!cargo.trim() || !cerFile || !keyFile || !password) {
+    const invalidos = {
+      cargo: !cargo.trim(),
+      cer: !cerFile,
+      key: !keyFile,
+      password: !password,
+    }
+    setCamposInvalidos(invalidos)
+    if (invalidos.cargo || invalidos.cer || invalidos.key || invalidos.password) {
       setError("Completa cargo, .cer, .key y contraseña"); return
     }
+    setError(null)
     await ejecutarFirma()
   }
 
@@ -232,7 +242,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               />
             )}
 
-            {error && <p className="text-xs text-destructive">{error}</p>}
+            {error && <p className="text-xs text-support-error">{error}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="default" onClick={() => { reset(); onClose() }} disabled={emitiendo}>Cerrar</Button>
               <Button
@@ -249,16 +259,16 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-6 pt-4 pb-6">
             {esEmisor && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-0.5">
-                  <p className="text-xs font-semibold text-destructive">Firma del emisor</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {requiereSellado
-                      ? "Después de firmar electrónicamente, deberá descargar el dictamen, sellarlo y subirlo para emitirlo."
-                      : "Al firmar, el dictamen será emitido oficialmente y ya no podrá modificarse."}
-                  </p>
+              <div className="flex items-center justify-center gap-2 rounded-xl bg-support-error-low px-4 py-3">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-support-error">
+                  <span className="text-[12px] font-bold text-white leading-none">!</span>
                 </div>
+                <span className="text-sm font-light text-support-error">
+                  <strong className="font-medium">Firma del emisor</strong> —{" "}
+                  {requiereSellado
+                    ? "Después de firmar electrónicamente, deberá descargar el dictamen, sellarlo y subirlo para emitirlo."
+                    : "Al firmar, el dictamen será emitido oficialmente y ya no podrá modificarse."}
+                </span>
               </div>
             )}
             <div className="flex flex-col gap-2">
@@ -266,40 +276,97 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               <Input
                 ref={cargoInputRef}
                 value={cargo}
+                readOnly={!cargoHabilitado}
+                tabIndex={cargoHabilitado ? undefined : -1}
+                onMouseDown={e => { if (!cargoHabilitado) { e.preventDefault(); setAvisoCargoAbierto(true) } }}
+                onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
                 onChange={e => {
                   const val = e.target.value.toUpperCase()
                   setCargo(val)
-                  if (!cargoHabilitado && val.length > 0) {
-                    setCargoHabilitado(true)
-                    setAvisoCargoAbierto(true)
-                  }
+                  if (camposInvalidos.cargo && val.trim()) setCamposInvalidos(p => ({ ...p, cargo: false }))
                 }}
                 placeholder="EJ. DIRECTOR DE ANÁLISIS NORMATIVO"
-                className="uppercase"
+                className={`uppercase ${!cargoHabilitado ? "cursor-pointer" : ""}`}
+                aria-invalid={camposInvalidos.cargo}
                 autoComplete="off"
                 name="cargo-firmante-interno"
               />
-              <p className="text-[10px] text-support-warning flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
-              </p>
+              {camposInvalidos.cargo ? (
+                <p className="text-[10px] text-support-error flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Este campo es obligatorio
+                </p>
+              ) : (
+                <p className="text-[10px] text-support-warning flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-xs flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
-              <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} />
+              <Input
+                type="file" accept=".cer"
+                aria-invalid={camposInvalidos.cer}
+                onChange={e => {
+                  const f = e.target.files?.[0] ?? null
+                  setCerFile(f)
+                  if (camposInvalidos.cer && f) setCamposInvalidos(p => ({ ...p, cer: false }))
+                }}
+              />
               {cerFile && <span className="text-xs text-muted-foreground truncate">{cerFile.name}</span>}
+              {camposInvalidos.cer && (
+                <p className="text-[10px] text-support-error flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Este campo es obligatorio
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
-              <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} />
+              <Input
+                type="file" accept=".key"
+                aria-invalid={camposInvalidos.key}
+                onChange={e => {
+                  const f = e.target.files?.[0] ?? null
+                  setKeyFile(f)
+                  if (camposInvalidos.key && f) setCamposInvalidos(p => ({ ...p, key: false }))
+                }}
+              />
               {keyFile && <span className="text-xs text-muted-foreground truncate">{keyFile.name}</span>}
+              {camposInvalidos.key && (
+                <p className="text-[10px] text-support-error flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Este campo es obligatorio
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Label className="text-xs">Contraseña de la clave privada</Label>
-              <Input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+              <Input
+                type="password"
+                value={password}
+                onChange={e => {
+                  setPassword(e.target.value)
+                  if (camposInvalidos.password && e.target.value) setCamposInvalidos(p => ({ ...p, password: false }))
+                }}
+                autoComplete="new-password"
+                aria-invalid={camposInvalidos.password}
+              />
+              {camposInvalidos.password && (
+                <p className="text-[10px] text-support-error flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Este campo es obligatorio
+                </p>
+              )}
             </div>
 
-            {error && <p className="text-xs text-destructive">{error}</p>}
+            {error && (
+              <p className="text-xs text-support-error flex items-center gap-1">
+                <AlertCircle className="h-3.5 w-3.5" />
+                {error}
+              </p>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="default" onClick={() => { reset(); onClose() }} disabled={trabajando}>Cancelar</Button>
               <Button type="submit" variant="vino" disabled={trabajando}>

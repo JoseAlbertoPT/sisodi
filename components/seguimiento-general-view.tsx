@@ -6,8 +6,9 @@ import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { C_VERDE_ESTADO, C_ROSA_VINO, C_VIOLETA_EMISION } from "@/components/ui/status-badge"
+import { EmptyState } from "@/components/ui/empty-state"
 import {
-  Loader2, AlertTriangle, FileText, Info,
+  Loader2, AlertTriangle, FileText, Info, Inbox,
 } from "lucide-react"
 
 interface SolicitudSeguimiento {
@@ -221,10 +222,7 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
               <span className="text-sm text-muted-foreground">Cargando solicitudes...</span>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
-              <FileText className="h-8 w-8 text-muted-foreground/40" />
-              <span className="text-sm">No hay solicitudes que coincidan.</span>
-            </div>
+            <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

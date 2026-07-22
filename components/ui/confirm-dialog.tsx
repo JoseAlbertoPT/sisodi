@@ -7,6 +7,8 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel,
 } from "@/components/ui/alert-dialog"
+import type { buttonVariants } from "@/components/ui/button"
+import type { VariantProps } from "class-variance-authority"
 
 export type ConfirmVariant = "aprobar" | "observar" | "eliminar" | "default"
 
@@ -29,13 +31,15 @@ export interface ConfirmDialogProps {
   loading?: boolean
   hideCancel?: boolean
   error?: string
+  /** Variante del botón Cancelar (por defecto "destructive-low"). Usa "default" para un botón gris neutro. */
+  cancelVariant?: VariantProps<typeof buttonVariants>["variant"]
 }
 
 export function ConfirmDialog({
   open, onClose, onConfirm,
   title, description, confirmLabel,
   variant = "default", icon, loading = false,
-  hideCancel = false, error,
+  hideCancel = false, error, cancelVariant,
 }: ConfirmDialogProps) {
   const cfg = VARIANT_CFG[variant]
   const label = confirmLabel ?? cfg.defaultLabel
@@ -54,7 +58,7 @@ export function ConfirmDialog({
         </div>
         <AlertDialogFooter>
           {!hideCancel && (
-            <AlertDialogCancel onClick={onClose} disabled={loading}>
+            <AlertDialogCancel onClick={onClose} disabled={loading} variant={cancelVariant}>
               Cancelar
             </AlertDialogCancel>
           )}
