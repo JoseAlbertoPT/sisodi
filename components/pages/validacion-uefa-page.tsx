@@ -26,12 +26,9 @@ import {
   CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
   AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
   RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
-  Shield, FileSignature, X, MoreHorizontal,
+  Shield, FileSignature, X,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
 import { FirmaModal } from "@/components/firma-modal"
@@ -1559,25 +1556,23 @@ export function ValidacionUefaPage() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end">
                           {solTab === "Pendiente Firma" ? (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 bg-bg-surface-low border border-border-low">
-                                  <MoreHorizontal className="h-4 w-4 text-content-low" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setSelectedId(sol.id)} className="gap-2 cursor-pointer">
-                                  <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => setFirmaTargetId(sol.id)}
-                                  disabled={guardando}
-                                  className="gap-2 cursor-pointer"
-                                >
-                                  <Stamp className="h-4 w-4" />Firmar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => setSelectedId(sol.id)}
+                                className="text-secondary hover:text-primary gap-1.5"
+                              >
+                                <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
+                              </Button>
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => setFirmaTargetId(sol.id)}
+                                disabled={guardando}
+                                className="text-secondary hover:text-primary gap-1.5"
+                              >
+                                <Stamp className="h-4 w-4" />Firmar
+                              </Button>
+                            </div>
                           ) : (
                             <Button
                               variant="ghost" size="sm"

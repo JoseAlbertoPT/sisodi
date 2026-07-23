@@ -205,7 +205,8 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
   const { allLeaves } = useMemo(() => {
     if (!menuTree) return { allLeaves: [] }
     const leaves = collectLeafNodes(menuTree)
-      .filter((n) => n.key && n.route !== null && n.key !== "revision-do")
+      // "progreso-firmado" oculto del menú por diseño; la página sigue activa vía INTERNAL_PAGES
+      .filter((n) => n.key && n.route !== null && n.key !== "revision-do" && n.key !== "progreso-firmado")
 
     return { allLeaves: leaves }
   }, [menuTree])

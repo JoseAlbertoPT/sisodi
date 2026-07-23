@@ -20,7 +20,7 @@ import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-paginatio
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { SearchInput, SEARCH_INPUT_MAX_W_MD, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
-import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG } from "@/components/ui/status-badge"
+import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
 import {
 
   Search,
@@ -111,6 +111,12 @@ function fmt(val: string | null | undefined) {
 function fmtCapitalize(val: string | null | undefined) {
   if (!val) return "—"
   return val.charAt(0).toUpperCase() + val.slice(1).toLowerCase()
+}
+function regimenBadgeColor(raw: string | null | undefined): { color: string; bgColor: string } {
+  const r = (raw ?? "").toLowerCase().trim()
+  if (r.includes("asimilado")) return { color: C_AZUL_REVISION, bgColor: C_AZUL_REVISION_BG }
+  if (r.includes("nombramiento") || r.includes("tiempo determinado")) return { color: C_AMARILLO, bgColor: C_AMARILLO_BG }
+  return { color: C_VERDE_ESTADO, bgColor: C_VERDE_ESTADO_BG }
 }
 
 function fmtMoney(val: string | null | undefined) {
@@ -364,7 +370,7 @@ function ConsultaTab() {
                     </td>
                     <td className="px-4 py-3 text-xs max-w-[200px] truncate text-gray-600">{fmt(rec.tipo_actividad)}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
+                      <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 capitalize">{fmt(rec.tipo_pago)}</td>
                     <td className="px-4 py-3 text-xs font-medium" style={{ color: "#2a2a2a" }}>{fmtMoney(rec.importe_bruto)}</td>
@@ -801,7 +807,7 @@ function AdministracionTab() {
                   </td>
                   <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.programa_proyecto}>{fmt(rec.programa_proyecto)}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
+                    <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { StatusBadge, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
-import { Loader2, RefreshCw, AlertCircle, Inbox, Eye } from "lucide-react"
+import { Loader2, RefreshCw, AlertCircle, Inbox, Stamp } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
 import { FirmaProgresoDialog } from "@/components/firma-progreso-dialog"
@@ -183,20 +183,21 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                     <td className="px-4 py-2 text-right">
                       {esMiTurno ? (
                         <Button
-                          variant="default"
+                          variant="ghost"
                           size="sm"
                           onClick={() => miFirmante && setFirmanteDialogId(miFirmante.id)}
+                          className="text-secondary hover:text-primary gap-1.5"
                         >
-                          Firmar
+                          <Stamp className="h-4 w-4" />Firmar
                         </Button>
                       ) : (
                         <Button
-                          variant="default"
+                          variant="ghost"
                           size="sm"
-                          className="gap-1.5"
                           onClick={() => setProgresoTarget(p)}
+                          className="text-secondary hover:text-primary gap-1.5"
                         >
-                          <Eye className="h-4 w-4" /> Ver
+                          <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
                         </Button>
                       )}
                     </td>
