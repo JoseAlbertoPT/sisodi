@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+const FIRMANTES_INCLUDE = {
+  firmantes: { orderBy: { orden: "asc" as const }, include: { usuario: { select: { id: true, nombre: true, rfc: true, correo: true } } } },
+}
+
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url)
@@ -9,15 +13,9 @@ export async function GET(req: NextRequest) {
 
     let firma: any = null
     if (uuid) {
-      firma = await prisma.firma_proceso.findUnique({
-        where: { uuid },
-        include: { firmantes: { orderBy: { orden: "asc" }, include: { usuario: { select: { id: true, nombre: true, rfc: true, correo: true } } } } },
-      })
+      firma = await prisma.firma_proceso.findUnique({ where: { uuid }, include: FIRMANTES_INCLUDE })
     } else if (solicitudId) {
-      firma = await prisma.firma_proceso.findUnique({
-        where: { solicitud_id: Number(solicitudId) },
-        include: { firmantes: { orderBy: { orden: "asc" }, include: { usuario: { select: { id: true, nombre: true, rfc: true, correo: true } } } } },
-      })
+      firma = await prisma.firma_proceso.findUnique({ where: { solicitud_id: Number(solicitudId) }, include: FIRMANTES_INCLUDE })
     } else {
       return NextResponse.json({ ok: false, error: "Falta uuid o solicitudId" }, { status: 400 })
     }

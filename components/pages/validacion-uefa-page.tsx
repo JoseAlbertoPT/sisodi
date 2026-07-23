@@ -164,6 +164,9 @@ function getTabForEstado(estado: string): UefaTab {
     n.includes("en revision") ||
     n.includes("en validacion final") ||
     n.includes("pendiente firma dictamen") ||
+    n.includes("pendiente firma revision") ||
+    n.includes("pendiente firma validacion") ||
+    n.includes("pendiente firma emisor") ||
     n.includes("pendiente do") ||
     n.includes("aceptado por revisor") ||
     n.includes("aprobado por revisor") ||
@@ -1455,6 +1458,7 @@ export function ValidacionUefaPage() {
           folioDictamen={firmaTargetSol.numeroDictamen ?? (firmaTargetSol.folioDictamen ? formatearFolio(firmaTargetSol.folioDictamen) : null)}
           modalidadFirma={firmaTargetSol.modalidadFirma}
           currentUserId={(user as any)?.id ?? ""}
+          currentUserRol={(user as any)?.rol ?? ""}
           onGenerarPdf={() => {
             generateJustificacionPDF(firmaTargetSol.id, firmaTargetSol.folioJustificacion)
           }}

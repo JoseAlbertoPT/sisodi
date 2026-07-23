@@ -83,6 +83,13 @@ export interface UsuariosInternosResueltos {
  * - Revisor (Filtro 1): quien transicionó a "En Validacion Final"
  * - Validador (Filtro 2): quien transicionó a "En Revision Emisor"
  * - Emisor (Filtro 3): quien transicionó a "Pendiente Firma Dictamen" o "Emitido"
+ *
+ * UEFA no se resuelve aquí a propósito: el bloque UEFA no queda atado a la
+ * persona específica que aprobó ("Pendiente DO"), sino que lo puede firmar
+ * cualquier usuario con rol UEFA (ver usuarioIdParaFirmante y la verificación
+ * de rol en /api/firma-efirma/firmar-interno). Esto evita que, si quien
+ * aprobó usó una cuenta distinta (p. ej. Administrador) a la cuenta UEFA
+ * real, el bloque quede huérfano para siempre.
  */
 export async function resolverUsuariosInternos(solicitudId: number): Promise<UsuariosInternosResueltos> {
   const historial = await prisma.historial_solicitud.findMany({
@@ -96,9 +103,9 @@ export async function resolverUsuariosInternos(solicitudId: number): Promise<Usu
     return nombres.some(x => norm(x) === norm(n))
   }
 
-  const revisorEntry  = historial.find(h => matchNombre(h, ["En Validacion Final"]))
+  const revisorEntry   = historial.find(h => matchNombre(h, ["En Validacion Final"]))
   const validadorEntry = historial.find(h => matchNombre(h, ["En Revision Emisor"]))
-  const emisorEntry   = historial.find(h => matchNombre(h, ["Pendiente Firma Dictamen", "Pendiente Firma Justificacion", "Emitido"]))
+  const emisorEntry    = historial.find(h => matchNombre(h, ["Pendiente Firma Dictamen", "Pendiente Firma Justificacion", "Emitido"]))
 
   return {
     revisor_id:   revisorEntry?.usuario_id    ?? null,
@@ -109,7 +116,8 @@ export async function resolverUsuariosInternos(solicitudId: number): Promise<Usu
 
 /**
  * Resuelve el usuario_id para una entrada de plantilla interna, según su bandeja.
- * Devuelve null si es externo o si no se encontró al interno en el historial.
+ * Devuelve null si es externo, si es UEFA (queda libre para cualquier usuario
+ * con ese rol, ver arriba), o si no se encontró al interno en el historial.
  */
 export function usuarioIdParaFirmante(
   template: FirmanteTemplate,
@@ -118,7 +126,7 @@ export function usuarioIdParaFirmante(
 ): string | null {
   if (template.tipo !== "interno") return null
   switch (template.bandeja) {
-    case "uefa":       return creadoPorId
+    case "uefa":       return null
     case "revision":   return internos.revisor_id
     case "validacion": return internos.validador_id
     case "emision":    return internos.emisor_id

@@ -50,6 +50,7 @@ interface Props {
   folioJustificacion: string
   folioDictamen?: string | null
   currentUserId: string
+  currentUserRol?: string
   onGenerarPdfBase64: () => Promise<string>
   onFinalizar: () => Promise<void> | void
   guardandoFinal: boolean
@@ -58,11 +59,14 @@ interface Props {
   onEstadoCargado?: (iniciado: boolean) => void
 }
 
+const normRol = (s: string) => s.normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "").toLowerCase().trim()
+
 export function FirmaElectronicaTabs({
   solicitudId,
   folioJustificacion,
   folioDictamen,
   currentUserId,
+  currentUserRol,
   onGenerarPdfBase64,
   onFinalizar,
   guardandoFinal,
@@ -291,13 +295,29 @@ export function FirmaElectronicaTabs({
 
   const externos = firmantes.filter(f => f.tipo === "externo")
   const internosTodos = firmantes.filter(f => f.tipo === "interno")
-  const miInterno = internosTodos.find(f => f.usuario_id === currentUserId) ?? null
-  const internos = miInterno ? [miInterno] : internosTodos
 
-  const siguienteFirmante = firmantes
-    .filter(f => !f.firmado)
-    .sort((a, b) => a.orden - b.orden)[0] ?? null
-  const siguienteOrden = siguienteFirmante?.orden ?? Infinity
+
+  const esSuTurno = (f: Firmante) => {
+    if (f.firmado) return false
+    if (f.tipo === "interno" && f.bandeja === "revision") {
+      return externos.every(e => e.firmado)
+    }
+    return firmantes.filter(x => x.orden < f.orden).every(x => x.firmado)
+  }
+
+
+  const puedeClaimarUefa = () => {
+    const r = normRol(currentUserRol ?? "")
+    return r === "uefa" || r === "administrador"
+  }
+  const esClaimUefaValido = (f: Firmante) =>
+    f.bandeja !== "uefa" || puedeClaimarUefa()
+  const miInterno = internosTodos.find(f => {
+    if (f.bandeja === "uefa") return puedeClaimarUefa()
+    if (f.usuario_id) return f.usuario_id === currentUserId
+    return esSuTurno(f)
+  }) ?? null
+  const internos = miInterno ? [miInterno] : []
 
   const puedeContinuar = (() => {
     if (miInterno) {
@@ -352,7 +372,7 @@ export function FirmaElectronicaTabs({
               uuid={firma.uuid}
               copiadoId={copiadoId}
               regenerando={regenerando}
-              esSuTurno={f.orden === siguienteOrden}
+              esSuTurno={esSuTurno(f)}
               onCopiar={(link) => copiarLink(f.id, link)}
               onRegenerar={() => regenerarLink(f.id)}
             />
@@ -360,10 +380,11 @@ export function FirmaElectronicaTabs({
         </CardContent>
       </Card>
 
+      {miInterno && (
       <Card className="border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Lock className="h-4 w-4 text-muted-foreground" /> {miInterno ? "Mi firma" : "Internos"}
+            <Lock className="h-4 w-4 text-muted-foreground" /> Mi firma
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -372,8 +393,8 @@ export function FirmaElectronicaTabs({
               <FirmanteRow
                 firmante={f}
                 modo="interno"
-                esSuTurno={f.orden === siguienteOrden}
-                esCurrent={f.usuario_id === currentUserId || (!f.usuario_id && f.orden === siguienteOrden)}
+                esSuTurno={esSuTurno(f)}
+                esCurrent={f.usuario_id === currentUserId || (!f.usuario_id && esClaimUefaValido(f) && esSuTurno(f))}
                 onFirmar={() => setFirmandoInline(f.id)}
               />
               {firmandoInline === f.id && (
@@ -492,6 +513,7 @@ export function FirmaElectronicaTabs({
           ))}
         </CardContent>
       </Card>
+      )}
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 

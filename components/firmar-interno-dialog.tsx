@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Shield, Loader2, FileKey, KeyRound, Briefcase, AlertCircle } from "lucide-react"
-import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
+// import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 
 async function fileToBase64(file: File): Promise<string> {
   const buf = await file.arrayBuffer()
@@ -49,7 +49,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
   const [avisoCargoAbierto, setAvisoCargoAbierto] = useState(false)
   const [cargoHabilitado, setCargoHabilitado] = useState(false)
   const [confirmEmitirAbierto, setConfirmEmitirAbierto] = useState(false)
-  const [selladoSubido, setSelladoSubido] = useState(false)
+  const [confirmFirmarYEmitirAbierto, setConfirmFirmarYEmitirAbierto] = useState(false)
   const [ultimoCargo, setUltimoCargo] = useState<string | null>(null)
   /** En el flujo del emisor: pasa a true cuando ya se firmó electrónicamente
    *  pero aún falta subir el sellado y emitir. */
@@ -93,7 +93,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
     setAvisoCargoAbierto(false)
     setCargoHabilitado(false)
     setConfirmEmitirAbierto(false)
-    setSelladoSubido(false)
+    setConfirmFirmarYEmitirAbierto(false)
     setFirmaCompleta(false)
     setEmitiendo(false)
     setCamposInvalidos({ cargo: false, cer: false, key: false, password: false })
@@ -112,6 +112,10 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
       setError("Completa cargo, .cer, .key y contraseña"); return
     }
     setError(null)
+    if (requiereSellado) {
+      setConfirmFirmarYEmitirAbierto(true)
+      return
+    }
     await ejecutarFirma()
   }
 
@@ -126,18 +130,48 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
           firmanteId, usuarioId,
           cargoFirmante: cargo.trim(),
           certificado: cerB64, clavePrivada: keyB64, fraseClavePrivada: password,
-          skipEmit: requiereSellado,
         }),
       })
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al firmar"); return }
 
-      if (requiereSellado) {
-        setFirmaCompleta(true)
-        return
-      }
       setExito(true)
       setTimeout(() => { onFirmado?.(); reset(); onClose() }, 1500)
+    } catch (e: any) {
+      setError(e?.message ?? "Error de conexión")
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  const ejecutarFirmaYEmitir = async () => {
+    setConfirmFirmarYEmitirAbierto(false)
+    setTrabajando(true); setError(null)
+    try {
+      const [cerB64, keyB64] = await Promise.all([fileToBase64(cerFile!), fileToBase64(keyFile!)])
+      const res = await fetch("/api/firma-efirma/firmar-interno", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firmanteId, usuarioId,
+          cargoFirmante: cargo.trim(),
+          certificado: cerB64, clavePrivada: keyB64, fraseClavePrivada: password,
+          skipEmit: true,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) { setError(json.error ?? "Error al firmar"); return }
+
+      if (!solicitudId) { setError("Falta el identificador de la solicitud"); return }
+      const resEmitir = await fetch("/api/firma-efirma/emitir-dictamen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solicitudId, usuarioId }),
+      })
+      const jsonEmitir = await resEmitir.json()
+      if (!resEmitir.ok || !jsonEmitir.ok) { setError(jsonEmitir.error ?? "Error al emitir"); return }
+
+      setExito(true)
     } catch (e: any) {
       setError(e?.message ?? "Error de conexión")
     } finally {
@@ -158,13 +192,37 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al emitir"); return }
       setExito(true)
-      setTimeout(() => { onFirmado?.(); reset(); onClose() }, 1500)
     } catch (e: any) {
       setError(e?.message ?? "Error de conexión")
     } finally {
       setEmitiendo(false)
     }
   }
+
+  const descargarDictamen = async () => {
+    if (!solicitudId) return
+    try {
+      const res = await fetch("/api/pdf/justificacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solicitudId }),
+      })
+      if (!res.ok) throw new Error("No se pudo generar el dictamen")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${`Dictamen_${folioDictamen ?? folio ?? solicitudId}`.replace(/[/\\]+/g, "-")}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      setError(e?.message ?? "No se pudo descargar el dictamen")
+    }
+  }
+
+  const cerrarExito = () => { onFirmado?.(); reset(); onClose() }
 
   return (
     <>
@@ -179,6 +237,18 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
         Esta acción <strong>no se puede revertir</strong>.
       </>}
       confirmLabel="Sí, emitir dictamen"
+    />
+    <ConfirmAlertDialog
+      open={confirmFirmarYEmitirAbierto}
+      onOpenChange={setConfirmFirmarYEmitirAbierto}
+      onConfirm={ejecutarFirmaYEmitir}
+      title="Confirmar firma y emisión"
+      description={<>
+        ¿Estás seguro de firmar y emitir el dictamen{folio ? <> de la justificación <strong>{folio}</strong></> : null}?
+        El expediente quedará <strong>bloqueado</strong> y pasará a la sección de Dictámenes.
+        Esta acción <strong>no se puede revertir</strong>.
+      </>}
+      confirmLabel="Sí, firmar y emitir"
     />
     <ConfirmDialog
       open={avisoCargoAbierto}
@@ -198,11 +268,13 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
       open={exito}
       type="success"
       title={requiereSellado ? "¡Dictamen emitido!" : "¡Firma registrada!"}
-      message={requiereSellado ? "El dictamen fue sellado y emitido correctamente." : "Tu firma quedó registrada correctamente."}
-      onClose={() => { onFirmado?.(); reset(); onClose() }}
+      message={requiereSellado ? "El dictamen fue firmado y emitido correctamente." : "Tu firma quedó registrada correctamente."}
+      primaryAction={requiereSellado ? { label: "Descargar dictamen", onClick: descargarDictamen } : undefined}
+      secondaryAction={requiereSellado ? { label: "Regresar a bandeja", onClick: cerrarExito } : undefined}
+      onClose={cerrarExito}
     />
     <Dialog open={open && !exito} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
-      <DialogContent className="w-[90vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[90vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader className="px-8 py-4">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Shield className="h-5 w-5 text-primary" />
@@ -213,7 +285,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
 
         {firmaCompleta ? (
           <div className="flex flex-col gap-4 px-8 pt-2 pb-6">
-            <div className="flex items-start gap-2 rounded-xl px-4 py-3" style={{ backgroundColor: "var(--sem-support-success-low)" }}>
+            {/* <div className="flex items-start gap-2 rounded-xl px-4 py-3" style={{ backgroundColor: "var(--sem-support-success-low)" }}>
               <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full mt-0.5" style={{ backgroundColor: "var(--sem-support-success)" }}>
                 <span className="text-[12px] font-bold text-white leading-none">i</span>
               </div>
@@ -223,9 +295,9 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                   Falta sellar el dictamen y emitirlo. Descargue, agregue el sello fuera del sistema y suba el archivo.
                 </p>
               </div>
-            </div>
+            </div> */}
 
-            {solicitudId && (
+            {/* {solicitudId && (
               <SelladoDocumentoSection
                 solicitudId={solicitudId}
                 etapa="emision"
@@ -243,7 +315,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                   return await res.blob()
                 }}
               />
-            )}
+            )} */}
 
             {error && <p className="text-xs text-support-error">{error}</p>}
             <div className="flex justify-end gap-2 pt-2">
@@ -252,7 +324,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 type="button"
                 variant="vino"
                 onClick={() => setConfirmEmitirAbierto(true)}
-                disabled={emitiendo || !selladoSubido}
+                disabled={emitiendo}
               >
                 {emitiendo && <Loader2 className="h-4 w-4 animate-spin" />}
                 Emitir Dictamen
@@ -261,7 +333,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 px-8 pt-2 pb-6">
-            {esEmisor && (
+            {/* {esEmisor && (
               <div className="flex items-center justify-center gap-2 rounded-xl bg-support-error-low px-4 py-3">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-support-error">
                   <span className="text-[12px] font-bold text-white leading-none">!</span>
@@ -273,7 +345,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                     : "Al firmar, el dictamen será emitido oficialmente y ya no podrá modificarse."}
                 </span>
               </div>
-            )}
+            )} */}
             <div className="flex flex-col gap-2">
               <Label className="text-xs flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
               <Input
@@ -306,7 +378,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 </p>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-col gap-2">
                 <Label className="text-xs flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
                 <Input
@@ -376,7 +448,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               <Button variant="default" onClick={() => { reset(); onClose() }} disabled={trabajando}>Cancelar</Button>
               <Button type="submit" variant="vino" disabled={trabajando}>
                 {trabajando && <Loader2 className="h-4 w-4 animate-spin" />}
-                Firmar
+                {esEmisor ? "Firmar y Emitir" : "Firmar"}
               </Button>
             </div>
           </form>

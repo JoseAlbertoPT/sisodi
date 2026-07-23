@@ -5,6 +5,8 @@ import { broadcastUpdate } from "@/lib/sse-manager"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
+const norm = (s: string) => s.normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "").toLowerCase().trim()
+
 const BYPASS = process.env.EFIRMA_BYPASS === "true"
 
 export async function POST(req: NextRequest) {
@@ -28,9 +30,23 @@ export async function POST(req: NextRequest) {
     })
     if (!firmante)                          return NextResponse.json({ ok: false, error: "Firmante no encontrado" }, { status: 404 })
     if (firmante.tipo !== "interno")        return NextResponse.json({ ok: false, error: "Este firmante no es interno" }, { status: 400 })
+
     const slotSinAsignar = !firmante.usuario_id
     if (!BYPASS && !slotSinAsignar && firmante.usuario_id !== usuarioId) {
       return NextResponse.json({ ok: false, error: "No te corresponde firmar este bloque" }, { status: 403 })
+    }
+    // El bloque UEFA no está atado a quien aprobó ("Pendiente DO"), sino a
+    // cualquier usuario con rol UEFA: se verifica aquí en vez de confiar en
+    // el usuario_id de la solicitud, que el cliente podría falsear.
+    if (!BYPASS && slotSinAsignar && firmante.bandeja === "uefa") {
+      const solicitante = await prisma.usuario.findUnique({
+        where: { id: usuarioId },
+        include: { rol: true },
+      })
+      const rolSolicitante = norm(solicitante?.rol.nombre ?? "")
+      if (!solicitante || (rolSolicitante !== "uefa" && rolSolicitante !== "administrador")) {
+        return NextResponse.json({ ok: false, error: "Solo un usuario con rol UEFA puede firmar este bloque" }, { status: 403 })
+      }
     }
     if (firmante.firmado)                   return NextResponse.json({ ok: false, error: "Ya firmaste" }, { status: 409 })
     if (firmante.firma_proceso.estado === "completado") {
@@ -40,9 +56,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Proceso sin identificador del portal" }, { status: 500 })
     }
 
-    const anterioresPendientes = firmante.firma_proceso.firmantes.filter(
-      f => f.orden < firmante.orden && !f.firmado
-    )
+    // Revisor (Filtro 1) no depende de que UEFA haya firmado: su revisión
+    // corre en paralelo, solo espera a que los externos (Elaboró) firmen.
+    const anterioresPendientes = firmante.bandeja === "revision"
+      ? firmante.firma_proceso.firmantes.filter(f => f.tipo === "externo" && !f.firmado)
+      : firmante.firma_proceso.firmantes.filter(f => f.orden < firmante.orden && !f.firmado)
     if (anterioresPendientes.length > 0) {
       const siguiente = anterioresPendientes.sort((a, b) => a.orden - b.orden)[0]
       return NextResponse.json({
@@ -100,12 +118,23 @@ export async function POST(req: NextRequest) {
     })
 
     if (!result.completo) {
-      const siguienteEstadoPorBandeja: Record<string, string | null> = {
-        uefa:       "Pendiente Firma Revision",
-        revision:   "Pendiente Firma Validacion",
-        validacion: "Pendiente Firma Emisor",
+      // El siguiente estado depende de cuál es el firmante interno de MENOR
+      // orden que todavía falta por firmar — no de cuál bandeja acaba de
+      // firmar. Revisor puede firmar antes que UEFA (no se esperan entre
+      // sí), así que si UEFA sigue pendiente, el estado no debe saltarse su
+      // turno aunque Revisor ya haya firmado.
+      const estadoPorBandejaPendiente: Record<string, string> = {
+        uefa:       "Pendiente Firma Justificacion",
+        revision:   "Pendiente Firma Revision",
+        validacion: "Pendiente Firma Validacion",
+        emision:    "Pendiente Firma Emisor",
       }
-      const siguienteEstado = siguienteEstadoPorBandeja[firmante.bandeja ?? ""]
+      const siguientePendiente = firmante.firma_proceso.firmantes
+        .filter(f => f.tipo === "interno" && f.id !== firmante.id && !f.firmado)
+        .sort((a, b) => a.orden - b.orden)[0]
+      const siguienteEstado = siguientePendiente
+        ? estadoPorBandejaPendiente[siguientePendiente.bandeja ?? ""]
+        : null
       if (siguienteEstado) {
         const estadoSig = await prisma.estado.findFirst({
           where: { nombre: { equals: siguienteEstado, mode: "insensitive" } },

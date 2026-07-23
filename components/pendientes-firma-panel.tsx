@@ -2,11 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { StatusBadge, C_AZUL_REVISION, C_AZUL_REVISION_BG } from "@/components/ui/status-badge"
-import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
-import { Loader2, RefreshCw, AlertCircle, Stamp, Inbox, MoreHorizontal, Eye, Shield } from "lucide-react"
+import { StatusBadge, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
+import { Loader2, RefreshCw, AlertCircle, Inbox, Eye } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
 import { FirmaProgresoDialog } from "@/components/firma-progreso-dialog"
@@ -150,26 +147,18 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                       <td className="px-4 py-2">
                         <StatusBadge
                           label={p.sellado_emision_subido ? "Listo para emitir" : "Falta sellar"}
-                          color={C_AZUL_REVISION}
-                          bgColor={C_AZUL_REVISION_BG}
+                          color={p.sellado_emision_subido ? C_AZUL_REVISION : C_AMARILLO}
+                          bgColor={p.sellado_emision_subido ? C_AZUL_REVISION_BG : C_AMARILLO_BG}
                         />
                       </td>
                       <td className="px-4 py-2 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 bg-bg-surface-low border border-border-low" aria-label="Acciones">
-                              <MoreHorizontal className="h-4 w-4 text-content-low" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setProgresoTarget(p)}>
-                              <Eye className="h-4 w-4" /> Ver progreso
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => p.mi_firmante_emisor_id && setFirmanteDialogId(p.mi_firmante_emisor_id)}>
-                              <Stamp className="h-4 w-4" /> Sellar y emitir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => p.mi_firmante_emisor_id && setFirmanteDialogId(p.mi_firmante_emisor_id)}
+                        >
+                          Sellar y emitir
+                        </Button>
                       </td>
                     </tr>
                   )
@@ -186,30 +175,30 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                     <td className="px-4 py-2 font-mono text-xs">{p.firmados}/{p.total_firmantes}</td>
                     <td className="px-4 py-2">
                       <StatusBadge
-                        label={esMiTurno ? "Tu turno" : `Esperando #${siguiente?.orden} · ${siguiente?.rol}`}
-                        color={C_AZUL_REVISION}
-                        bgColor={C_AZUL_REVISION_BG}
+                        label={esMiTurno ? "Para firmar" : "En firma"}
+                        color={C_AMARILLO}
+                        bgColor={C_AMARILLO_BG}
                       />
                     </td>
                     <td className="px-4 py-2 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 bg-bg-surface-low border border-border-low" aria-label="Acciones">
-                            <MoreHorizontal className="h-4 w-4 text-content-low" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setProgresoTarget(p)}>
-                            <Eye className="h-4 w-4" /> Ver progreso
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={!esMiTurno}
-                            onClick={() => esMiTurno && miFirmante && setFirmanteDialogId(miFirmante.id)}
-                          >
-                            <Shield className="h-4 w-4" /> Firmar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {esMiTurno ? (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => miFirmante && setFirmanteDialogId(miFirmante.id)}
+                        >
+                          Firmar
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => setProgresoTarget(p)}
+                        >
+                          <Eye className="h-4 w-4" /> Ver
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 )

@@ -53,9 +53,6 @@ export async function POST(req: NextRequest) {
     const sellado = await prisma.documento_sellado.findUnique({
       where: { solicitud_id_etapa: { solicitud_id: sid, etapa: "emision" } },
     })
-    if (!sellado) {
-      return NextResponse.json({ ok: false, error: "Falta subir el dictamen sellado" }, { status: 400 })
-    }
 
     const ahora = new Date()
     const modalidad = (solicitud as any).modalidad_firma ?? "electronica"
@@ -98,7 +95,7 @@ export async function POST(req: NextRequest) {
             folio: folioDictamenFinal,
             fecha_emision: ahora,
             tipo_firma: modalidad,
-            archivo_pdf: sellado.archivo,
+            archivo_pdf: sellado?.archivo ?? null,
           },
         })
       )
@@ -106,7 +103,7 @@ export async function POST(req: NextRequest) {
       ops.push(
         prisma.dictamen.update({
           where: { solicitud_id: sid },
-          data: { tipo_firma: modalidad, fecha_emision: ahora, archivo_pdf: sellado.archivo },
+          data: { tipo_firma: modalidad, fecha_emision: ahora, ...(sellado ? { archivo_pdf: sellado.archivo } : {}) },
         })
       )
     }
