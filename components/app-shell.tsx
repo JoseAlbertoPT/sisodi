@@ -83,7 +83,6 @@ export function AppShell() {
     const eraObservada = estadoOrig.includes("observad") || estadoOrig.includes("devuelta")
     const getInitialTab = (): string | undefined => {
       if (!eraObservada) return undefined
-      // All corrections now restart from "En Validacion Justificaciones" → "En aprobación" tab
       return "En aprobación"
     }
     if (prevPage === "mis-solicitudes") {
