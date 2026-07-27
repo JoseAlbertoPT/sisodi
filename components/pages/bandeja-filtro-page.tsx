@@ -1256,8 +1256,10 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const [guardando,      setGuardando]      = useState(false)
   const [activeTab,      setActiveTab]      = useState<TabKey>(
     filtro === 2 ? "pendientes_asignacion"
+    : filtro === 3 ? "revision"
     : "nuevas"
   )
+  const userChangedTabRef = useRef(false)
   const [selectedId,     setSelectedId]     = useState<string | null>(null)
   const [observarTarget,        setObservarTarget]        = useState<string | null>(null)
   const [aprobarTarget,        setAprobarTarget]        = useState<string | null>(null)
@@ -1387,6 +1389,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       const json = await res.json()
       if (!res.ok || !json.ok) { showToast("error", "Error al observar", json.error ?? "No se pudo registrar la observación."); return }
       setObservarTarget(null)
+      userChangedTabRef.current = true
       setActiveTab("observadas")
       void cargar()
       setSuccessMsg({ title: "Solicitud marcada con observaciones", description: "La solicitud fue devuelta con observaciones a la URG.", type: 'observe' })
@@ -1491,6 +1494,33 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
     [solicitudes, activeTab, filtro, searchTerm, filterRegimen]
   )
 
+  useEffect(() => {
+    if (filtro !== 1) return
+    if (loading) return
+    if (userChangedTabRef.current) return
+    const desired: TabKey =
+      tabCounts.nuevas > 0 ? "nuevas" : tabCounts.revision > 0 ? "revision" : "todas"
+    if (activeTab !== desired) setActiveTab(desired)
+  }, [filtro, loading, tabCounts, activeTab])
+
+  useEffect(() => {
+    if (filtro !== 2) return
+    if (loading) return
+    if (userChangedTabRef.current) return
+    const desired: TabKey =
+      tabCounts.pendientes_asignacion > 0 ? "pendientes_asignacion" : tabCounts.en_validacion > 0 ? "en_validacion" : "todas"
+    if (activeTab !== desired) setActiveTab(desired)
+  }, [filtro, loading, tabCounts, activeTab])
+
+  useEffect(() => {
+    if (filtro !== 3) return
+    if (loading) return
+    if (userChangedTabRef.current) return
+    const desired: TabKey =
+      tabCounts.revision > 0 ? "revision" : tabCounts.nuevas > 0 ? "nuevas" : "todas"
+    if (activeTab !== desired) setActiveTab(desired)
+  }, [filtro, loading, tabCounts, activeTab])
+
   useEffect(() => { setCurrentPage(1) }, [activeTab, filtro, searchTerm, filterRegimen])
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
@@ -1545,7 +1575,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
 
       <FilterTabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as TabKey)}
+        onValueChange={(v) => { userChangedTabRef.current = true; setActiveTab(v as TabKey) }}
         items={Object.keys(
           filtro === 2 ? TAB_CONFIG_DO : filtro === 3 ? TAB_CONFIG_EMISION : TAB_CONFIG_REVISION
         ).map((tabKey) => {

@@ -1255,6 +1255,7 @@ export function ValidacionUefaPage() {
   const [error,            setError]            = useState<string | null>(null)
   const [guardando,        setGuardando]        = useState(false)
   const [activeTab,        setActiveTab]        = useState<UefaTab>("Nuevas")
+  const userChangedTabRef                       = useRef(false)
   const [currentPage,      setCurrentPage]      = useState(1)
   const [selectedId,       setSelectedId]       = useState<number | null>(null)
   const [observarTargetId, setObservarTargetId] = useState<number | null>(null)
@@ -1394,6 +1395,14 @@ export function ValidacionUefaPage() {
     [solicitudes, activeTab]
   )
 
+  useEffect(() => {
+    if (loading) return
+    if (userChangedTabRef.current) return
+    const desired: UefaTab =
+      tabCounts["Nuevas"] > 0 ? "Nuevas" : tabCounts["En Proceso"] > 0 ? "En Proceso" : "Todas"
+    if (activeTab !== desired) setActiveTab(desired)
+  }, [loading, tabCounts, activeTab])
+
   useEffect(() => { setCurrentPage(1) }, [activeTab])
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
   const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
@@ -1477,7 +1486,7 @@ export function ValidacionUefaPage() {
 
       <FilterTabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as UefaTab)}
+        onValueChange={(v) => { userChangedTabRef.current = true; setActiveTab(v as UefaTab) }}
         items={tabDefs.map((tab) => ({ value: tab.key, label: tab.label, count: tabCounts[tab.key] ?? 0 }))}
       />
 

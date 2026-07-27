@@ -113,7 +113,7 @@ export function AppShell() {
       case "dashboard":
         return <DashboardPage onNavigate={setCurrentPage} onOpenReview={handleOpenReview} />
       case "nueva-solicitud":
-        return <NuevaSolicitudPage key={editSolicitud?.id ?? "new"} editSolicitud={editSolicitud} onAfterSave={editSolicitud ? handleAfterSave : undefined} onCancel={editSolicitud ? handleCancelEdit : undefined} onGoToBandeja={() => setCurrentPage("mis-solicitudes")} />
+        return <NuevaSolicitudPage key={editSolicitud?.id ?? "new"} editSolicit ud={editSolicitud} onAfterSave={editSolicitud ? handleAfterSave : undefined} onCancel={editSolicitud ? handleCancelEdit : undefined} onGoToBandeja={() => setCurrentPage("mis-solicitudes")} />
       case "mis-solicitudes":
         return <MisSolicitudesPage key={`${user?.id ?? "anon"}-${misSolicitudesRefreshKey}`} initialTab={misSolicitudesInitialTab} onEditSolicitud={handleEditSolicitud} />
       case "validacion-uefa":
