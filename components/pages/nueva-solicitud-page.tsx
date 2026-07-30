@@ -551,40 +551,35 @@ function useExcelRows(historicos: { sheets: Record<string, HistoricoRow[]> }[]):
 
 const TIPO_ACTIVIDAD_LABELS: Record<string, string> = {}
 
+const ACTIVIDADES_TIPO_LABELS = [
+  "Actividades Administrativas",
+  "Actividades Administrativas Contables",
+  "Actividades Administrativas-Operativas",
+  "Actividades Contables",
+  "Actividades Técnicas",
+  "Actividades Operativas",
+  "Actividades Jurídicas",
+  "Actividades Jurídico Administrativas",
+  "Actividades Jurídico Social",
+  "Actividades de Psicología",
+  "Actividades de Trabajo Social",
+  "Actividades Académicas",
+  "Actividades Docentes",
+  "Actividades Artísticas",
+  "Actividades Médicas",
+]
+const ACTIVIDADES_TIPO_OPTIONS = ACTIVIDADES_TIPO_LABELS.map((label) => ({
+  value: label.toLowerCase().replace(/\s+/g, "_").replace(/[()\/,]/g, ""),
+  label,
+}))
+
 const FALLBACK_TIPOS_ACTIVIDAD: Record<string, { value: string; label: string }[]> = {
-  "centralizada:honorarios": [
-    { value: "profesional", label: "Actividades Profesionales" },
-    { value: "tecnico",     label: "Actividades Técnicas" },
-    { value: "operativo",   label: "Actividades Operativas" },
-    { value: "asesoria",    label: "Actividades de Asesoría" },
-  ],
-  "centralizada:asimilados": [
-    { value: "profesional", label: "Actividades Profesionales" },
-    { value: "tecnico",     label: "Actividades Técnicas" },
-    { value: "asesoria",    label: "Actividades de Asesoría" },
-  ],
-  "paraestatal:honorarios": [
-    { value: "direccion_proyecto",     label: "Dirección de Proyecto" },
-    { value: "coordinacion_tecnica",   label: "Coordinación Técnica" },
-    { value: "soporte_administrativo", label: "Soporte Administrativo" },
-    { value: "asesoria_especializada", label: "Asesoría Especializada" },
-  ],
-  "paraestatal:asimilados": [
-    { value: "direccion_proyecto",     label: "Dirección de Proyecto" },
-    { value: "coordinacion_tecnica",   label: "Coordinación Técnica" },
-    { value: "asesoria_especializada", label: "Asesoría Especializada" },
-  ],
-  honorarios: [
-    { value: "profesional", label: "Actividades Profesionales" },
-    { value: "tecnico",     label: "Actividades Técnicas" },
-    { value: "operativo",   label: "Actividades Operativas" },
-    { value: "asesoria",    label: "Actividades de Asesoría" },
-  ],
-  asimilados: [
-    { value: "profesional", label: "Actividades Profesionales" },
-    { value: "tecnico",     label: "Actividades Técnicas" },
-    { value: "asesoria",    label: "Actividades de Asesoría" },
-  ],
+  "centralizada:honorarios":  ACTIVIDADES_TIPO_OPTIONS,
+  "centralizada:asimilados":  ACTIVIDADES_TIPO_OPTIONS,
+  "paraestatal:honorarios":   ACTIVIDADES_TIPO_OPTIONS,
+  "paraestatal:asimilados":   ACTIVIDADES_TIPO_OPTIONS,
+  honorarios: ACTIVIDADES_TIPO_OPTIONS,
+  asimilados: ACTIVIDADES_TIPO_OPTIONS,
   nombramiento: [
     { value: "directivo",   label: "Directivo" },
     { value: "mando_medio", label: "Mando Medio" },
@@ -1799,7 +1794,7 @@ function FormularioPrestacion({
                   <SelectTrigger className="w-full font-mono">
                     <SelectValue placeholder="Seleccione clave" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent side="bottom" avoidCollisions={false}>
                     {catalogoUAsConGuardada.filter((u) => u.clave !== "").map((u) => (
                       <SelectItem key={u.nombre} value={u.clave} textValue={fmtClave(u.clave)} className="font-mono">{fmtClave(u.clave)}</SelectItem>
                     ))}
@@ -1921,7 +1916,7 @@ function FormularioPrestacion({
                     {tipoActividadLabel ?? <span className="text-muted-foreground">{!regimenEfectivo ? "Seleccione primero un régimen" : "Según unidad administrativa"}</span>}
                   </span>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent side="bottom" avoidCollisions={false}>
                   {tiposActividad.length === 0
                     ? <div className="px-3 py-2 text-xs text-muted-foreground">Sin opciones para este régimen</div>
                     : tiposActividad.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
@@ -2540,7 +2535,7 @@ function FormularioNombramiento({
                   <SelectTrigger className="w-full font-mono">
                     <SelectValue placeholder={!camposDependientesHabilitados ? "Seleccione primero la secretaría" : "Seleccione clave"} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent side="bottom" avoidCollisions={false}>
                     {clavesAdscripcion.map((u) => (
                       <SelectItem key={u.nombre} value={u.clave} textValue={fmtClave(u.clave)} className="font-mono">{fmtClave(u.clave)}</SelectItem>
                     ))}
