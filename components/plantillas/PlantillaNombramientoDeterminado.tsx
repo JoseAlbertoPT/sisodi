@@ -67,6 +67,7 @@ export interface JustificacionNombramientoData {
   firmaDictEmitioNombre?: string;
   fechaDictaminacion?: string;
   ocultarFirmas?: boolean;
+  clave?: string;
 }
 
 const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20finanzas.png"));
@@ -146,6 +147,14 @@ const s = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     fontSize: 10,
     textAlign: "center",
+  },
+  claveBox: {
+    flex: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    padding: 4,
+    justifyContent: "center",
+    alignItems: "center",
   },
   pageBox: { flex: 1, paddingHorizontal: 4, paddingTop: 10, justifyContent: "flex-start", alignItems: "center" },
   claveText: { fontSize: 8, textAlign: "center" },
@@ -397,6 +406,9 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             <Text style={s.headerTitle}>JUSTIFICACIÓN PARA NOMBRAMIENTO POR TIEMPO{"\n"}DETERMINADO</Text>
           </View>
           <View style={s.headerCol3}>
+            <View style={s.claveBox}>
+              <Text style={s.claveText}>{data.clave || "Clave"}</Text>
+            </View>
             <View style={s.pageBox}>
               <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />
             </View>
@@ -835,6 +847,9 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             <Text style={s.headerTitle}>JUSTIFICACIÓN PARA NOMBRAMIENTO POR TIEMPO{"\n"}DETERMINADO</Text>
           </View>
           <View style={s.headerCol3}>
+            <View style={s.claveBox}>
+              <Text style={s.claveText}>{data.clave || "Clave"}</Text>
+            </View>
             <View style={s.pageBox}>
               <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />
             </View>

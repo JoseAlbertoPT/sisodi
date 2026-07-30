@@ -49,6 +49,7 @@ export interface JustificacionData {
   firmaDictEmitioCargo?: string;
   fechaDictaminacion?: string;
   ocultarFirmas?: boolean;
+  clave?: string;
 }
 
 const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20finanzas.png"));
@@ -351,6 +352,9 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
             <Text style={s.headerSubtitle}>(HONORARIOS Y HONORARIOS ASIMILADOS A SALARIOS)</Text>
           </View>
           <View style={s.headerCol3}>
+            <View style={s.claveBox}>
+              <Text style={s.claveText}>{data.clave || "Clave"}</Text>
+            </View>
             <View style={s.pageBox}>
               <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />
             </View>
@@ -640,6 +644,9 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
             <Text style={s.headerSubtitle}>(HONORARIOS Y HONORARIOS ASIMILADOS A SALARIOS)</Text>
           </View>
           <View style={s.headerCol3}>
+            <View style={s.claveBox}>
+              <Text style={s.claveText}>{data.clave || "Clave"}</Text>
+            </View>
             <View style={s.pageBox}>
               <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />
             </View>

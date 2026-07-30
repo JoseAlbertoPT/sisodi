@@ -65,7 +65,6 @@ type Usuario = {
 }
 
 const API = "/api"
-
 async function fetchUsuarios(): Promise<Usuario[]> {
   const res = await fetch(`${API}/usuarios`)
   if (!res.ok) throw new Error("Error al cargar usuarios")
@@ -1595,10 +1594,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     if (isDirty) setShowCloseConfirm(true)
     else onClose()
   }, [isDirty, onClose])
-  const handleCloseWithoutSave = useCallback(() => {
-    setShowCloseConfirm(false)
-    onClose()
-  }, [onClose])
   const handleSaveAndClose = useCallback(async () => {
     if (permisos == null) return
     setPermisosSaveError(null)
@@ -1634,9 +1629,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <Button variant="outline" onClick={handleCloseWithoutSave}>
-            Cerrar sin guardar
-          </Button>
           <Button onClick={() => void handleSaveAndClose()} disabled={permisosSaveLoading}>
             {permisosSaveLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Guardar y cerrar

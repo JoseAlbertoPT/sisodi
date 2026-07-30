@@ -38,6 +38,29 @@ function formatString(str: string | null | undefined): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
+const SIGLAS_STOPWORDS = new Set(["de", "del", "la", "las", "los", "el", "en", "para"]);
+
+function siglasSecretaria(nombre: string | null | undefined): string {
+  if (!nombre) return "";
+  return nombre
+    .trim()
+    .split(/\s+/)
+    .map((w) => {
+      const lw = w.toLowerCase();
+      if (lw === "y") return "y";
+      if (SIGLAS_STOPWORDS.has(lw)) return "";
+      return w.charAt(0).toUpperCase();
+    })
+    .join("");
+}
+
+function construirClave(secretaria: string | null | undefined, folioDictamen: string | null | undefined): string {
+  const siglas = siglasSecretaria(secretaria);
+  if (!siglas && !folioDictamen) return "";
+  if (!folioDictamen) return siglas;
+  return siglas ? `${siglas}/${folioDictamen}` : folioDictamen;
+}
+
 function selloFalso(prefix: string, length = 344): string {
   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   let out = prefix;
@@ -47,7 +70,6 @@ function selloFalso(prefix: string, length = 344): string {
   return out.slice(0, length - 2) + "==";
 }
 
-/* ── Helper: construye una firma ficticia a partir de un firmante local (modo bypass) ── */
 function buildFirmaFicticia(firmante: any, uuid?: string | null): FirmaPortal {
   const nombre = firmante?.nombre || "JUAN PÉREZ GARCÍA";
   const rfc = firmante?.rfc || "PEGJ800101AB1";
@@ -88,10 +110,7 @@ interface FirmaNames {
   formato?: 'fisico' | 'en_linea';
 }
 
-/**
- * Resuelve el nombre y cargo capturado de cada firmante registrado en
- * `firma_firmante` y mapea por (rol + bandeja) a los slots del template.
- */
+
 async function resolverNombresFirmantes(
   solicitudId: number,
   base: FirmaNames,
@@ -279,6 +298,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         firmaDictEmitioNombre: firmas.firmaDictEmitioNombre,
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
+        clave: construirClave(sol.secretaria, sol.folio_dictamen),
       };
 
       pdfElement = React.createElement(
@@ -337,6 +357,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
         firmaDictEmitioCargo: firmas.firmaDictEmitioCargo,
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
+        clave: construirClave(sol.secretaria, sol.folio_dictamen),
       };
 
       pdfElement = React.createElement(
@@ -355,7 +376,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
     const pdfStream = await renderToStream(pdfElement as any);
 
     let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
-    try {
+    if (!sinFirmas) try {
       const bypass = process.env.EFIRMA_BYPASS === "true";
 
       const firmaProceso = await prisma.firma_proceso.findUnique({

@@ -176,6 +176,7 @@ function ConsultaTab() {
         const words = norm(q).split(/\s+/).filter(Boolean)
         return allRecords.filter((r) => {
           const haystack = norm([
+            r.solicitud.folio_dictamen,
             r.programa_proyecto,
             r.tipo_actividad,
             r.denominacion_nombramiento,
@@ -330,7 +331,7 @@ function ConsultaTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ backgroundColor: VERDE }}>
-                  {["Programa / Proyecto", "Tipo de actividad", "Régimen", "Tipo de pago", "Importe bruto", "Acciones"].map((h) => (
+                  {["Folio de Dictamen", "Tipo de actividad", "Régimen", "Tipo de pago", "Importe bruto", "Acciones"].map((h) => (
                     <th
                       key={h}
                       className="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap"
@@ -365,8 +366,8 @@ function ConsultaTab() {
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e8e2d8")}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = idx % 2 === 1 ? BEIGE : "#fff")}
                   >
-                    <td className="px-4 py-3 text-xs max-w-[220px] truncate font-medium" style={{ color: "#2a2a2a" }} title={rec.programa_proyecto}>
-                      {fmt(rec.programa_proyecto)}
+                    <td className="px-4 py-3 text-xs max-w-[220px] truncate font-medium" style={{ color: "#2a2a2a" }} title={rec.solicitud.folio_dictamen ?? ""}>
+                      {fmt(rec.solicitud.folio_dictamen)}
                     </td>
                     <td className="px-4 py-3 text-xs max-w-[200px] truncate text-gray-600">{fmt(rec.tipo_actividad)}</td>
                     <td className="px-4 py-3">
@@ -403,7 +404,7 @@ function ConsultaTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ backgroundColor: VERDE }}>
-                  {["Programa / Proyecto", "Denominación", "Puesto jefe inmediato", "Tipo de actividad", "Personas", "Importe neto", "Tipo de pago", "Acciones"].map((h) => (
+                  {["Folio de Dictamen", "Denominación", "Puesto jefe inmediato", "Tipo de actividad", "Personas", "Importe neto", "Tipo de pago", "Acciones"].map((h) => (
                     <th
                       key={h}
                       className="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap"
@@ -438,8 +439,8 @@ function ConsultaTab() {
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e8e2d8")}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = idx % 2 === 1 ? BEIGE : "#fff")}
                   >
-                    <td className="px-4 py-3 text-xs max-w-[200px] truncate font-medium" style={{ color: "#2a2a2a" }} title={rec.programa_proyecto}>
-                      {fmt(rec.programa_proyecto)}
+                    <td className="px-4 py-3 text-xs max-w-[200px] truncate font-medium" style={{ color: "#2a2a2a" }} title={rec.solicitud.folio_dictamen ?? ""}>
+                      {fmt(rec.solicitud.folio_dictamen)}
                     </td>
                     <td className="px-4 py-3 text-xs max-w-[200px] truncate text-gray-600" title={rec.denominacion_nombramiento ?? ""}>
                       {fmt(rec.denominacion_nombramiento)}
@@ -487,7 +488,7 @@ function ConsultaTab() {
             </div>
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="ds-title-md text-content-high truncate">
-                Documento de justificación
+                CARTA DESCRIPTIVA DE PRESTACIÓN DE SERVICIOS
               </DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {(viewRec?.solicitud.secretaria || viewRec?.solicitud.secretaria_txt_snapshot) ?? "—"}
@@ -776,7 +777,7 @@ function AdministracionTab() {
             <thead>
               <tr className="bg-muted/30 border-b border-border">
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Entidad</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa / Proyecto</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Folio de Dictamen</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Régimen</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
@@ -805,7 +806,7 @@ function AdministracionTab() {
                   <td className="px-4 py-3 text-xs max-w-[140px] truncate" title={entidadNombre(rec)}>
                     {entidadNombre(rec).split(" > ")[0]}
                   </td>
-                  <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.programa_proyecto}>{fmt(rec.programa_proyecto)}</td>
+                  <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.solicitud.folio_dictamen ?? ""}>{fmt(rec.solicitud.folio_dictamen)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                   </td>
