@@ -536,7 +536,10 @@ function ConsultaTab() {
         </DialogContent>
       </Dialog>
       <Dialog open={showSol} onOpenChange={setShowSol}>
-        <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
+        <DialogContent
+          className="max-w-lg bg-white p-0 gap-0 overflow-hidden"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
             <DialogTitle className="ds-title-md text-content-high">
               Generar dictamen
@@ -549,6 +552,7 @@ function ConsultaTab() {
                   ? "Ajusta la vigencia y el número de personas. Se descargará el PDF del dictamen sin firmas."
                   : "Ajusta la vigencia y el número de prestadores de servicio. Se descargará el PDF del dictamen sin firmas."}
               </p>
+
               <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
                 <p className="font-semibold text-[#1F2937]">{entidadNombre(solRec)}</p>
                 <p className="text-[var(--sem-content-low)]">{fmt(solRec.programa_proyecto)}</p>
@@ -566,8 +570,9 @@ function ConsultaTab() {
                     <span className="text-xs text-muted-foreground">Inicio</span>
                     <DatePickerHabil
                       value={solVigInicio}
+                      fromDate={new Date()}
                       onChange={(d) => setSolVigInicio(d)}
-                      placeholder="Seleccionar inicio"
+                      placeholder="Seleccionar Inicio"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
@@ -576,7 +581,7 @@ function ConsultaTab() {
                       value={solVigFin}
                       fromDate={solVigInicio}
                       onChange={(d) => setSolVigFin(d)}
-                      placeholder="Seleccionar término"
+                      placeholder="Seleccionar Término"
                     />
                   </div>
                 </div>
