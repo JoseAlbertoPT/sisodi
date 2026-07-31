@@ -38,15 +38,15 @@ export function DevolucionObs({ comentario }: { comentario: string }) {
             return (
               <div key={idx} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/50 bg-[#832B56]/5 text-[10px] font-bold text-[#832B56]">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--sem-support-on-error-low)]/50 bg-[var(--sem-support-on-error-low)]/5 text-[10px] font-bold text-[var(--sem-support-on-error-low)]">
                     {num}
                   </div>
-                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[#832B56]/15 my-0.5" />}
+                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[var(--sem-support-on-error-low)]/15 my-0.5" />}
                 </div>
                 <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
-                  <span className="text-xs font-semibold text-[#832B56] leading-snug">{label}</span>
+                  <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)] leading-snug">{label}</span>
                   {obs?.trim() && (
-                    <span className="text-xs text-[#832B56]/80 bg-[#832B56]/5 rounded px-2 py-1 border border-[#832B56]/15 leading-relaxed">
+                    <span className="text-xs text-[var(--sem-support-on-error-low)]/80 bg-[var(--sem-support-on-error-low)]/5 rounded px-2 py-1 border border-[var(--sem-support-on-error-low)]/15 leading-relaxed">
                       {obs.trim()}
                     </span>
                   )}
@@ -60,18 +60,18 @@ export function DevolucionObs({ comentario }: { comentario: string }) {
       {tieneChecks && tieneGeneral && (
         <div className="flex gap-3">
           <div className="flex flex-col items-center">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[#832B56]/30 bg-white text-[10px] text-[#832B56]/50">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--sem-support-on-error-low)]/30 bg-white text-[10px] text-[var(--sem-support-on-error-low)]/50">
               <span className="text-[8px]">✎</span>
             </div>
           </div>
           <div className="flex flex-col gap-0.5 flex-1 pb-0">
-            <span className="text-[10px] font-semibold text-[#832B56]/60 uppercase tracking-wide">Observación general</span>
-            <p className="text-xs text-[#832B56]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+            <span className="text-[10px] font-semibold text-[var(--sem-support-on-error-low)]/60 uppercase tracking-wide">Observación general</span>
+            <p className="text-xs text-[var(--sem-support-on-error-low)]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
           </div>
         </div>
       )}
       {!tieneChecks && tieneGeneral && (
-        <p className="text-sm text-[#832B56] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+        <p className="text-sm text-[var(--sem-support-on-error-low)] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
       )}
     </div>
   )
@@ -118,7 +118,7 @@ export function StatusTabsList({
         <TabsTrigger value="observaciones" className="flex-1 relative">
           <AlertTriangle className="h-4 w-4" />Observaciones
           {obsCount > 0 && (
-            <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#773357] px-1 text-[11px] font-normal text-white">
+            <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--sem-support-error)] px-1 text-[11px] font-normal text-white">
               {obsCount}
             </span>
           )}
@@ -190,8 +190,8 @@ export function ObservacionesPanel({
   return (
     <div className="overflow-hidden rounded-xl border border-border shadow-md">
       <PanelHeader
-        iconBg="bg-[#ffeaea]"
-        icon={<AlertTriangle className="h-5 w-5 text-[#87090c]" />}
+        iconBg="bg-[var(--sem-support-error-low)]"
+        icon={<AlertTriangle className="h-5 w-5 text-[var(--sem-support-on-error-low)]" />}
         title={title}
         subtitle={count > 0 ? `${count} observación${count !== 1 ? "es" : ""}` : "Sin observaciones"}
         countLabel={`${count} obs.`}
@@ -200,9 +200,9 @@ export function ObservacionesPanel({
         {todasObservaciones.length > 0 ? (
           <div className="flex flex-col gap-2">
             {todasObservaciones.map((obs, i) => (
-              <div key={i} className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+              <div key={i} className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold text-[#832B56]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                  <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
                   <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
                 </div>
                 <DevolucionObs comentario={obs.comentario} />
@@ -210,7 +210,7 @@ export function ObservacionesPanel({
             ))}
           </div>
         ) : single ? (
-          <div className="rounded-lg border border-[#832B56]/20 bg-[#832B56]/[0.03] p-3 flex flex-col gap-1">
+          <div className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
             {single.fecha && <span className="text-[10px] text-muted-foreground">{single.fecha}</span>}
             {single.usuario && <span className="text-[10px] text-muted-foreground">Por: {single.usuario}</span>}
             <DevolucionObs comentario={single.motivo} />

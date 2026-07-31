@@ -1449,7 +1449,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       pendientes_asignacion: 0, en_validacion: 0, pendientes_firma: 0,
       todas: 0, solicitudes: 0,
     }
-    c.todas = solicitudes.length
+    c.todas = solicitudes.filter(s => classifySolicitud(s, filtro) !== "pendientes_firma").length
     solicitudes.forEach(s => {
       const tab = classifySolicitud(s, filtro)
       if (tab !== "todas") c[tab]++
@@ -1467,6 +1467,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         if (filtro === 3 && tab === "todas") return false
         if (filtro === 3 && activeTab === "nuevas") return true
         if (activeTab !== "todas") return tab === activeTab
+        if (tab === "pendientes_firma") return false
         if (filtro === 2) return tab !== "pendientes_asignacion"
         return true
       })

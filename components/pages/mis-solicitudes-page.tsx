@@ -32,8 +32,8 @@ import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-pa
 import {
   isPeriodoVigente,
   isRegimenTipoCompatible,
-  getPeriodoEndDate,
   parseDateDMY,
+  normalizaRegimen,
   CAP_3000,
   CAP_1000,
   NOMBRAMIENTO_TD,
@@ -335,7 +335,7 @@ function mapApiItem(item: any): UrgSolicitud {
     const dt = new Date(d)
     return isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10)
   }
-  const regimen = (item.regimen ?? "honorarios") as RegimenPeriodo
+  const regimen = normalizaRegimen(item.regimen)
   const _MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
   const periodoAplicacion = item.periodo
     ? regimen === "honorarios"
@@ -534,12 +534,12 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
   const comentarioGeneral = lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
   if (itemsChecklist.length === 0) {
-    return <p className="text-sm text-[var(--color-core-mora-20)] leading-relaxed">{comentario}</p>
+    return <p className="text-sm text-[var(--sem-support-on-error-low)] leading-relaxed">{comentario}</p>
   }
   return (
     <div className="flex flex-col gap-0 mt-1">
       {comentarioGeneral && (
-        <p className="text-xs text-[var(--color-core-mora-20)]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
+        <p className="text-xs text-[var(--sem-support-on-error-low)]/80 mb-2 leading-relaxed">{comentarioGeneral}</p>
       )}
       {itemsChecklist.map((linea, idx) => {
         const [titulo, obs] = linea.split("::")
@@ -550,15 +550,15 @@ function ObservacionTimeline({ comentario }: { comentario: string }) {
         return (
           <div key={idx} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/60 bg-white text-[10px] font-bold text-[var(--color-core-mora-20)]">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[var(--sem-support-on-error-low)]/60 bg-white text-[10px] font-bold text-[var(--sem-support-on-error-low)]">
                 {num}
               </div>
-              {!isLast && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/20 my-0.5" />}
+              {!isLast && <div className="w-px flex-1 bg-[var(--sem-support-on-error-low)]/20 my-0.5" />}
             </div>
             <div className={`flex flex-col gap-1 flex-1 ${!isLast ? "pb-3" : "pb-1"}`}>
-              <span className="text-xs font-semibold text-[var(--color-core-mora-20)]/90 leading-snug">{label}</span>
+              <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]/90 leading-snug">{label}</span>
               {obs?.trim() && (
-                <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
+                <span className="text-xs text-[var(--sem-support-on-error-low)]/80 bg-[var(--sem-support-on-error-low)]/5 rounded px-2 py-1 border border-[var(--sem-support-on-error-low)]/15 leading-relaxed">
                   {obs.trim()}
                 </span>
               )}
@@ -589,15 +589,15 @@ function DevolucionObs({ comentario }: { comentario: string }) {
             return (
               <div key={idx} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/50 bg-[var(--color-core-mora-20)]/5 text-[10px] font-bold text-[var(--color-core-mora-20)]">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--sem-support-on-error-low)]/50 bg-[var(--sem-support-on-error-low)]/5 text-[10px] font-bold text-[var(--sem-support-on-error-low)]">
                     {num}
                   </div>
-                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[var(--color-core-mora-20)]/15 my-0.5" />}
+                  {(!isLast || tieneGeneral) && <div className="w-px flex-1 bg-[var(--sem-support-on-error-low)]/15 my-0.5" />}
                 </div>
                 <div className={`flex flex-col gap-1 flex-1 ${(!isLast || tieneGeneral) ? "pb-2.5" : "pb-0"}`}>
-                  <span className="text-xs font-semibold text-[var(--color-core-mora-20)] leading-snug">{label}</span>
+                  <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)] leading-snug">{label}</span>
                   {obs?.trim() && (
-                    <span className="text-xs text-[var(--color-core-mora-20)]/80 bg-[var(--color-core-mora-20)]/5 rounded px-2 py-1 border border-[var(--color-core-mora-20)]/15 leading-relaxed">
+                    <span className="text-xs text-[var(--sem-support-on-error-low)]/80 bg-[var(--sem-support-on-error-low)]/5 rounded px-2 py-1 border border-[var(--sem-support-on-error-low)]/15 leading-relaxed">
                       {obs.trim()}
                     </span>
                   )}
@@ -611,18 +611,18 @@ function DevolucionObs({ comentario }: { comentario: string }) {
       {tieneChecks && tieneGeneral && (
         <div className="flex gap-3">
           <div className="flex flex-col items-center">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--color-core-mora-20)]/30 bg-white text-[10px] text-[var(--color-core-mora-20)]/50">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--sem-support-on-error-low)]/30 bg-white text-[10px] text-[var(--sem-support-on-error-low)]/50">
               <span className="text-[8px]">✎</span>
             </div>
           </div>
           <div className="flex flex-col gap-0.5 flex-1 pb-0">
-            <span className="text-[10px] font-semibold text-[var(--color-core-mora-20)]/60 uppercase tracking-wide">Observación general</span>
-            <p className="text-xs text-[var(--color-core-mora-20)]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+            <span className="text-[10px] font-semibold text-[var(--sem-support-on-error-low)]/60 uppercase tracking-wide">Observación general</span>
+            <p className="text-xs text-[var(--sem-support-on-error-low)]/90 leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
           </div>
         </div>
       )}
       {!tieneChecks && tieneGeneral && (
-        <p className="text-sm text-[var(--color-core-mora-20)] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
+        <p className="text-sm text-[var(--sem-support-on-error-low)] leading-relaxed whitespace-pre-line">{comentarioGeneral}</p>
       )}
     </div>
   )
@@ -636,8 +636,8 @@ function ParsedObservacion({ comentario, borderColor = "orange" }: { comentario:
     ? lineas.filter(l => !/^\d+\.\s.+::/.test(l)).join(" ").trim()
     : comentario
   const c = borderColor === "red"
-    ? { wrap: "border-[var(--color-core-mora-20)]/30 bg-[var(--color-core-mora-20)]/5", title: "text-[var(--color-core-mora-20)]", text: "text-[var(--color-core-mora-20)]", item: "border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/5", itemTitle: "text-[var(--color-core-mora-20)]/90", itemText: "text-[var(--color-core-mora-20)]" }
-    : { wrap: "border-[var(--color-core-mora-20)]/30 bg-[var(--color-core-mora-20)]/5", title: "text-[var(--color-core-mora-20)]", text: "text-[var(--color-core-mora-20)]/80", item: "border-[var(--color-core-mora-20)]/20 bg-white/60", itemTitle: "text-[var(--color-core-mora-20)]", itemText: "text-[var(--color-core-mora-20)]/80" }
+    ? { wrap: "border-[var(--sem-support-on-error-low)]/30 bg-[var(--sem-support-on-error-low)]/5", title: "text-[var(--sem-support-on-error-low)]", text: "text-[var(--sem-support-on-error-low)]", item: "border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/5", itemTitle: "text-[var(--sem-support-on-error-low)]/90", itemText: "text-[var(--sem-support-on-error-low)]" }
+    : { wrap: "border-[var(--sem-support-on-error-low)]/30 bg-[var(--sem-support-on-error-low)]/5", title: "text-[var(--sem-support-on-error-low)]", text: "text-[var(--sem-support-on-error-low)]/80", item: "border-[var(--sem-support-on-error-low)]/20 bg-white/60", itemTitle: "text-[var(--sem-support-on-error-low)]", itemText: "text-[var(--sem-support-on-error-low)]/80" }
   return (
     <div className={`rounded-md border ${c.wrap} px-3 py-2 flex flex-col gap-2`}>
       <p className={`text-[10px] font-semibold ${c.title} uppercase tracking-wide`}>Observaciones</p>
@@ -938,7 +938,7 @@ function formatRegimen(raw: string): string {
 }
 
 function DetalleView({
-  sol, onBack, onUpdatePeriodo, onUpdatePeriodoYEnviar, onEditSolicitud, onReenviar, calData,
+  sol, onBack, onUpdatePeriodo, onUpdatePeriodoYEnviar, onEditSolicitud, onReenviar, onEnviarValidacion, calData,
 }: {
   sol: UrgSolicitud
   onBack: () => void
@@ -946,6 +946,7 @@ function DetalleView({
   onUpdatePeriodoYEnviar?: (id: string, periodo: string) => Promise<void>
   onEditSolicitud?: (payload: EditSolicitudPayload) => void
   onReenviar?: (id: string) => Promise<void>
+  onEnviarValidacion?: (id: string) => Promise<void>
   calData?: CalData
 }) {
   const cal = calData ?? { honorarios: [], asimilados: [], nombramiento: [] }
@@ -1005,6 +1006,15 @@ function DetalleView({
     setGuardandoReenvio(true)
     try {
       await onReenviar(sol.id)
+    } finally {
+      setGuardandoReenvio(false)
+    }
+  }
+  const handleEnviarValidacionClick = async () => {
+    if (!onEnviarValidacion) return
+    setGuardandoReenvio(true)
+    try {
+      await onEnviarValidacion(sol.id)
     } finally {
       setGuardandoReenvio(false)
     }
@@ -1073,13 +1083,13 @@ function DetalleView({
           {estadoBadge(sol.estado)}
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="primary" className="gap-1.5 rounded-full"
+          <Button size="sm" variant={n === "borrador" || n === "en captura" ? "default" : "vino"} className="gap-1.5 rounded-full"
             onClick={() => setShowDescargarConfirm(true)}>
            Descargar Justificación
           </Button>
           {canEdit && !periodoConfirmado && (
             <>
-              <Button size="sm"
+              <Button size="sm" variant="default"
                 onClick={() => onEditSolicitud
                   ? onEditSolicitud(solToEditPayload(sol))
                   : handleDemoAction("Continuar captura")
@@ -1087,11 +1097,12 @@ function DetalleView({
                 <Edit3 className="h-4 w-4" />{n === "borrador" || n === "en captura" ? "Continuar Captura" : "Editar"}
               </Button>
               {(n === "borrador" || n === "en captura") && (
-                <Button size="sm"
-                  disabled={!canSend}
-                  onClick={() => handleDemoAction("Enviar a Validacion")}
+                <Button size="sm" variant="vino"
+                  disabled={!canSend || guardandoReenvio}
+                  onClick={handleEnviarValidacionClick}
                   title={!canSend ? "Periodo fuera de tiempo o régimen incompatible" : ""}>
-                  <FileCheck className="h-4 w-4" />Enviar a Validación
+                  <FileCheck className="h-4 w-4" />
+                  {guardandoReenvio ? "Enviando..." : "Enviar a Validación"}
                 </Button>
               )}
             </>
@@ -1137,39 +1148,34 @@ function DetalleView({
       )}
 
       {isBorradorFueraDeTiempo && (
-        <Card className={`border-2 shadow-sm ${permisoActivoBorrador ? "border-orange-400/50" : "border-destructive/40"}`}>
-          <CardContent className="flex flex-col gap-3 py-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${permisoActivoBorrador ? "text-orange-500" : "text-destructive"}`} />
-              <div className="flex-1">
-                <span className={`text-sm font-medium ${permisoActivoBorrador ? "text-orange-600" : "text-destructive"}`}>
-                  Periodo fuera de tiempo
-                </span>
-                <p className="text-sm text-card-foreground mt-1">
-                  El periodo seleccionado ya no está disponible. Debes actualizarlo conforme al calendario de recepción.
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Periodo: <strong>{sol.periodoAplicacion}</strong> — Límite DO:{" "}
-                  <strong>{periodoCheck.limiteDO ?? "N/A"}</strong>
-                </p>
-                {permisoActivoBorrador && (
-                  <p className="text-xs text-orange-600 font-medium mt-1.5">
-                    Tiene habilitación especial para el periodo <strong>{permisoActivoBorrador.periodo}</strong>.
-                    Al actualizar se usará el token de captura.
-                  </p>
-                )}
+        !editingPeriodo && !periodoConfirmado ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl px-4 py-3"
+            style={{ backgroundColor: permisoActivoBorrador ? "#FFF7ED" : "var(--sem-support-error-low)" }}>
+            <div className="flex items-center gap-2">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: permisoActivoBorrador ? "#EA580C" : "var(--sem-support-error)" }}>
+                <span className="text-[12px] font-bold text-white leading-none">i</span>
               </div>
+              <span className="text-sm font-light"
+                style={{ color: permisoActivoBorrador ? "#C2410C" : "var(--sem-support-on-error-low)" }}>
+                <strong className="font-medium">Periodo fuera de tiempo</strong> — Periodo: <strong>{sol.periodoAplicacion}</strong> — Límite DO: <strong>{periodoCheck.limiteDO ?? "N/A"}</strong>
+                {permisoActivoBorrador && (
+                  <> — Tiene habilitación especial para el periodo <strong>{permisoActivoBorrador.periodo}</strong>. Al actualizar se usará el token de captura.</>
+                )}
+              </span>
             </div>
-            {!editingPeriodo && !periodoConfirmado ? (
-              <Button variant="outline" size="sm"
-                className={`self-start gap-1.5 ${permisoActivoBorrador ? "border-orange-400/40 text-orange-600 hover:bg-orange-500/5" : "border-destructive/30 text-destructive hover:bg-destructive/5"}`}
-                onClick={() => {
-                  setEditingPeriodo(true)
-                  if (permisoActivoBorrador) setNewPeriodo(permisoActivoBorrador.periodo)
-                }}>
-                <Edit3 className="h-3.5 w-3.5" />Cambiar periodo
-              </Button>
-            ) : (
+            <Button variant="outline" size="sm"
+              className={`shrink-0 gap-1.5 ${permisoActivoBorrador ? "border-orange-400/40 text-orange-600 hover:bg-orange-500/5" : "border-[var(--sem-support-error)]/30 text-[var(--sem-support-error)] hover:bg-[var(--sem-support-error)]/5"}`}
+              onClick={() => {
+                setEditingPeriodo(true)
+                if (permisoActivoBorrador) setNewPeriodo(permisoActivoBorrador.periodo)
+              }}>
+              <Edit3 className="h-3.5 w-3.5" />Cambiar periodo
+            </Button>
+          </div>
+        ) : (
+          <Card className={`border-2 shadow-sm ${permisoActivoBorrador ? "border-orange-400/50" : "border-[var(--sem-support-error)]/40"}`}>
+            <CardContent className="flex flex-col gap-3 py-4">
               <div className="flex items-end gap-3 rounded-lg border border-border bg-muted/50 p-3">
                 <div className="flex flex-col gap-1.5 flex-1 max-w-xs">
                   <span className="text-xs font-medium text-muted-foreground">Régimen: {regimenLabel}</span>
@@ -1191,7 +1197,7 @@ function DetalleView({
                     </SelectContent>
                   </Select>
                 </div>
-                <Button size="sm" className="bg-secondary hover:bg-secondary/90 text-white"
+                <Button variant="vino" size="sm"
                   disabled={newPeriodo === sol.periodoAplicacion || (
                     !checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente &&
                     !(permisoActivoBorrador && newPeriodo === permisoActivoBorrador.periodo)
@@ -1199,14 +1205,14 @@ function DetalleView({
                   onClick={handleUpdatePeriodo}>
                   Actualizar
                 </Button>
-                <Button variant="ghost" size="sm"
+                <Button variant="default" size="sm"
                   onClick={() => { setEditingPeriodo(false); setNewPeriodo(sol.periodoAplicacion) }}>
                   Cancelar
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )
       )}
 
       {canEdit && !tipoCompatible && (
@@ -1244,30 +1250,23 @@ function DetalleView({
       />
 
       {(n === "borrador" || n === "en captura") && periodoCheck.vigente && tipoCompatible && !isBorradorFueraDeTiempo && (
-        <Card className="border-2 border-secondary/30 shadow-sm">
-          <CardContent className="flex flex-col gap-3 py-4">
-            <div className="flex items-start gap-3">
-              <FileCheck className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <span className="text-sm font-medium text-secondary">En tiempo para enviar</span>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Periodo: <strong>{sol.periodoAplicacion}</strong> — Límite DO: <strong>{periodoCheck.limiteDO ?? "N/A"}</strong>
-                </p>
-                {permisoDisponible && (
-                  <p className="text-xs text-orange-600 font-medium mt-1.5">
-                    Habilitación especial disponible — periodo <strong>{permisoDisponible.periodo}</strong> ({regimenLabel}).
-
-                  </p>
-                )}
-              </div>
-            </div>
-            {!editingPeriodo ? (
-              <Button variant="outline" size="sm"
-                className="self-start gap-1.5 border-secondary/30 text-secondary hover:bg-secondary/5"
-                onClick={() => { setEditingPeriodo(true); setNewPeriodo(sol.periodoAplicacion) }}>
-                <Edit3 className="h-3.5 w-3.5" />Cambiar periodo
-              </Button>
-            ) : (
+        !editingPeriodo ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-[#ecf2ff] px-4 py-3">
+            <span className="text-sm font-light text-[#3266cb]">
+              <strong className="font-medium">En tiempo para enviar</strong> — Periodo: <strong>{sol.periodoAplicacion}</strong> — Límite DO: <strong>{periodoCheck.limiteDO ?? "N/A"}</strong>
+              {permisoDisponible && (
+                <> — Habilitación especial disponible para periodo <strong>{permisoDisponible.periodo}</strong> ({regimenLabel}).</>
+              )}
+            </span>
+            <Button variant="outline" size="sm"
+              className="shrink-0 gap-1.5 border-[#3266cb]/30 text-[#3266cb] hover:bg-[#3266cb]/5"
+              onClick={() => { setEditingPeriodo(true); setNewPeriodo(sol.periodoAplicacion) }}>
+              <Edit3 className="h-3.5 w-3.5" />Cambiar periodo
+            </Button>
+          </div>
+        ) : (
+          <Card className="border-2 border-secondary/30 shadow-sm">
+            <CardContent className="flex flex-col gap-3 py-4">
               <div className="flex flex-col gap-2">
                 <div className="flex items-end gap-3 rounded-lg border border-border bg-muted/50 p-3">
                   <div className="flex flex-col gap-1.5 flex-1 max-w-xs">
@@ -1289,7 +1288,7 @@ function DetalleView({
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button size="sm" className="bg-secondary hover:bg-secondary/90 text-white"
+                  <Button variant="vino" size="sm"
                     disabled={newPeriodo === sol.periodoAplicacion || (
                       !checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente &&
                       !(permisoDisponible && newPeriodo === permisoDisponible.periodo)
@@ -1297,7 +1296,7 @@ function DetalleView({
                     onClick={handleUpdatePeriodo}>
                     Actualizar
                   </Button>
-                  <Button variant="ghost" size="sm"
+                  <Button variant="default" size="sm"
                     onClick={() => { setEditingPeriodo(false); setNewPeriodo(sol.periodoAplicacion) }}>
                     Cancelar
                   </Button>
@@ -1308,9 +1307,9 @@ function DetalleView({
                   </p>
                 )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )
       )}
       {isEmitido && sol.numeroDictamen && (
         <div className="flex items-center justify-center gap-2 rounded-xl bg-support-success-low px-4 py-3">
@@ -1442,9 +1441,9 @@ function DetalleView({
                   {sol.todasObservaciones.length > 0 ? (
                     <div className="flex flex-col gap-2">
                       {sol.todasObservaciones.map((obs, i) => (
-                        <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
+                        <div key={i} className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                            <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
                             <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
                           </div>
                           <DevolucionObs comentario={obs.comentario} />
@@ -1452,7 +1451,7 @@ function DetalleView({
                       ))}
                     </div>
                   ) : sol.observacionMotivo ? (
-                    <div className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
+                    <div className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
                       {sol.observacionFecha && <span className="text-[10px] text-muted-foreground">{sol.observacionFecha}</span>}
                       {sol.observacionUsuario && <span className="text-[10px] text-muted-foreground">Por: {sol.observacionUsuario}</span>}
                       <DevolucionObs comentario={sol.observacionMotivo} />
@@ -1508,9 +1507,7 @@ function checkVigenteFromCal(
     }
   }
   if (!row) return { vigente: false, limiteDO: null }
-  const nombreNorm = normalizarPeriodoANombre(periodo)
-  const fechaFin = getPeriodoEndDate(regimen, nombreNorm)
-  const vigente = fechaFin !== null ? today <= fechaFin : today <= parseDateDMY(row.limiteDO)
+  const vigente = today <= parseDateDMY(row.limiteDO)
   return { vigente, limiteDO: row.limiteDO }
 }
 
@@ -1613,6 +1610,27 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
     void fetchData(activeTab, searchTerm)
   }, [user?.id, toast, fetchData, activeTab, searchTerm])
 
+  const handleEnviarValidacion = useCallback(async (id: string) => {
+    const res = await fetch("/api/validacion", {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        solicitudId: id,
+        nuevoEstado: "En Validacion Justificaciones",
+        usuarioId:   user?.id ?? "",
+        comentario:  "Solicitud enviada a Validación de Justificaciones por la URG",
+      }),
+    })
+    const json = await res.json()
+    if (!res.ok || !json.ok) {
+      toast({ title: "Error", description: json.error ?? "Error al enviar a validación", variant: "destructive" })
+      return
+    }
+    toast({ title: "Enviada a Validación", description: "La solicitud fue enviada a Validación de Justificaciones." })
+    setSelectedId(null)
+    void fetchData(activeTab, searchTerm)
+  }, [user?.id, toast, fetchData, activeTab, searchTerm])
+
   const handleUpdatePeriodoYEnviar = useCallback(async (id: string, periodo: string) => {
     const resEnvio = await fetch("/api/validacion", {
       method:  "PATCH",
@@ -1643,9 +1661,8 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
           onBack={() => setSelectedId(null)}
           onEditSolicitud={onEditSolicitud}
           onReenviar={handleReenviar}
-          onUpdatePeriodo={(id, periodo) =>
-            setData((prev) => prev.map((s) => s.id === id ? { ...s, periodoAplicacion: periodo } : s))
-          }
+          onEnviarValidacion={handleEnviarValidacion}
+          onUpdatePeriodo={() => { void fetchData(activeTab, searchTerm) }}
           onUpdatePeriodoYEnviar={handleUpdatePeriodoYEnviar}
         />
       </PageLayout>

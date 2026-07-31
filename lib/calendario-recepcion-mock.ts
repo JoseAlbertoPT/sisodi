@@ -18,6 +18,16 @@ export interface PeriodoCap1000 {
 
 export type RegimenPeriodo = "honorarios" | "asimilados" | "nombramiento"
 
+// El campo `solicitud.regimen` en BD es texto libre (p. ej. "HONORARIOS",
+// "Honorarios Asimilados a Salarios"). Toda comparación contra RegimenPeriodo
+// debe pasar primero por aquí para no romper el cálculo de mes/quincena.
+export function normalizaRegimen(raw: string | null | undefined): RegimenPeriodo {
+  const u = (raw ?? "").toUpperCase().trim()
+  if (u.includes("ASIMILADO")) return "asimilados"
+  if (u.includes("NOMBRAMIENTO") || u.includes("TIEMPO DETERMINADO")) return "nombramiento"
+  return "honorarios"
+}
+
 export interface PeriodoVigenciaResult {
   vigente: boolean
   limiteDO: string | null
