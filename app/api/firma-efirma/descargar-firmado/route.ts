@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { buildJustificacionBuffer } from "@/app/api/pdf/justificacion/route"
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,16 +24,16 @@ export async function GET(req: NextRequest) {
       ?? `SOL-${solicitudId}`
     const filename = `${folio}-firmado.pdf`
 
-    const internalRes = await fetch(
-      `${url.origin}/api/pdf/justificacion?id=${solicitudId}&formato=en_linea&firmanteId=${firmante.id}`,
-      { cache: "no-store", headers: { cookie: req.headers.get("cookie") ?? "" } },
+    const result = await buildJustificacionBuffer(
+      String(solicitudId),
+      { formato: "en_linea" },
+      firmante.id,
     )
-    if (!internalRes.ok) {
-      return NextResponse.json({ ok: false, error: `No se pudo generar el PDF (${internalRes.status})` }, { status: 502 })
+    if (!result) {
+      return NextResponse.json({ ok: false, error: "No se pudo generar el PDF" }, { status: 502 })
     }
-    const buf = await internalRes.arrayBuffer()
 
-    return new NextResponse(buf, {
+    return new NextResponse(new Uint8Array(result.buffer as Buffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

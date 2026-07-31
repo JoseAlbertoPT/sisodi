@@ -111,6 +111,17 @@ function formatFecha(value: string | Date | null | undefined): string {
   } catch { return String(value) }
 }
 
+let logoBytesPromise: Promise<Buffer | null> | null = null
+
+function getLogoBytes(): Promise<Buffer | null> {
+  if (!logoBytesPromise) {
+    logoBytesPromise = fs
+      .readFile(path.join(process.cwd(), "public", "logo-20finanzas.png"))
+      .catch(() => null)
+  }
+  return logoBytesPromise
+}
+
 async function generarQRPng(text: string, size = 220): Promise<Buffer> {
   return QRCode.toBuffer(text, {
     type: "png", errorCorrectionLevel: "M",
@@ -589,9 +600,8 @@ export async function agregarConstanciaFirma(opts: AgregarConstanciaOpts): Promi
 
   let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null
   try {
-    const logoPath = path.join(process.cwd(), "public", "logo-20finanzas.png")
-    const logoBytes = await fs.readFile(logoPath)
-    logoImage = await pdfDoc.embedPng(logoBytes)
+    const logoBytes = await getLogoBytes()
+    if (logoBytes) logoImage = await pdfDoc.embedPng(logoBytes)
   } catch {
     logoImage = null
   }

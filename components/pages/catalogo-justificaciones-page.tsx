@@ -907,7 +907,7 @@ function AdministracionTab() {
                   </td>
                 </tr>
               )}
-              {!loading && records.length === 0 && (
+              {!loading && records.length === 0 &&(
                 <tr className="empty-row">
                   <td colSpan={9}><EmptyState icon={Inbox} title="Sin registros en el catálogo" description="No se encontraron registros." /></td>
                 </tr>

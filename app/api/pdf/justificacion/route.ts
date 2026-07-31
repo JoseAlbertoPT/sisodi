@@ -166,16 +166,15 @@ interface PdfOverrides {
   numeroPersonas?: number
 }
 
-async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null, overrides: PdfOverrides = {}, sinFirmas = false) {
+export async function buildJustificacionBuffer(
+  solicitudId: string,
+  firmasInput: FirmaNames = {},
+  soloFirmanteId: number | null = null,
+  overrides: PdfOverrides = {},
+  sinFirmas = false,
+): Promise<{ buffer: Buffer | Uint8Array; filename: string; sol: any } | null> {
   let firmas: FirmaNames = { ...firmasInput };
-  try {
-    if (!solicitudId) {
-      return NextResponse.json(
-        { ok: false, error: "Falta solicitudId" },
-        { status: 400 }
-      );
-    }
-
+  {
     const sol = await prisma.solicitud.findUnique({
       where: { id: Number(solicitudId) },
       include: {
@@ -195,10 +194,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       : "";
 
     if (!sol) {
-      return NextResponse.json(
-        { ok: false, error: "Solicitud no encontrada" },
-        { status: 404 }
-      );
+      return null;
     }
 
     if (!sinFirmas) {
@@ -408,11 +404,32 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       console.error("[pdf/justificacion] Error agregando constancia de firma:", errFirma);
     }
 
-    return new NextResponse(pdfFinal as unknown as BodyInit, {
+    return { buffer: pdfFinal, filename, sol };
+  }
+}
+
+async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null, overrides: PdfOverrides = {}, sinFirmas = false) {
+  try {
+    if (!solicitudId) {
+      return NextResponse.json(
+        { ok: false, error: "Falta solicitudId" },
+        { status: 400 }
+      );
+    }
+
+    const result = await buildJustificacionBuffer(solicitudId, firmasInput, soloFirmanteId, overrides, sinFirmas);
+    if (!result) {
+      return NextResponse.json(
+        { ok: false, error: "Solicitud no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    return new NextResponse(result.buffer as unknown as BodyInit, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${filename}"`,
+        "Content-Disposition": `inline; filename="${result.filename}"`,
       },
     });
   } catch (error: unknown) {

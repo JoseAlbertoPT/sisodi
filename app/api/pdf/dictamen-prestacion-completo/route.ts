@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
+import { prisma } from "@/lib/prisma";
 import { buildCartaDescriptivaBuffer } from "../carta-descriptiva/route";
 import { buildDictamenPrestacionBuffer } from "../dictamen-prestacion/route";
 import { construirClave } from "@/lib/clave-dictamen";
@@ -20,17 +21,26 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
     );
   }
 
-  const dictamenResult = await buildDictamenPrestacionBuffer(solicitudId, overrides);
-  if (!dictamenResult) {
+  // Consulta ligera solo para calcular la clave antes de lanzar ambos renders en paralelo.
+  const solMeta = await prisma.solicitud.findUnique({
+    where: { id: Number(solicitudId) },
+    select: { secretaria: true, folio_dictamen: true, folio_recepcion: true, dictamen: { select: { folio: true } } },
+  });
+  if (!solMeta) {
     return NextResponse.json(
       { ok: false, error: "Solicitud no encontrada" },
       { status: 404 },
     );
   }
+  const folioMeta = solMeta.dictamen?.folio ?? solMeta.folio_dictamen ?? solMeta.folio_recepcion ?? solicitudId;
+  const clave = construirClave(solMeta.secretaria, folioMeta);
 
-  const clave = construirClave(dictamenResult.sol.secretaria, dictamenResult.folio);
-  const cartaResult = await buildCartaDescriptivaBuffer(solicitudId, clave || null);
-  if (!cartaResult) {
+  const [dictamenResult, cartaResult] = await Promise.all([
+    buildDictamenPrestacionBuffer(solicitudId, overrides),
+    buildCartaDescriptivaBuffer(solicitudId, clave || null),
+  ]);
+
+  if (!dictamenResult || !cartaResult) {
     return NextResponse.json(
       { ok: false, error: "Solicitud no encontrada" },
       { status: 404 },
