@@ -35,27 +35,15 @@ function formatFechaMesAnio(d: Date | null | undefined): string {
   return `${meses[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
-async function buildPDFResponse(
-  solicitudId: string | null,
+export async function buildCartaDescriptivaBuffer(
+  solicitudId: string,
   claveOverride: string | null,
 ) {
-  if (!solicitudId) {
-    return NextResponse.json(
-      { ok: false, error: "Falta solicitudId" },
-      { status: 400 },
-    );
-  }
-
   const sol = await prisma.solicitud.findUnique({
     where: { id: Number(solicitudId) },
   });
 
-  if (!sol) {
-    return NextResponse.json(
-      { ok: false, error: "Solicitud no encontrada" },
-      { status: 404 },
-    );
-  }
+  if (!sol) return null;
 
   const data: CartaDescriptivaData = {
     // ponytail: clave llega por override; pendiente definir dónde nace en sistema
@@ -84,11 +72,33 @@ async function buildPDFResponse(
     sol.folio_recepcion ?? sol.folio_dictamen ?? String(sol.id);
   const filename = `CartaDescriptiva_${folioBase.replace(/\//g, "-")}.pdf`;
 
-  return new NextResponse(new Uint8Array(buffer), {
+  return { buffer, sol, filename };
+}
+
+async function buildPDFResponse(
+  solicitudId: string | null,
+  claveOverride: string | null,
+) {
+  if (!solicitudId) {
+    return NextResponse.json(
+      { ok: false, error: "Falta solicitudId" },
+      { status: 400 },
+    );
+  }
+
+  const result = await buildCartaDescriptivaBuffer(solicitudId, claveOverride);
+  if (!result) {
+    return NextResponse.json(
+      { ok: false, error: "Solicitud no encontrada" },
+      { status: 404 },
+    );
+  }
+
+  return new NextResponse(new Uint8Array(result.buffer), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `attachment; filename="${result.filename}"`,
       "Cache-Control": "no-store",
     },
   });

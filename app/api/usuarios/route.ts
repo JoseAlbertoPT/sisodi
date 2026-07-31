@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         secretaria_id:    secretariaId || null,
         secretaria_texto: secretariaTexto || null,
         activo:           true,
-        must_change_password: false,
+        must_change_password: true,
       },
       include: { rol: true, area: true, organo_centralizado: true },
     })

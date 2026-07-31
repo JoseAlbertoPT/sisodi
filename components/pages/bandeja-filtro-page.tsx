@@ -45,6 +45,9 @@ import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-pa
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
+import { generateDictamenPrestacionPDF } from "@/lib/generate-dictamen-prestacion-pdf"
+import { generateCartaDescriptivaPDF } from "@/lib/generate-carta-descriptiva-pdf"
+import { construirClave } from "@/lib/clave-dictamen"
 import { useRealtime } from "@/hooks/use-realtime"
 
 interface FiltroSolicitud {
@@ -873,6 +876,8 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
   const [folioDictamen,           setFolioDictamen]           = useState<string | null>(
     solicitud._raw?.folio_dictamen ?? solicitud._raw?.dictamen?.folio ?? null
   )
+  const [descargandoDictamenPrestacion, setDescargandoDictamenPrestacion] = useState(false)
+  const [descargandoCartaDescriptiva,   setDescargandoCartaDescriptiva]   = useState(false)
 
   const raw = solicitud._raw
   const handleAsignarFolioDictamen = async (folio: string) => {
@@ -961,6 +966,26 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         comentario: h.comentario as string,
       }))
   const denominacion = raw?.denominacion || raw?.tipo_solicitud || solicitud.denominacion || solicitud.tipo || "—"
+
+  const handleDescargarDictamenPrestacion = async () => {
+    setDescargandoDictamenPrestacion(true)
+    try {
+      await generateDictamenPrestacionPDF(solicitud.id, folioDictamen ?? undefined)
+    } finally {
+      setDescargandoDictamenPrestacion(false)
+    }
+  }
+
+  const handleDescargarCartaDescriptiva = async () => {
+    setDescargandoCartaDescriptiva(true)
+    try {
+      const clave = construirClave(solicitud.secretaria, folioDictamen)
+      await generateCartaDescriptivaPDF(solicitud.id, { clave, folioFallback: folioDictamen ?? undefined })
+    } finally {
+      setDescargandoCartaDescriptiva(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -999,6 +1024,22 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           >
             Descagar Justificacion
           </Button>
+          {!!folioDictamen && solicitud.tipo === "Prestacion de Servicios" && (
+            <>
+              <Button variant="default" size="sm" className="gap-1.5"
+                disabled={descargandoDictamenPrestacion}
+                onClick={handleDescargarDictamenPrestacion}>
+                {descargandoDictamenPrestacion && <Loader2 className="h-4 w-4 animate-spin" />}
+                {descargandoDictamenPrestacion ? "Generando..." : "Dictamen Prestación (sin firma)"}
+              </Button>
+              <Button variant="default" size="sm" className="gap-1.5"
+                disabled={descargandoCartaDescriptiva}
+                onClick={handleDescargarCartaDescriptiva}>
+                {descargandoCartaDescriptiva && <Loader2 className="h-4 w-4 animate-spin" />}
+                {descargandoCartaDescriptiva ? "Generando..." : "Carta Descriptiva"}
+              </Button>
+            </>
+          )}
           {onEditSolicitud && (
             <Button
               variant="default"

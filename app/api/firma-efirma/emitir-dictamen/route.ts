@@ -109,6 +109,37 @@ export async function POST(req: NextRequest) {
     }
     await prisma.$transaction(ops)
 
+    // Auto-crear registro en catálogo de justificaciones (best-effort)
+    try {
+      const existing = await prisma.catalogo_justificacion.findUnique({
+        where: { solicitud_id: sid },
+      })
+      if (!existing) {
+        const vigencia =
+          solicitud.vigencia_inicio && solicitud.vigencia_fin
+            ? `${solicitud.vigencia_inicio.toISOString().slice(0, 10)} / ${solicitud.vigencia_fin.toISOString().slice(0, 10)}`
+            : null
+        await prisma.catalogo_justificacion.create({
+          data: {
+            solicitud_id:              sid,
+            regimen_contratacion:      (solicitud as any).regimen ?? "honorarios",
+            programa_proyecto:         (solicitud as any).programa_proyecto ?? "",
+            tipo_actividad:            (solicitud as any).tipo_actividades ?? null,
+            denominacion_nombramiento: (solicitud as any).denominacion ?? null,
+            puesto_jefe_inmediato:     (solicitud as any).puesto_jefe_inmediato ?? null,
+            numero_personas:           (solicitud as any).numero_prestadores ?? null,
+            tipo_pago:                 (solicitud as any).tipo_importe ?? null,
+            importe_bruto:             (solicitud as any).importe_bruto ?? null,
+            importe_neto:              null,
+            vigencia,
+            activo:                    true,
+          },
+        })
+      }
+    } catch (catalogError) {
+      console.error("[firma-efirma/emitir-dictamen] Error al crear catálogo:", catalogError)
+    }
+
     broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({ ok: true, folio: folioDictamenFinal })
   } catch (error: any) {

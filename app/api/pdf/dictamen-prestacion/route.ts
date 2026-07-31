@@ -5,6 +5,7 @@ import {
   PlantillaDictamenPrestacionServicios,
   type DictamenPrestacionData,
 } from "@/components/plantillas/PlantillaDictamenPrestacionServicios";
+import { construirClave } from "@/lib/clave-dictamen";
 import React from "react";
 
 export const runtime = "nodejs";
@@ -33,25 +34,22 @@ function formatImporte(v: unknown): string {
   return `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
 }
 
-async function buildPDFResponse(solicitudId: string | null) {
-  if (!solicitudId) {
-    return NextResponse.json(
-      { ok: false, error: "Falta solicitudId" },
-      { status: 400 },
-    );
-  }
+interface PdfOverrides {
+  vigenciaInicio?: string
+  vigenciaFin?: string
+  numeroPrestadores?: number
+}
 
+export async function buildDictamenPrestacionBuffer(
+  solicitudId: string,
+  overrides: PdfOverrides = {},
+) {
   const sol = await prisma.solicitud.findUnique({
     where: { id: Number(solicitudId) },
     include: { dictamen: true },
   });
 
-  if (!sol) {
-    return NextResponse.json(
-      { ok: false, error: "Solicitud no encontrada" },
-      { status: 404 },
-    );
-  }
+  if (!sol) return null;
 
   const folio =
     sol.dictamen?.folio ??
@@ -71,14 +69,14 @@ async function buildPDFResponse(solicitudId: string | null) {
     objetoContratacion: sol.objeto ?? "",
     importeBruto: formatImporte(sol.importe_bruto),
     tipoPagoLabel: (sol.tipo_importe ?? "").replace(/_/g, " ") || undefined,
-    justificacion: sol.folio_justificacion ?? "",
-    numeroPrestadores: sol.numero_prestadores ?? 1,
-    vigenciaInicio: sol.vigencia_inicio
+    justificacion: construirClave(sol.secretaria, folio) || sol.folio_justificacion || "",
+    numeroPrestadores: overrides.numeroPrestadores ?? sol.numero_prestadores ?? 1,
+    vigenciaInicio: overrides.vigenciaInicio ?? (sol.vigencia_inicio
       ? sol.vigencia_inicio.toISOString().split("T")[0]
-      : "",
-    vigenciaFin: sol.vigencia_fin
+      : ""),
+    vigenciaFin: overrides.vigenciaFin ?? (sol.vigencia_fin
       ? sol.vigencia_fin.toISOString().split("T")[0]
-      : "",
+      : ""),
   };
 
   const stream = await renderToStream(
@@ -91,11 +89,30 @@ async function buildPDFResponse(solicitudId: string | null) {
 
   const filename = `Dictamen_${folio.replace(/\//g, "-")}.pdf`;
 
-  return new NextResponse(new Uint8Array(buffer), {
+  return { buffer, sol, folio, filename };
+}
+
+async function buildPDFResponse(solicitudId: string | null, overrides: PdfOverrides = {}) {
+  if (!solicitudId) {
+    return NextResponse.json(
+      { ok: false, error: "Falta solicitudId" },
+      { status: 400 },
+    );
+  }
+
+  const result = await buildDictamenPrestacionBuffer(solicitudId, overrides);
+  if (!result) {
+    return NextResponse.json(
+      { ok: false, error: "Solicitud no encontrada" },
+      { status: 404 },
+    );
+  }
+
+  return new NextResponse(new Uint8Array(result.buffer), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `attachment; filename="${result.filename}"`,
       "Cache-Control": "no-store",
     },
   });
@@ -104,11 +121,21 @@ async function buildPDFResponse(solicitudId: string | null) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
-  return buildPDFResponse(solicitudId);
+  const overrides: PdfOverrides = {};
+  const vi = searchParams.get("vigenciaInicio"); if (vi) overrides.vigenciaInicio = vi;
+  const vf = searchParams.get("vigenciaFin");    if (vf) overrides.vigenciaFin    = vf;
+  const np = searchParams.get("numeroPrestadores") ?? searchParams.get("numeroPersonas");
+  if (np) overrides.numeroPrestadores = Number(np);
+  return buildPDFResponse(solicitudId, overrides);
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const solicitudId = body?.solicitudId ? String(body.solicitudId) : null;
-  return buildPDFResponse(solicitudId);
+  const overrides: PdfOverrides = {};
+  if (body?.vigenciaInicio) overrides.vigenciaInicio = String(body.vigenciaInicio);
+  if (body?.vigenciaFin)    overrides.vigenciaFin    = String(body.vigenciaFin);
+  const np = body?.numeroPrestadores ?? body?.numeroPersonas;
+  if (np) overrides.numeroPrestadores = Number(np);
+  return buildPDFResponse(solicitudId, overrides);
 }

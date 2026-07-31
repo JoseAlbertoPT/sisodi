@@ -272,14 +272,16 @@ const DictamenViewModal = React.memo(({
               {isDownloading && <Loader2 className="h-4 w-4 animate-spin" />}
               {isDownloading ? "Generando..." : "Descargar"}
             </Button>
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => setShowFirmas(!showFirmas)}
-              className="gap-1.5"
-            >
-              {showFirmas ? "Ocultar Firmas" : "Editar Firmas"}
-            </Button>
+            {dictamen.tipoFirma === "electronica" && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => setShowFirmas(!showFirmas)}
+                className="gap-1.5"
+              >
+                {showFirmas ? "Ocultar Firmas" : "Editar Firmas"}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <div className="flex flex-1 overflow-hidden">

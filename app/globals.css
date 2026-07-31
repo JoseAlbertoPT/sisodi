@@ -731,6 +731,20 @@ table.w-full.conditions-table tbody td:not(:first-child) {
   vertical-align: middle !important;
 }
 
+/* Reuso modal (catálogo → administración): Num. Prestadores centrado, header de Vigencia centrado, contenido con padding izquierdo extra. */
+table.w-full.reuso-table thead th:nth-child(2),
+table.w-full.reuso-table tbody td:nth-child(2) {
+  text-align: center !important;
+}
+table.w-full.reuso-table thead th:nth-child(3) {
+  text-align: center !important;
+}
+table.w-full.reuso-table tbody td:nth-child(3) {
+  text-align: left !important;
+  padding-left: 46px !important;
+  padding-right: 16px !important;
+}
+
 [data-slot="table-row"]:hover {
   background-color: var(--sem-bg-surface-low) !important;
 }

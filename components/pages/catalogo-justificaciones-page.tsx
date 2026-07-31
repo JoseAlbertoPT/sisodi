@@ -12,6 +12,7 @@ import { DatePickerHabil, dateToIso } from "@/components/ui/date-picker-habil"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -40,6 +41,8 @@ import {
   Power,
   PowerOff,
   Inbox,
+  Download,
+  X,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -50,6 +53,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import dynamic from "next/dynamic"
+import { construirClave } from "@/lib/clave-dictamen"
+import * as XLSX from "xlsx"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
@@ -195,7 +200,13 @@ function ConsultaTab() {
     const controller = new AbortController()
     setPdfBlobUrl(null)
     setPdfLoading(true)
-    fetch(`/api/pdf/justificacion?id=${viewRec.solicitud.id}&sinFirmas=true`, { signal: controller.signal })
+    const clave = construirClave(
+      viewRec.solicitud.secretaria || viewRec.solicitud.secretaria_txt_snapshot,
+      viewRec.solicitud.folio_dictamen,
+    )
+    const params = new URLSearchParams({ id: String(viewRec.solicitud.id) })
+    if (clave) params.set("clave", clave)
+    fetch(`/api/pdf/carta-descriptiva?${params}`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw new Error("Error al generar PDF"); return r.blob() })
       .then((blob) => {
         if (controller.signal.aborted) return
@@ -243,20 +254,27 @@ function ConsultaTab() {
         }),
       })
       const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
+      const esPrestacionServicios = !isParaestatal(solRec)
       const params = new URLSearchParams({
         id: String(solRec.solicitud.id),
         vigenciaInicio: vi,
         vigenciaFin: vf,
-        sinFirmas: "true",
       })
-      if (np) params.set("numeroPersonas", np)
-      const pdfRes = await fetch(`/api/pdf/justificacion?${params}`)
+      if (esPrestacionServicios) {
+        if (np) params.set("numeroPrestadores", np)
+      } else {
+        params.set("sinFirmas", "true")
+        if (np) params.set("numeroPersonas", np)
+      }
+      const pdfEndpoint = esPrestacionServicios ? "/api/pdf/dictamen-prestacion-completo" : "/api/pdf/justificacion"
+      const pdfRes = await fetch(`${pdfEndpoint}?${params}`)
       if (!pdfRes.ok) throw new Error("Error al generar el PDF")
       const blob = await pdfRes.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `Justificacion_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
+      const nombreArchivo = esPrestacionServicios ? "Dictamen" : "Justificacion"
+      a.download = `${nombreArchivo}_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
       a.click()
       URL.revokeObjectURL(url)
       setShowSol(false)
@@ -484,7 +502,7 @@ function ConsultaTab() {
         <DialogContent showCloseButton={false} className="w-[75vw] max-w-[75vw] sm:max-w-[75vw] h-[92vh] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden bg-white">
           <DialogHeader className="flex flex-row items-center gap-3 px-5 py-4 border-b border-border shrink-0 space-y-0">
             <div className="flex items-center justify-center shrink-0">
-              <FileTypeIcon name="justificacion.pdf" size="md" />
+              <FileTypeIcon name="carta-descriptiva.pdf" size="md" />
             </div>
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="ds-title-md text-content-high truncate">
@@ -658,6 +676,7 @@ function AdministracionTab() {
   const [error, setError]       = useState<string | null>(null)
   const [toggling, setToggling]         = useState<number | null>(null)
   const [procesando, setProcesando]     = useState<number | null>(null)
+  const [exportandoGeneral, setExportandoGeneral] = useState(false)
   const { user } = useAuth()
   const limit = 10
   const hasDataRef = useRef(false)
@@ -755,6 +774,90 @@ function AdministracionTab() {
       setProcesando(null)
     }
   }
+  const handleExportarReuso = (rec: AdminRecord) => {
+    const rows: (string | number)[][] = [
+      ["Usuario", "Num. Prestadores", "Vigencia", "Creado"],
+      ...rec.catalogo_solicitudes.map((sol) => [
+        sol.usuario.nombre,
+        sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "",
+        sol.nueva_vigencia,
+        new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
+      ]),
+    ]
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws["!cols"] = rows[0].map((_, c) =>
+      ({ wch: Math.min(50, Math.max(12, ...rows.map((r) => String(r[c] ?? "").length))) })
+    )
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Reuso")
+    const folio = rec.solicitud.folio_dictamen ?? rec.solicitud.folio_recepcion ?? String(rec.solicitud.id)
+    XLSX.writeFile(wb, `Reuso_${folio.replace(/\//g, "-")}.xlsx`, { bookType: "xlsx", type: "binary" })
+  }
+  const handleExportarGeneral = async () => {
+    setExportandoGeneral(true)
+    setError(null)
+    try {
+      let all: AdminRecord[] = []
+      let p = 1
+      const pageLimit = 100
+      while (true) {
+        const params = new URLSearchParams({ q: "", page: String(p), limit: String(pageLimit), userId: user?.id ?? "" })
+        const res = await fetch(`/api/catalogo-justificaciones/admin?${params}`)
+        if (!res.ok) throw new Error((await res.json()).error ?? "Error al exportar")
+        const data = await res.json()
+        all = all.concat(data.records)
+        if (all.length >= data.total || data.records.length === 0) break
+        p++
+      }
+
+      const catalogoRows: (string | number)[][] = [
+        ["Entidad", "Folio de Dictamen", "Régimen", "Vigencia", "Num. Prestadores", "Creado", "Reuso", "Estado"],
+        ...all.map((rec) => [
+          entidadNombre(rec).split(" > ")[0],
+          rec.solicitud.folio_dictamen ?? "—",
+          fmtCapitalize(rec.regimen_contratacion),
+          rec.vigencia ?? "—",
+          rec.numero_personas ?? "—",
+          new Date(rec.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
+          rec._count.catalogo_solicitudes,
+          rec.activo ? "Activo" : "Inactivo",
+        ]),
+      ]
+
+      const reusoRows: (string | number)[][] = [
+        ["Folio de Dictamen", "Entidad", "Usuario", "Num. Prestadores", "Vigencia", "Creado"],
+        ...all.flatMap((rec) =>
+          rec.catalogo_solicitudes.map((sol) => [
+            rec.solicitud.folio_dictamen ?? "—",
+            entidadNombre(rec).split(" > ")[0],
+            sol.usuario.nombre,
+            sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "",
+            sol.nueva_vigencia,
+            new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
+          ]),
+        ),
+      ]
+
+      const wb = XLSX.utils.book_new()
+      const wsCatalogo = XLSX.utils.aoa_to_sheet(catalogoRows)
+      wsCatalogo["!cols"] = catalogoRows[0].map((_, c) =>
+        ({ wch: Math.min(50, Math.max(12, ...catalogoRows.map((r) => String(r[c] ?? "").length))) })
+      )
+      XLSX.utils.book_append_sheet(wb, wsCatalogo, "Catálogo")
+
+      const wsReuso = XLSX.utils.aoa_to_sheet(reusoRows)
+      wsReuso["!cols"] = reusoRows[0].map((_, c) =>
+        ({ wch: Math.min(50, Math.max(12, ...reusoRows.map((r) => String(r[c] ?? "").length))) })
+      )
+      XLSX.utils.book_append_sheet(wb, wsReuso, "Reuso")
+
+      XLSX.writeFile(wb, `Catalogo_Reporte_General_${new Date().toISOString().slice(0, 10)}.xlsx`, { bookType: "xlsx", type: "binary" })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al exportar el reporte general")
+    } finally {
+      setExportandoGeneral(false)
+    }
+  }
   const totalPages = Math.max(1, Math.ceil(total / limit))
   return (
     <>
@@ -769,6 +872,10 @@ function AdministracionTab() {
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </Button>
         <span className="text-sm text-muted-foreground">{total} registro{total !== 1 ? "s" : ""}</span>
+        <Button variant="outline" size="sm" onClick={handleExportarGeneral} disabled={exportandoGeneral} className="gap-1.5 ml-auto">
+          {exportandoGeneral ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Reporte General
+        </Button>
       </div>
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3 mb-4">
@@ -784,9 +891,10 @@ function AdministracionTab() {
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Entidad</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Folio de Dictamen</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Régimen</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">Vigencia</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground whitespace-nowrap">Num. Prestadores</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Reutilizaciones</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Reuso</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Estado</th>
                 <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground"><div className="flex justify-end">Acciones</div></th>
               </tr>
@@ -794,14 +902,14 @@ function AdministracionTab() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center">
+                  <td colSpan={9} className="px-4 py-10 text-center">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                   </td>
                 </tr>
               )}
               {!loading && records.length === 0 && (
                 <tr className="empty-row">
-                  <td colSpan={8}><EmptyState icon={Inbox} title="Sin registros en el catálogo" description="No se encontraron registros." /></td>
+                  <td colSpan={9}><EmptyState icon={Inbox} title="Sin registros en el catálogo" description="No se encontraron registros." /></td>
                 </tr>
               )}
               {!loading && records.map((rec) => {
@@ -815,7 +923,8 @@ function AdministracionTab() {
                   <td className="px-4 py-3">
                     <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
+                  <td className="px-4 py-3 text-xs text-center text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
+                  <td className="px-4 py-3 text-xs text-center text-muted-foreground">{rec.numero_personas ?? "—"}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                     {new Date(rec.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
                   </td>
@@ -857,6 +966,9 @@ function AdministracionTab() {
                           <DropdownMenuItem onClick={() => openReutilizaciones(rec)}>
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleExportarReuso(rec)} disabled={!hasSols}>
+                            <Download className="h-4 w-4" /> Exportar
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setConfirmToggle(rec)} disabled={toggling === rec.id}>
                             {rec.activo
                               ? <><PowerOff className="h-4 w-4" /> Desactivar</>
@@ -876,51 +988,74 @@ function AdministracionTab() {
       </div>
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       <Dialog open={showReutilizaciones} onOpenChange={setShowReutilizaciones}>
-        <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl bg-white p-0 gap-0 overflow-hidden">
-          <DialogHeader className="px-5 py-4 border-b border-[var(--sem-border-md)]">
-            <DialogTitle className="ds-title-md text-content-high">
-              Reutilizaciones{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
+        <DialogContent showCloseButton={false} className="w-[70vw] max-w-3xl sm:max-w-3xl bg-white p-0 gap-0 overflow-hidden flex flex-col max-h-[520px]">
+          <DialogHeader className="pl-4 pr-3 py-2.5 border-b border-[var(--sem-border-md)] shrink-0 flex-row flex-nowrap items-center justify-between gap-3">
+            <DialogTitle className="text-sm font-semibold text-content-high truncate min-w-0">
+              Reuso{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
             </DialogTitle>
+            <div className="flex items-center gap-6 shrink-0">
+              {viewRec && viewRec.catalogo_solicitudes.length > 0 && (
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  Total prestadores:{" "}
+                  <span className="font-semibold text-content-high">
+                    {viewRec.catalogo_solicitudes.reduce(
+                      (acc, sol) => acc + (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0),
+                      0,
+                    )}
+                  </span>
+                </span>
+              )}
+              <DialogClose className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--sem-content-low)] opacity-70 transition-all hover:opacity-100 hover:bg-[var(--sem-support-disabled-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-support-focus focus-visible:ring-offset-2">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Cerrar</span>
+              </DialogClose>
+            </div>
           </DialogHeader>
-          <div className="max-h-[80vh] overflow-y-auto p-4">
+          <div className="flex flex-col flex-1 min-h-0 p-3 gap-2">
             {viewRec && viewRec.catalogo_solicitudes.length > 0 ? (
               <>
                 <SearchInput
                   value={reutilizacionesQuery}
                   onChange={(e) => setReutilizacionesQuery(e.target.value)}
                   placeholder="Buscar por usuario o vigencia…"
-                  containerClassName="mb-3"
+                  className="h-8 text-xs"
+                  containerClassName="shrink-0"
                 />
-                <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full table-fixed text-sm">
+                <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+                  <div className="overflow-y-auto overflow-x-auto flex-1 min-h-0">
+                    <table className="w-full reuso-table table-fixed text-sm">
                       <colgroup>
-                        <col className="w-[40%]" />
-                        <col className="w-[35%]" />
-                        <col className="w-[25%]" />
+                        <col className="w-[18%]" />
+                        <col className="w-[24%]" />
+                        <col className="w-[36%]" />
+                        <col className="w-[22%]" />
                       </colgroup>
-                      <thead>
-                        <tr className="bg-muted/30 border-b border-border">
-                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
-                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
-                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
+                      <thead className="sticky top-0 z-10">
+                        <tr className="bg-muted/90 backdrop-blur-sm border-b border-border">
+                          <th className="px-3 py-2 text-left text-sm font-semibold text-muted-foreground">Usuario</th>
+                          <th className="px-3 py-2 text-center text-sm font-semibold text-muted-foreground whitespace-nowrap">Num. Prestadores</th>
+                          <th className="px-6 py-2 text-center text-sm font-semibold text-muted-foreground">Vigencia</th>
+                          <th className="px-3 py-2 text-left text-sm font-semibold text-muted-foreground">Creado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
                           <tr>
-                            <td colSpan={3}>
+                            <td colSpan={4}>
                               <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
                           </tr>
                         )}
                         {reutilizacionesVisibles.map((sol) => (
                           <tr key={sol.id} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
-                            <td className="px-4 py-3 text-xs font-medium text-card-foreground truncate text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
+                            <td className="px-3 py-2 text-[13px] font-medium text-card-foreground truncate text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
                               {sol.usuario.nombre}
                             </td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">{sol.nueva_vigencia}</td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
+                            <td className="px-3 py-2 text-[13px] text-muted-foreground text-center">
+                              {sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—"}
+                            </td>
+                            <td className="pl-[46px] pr-4 py-2 text-[13px] text-muted-foreground whitespace-nowrap text-left">{sol.nueva_vigencia}</td>
+                            <td className="px-3 py-2 text-[13px] text-muted-foreground truncate text-left">
                               {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
                             </td>
                           </tr>
@@ -929,11 +1064,13 @@ function AdministracionTab() {
                     </table>
                   </div>
                 </div>
-                <TablePagination
-                  currentPage={reutilizacionesPage}
-                  totalPages={reutilizacionesTotalPages}
-                  onPageChange={setReutilizacionesPage}
-                />
+                <div className="shrink-0">
+                  <TablePagination
+                    currentPage={reutilizacionesPage}
+                    totalPages={reutilizacionesTotalPages}
+                    onPageChange={setReutilizacionesPage}
+                  />
+                </div>
               </>
             ) : (
               <EmptyState icon={Inbox} title="Sin reutilizaciones registradas" description="Ajusta los filtros para ver más resultados." />

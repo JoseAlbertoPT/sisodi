@@ -289,10 +289,6 @@ export function PlantillaDictamenPrestacionServicios({
   const inD = parseDateParts(data.vigenciaInicio);
   const finD = parseDateParts(data.vigenciaFin);
 
-  const folioParts = (data.folio || "").split("/");
-  const folioMes = folioParts[1] || "";
-  const folioAnio = folioParts[2] || "";
-
   return (
     <Document>
       <Page size="LETTER" style={s.page} wrap>
@@ -313,18 +309,7 @@ export function PlantillaDictamenPrestacionServicios({
           </View>
           <View style={s.headerCol3}>
             <View style={s.folioBox}>
-              <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                <Text style={s.folioText}>Folio: {folioParts[0] || ""}/</Text>
-                <View style={{ alignItems: "center" }}>
-                  <Text style={s.folioText}>{folioMes}</Text>
-                  <Text style={s.folioSubText}>(mes)</Text>
-                </View>
-                <Text style={s.folioText}>/</Text>
-                <View style={{ alignItems: "center" }}>
-                  <Text style={s.folioText}>{folioAnio}</Text>
-                  <Text style={s.folioSubText}>(año)</Text>
-                </View>
-              </View>
+              <Text style={s.folioText}>Folio: {data.folio}</Text>
             </View>
             <View style={s.pageBox}>
               <Text

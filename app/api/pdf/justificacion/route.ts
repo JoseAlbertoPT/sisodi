@@ -12,6 +12,7 @@ import {
 import { efirmaClient } from "@/lib/efirma-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
+import { construirClave } from "@/lib/clave-dictamen";
 import React from "react";
 
 export const runtime = "nodejs";
@@ -36,29 +37,6 @@ function formatString(str: string | null | undefined): string {
   if (!str) return "";
   const spaced = str.replace(/_/g, " ");
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
-
-const SIGLAS_STOPWORDS = new Set(["de", "del", "la", "las", "los", "el", "en", "para"]);
-
-function siglasSecretaria(nombre: string | null | undefined): string {
-  if (!nombre) return "";
-  return nombre
-    .trim()
-    .split(/\s+/)
-    .map((w) => {
-      const lw = w.toLowerCase();
-      if (lw === "y") return "y";
-      if (SIGLAS_STOPWORDS.has(lw)) return "";
-      return w.charAt(0).toUpperCase();
-    })
-    .join("");
-}
-
-function construirClave(secretaria: string | null | undefined, folioDictamen: string | null | undefined): string {
-  const siglas = siglasSecretaria(secretaria);
-  if (!siglas && !folioDictamen) return "";
-  if (!folioDictamen) return siglas;
-  return siglas ? `${siglas}/${folioDictamen}` : folioDictamen;
 }
 
 function selloFalso(prefix: string, length = 344): string {
@@ -376,7 +354,8 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
     const pdfStream = await renderToStream(pdfElement as any);
 
     let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
-    if (!sinFirmas) try {
+    const esFirmaElectronica = ((sol as any).modalidad_firma ?? "electronica") !== "autografa";
+    if (!sinFirmas && esFirmaElectronica) try {
       const bypass = process.env.EFIRMA_BYPASS === "true";
 
       const firmaProceso = await prisma.firma_proceso.findUnique({
