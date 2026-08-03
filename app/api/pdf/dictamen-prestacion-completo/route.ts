@@ -3,7 +3,7 @@ import { PDFDocument } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
 import { buildCartaDescriptivaBuffer } from "../carta-descriptiva/route";
 import { buildDictamenPrestacionBuffer } from "../dictamen-prestacion/route";
-import { construirClave } from "@/lib/clave-dictamen";
+import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 
 export const runtime = "nodejs";
 
@@ -24,7 +24,10 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
   // Consulta ligera solo para calcular la clave antes de lanzar ambos renders en paralelo.
   const solMeta = await prisma.solicitud.findUnique({
     where: { id: Number(solicitudId) },
-    select: { secretaria: true, folio_dictamen: true, folio_recepcion: true, dictamen: { select: { folio: true } } },
+    select: {
+      secretaria: true, folio_dictamen: true, folio_recepcion: true, dictamen: { select: { folio: true } },
+      historial_solicitud: { where: { comentario: { contains: MARCA_HISTORICO_IMPORTADO } }, take: 1, select: { id: true } },
+    },
   });
   if (!solMeta) {
     return NextResponse.json(
@@ -33,7 +36,7 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
     );
   }
   const folioMeta = solMeta.dictamen?.folio ?? solMeta.folio_dictamen ?? solMeta.folio_recepcion ?? solicitudId;
-  const clave = construirClave(solMeta.secretaria, folioMeta);
+  const clave = claveParaPdf(solMeta.secretaria, folioMeta, solMeta.historial_solicitud.length > 0);
 
   const [dictamenResult, cartaResult] = await Promise.all([
     buildDictamenPrestacionBuffer(solicitudId, overrides),

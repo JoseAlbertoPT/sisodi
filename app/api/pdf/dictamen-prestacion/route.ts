@@ -5,7 +5,7 @@ import {
   PlantillaDictamenPrestacionServicios,
   type DictamenPrestacionData,
 } from "@/components/plantillas/PlantillaDictamenPrestacionServicios";
-import { construirClave } from "@/lib/clave-dictamen";
+import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import React from "react";
 
 export const runtime = "nodejs";
@@ -46,10 +46,19 @@ export async function buildDictamenPrestacionBuffer(
 ) {
   const sol = await prisma.solicitud.findUnique({
     where: { id: Number(solicitudId) },
-    include: { dictamen: true },
+    include: {
+      dictamen: true,
+      historial_solicitud: {
+        where: { comentario: { contains: MARCA_HISTORICO_IMPORTADO } },
+        take: 1,
+        select: { id: true },
+      },
+    },
   });
 
   if (!sol) return null;
+
+  const esHistoricoImportado = sol.historial_solicitud.length > 0;
 
   const folio =
     sol.dictamen?.folio ??
@@ -69,7 +78,7 @@ export async function buildDictamenPrestacionBuffer(
     objetoContratacion: sol.objeto ?? "",
     importeBruto: formatImporte(sol.importe_bruto),
     tipoPagoLabel: (sol.tipo_importe ?? "").replace(/_/g, " ") || undefined,
-    justificacion: construirClave(sol.secretaria, folio) || sol.folio_justificacion || "",
+    justificacion: claveParaPdf(sol.secretaria, folio, esHistoricoImportado) || sol.folio_justificacion || "",
     numeroPrestadores: overrides.numeroPrestadores ?? sol.numero_prestadores ?? 1,
     vigenciaInicio: overrides.vigenciaInicio ?? (sol.vigencia_inicio
       ? sol.vigencia_inicio.toISOString().split("T")[0]

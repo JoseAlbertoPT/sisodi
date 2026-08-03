@@ -199,19 +199,10 @@ function FoliosCell({ sol }: { sol: UrgSolicitud }) {
 
   return (
     <div className="flex flex-col gap-0.5">
-      {entries.map(({ label, value, highlight }) => (
-        <div key={label} className="flex items-center gap-1.5">
-          <span className={`text-[10px] rounded px-1 py-0.5 shrink-0 ${
-            highlight
-              ? "bg-primary/10 text-primary font-semibold"
-              : "bg-muted text-muted-foreground"
-          }`}>
-            {label}
-          </span>
-          <span className={`text-xs ${highlight ? "font-semibold text-card-foreground" : "text-muted-foreground"}`}>
-            {value}
-          </span>
-        </div>
+      {entries.map(({ label, value }) => (
+        <span key={label} className="text-xs text-muted-foreground">
+          {value}
+        </span>
       ))}
     </div>
   )
@@ -1750,7 +1741,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                         <FoliosCell sol={sol} />
                       </td>
                       <td className="px-4 py-3 text-xs break-words max-w-[180px]">
-                        <span className="text-card-foreground font-medium">
+                        <span className="text-muted-foreground">
                           {formatRegimen(sol.regimen)}
                         </span>
                       </td>

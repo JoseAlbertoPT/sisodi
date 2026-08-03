@@ -503,6 +503,13 @@
 }
 .ds-input[readonly] { cursor: default; }
 
+/* Oculta el ícono nativo de "mostrar contraseña" de Edge/IE para que no se
+   duplique con el botón de ojo personalizado de los campos type="password". */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
 /* ── Select trigger atom states (DS Selector) ─────────────────────────────── */
 .ds-select-trigger {
   border-color: var(--sem-border-md);

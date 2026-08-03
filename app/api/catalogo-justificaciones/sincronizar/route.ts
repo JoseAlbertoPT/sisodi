@@ -80,6 +80,11 @@ export async function POST(_req: NextRequest) {
             importe_neto:              null,
             vigencia,
             activo:                    true,
+            tipo_solicitud:            sol.tipo_solicitud ?? null,
+            secretaria:                (sol as any).secretaria ?? null,
+            secretaria_txt_snapshot:   (sol as any).secretaria_txt_snapshot ?? null,
+            folio_recepcion:           sol.folio_recepcion ?? null,
+            folio_dictamen:            (sol as any).folio_dictamen ?? null,
           },
         })
         insertados++

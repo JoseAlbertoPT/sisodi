@@ -12,7 +12,7 @@ import {
 import { efirmaClient } from "@/lib/efirma-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
-import { construirClave } from "@/lib/clave-dictamen";
+import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import React from "react";
 
 export const runtime = "nodejs";
@@ -180,8 +180,14 @@ export async function buildJustificacionBuffer(
       include: {
         dictamen: true,
         usuario: { select: { organo_centralizado: { select: { id: true } } } },
+        historial_solicitud: {
+          where: { comentario: { contains: MARCA_HISTORICO_IMPORTADO } },
+          take: 1,
+          select: { id: true },
+        },
       },
     });
+    const esHistoricoImportado = (sol?.historial_solicitud.length ?? 0) > 0;
 
     const fechaDict =
       sol?.dictamen?.fecha_emision ?? (sol as any)?.fecha_emision ?? null;
@@ -272,7 +278,7 @@ export async function buildJustificacionBuffer(
         firmaDictEmitioNombre: firmas.firmaDictEmitioNombre,
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
-        clave: construirClave(sol.secretaria, sol.folio_dictamen),
+        clave: claveParaPdf(sol.secretaria, sol.folio_dictamen, esHistoricoImportado),
       };
 
       pdfElement = React.createElement(
@@ -331,7 +337,7 @@ export async function buildJustificacionBuffer(
         firmaDictEmitioCargo: firmas.firmaDictEmitioCargo,
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
-        clave: construirClave(sol.secretaria, sol.folio_dictamen),
+        clave: claveParaPdf(sol.secretaria, sol.folio_dictamen, esHistoricoImportado),
       };
 
       pdfElement = React.createElement(

@@ -45,6 +45,13 @@ export async function POST(req: NextRequest) {
     }
 
     const original = catSol.catalogo_justificacion.solicitud
+    if (!original) {
+      await prisma.$executeRaw`UPDATE catalogo_solicitud SET procesado = false WHERE id = ${id}`
+      return NextResponse.json(
+        { error: "No se puede reutilizar: la solicitud original ya no existe (registro histórico)." },
+        { status: 400 },
+      )
+    }
 
     // Parsear nueva vigencia "YYYY-MM-DD / YYYY-MM-DD"
     const partes = catSol.nueva_vigencia.split("/").map((s) => s.trim())

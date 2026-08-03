@@ -133,6 +133,11 @@ export async function POST(req: NextRequest) {
             importe_neto:              null,
             vigencia,
             activo:                    true,
+            tipo_solicitud:            (solicitud as any).tipo_solicitud ?? null,
+            secretaria:                (solicitud as any).secretaria ?? null,
+            secretaria_txt_snapshot:   (solicitud as any).secretaria_txt_snapshot ?? null,
+            folio_recepcion:           (solicitud as any).folio_recepcion ?? null,
+            folio_dictamen:            (solicitud as any).folio_dictamen ?? null,
           },
         })
       }

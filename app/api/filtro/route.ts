@@ -357,6 +357,7 @@ export async function GET(req: NextRequest) {
         openedInFiltro:   { [filtro]: openedInFiltro }  as Record<number, boolean>,
         isNuevaEnFiltro:  { [filtro]: isNuevaEnFiltro } as Record<number, boolean>,
         revisorAsignado:  (sol as any).revisor_asignado ?? null,
+        esHistoricoImportado: historial.some((h) => (h.comentario ?? "").includes("Importado de histórico consolidado DGSAC")),
         _raw: rawEnriquecido,
       }
     })
@@ -805,6 +806,11 @@ export async function PATCH(req: NextRequest) {
                 importe_neto:              null,
                 vigencia,
                 activo:                    true,
+                tipo_solicitud:            (solicitud as any).tipo_solicitud ?? null,
+                secretaria:                (solicitud as any).secretaria ?? null,
+                secretaria_txt_snapshot:   (solicitud as any).secretaria_txt_snapshot ?? null,
+                folio_recepcion:           (solicitud as any).folio_recepcion ?? null,
+                folio_dictamen:            (solicitud as any).folio_dictamen ?? null,
               },
             })
           }

@@ -14,11 +14,26 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "20")))
     const skip  = (page - 1) * limit
 
-    // El rol Administrador ve todos los registros del catálogo, sin restringir
-    // por secretaría (a diferencia de la pestaña de Consulta, que sí se limita
-    // a la secretaría de cada usuario).
-    const conditions: string[] = []
-    const params: any[] = []
+    // El rol Administrador ve el catálogo limitado a su propia secretaría,
+    // igual que la pestaña de Consulta (app/api/catalogo-justificaciones/route.ts).
+    const viewer = await prisma.usuario.findUnique({
+      where:  { id: userId! },
+      select: {
+        secretaria_texto: true,
+        organo_centralizado: { select: { nombre: true } },
+      },
+    })
+    const viewerSecretaria = (viewer?.secretaria_texto ?? viewer?.organo_centralizado?.nombre ?? "")
+      .split(">")[0]
+      .trim()
+
+    if (!viewerSecretaria) {
+      return NextResponse.json({ records: [], total: 0, page, limit })
+    }
+
+    const conditions: string[] = ["cj.activo = true"]
+    const params: any[] = [viewerSecretaria]
+    conditions.push(`lower(trim(split_part(COALESCE(cj.secretaria, s.secretaria), '>', 1))) = lower($1)`)
 
     if (q) {
       params.push(`%${q}%`)
@@ -64,12 +79,12 @@ export async function GET(req: NextRequest) {
         cj.activo,
         cj.creado_en,
         cj.actualizado_en,
-        s.id               AS sol_id,
-        s.tipo_solicitud   AS sol_tipo,
-        s.folio_recepcion  AS sol_folio_recepcion,
-        s.folio_dictamen   AS sol_folio_dictamen,
-        s.secretaria       AS sol_secretaria,
-        s.secretaria_txt_snapshot AS sol_secretaria_txt
+        s.id                                           AS sol_id,
+        COALESCE(cj.tipo_solicitud, s.tipo_solicitud)   AS sol_tipo,
+        COALESCE(cj.folio_recepcion, s.folio_recepcion) AS sol_folio_recepcion,
+        COALESCE(cj.folio_dictamen, s.folio_dictamen)   AS sol_folio_dictamen,
+        COALESCE(cj.secretaria, s.secretaria)           AS sol_secretaria,
+        COALESCE(cj.secretaria_txt_snapshot, s.secretaria_txt_snapshot) AS sol_secretaria_txt
       FROM catalogo_justificacion cj
       LEFT JOIN solicitud s ON s.id = cj.solicitud_id
       ${whereClause}
@@ -129,7 +144,7 @@ export async function GET(req: NextRequest) {
 
     const records = rows.map((r: any) => ({
       id:                       Number(r.id),
-      solicitud_id:             Number(r.solicitud_id),
+      solicitud_id:             r.solicitud_id != null ? Number(r.solicitud_id) : null,
       regimen_contratacion:     r.regimen_contratacion,
       programa_proyecto:        r.programa_proyecto,
       tipo_actividad:           r.tipo_actividad,
@@ -144,7 +159,7 @@ export async function GET(req: NextRequest) {
       activo:                   r.activo,
       creado_en:                r.creado_en,
       solicitud: {
-        id:                     Number(r.sol_id),
+        id:                     r.sol_id != null ? Number(r.sol_id) : null,
         tipo_solicitud:         r.sol_tipo,
         folio_recepcion:        r.sol_folio_recepcion,
         folio_dictamen:         r.sol_folio_dictamen,

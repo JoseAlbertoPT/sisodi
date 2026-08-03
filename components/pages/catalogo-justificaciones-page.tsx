@@ -71,7 +71,7 @@ interface CatalogoRecord {
   activo: boolean
   creado_en: string
   solicitud: {
-    id: number
+    id: number | null
     tipo_solicitud: string
     folio_recepcion: string | null
     folio_dictamen: string | null
@@ -181,10 +181,11 @@ function ConsultaTab() {
   useEffect(() => { setPage(1) }, [q])
   useEffect(() => {
     if (!showView || !viewRec) return
-    const controller = new AbortController()
     setPdfBlobUrl(null)
+    if (!viewRec.solicitud.id) { setPdfLoading(false); return }
+    const controller = new AbortController()
     setPdfLoading(true)
-    fetch(`/api/pdf/justificacion?id=${viewRec.solicitud.id}&sinFirmas=true`, { signal: controller.signal })
+    fetch(`/api/pdf/carta-descriptiva?id=${viewRec.solicitud.id}`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw new Error("Error al generar PDF"); return r.blob() })
       .then((blob) => {
         if (controller.signal.aborted) return
@@ -236,16 +237,15 @@ function ConsultaTab() {
         id: String(solRec.solicitud.id),
         vigenciaInicio: vi,
         vigenciaFin: vf,
-        sinFirmas: "true",
       })
       if (np) params.set("numeroPersonas", np)
-      const pdfRes = await fetch(`/api/pdf/justificacion?${params}`)
+      const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo?${params}`)
       if (!pdfRes.ok) throw new Error("Error al generar el PDF")
       const blob = await pdfRes.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `Justificacion_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
+      a.download = `Dictamen_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
       a.click()
       URL.revokeObjectURL(url)
       setShowSol(false)
@@ -347,7 +347,11 @@ function ConsultaTab() {
                           <DropdownMenuItem onClick={() => openView(rec)}>
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openSol(rec)}>
+                          <DropdownMenuItem
+                            onClick={() => { if (rec.solicitud.id) openSol(rec) }}
+                            disabled={!rec.solicitud.id}
+                            title={!rec.solicitud.id ? "No disponible: registro histórico sin solicitud original" : undefined}
+                          >
                             <Send className="h-4 w-4" /> Solicitar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -409,7 +413,11 @@ function ConsultaTab() {
                           <DropdownMenuItem onClick={() => openView(rec)}>
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openSol(rec)}>
+                          <DropdownMenuItem
+                            onClick={() => { if (rec.solicitud.id) openSol(rec) }}
+                            disabled={!rec.solicitud.id}
+                            title={!rec.solicitud.id ? "No disponible: registro histórico sin solicitud original" : undefined}
+                          >
                             <Send className="h-4 w-4" /> Solicitar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -433,7 +441,7 @@ function ConsultaTab() {
             </div>
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="ds-title-md text-content-high truncate">
-                Documento de justificación
+                Carta descriptiva
               </DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {(viewRec?.solicitud.secretaria || viewRec?.solicitud.secretaria_txt_snapshot) ?? "—"}
@@ -670,6 +678,10 @@ function AdministracionTab() {
     }
   }
   const handleProcesar = async (rec: AdminRecord, sol: AdminRecord["catalogo_solicitudes"][0]) => {
+    if (!rec.solicitud.id) {
+      setError("No se puede procesar: la solicitud original ya no existe (registro histórico).")
+      return
+    }
     setProcesando(sol.id)
     try {
       const partes = sol.nueva_vigencia.split("/").map((s) => s.trim())

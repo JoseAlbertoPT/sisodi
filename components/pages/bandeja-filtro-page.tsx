@@ -47,7 +47,7 @@ import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { generateDictamenPrestacionPDF } from "@/lib/generate-dictamen-prestacion-pdf"
 import { generateCartaDescriptivaPDF } from "@/lib/generate-carta-descriptiva-pdf"
-import { construirClave } from "@/lib/clave-dictamen"
+import { claveParaPdf } from "@/lib/clave-dictamen"
 import { useRealtime } from "@/hooks/use-realtime"
 
 interface FiltroSolicitud {
@@ -72,6 +72,7 @@ interface FiltroSolicitud {
   openedInFiltro: Record<number, boolean>
   isNuevaEnFiltro: Record<number, boolean>
   revisorAsignado: { id: string; nombre: string; correo: string } | null
+  esHistoricoImportado?: boolean
   _raw?: any
 }
 type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "pendientes_asignacion" | "en_validacion" | "pendientes_firma" | "todas" | "solicitudes"
@@ -962,7 +963,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
   const handleDescargarCartaDescriptiva = async () => {
     setDescargandoCartaDescriptiva(true)
     try {
-      const clave = construirClave(solicitud.secretaria, folioDictamen)
+      const clave = claveParaPdf(solicitud.secretaria, folioDictamen, solicitud.esHistoricoImportado ?? false)
       await generateCartaDescriptivaPDF(solicitud.id, { clave, folioFallback: folioDictamen ?? undefined })
     } finally {
       setDescargandoCartaDescriptiva(false)

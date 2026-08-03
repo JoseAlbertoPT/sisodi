@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const q      = searchParams.get("q")?.trim() ?? ""
     const page   = Math.max(1, Number(searchParams.get("page") ?? "1"))
-    const limit  = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? "20")))
+    const limit  = Math.min(1000, Math.max(1, Number(searchParams.get("limit") ?? "20")))
     const skip   = (page - 1) * limit
     const userId = searchParams.get("userId")
 
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
     const conditions = ["cj.activo = true"]
     const params: any[] = [viewerSecretaria]
-    conditions.push(`lower(trim(split_part(s.secretaria, '>', 1))) = lower($1)`)
+    conditions.push(`lower(trim(split_part(COALESCE(cj.secretaria, s.secretaria), '>', 1))) = lower($1)`)
 
     if (q) {
       params.push(`%${q}%`)
@@ -77,12 +77,12 @@ export async function GET(req: NextRequest) {
         cj.archivo_pdf_sin_firmas,
         cj.activo,
         cj.creado_en,
-        s.id                    AS sol_id,
-        s.tipo_solicitud        AS sol_tipo,
-        s.folio_recepcion       AS sol_folio_recepcion,
-        s.folio_dictamen        AS sol_folio_dictamen,
-        s.secretaria            AS sol_secretaria,
-        s.secretaria_txt_snapshot AS sol_secretaria_txt,
+        s.id                                          AS sol_id,
+        COALESCE(cj.tipo_solicitud, s.tipo_solicitud)  AS sol_tipo,
+        COALESCE(cj.folio_recepcion, s.folio_recepcion) AS sol_folio_recepcion,
+        COALESCE(cj.folio_dictamen, s.folio_dictamen)  AS sol_folio_dictamen,
+        COALESCE(cj.secretaria, s.secretaria)          AS sol_secretaria,
+        COALESCE(cj.secretaria_txt_snapshot, s.secretaria_txt_snapshot) AS sol_secretaria_txt,
         (SELECT COUNT(*) FROM catalogo_solicitud cs2 WHERE cs2.catalogo_justificacion_id = cj.id) AS sol_count
       FROM catalogo_justificacion cj
       LEFT JOIN solicitud s ON s.id = cj.solicitud_id
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
 
     const records = rows.map((r: any) => ({
       id:                       Number(r.id),
-      solicitud_id:             Number(r.solicitud_id),
+      solicitud_id:             r.solicitud_id != null ? Number(r.solicitud_id) : null,
       regimen_contratacion:     r.regimen_contratacion,
       programa_proyecto:        r.programa_proyecto,
       tipo_actividad:           r.tipo_actividad,
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
       activo:                   r.activo,
       creado_en:                r.creado_en,
       solicitud: {
-        id:                     Number(r.sol_id),
+        id:                     r.sol_id != null ? Number(r.sol_id) : null,
         tipo_solicitud:         r.sol_tipo ?? "",
         folio_recepcion:        r.sol_folio_recepcion,
         folio_dictamen:         r.sol_folio_dictamen,
