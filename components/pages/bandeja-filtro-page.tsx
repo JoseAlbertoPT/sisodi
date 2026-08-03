@@ -21,17 +21,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { FilterTabs } from "@/components/ui/filter-tabs"
 import { PageLayout } from "@/components/page-layout"
 import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 import { ActionResultScreen } from "@/components/ui/action-result-screen"
 import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
-  FileSearch, Filter, Clock, RotateCcw, CircleDot, Eye,
-  AlertTriangle, ListFilter, RefreshCw, Loader2, CheckCircle2,
-  ArrowLeft, ChevronDown, ChevronRight,
-  FileText, History, Download, UserCheck, ClipboardCheck, Stamp, Pencil, X, Inbox,
+  FileSearch, Clock, CircleDot, Eye,
+  AlertTriangle, ListFilter, Loader2,
+  ArrowLeft,
+  FileText, History, UserCheck, ClipboardCheck, Stamp, X, Inbox,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 
@@ -613,66 +613,49 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent showCloseButton={false} className="max-w-sm p-0">
-        <div className="p-4 flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#f3e8f0] flex items-center justify-center shrink-0">
-                <img src="/Iconos1/account_circle-user-perfil.svg" width={24} height={24} alt="" />
-              </div>
-              <DialogTitle className="font-bold text-gray-900 text-base leading-tight pt-2">Asignar Revisor</DialogTitle>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Asignar Revisor</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-4">
+          <p className="text-sm text-content-low">
+            Solicitud <span className="font-semibold text-content-high">{folio}</span> — selecciona el revisor que la atenderá.
+          </p>
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
             </div>
-            <button type="button" onClick={onClose} className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="flex flex-col gap-3 pl-[52px]">
-            <p className="text-sm text-gray-500">
-              Solicitud <span className="font-semibold text-gray-800">{folio}</span> — selecciona el revisor que la atenderá.
-            </p>
-            {loading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />Cargando revisores...
-              </div>
-            ) : revisores.length === 0 ? (
-              <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
-            ) : (
-              <Select value={selectedId} onValueChange={setSelectedId}>
-                <SelectTrigger className="w-full max-w-sm">
-                  <SelectValue placeholder="Seleccionar revisor..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {revisores.map(r => (
-                    <SelectItem key={r.id} value={r.id}>
-                      <span className="font-medium">{r.nombre}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              size="sm"
-              onClick={onClose}
-              disabled={guardando}
-              className="h-10 rounded-full border-0 bg-[#F3F4F6] text-sm font-medium text-[#374151] hover:bg-[#E5E7EB]"
-            >
-              Cancelar
-            </Button>
-            <Button
-              size="sm"
-              variant="primary"
-              disabled={!selectedId || guardando || loading}
-              onClick={() => onConfirm(selectedId)}
-              className="h-11 px-6 min-w-[120px] gap-1.5"
-            >
-              {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Asignar
-            </Button>
-          </div>
-        </div>
+          ) : revisores.length === 0 ? (
+            <p className="text-sm text-destructive">No hay usuarios con rol Revisor disponibles.</p>
+          ) : (
+            <Select value={selectedId} onValueChange={setSelectedId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar revisor..." />
+              </SelectTrigger>
+              <SelectContent>
+                {revisores.map(r => (
+                  <SelectItem key={r.id} value={r.id}>
+                    <span className="font-medium">{r.nombre}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{r.correo}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="default" onClick={onClose} disabled={guardando}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            disabled={!selectedId || guardando || loading}
+            onClick={() => onConfirm(selectedId)}
+          >
+            {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Asignar
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -1566,6 +1549,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   useEffect(() => { setCurrentPage(1) }, [activeTab, filtro, searchTerm, filterRegimen])
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(Math.max(1, totalPages)) }, [totalPages, currentPage])
   const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const selectedSolicitud = selectedId ? solicitudes.find(s => s.id === selectedId) ?? null : null
@@ -1649,36 +1633,21 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       </div>
 
       {activeTab === "pendientes_firma" ? (
-        <Card className="shadow-sm border-border">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-card-foreground">
-              {pendientesFirmaCount} solicitud{pendientesFirmaCount !== 1 ? "es" : ""}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PendientesFirmaPanel filtro={filtro} currentUserId={(user as any)?.id ?? ""} onCountChange={setPendientesFirmaCount} />
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl bg-background border border-border shadow-sm overflow-hidden">
+          <PendientesFirmaPanel filtro={filtro} currentUserId={(user as any)?.id ?? ""} onCountChange={setPendientesFirmaCount} />
+        </div>
       ) : (
-      <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between text-sm font-semibold text-card-foreground">
-            <span>
-              {loading
-                ? "Cargando..."
-                : `${filtered.length} solicitud${filtered.length !== 1 ? "es" : ""} en ${FILTRO_LABELS[filtro]}`}
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12 gap-3">
-              <Loader2 className="h-6 w-6 animate-spin text-secondary" />
-              <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+      loading ? (
+        <div className="rounded-2xl bg-background border border-border shadow-sm">
+          <div className="flex items-center justify-center py-12 gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-secondary" />
+            <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-background border border-border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-bg-base text-content-high">
                     <th className="px-4 py-3 text-left font-semibold">Estatus</th>
@@ -1690,7 +1659,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                     <th className="px-4 py-3 text-left font-semibold">Ult. Observo</th>
                     <th className="px-4 py-3 text-left font-semibold">Plazo máximo de atención</th>
                     {!(filtro === 3 && activeTab === "nuevas") && (
-                      <th className="px-4 py-3 font-semibold"><div className="flex justify-end">Acción</div></th>
+                      <th className="px-4 py-3 font-semibold text-left">Acción</th>
                     )}
                   </tr>
                 </thead>
@@ -1757,15 +1726,16 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                         </td>
                         <td className="px-4 py-3"><SlaIndicator diasRestantes={sol.slaRestante} /></td>
                         {!(filtro === 3 && activeTab === "nuevas") && (
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
                             {filtro === 2 ? (
                               tab === "pendientes_asignacion" ? (
                                 <Button
                                   variant="ghost" size="sm"
                                   onClick={() => setAsignarRevisorTarget(sol.id)}
                                   disabled={guardando}
-                                  className="text-primary hover:text-primary/80 gap-1.5 font-medium"
+                                  className="gap-1.5 font-medium -ml-3"
+                                  style={{ color: "var(--sem-content-low)" }}
                                 >
                                   <UserCheck className="h-4 w-4" />
                                   {sol.estado.toLowerCase().includes("en revision revisor") ? "Reasignar Revisor" : "Asignar Revisor"}
@@ -1774,15 +1744,17 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                 <Button
                                   variant="ghost" size="sm"
                                   onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
-                                  className="text-muted-foreground hover:text-card-foreground gap-1.5"
+                                  className="gap-1.5 font-medium -ml-3"
+                                  style={{ color: "var(--sem-content-low)" }}
                                 >
-                                  <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
+                                  <Eye className="h-4 w-4" />Ver
                                 </Button>
                               ) : (
                                 <Button
                                   variant="ghost" size="sm"
                                   onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
-                                  className="text-secondary hover:text-primary gap-1.5"
+                                  className="gap-1.5 font-medium -ml-3"
+                                  style={{ color: "var(--sem-content-low)" }}
                                 >
                                   <FileSearch className="h-4 w-4" />Revisar
                                 </Button>
@@ -1792,7 +1764,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                 variant="ghost" size="sm"
                                 onClick={() => handleAceptar(sol.id)}
                                 disabled={guardando}
-                                className="gap-1.5 font-medium"
+                                className="gap-1.5 font-medium -ml-3"
                                 style={{ color: "var(--sem-content-low)" }}
                               >
                                 <ClipboardCheck className="h-4 w-4" />Aceptar
@@ -1801,7 +1773,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                               <Button
                                 variant="ghost" size="sm"
                                 onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
-                                className="text-secondary hover:text-primary gap-1.5"
+                                className="gap-1.5 font-medium -ml-3"
+                                style={{ color: "var(--sem-content-low)" }}
                               >
                                 <FileSearch className="h-4 w-4" />Revisar
                               </Button>
@@ -1809,7 +1782,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                               <Button
                                 variant="ghost" size="sm"
                                 onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
-                                className="text-secondary hover:text-primary gap-1.5"
+                                className="gap-1.5 font-medium -ml-3"
+                                style={{ color: "var(--sem-content-low)" }}
                               >
                                 <FileSearch className="h-4 w-4" />Revisar
                               </Button>
@@ -1823,9 +1797,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                 </tbody>
               </table>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+      )
       )}
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       <ConfirmAlertDialog

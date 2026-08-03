@@ -160,10 +160,8 @@ export function DatePickerHabil({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="ds-calendar-popover relative z-[60] w-auto rounded-2xl border border-[var(--sem-border-md)] bg-white p-5 shadow-xl"
+        className="ds-calendar-popover relative w-auto rounded-[20px] border border-border bg-white p-5 shadow-md"
         align="start"
-        side="bottom"
-        avoidCollisions={false}
       >
         <DayPicker
           mode="single"
@@ -176,7 +174,6 @@ export function DatePickerHabil({
           toDate={toDate}
           weekStartsOn={1}
           showOutsideDays
-          fixedWeeks
           disabled={[
             ...INHABILES,
             ...(fromDate ? [{ before: fromDate }] : []),
@@ -209,24 +206,24 @@ export function DatePickerHabil({
             caption_label: "text-base font-semibold capitalize text-card-foreground",
             nav:            "absolute left-3 right-3 top-1 flex items-center justify-between",
             button_previous: cn(
-              "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--sem-bg-surface-low)] p-0 text-[var(--sem-content-low)]",
-              "hover:bg-[var(--sem-bg-surface-md)] hover:text-foreground transition-colors",
+              "flex h-8 w-8 items-center justify-center rounded-full border border-border p-0 text-foreground",
+              "hover:bg-bg-surface-low hover:text-foreground transition-colors",
             ),
             button_next: cn(
-              "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--sem-bg-surface-low)] p-0 text-[var(--sem-content-low)]",
-              "hover:bg-[var(--sem-bg-surface-md)] hover:text-foreground transition-colors",
+              "flex h-8 w-8 items-center justify-center rounded-full border border-border p-0 text-foreground",
+              "hover:bg-bg-surface-low hover:text-foreground transition-colors",
             ),
             weekdays:    "flex mt-2",
-            weekday:     "text-gray-500 rounded-md w-10 font-normal text-xs text-center pb-1 capitalize",
+            weekday:     "text-gray-500 rounded-md w-10 font-normal text-[0.8rem] text-center pb-1 capitalize",
             week:        "flex w-full",
            day:
-  "relative p-0 text-center w-10 h-10 [&>button]:h-9 [&>button]:w-9 [&>button]:rounded-lg [&>button]:border-0 [&>button]:bg-transparent [&>button]:text-[#1A2419] [&>button]:text-sm [&>button]:font-semibold [&>button]:transition-colors [&>button:hover]:bg-[var(--sem-bg-surface-low)] [&>button:hover]:text-[#1A2419]",
+  "relative p-0 text-center w-10 h-10 [&>button]:h-9 [&>button]:w-9 [&>button]:rounded-lg [&>button]:border [&>button]:border-transparent [&>button]:bg-transparent [&>button]:text-[#1A2419] [&>button]:text-sm [&>button]:font-medium [&>button]:transition-colors [&>button:hover]:border-border [&>button:hover]:bg-bg-surface-low [&>button:hover]:text-[#1A2419]",
 
 outside:
-  "[&>button]:text-gray-300 [&>button]:font-normal",
+  "[&>button]:text-gray-300",
 
 selected:
-  "[&>button]:!bg-[var(--sem-accent-primary)] [&>button]:!text-white [&>button:hover]:!bg-[var(--sem-accent-primary)] [&>button:hover]:!text-white",
+  "[&>button]:!border-transparent [&>button]:!bg-[var(--sem-accent-primary)] [&>button]:!text-white [&>button:hover]:!bg-[var(--sem-accent-primary)] [&>button:hover]:!text-white",
 
 today:
   "[&>button]:font-semibold",

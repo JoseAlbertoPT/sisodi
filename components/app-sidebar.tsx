@@ -22,6 +22,7 @@ import {
   FileOutput,
   Menu as MenuIcon,
   LogOut,
+  X,
 } from "lucide-react"
 import {
   Tooltip,
@@ -30,6 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useSidebar } from "@/context/sidebar-context"
 
 export type PageKey =
   | "dashboard"
@@ -169,6 +171,7 @@ function SidebarItem({
 
 export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: SidebarProps) {
   const { logout, user } = useAuth()
+  const { toggle } = useSidebar()
   const [menuTree, setMenuTree] = useState<MenuNode[] | null>(null)
   const [menusLoading, setMenusLoading] = useState(true)
   const [menusError, setMenusError] = useState<string | null>(null)
@@ -214,11 +217,21 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "flex h-full flex-col bg-bg-surface-low rounded-xl transition-all duration-300 overflow-hidden flex-shrink-0",
-          collapsed ? "w-[93px]" : "w-[280px]"
+          "relative flex h-full flex-col bg-bg-surface-low rounded-xl transition-all duration-300 overflow-hidden",
+          "fixed inset-y-1 left-1 z-40 w-[calc(100%-0.5rem)] max-w-[280px] shadow-lg",
+          "md:relative md:inset-auto md:translate-x-0 md:shadow-none md:flex-shrink-0 md:max-w-none",
+          collapsed ? "-translate-x-[calc(100%+8px)] md:-translate-x-0 md:w-[93px]" : "translate-x-0 md:w-[280px]"
         )}
         aria-label="Navegación principal"
       >
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label="Cerrar menú"
+          className="md:hidden absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full text-content-low hover:bg-reactive-surface-hover transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
         <div
           className={cn(
             "flex shrink-0 items-center justify-center p-3 pb-4 gap-2",

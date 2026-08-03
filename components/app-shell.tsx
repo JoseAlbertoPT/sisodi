@@ -44,6 +44,9 @@ export function AppShell() {
     if (storedPage && storedPage !== "revision-do") setCurrentPage(storedPage)
     const storedSidebar = localStorage.getItem(SIDEBAR_KEY)
     if (storedSidebar === "true") setSidebarCollapsed(true)
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      setCollapsed(true)
+    }
     if (sessionStorage.getItem("sdtf_just_logged_in")) {
       sessionStorage.removeItem("sdtf_just_logged_in")
       setShowSplash(true)
@@ -65,6 +68,9 @@ export function AppShell() {
     setShowSplash(false)
     if (page !== "nueva-solicitud") setEditSolicitud(undefined)
     setCurrentPage(page)
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      setCollapsed(true)
+    }
   }
 
   const handleEditSolicitud = (payload: EditSolicitudPayload) => {
@@ -161,14 +167,21 @@ export function AppShell() {
 
   return (
     <SidebarContext.Provider value={{ collapsed , toggle }}>
-      <div className="flex h-screen overflow-hidden bg-bg-surface-low p-2 gap-4">
+      <div className="flex h-screen overflow-hidden bg-bg-surface-low p-1 md:p-2 gap-1 md:gap-2">
         <AppSidebar
           currentPage={sidebarCurrentPage}
           onNavigate={handleNavigate}
           collapsed={collapsed}
           onMenuReady={setMenuReady}
         />
-        <main className="flex flex-1 flex-col overflow-y-auto bg-bg-base rounded-xl">
+        {!collapsed && (
+          <div
+            aria-hidden
+            className="fixed inset-0 z-30 bg-black/40 md:hidden"
+            onClick={() => setCollapsed(true)}
+          />
+        )}
+        <main className="flex flex-1 flex-col overflow-y-auto bg-bg-base rounded-xl min-w-0">
           {showSplash && user
             ? <WelcomePage userName={user.nombre} userRole={user.rol} />
             : menuReady ? renderPage() : null

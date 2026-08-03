@@ -122,6 +122,7 @@ function ClaveInput({ value, onChange }: { value: string; onChange: (v: string) 
 
 function SecretariaRow({
                          node, allTree, onRefresh, onDragStart, onDragOver, onDrop, draggingIndex, index,
+                         open, onOpenChange,
                        }: {
   node: OrganoCentralizadoNode
   allTree: OrganoCentralizadoNode[]
@@ -131,8 +132,10 @@ function SecretariaRow({
   onDrop: (i: number) => void
   draggingIndex: number | null
   index: number
+  open: boolean
+  onOpenChange: (v: boolean) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const setOpen = onOpenChange
   const [uas, setUas] = useState<OrganoCentralizadoNode[]>(node.children)
   const [uaDragging, setUaDragging] = useState<number | null>(null)
   const [addUaOpen, setAddUaOpen] = useState(false)
@@ -552,6 +555,7 @@ export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n:
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+  const [openId, setOpenId] = useState<string | null>(null)
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
   const [addSecOpen, setAddSecOpen] = useState(false)
   const [newSecNombre, setNewSecNombre] = useState("")
@@ -643,6 +647,8 @@ export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n:
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={handleDrop}
                           draggingIndex={draggingIndex}
+                          open={openId === node.id}
+                          onOpenChange={(v) => setOpenId(v ? node.id : null)}
                       />
                   ))}
                 </div>

@@ -15,9 +15,9 @@ import { FilterTabs } from "@/components/ui/filter-tabs"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageLayout } from "@/components/page-layout"
 import {
-  Eye, Edit3, Download, FileCheck,
-  ChevronDown, ChevronRight, History, FileText,
-  ArrowLeft, AlertTriangle, Lock, Loader2, RotateCcw, Info, Inbox,
+  Eye, Edit3, FileCheck,
+  History, FileText,
+  ArrowLeft, AlertTriangle, Lock, Info, Inbox,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
@@ -1584,6 +1584,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
   const filtered          = data
   useEffect(() => { setCurrentPage(1) }, [activeTab, searchTerm])
   const totalPages    = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(Math.max(1, totalPages)) }, [totalPages, currentPage])
   const paginated     = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
   const selectedSolicitud = selectedId
     ? data.find((s) => s.id === selectedId) ?? null
@@ -1687,22 +1688,15 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
         onChange={(e) => setSearchTerm(e.target.value)}
         containerClassName={SEARCH_INPUT_MAX_W_SM}
       />
-      <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-2">
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-            {loading ? "Cargando solicitudes..." : `${filtered.length} solicitudes encontradas`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[var(--sem-support-error)] bg-[#FFF5F5] px-4 py-3 mb-4">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--sem-support-error)] mt-0.5" />
-              <span className="text-sm text-[var(--sem-support-error)]">{error}</span>
-            </div>
-          )}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+      {error && (
+        <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[var(--sem-support-error)] bg-[#FFF5F5] px-4 py-3">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--sem-support-error)] mt-0.5" />
+          <span className="text-sm text-[var(--sem-support-error)]">{error}</span>
+        </div>
+      )}
+      <div className="rounded-2xl bg-background border border-border shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
               <thead>
                 <tr className="bg-bg-base text-content-high">
                   <th className="px-4 py-3 text-left font-semibold">
@@ -1811,8 +1805,13 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                         })()}
                       </td>
                       <td className="px-4 py-3">
-                        <Button variant="ghost" size="sm" aria-label="Ver solicitud" onClick={() => setSelectedId(sol.id)}>
-                          <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" /> Ver
+                        <Button
+                          variant="ghost" size="sm" aria-label="Ver solicitud"
+                          onClick={() => setSelectedId(sol.id)}
+                          className="gap-1.5 font-medium -ml-3"
+                          style={{ color: "var(--sem-content-low)" }}
+                        >
+                          <Eye className="h-4 w-4" /> Ver
                         </Button>
                       </td>
                     </tr>
@@ -1820,7 +1819,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                 })}
 
                 {!loading && filtered.length === 0 && (
-                  <tr>
+                  <tr className="empty-row">
                     <td colSpan={7}>
                       <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                     </td>
@@ -1829,8 +1828,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </PageLayout>
   )

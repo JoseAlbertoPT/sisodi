@@ -12,7 +12,6 @@ import { DatePickerHabil, dateToIso } from "@/components/ui/date-picker-habil"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -23,26 +22,17 @@ import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { SearchInput, SEARCH_INPUT_MAX_W_MD, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
 import {
-
   Search,
   Loader2,
   Eye,
-  BookOpen,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
-  ToggleLeft,
-  ToggleRight,
   ListChecks,
   Send,
   AlertCircle,
-  MoreVertical,
   MoreHorizontal,
   Power,
   PowerOff,
   Inbox,
-  Download,
-  X,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -53,8 +43,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import dynamic from "next/dynamic"
-import { construirClave } from "@/lib/clave-dictamen"
-import * as XLSX from "xlsx"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
@@ -107,9 +95,6 @@ interface AdminRecord extends CatalogoRecord {
   }[]
 }
 
-const C_VERDE: string = "#2d4a3e"
-const C_BEIGE: string = "#f0ede4"
-const C_VINO: string  = "var(--sem-accent-primary)"
 function fmt(val: string | null | undefined) {
   return val ?? "—"
 }
@@ -181,7 +166,6 @@ function ConsultaTab() {
         const words = norm(q).split(/\s+/).filter(Boolean)
         return allRecords.filter((r) => {
           const haystack = norm([
-            r.solicitud.folio_dictamen,
             r.programa_proyecto,
             r.tipo_actividad,
             r.denominacion_nombramiento,
@@ -200,13 +184,7 @@ function ConsultaTab() {
     const controller = new AbortController()
     setPdfBlobUrl(null)
     setPdfLoading(true)
-    const clave = construirClave(
-      viewRec.solicitud.secretaria || viewRec.solicitud.secretaria_txt_snapshot,
-      viewRec.solicitud.folio_dictamen,
-    )
-    const params = new URLSearchParams({ id: String(viewRec.solicitud.id) })
-    if (clave) params.set("clave", clave)
-    fetch(`/api/pdf/carta-descriptiva?${params}`, { signal: controller.signal })
+    fetch(`/api/pdf/justificacion?id=${viewRec.solicitud.id}&sinFirmas=true`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw new Error("Error al generar PDF"); return r.blob() })
       .then((blob) => {
         if (controller.signal.aborted) return
@@ -254,27 +232,20 @@ function ConsultaTab() {
         }),
       })
       const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
-      const esPrestacionServicios = !isParaestatal(solRec)
       const params = new URLSearchParams({
         id: String(solRec.solicitud.id),
         vigenciaInicio: vi,
         vigenciaFin: vf,
+        sinFirmas: "true",
       })
-      if (esPrestacionServicios) {
-        if (np) params.set("numeroPrestadores", np)
-      } else {
-        params.set("sinFirmas", "true")
-        if (np) params.set("numeroPersonas", np)
-      }
-      const pdfEndpoint = esPrestacionServicios ? "/api/pdf/dictamen-prestacion-completo" : "/api/pdf/justificacion"
-      const pdfRes = await fetch(`${pdfEndpoint}?${params}`)
+      if (np) params.set("numeroPersonas", np)
+      const pdfRes = await fetch(`/api/pdf/justificacion?${params}`)
       if (!pdfRes.ok) throw new Error("Error al generar el PDF")
       const blob = await pdfRes.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      const nombreArchivo = esPrestacionServicios ? "Dictamen" : "Justificacion"
-      a.download = `${nombreArchivo}_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
+      a.download = `Justificacion_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
       a.click()
       URL.revokeObjectURL(url)
       setShowSol(false)
@@ -294,10 +265,8 @@ function ConsultaTab() {
   const nombramiento  = records.filter((r) =>  isParaestatal(r))
   const allVisible    = tipoTab === "honorarios" ? honorarios : nombramiento
   const totalPages    = Math.max(1, Math.ceil(allVisible.length / limit))
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [totalPages, page])
   const visibleRows   = allVisible.slice((page - 1) * limit, page * limit)
-  const VERDE  = C_VERDE
-  const BEIGE  = C_BEIGE
-  const MORADO = C_VINO
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
@@ -317,6 +286,9 @@ function ConsultaTab() {
             <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado ({nombramiento.length})</SelectItem>
           </SelectContent>
         </Select>
+        <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        </Button>
       </div>
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3">
@@ -324,47 +296,22 @@ function ConsultaTab() {
           <span className="text-sm text-destructive">{error}</span>
         </div>
       )}
-      <div
-        className="rounded-xl overflow-hidden mb-5"
-        style={{ boxShadow: "0 2px 12px rgba(0,0,0,.08)", border: "1px solid #e2ddd6" }}
-      >
-        <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-[#e2ddd6]">
-          <span className="text-xs text-muted-foreground">
-            {allVisible.length} registro{allVisible.length !== 1 ? "s" : ""}{q.trim() ? ` de ${allRecords.length}` : ""}
-          </span>
-          <button
-            type="button"
-            onClick={fetchData}
-            disabled={loading}
-            className="flex items-center justify-center rounded-lg w-7 h-7 border transition-colors hover:bg-muted/30 disabled:opacity-40"
-            style={{ borderColor: "rgb(120 5 84 / 0.62)" }}
-          >
-            {loading
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-              : <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />}
-          </button>
-        </div>
+      <div className="rounded-2xl bg-background border border-border shadow-sm overflow-hidden mb-5">
         <div className="overflow-x-auto">
           {tipoTab === "honorarios" ? (
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: VERDE }}>
-                  {["Folio de Dictamen", "Tipo de actividad", "Régimen", "Tipo de pago", "Importe bruto", "Acciones"].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "rgba(255,255,255,.9)" }}
-                    >
-                      {h}
-                    </th>
+                <tr>
+                  {["Programa / Proyecto", "Tipo de actividad", "Régimen", "Tipo de pago", "Importe bruto", "Acciones"].map((h) => (
+                    <th key={h} className={h === "Acciones" ? "text-center" : ""}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center">
-                      <Loader2 className="h-5 w-5 animate-spin mx-auto" style={{ color: VERDE }} />
+                    <td colSpan={6} className="text-center">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                     </td>
                   </tr>
                 )}
@@ -373,27 +320,19 @@ function ConsultaTab() {
                     <td colSpan={6}><EmptyState icon={Inbox} title="Sin registros de honorarios" description="No se encontraron registros en el catálogo." /></td>
                   </tr>
                 )}
-                {!loading && visibleRows.map((rec, idx) => (
-                  <tr
-                    key={rec.id}
-                    className="transition-colors"
-                    style={{
-                      backgroundColor: idx % 2 === 1 ? BEIGE : "#fff",
-                      borderBottom: "1px solid #e8e4dc",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e8e2d8")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = idx % 2 === 1 ? BEIGE : "#fff")}
-                  >
-                    <td className="px-4 py-3 text-xs max-w-[220px] truncate font-medium" style={{ color: "#2a2a2a" }} title={rec.solicitud.folio_dictamen ?? ""}>
-                      {fmt(rec.solicitud.folio_dictamen)}
+                {!loading && visibleRows.map((rec) => (
+                  <tr key={rec.id}>
+                    <td className="max-w-[220px] truncate" title={rec.programa_proyecto}>
+                      {fmt(rec.programa_proyecto)}
                     </td>
-                    <td className="px-4 py-3 text-xs max-w-[200px] truncate text-gray-600">{fmt(rec.tipo_actividad)}</td>
-                    <td className="px-4 py-3">
+                    <td className="max-w-[200px] truncate">{fmt(rec.tipo_actividad)}</td>
+                    <td>
                       <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 capitalize">{fmt(rec.tipo_pago)}</td>
-                    <td className="px-4 py-3 text-xs font-medium" style={{ color: "#2a2a2a" }}>{fmtMoney(rec.importe_bruto)}</td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="capitalize">{fmt(rec.tipo_pago)}</td>
+                    <td>{fmtMoney(rec.importe_bruto)}</td>
+                    <td className="text-center">
+                      <div className="flex justify-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -413,31 +352,26 @@ function ConsultaTab() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: VERDE }}>
-                  {["Folio de Dictamen", "Denominación", "Puesto jefe inmediato", "Tipo de actividad", "Personas", "Importe neto", "Tipo de pago", "Acciones"].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "rgba(255,255,255,.9)" }}
-                    >
-                      {h}
-                    </th>
+                <tr>
+                  {["Programa / Proyecto", "Denominación", "Puesto jefe inmediato", "Tipo de actividad", "Personas", "Importe neto", "Tipo de pago", "Acciones"].map((h) => (
+                    <th key={h} className={h === "Acciones" ? "text-center" : ""}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
-                      <Loader2 className="h-5 w-5 animate-spin mx-auto" style={{ color: VERDE }} />
+                    <td colSpan={8} className="text-center">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                     </td>
                   </tr>
                 )}
@@ -446,29 +380,21 @@ function ConsultaTab() {
                     <td colSpan={8}><EmptyState icon={Inbox} title="Sin registros de nombramiento" description="No se encontraron registros en el catálogo." /></td>
                   </tr>
                 )}
-                {!loading && visibleRows.map((rec, idx) => (
-                  <tr
-                    key={rec.id}
-                    className="transition-colors"
-                    style={{
-                      backgroundColor: idx % 2 === 1 ? BEIGE : "#fff",
-                      borderBottom: "1px solid #e8e4dc",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e8e2d8")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = idx % 2 === 1 ? BEIGE : "#fff")}
-                  >
-                    <td className="px-4 py-3 text-xs max-w-[200px] truncate font-medium" style={{ color: "#2a2a2a" }} title={rec.solicitud.folio_dictamen ?? ""}>
-                      {fmt(rec.solicitud.folio_dictamen)}
+                {!loading && visibleRows.map((rec) => (
+                  <tr key={rec.id}>
+                    <td className="max-w-[200px] truncate" title={rec.programa_proyecto}>
+                      {fmt(rec.programa_proyecto)}
                     </td>
-                    <td className="px-4 py-3 text-xs max-w-[200px] truncate text-gray-600" title={rec.denominacion_nombramiento ?? ""}>
+                    <td className="max-w-[200px] truncate" title={rec.denominacion_nombramiento ?? ""}>
                       {fmt(rec.denominacion_nombramiento)}
                     </td>
-                    <td className="px-4 py-3 text-xs max-w-[160px] truncate text-gray-500">{fmt(rec.puesto_jefe_inmediato)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{fmt(rec.tipo_actividad)}</td>
-                    <td className="px-4 py-3 text-xs text-center text-gray-600">{rec.numero_personas ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs font-medium" style={{ color: "#2a2a2a" }}>{fmtMoney(rec.importe_bruto)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500 capitalize">{fmt(rec.tipo_pago)}</td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="max-w-[160px] truncate">{fmt(rec.puesto_jefe_inmediato)}</td>
+                    <td>{fmt(rec.tipo_actividad)}</td>
+                    <td>{rec.numero_personas ?? "—"}</td>
+                    <td>{fmtMoney(rec.importe_bruto)}</td>
+                    <td className="capitalize">{fmt(rec.tipo_pago)}</td>
+                    <td className="text-center">
+                      <div className="flex justify-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -488,6 +414,7 @@ function ConsultaTab() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -502,11 +429,11 @@ function ConsultaTab() {
         <DialogContent showCloseButton={false} className="w-[75vw] max-w-[75vw] sm:max-w-[75vw] h-[92vh] max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden bg-white">
           <DialogHeader className="flex flex-row items-center gap-3 px-5 py-4 border-b border-border shrink-0 space-y-0">
             <div className="flex items-center justify-center shrink-0">
-              <FileTypeIcon name="carta-descriptiva.pdf" size="md" />
+              <FileTypeIcon name="justificacion.pdf" size="md" />
             </div>
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="ds-title-md text-content-high truncate">
-                CARTA DESCRIPTIVA DE PRESTACIÓN DE SERVICIOS
+                Documento de justificación
               </DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {(viewRec?.solicitud.secretaria || viewRec?.solicitud.secretaria_txt_snapshot) ?? "—"}
@@ -538,15 +465,15 @@ function ConsultaTab() {
           <div className="px-4 pb-4 pt-3 flex justify-end gap-3 border-t border-border shrink-0">
             <Button
               variant="default"
+              className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
               onClick={() => setShowView(false)}
-              className="px-5 py-2.5 h-auto"
             >
               Cerrar
             </Button>
             <Button
+              variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm"
               onClick={() => { if (viewRec) { setShowView(false); openSol(viewRec) } }}
-              className="gap-2 px-5 py-2.5 h-auto rounded-2xl hover:opacity-90 font-medium"
-              style={{ backgroundColor: MORADO, color: "#fff" }}
             >
               Solicitar
             </Button>
@@ -554,111 +481,108 @@ function ConsultaTab() {
         </DialogContent>
       </Dialog>
       <Dialog open={showSol} onOpenChange={setShowSol}>
-        <DialogContent
-          className="max-w-lg bg-white p-0 gap-0 overflow-hidden"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-        >
+        <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
             <DialogTitle className="ds-title-md text-content-high">
               Generar dictamen
             </DialogTitle>
           </div>
           {solRec && (
-            <div className="flex flex-col gap-4 px-6 py-5">
-              <p className="text-xs text-[var(--sem-content-low)]">
-                {isParaestatal(solRec)
-                  ? "Ajusta la vigencia y el número de personas. Se descargará el PDF del dictamen sin firmas."
-                  : "Ajusta la vigencia y el número de prestadores de servicio. Se descargará el PDF del dictamen sin firmas."}
-              </p>
-
-              <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
-                <p className="font-semibold text-[#1F2937]">{entidadNombre(solRec)}</p>
-                <p className="text-[var(--sem-content-low)]">{fmt(solRec.programa_proyecto)}</p>
-                <p className="text-[var(--sem-content-low)]">
-                  Vigencia actual:{" "}
-                  <span className="font-medium text-[#1F2937]">{fmt(solRec.vigencia)}</span>
+            <>
+              <div className="flex flex-col gap-4 px-6 py-5">
+                <p className="text-xs text-[var(--sem-content-low)]">
+                  {isParaestatal(solRec)
+                    ? "Ajusta la vigencia y el número de personas. Se descargará el PDF del dictamen sin firmas."
+                    : "Ajusta la vigencia y el número de prestadores de servicio. Se descargará el PDF del dictamen sin firmas."}
                 </p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium flex items-center gap-1.5">
-                  Nueva vigencia
-                </Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Inicio</span>
-                    <DatePickerHabil
-                      value={solVigInicio}
-                      fromDate={new Date()}
-                      onChange={(d) => setSolVigInicio(d)}
-                      placeholder="Seleccionar Inicio"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Término</span>
-                    <DatePickerHabil
-                      value={solVigFin}
-                      fromDate={solVigInicio}
-                      onChange={(d) => setSolVigFin(d)}
-                      placeholder="Seleccionar Término"
-                    />
+                <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
+                  <p className="font-semibold text-[#1F2937]">{entidadNombre(solRec)}</p>
+                  <p className="text-[var(--sem-content-low)]">{fmt(solRec.programa_proyecto)}</p>
+                  <p className="text-[var(--sem-content-low)]">
+                    Vigencia actual:{" "}
+                    <span className="font-medium text-[#1F2937]">{fmt(solRec.vigencia)}</span>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    Nueva vigencia
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Inicio</span>
+                      <DatePickerHabil
+                        value={solVigInicio}
+                        onChange={(d) => setSolVigInicio(d)}
+                        placeholder="Seleccionar inicio"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Término</span>
+                      <DatePickerHabil
+                        value={solVigFin}
+                        fromDate={solVigInicio}
+                        onChange={(d) => setSolVigFin(d)}
+                        placeholder="Seleccionar término"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-2">
-                {isParaestatal(solRec) ? (
-                  <>
-                    <Label className="text-sm font-medium">Núm. personas a contratar</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="—"
-                      value={solPersonas}
-                      onChange={(e) => setSolPersonas(e.target.value)}
-                      disabled={solLoading}
-                      className="bg-background"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Label className="text-sm font-medium">Núm. prestadores de servicio</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="—"
-                      value={solPrestadores}
-                      onChange={(e) => setSolPrestadores(e.target.value)}
-                      disabled={solLoading}
-                      className="bg-background"
-                    />
-                  </>
+                <div className="flex flex-col gap-2">
+                  {isParaestatal(solRec) ? (
+                    <>
+                      <Label className="text-sm font-medium">Núm. personas a contratar</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="—"
+                        value={solPersonas}
+                        onChange={(e) => setSolPersonas(e.target.value)}
+                        disabled={solLoading}
+                        className="bg-background"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Label className="text-sm font-medium">Núm. prestadores de servicio</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="—"
+                        value={solPrestadores}
+                        onChange={(e) => setSolPrestadores(e.target.value)}
+                        disabled={solLoading}
+                        className="bg-background"
+                      />
+                    </>
+                  )}
+                </div>
+                {solError && (
+                  <div className="flex items-center gap-2 text-xs text-destructive">
+                    <AlertCircle className="h-4 w-4 shrink-0" />{solError}
+                  </div>
                 )}
               </div>
-              {solError && (
-                <div className="flex items-center gap-2 text-xs text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0" />{solError}
-                </div>
-              )}
-              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[var(--sem-border-md)]">
+              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
                 <Button
                   variant="default"
+                  className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
                   onClick={() => setShowSol(false)}
                   disabled={solLoading}
-                  className="px-5 py-2.5 h-auto"
                 >
                   Cancelar
                 </Button>
                 <Button
+                  variant="vino"
+                  className="rounded-full h-10 px-6 font-normal shadow-sm"
                   onClick={handleSolicitar}
                   disabled={solLoading || !solVigInicio || !solVigFin}
-                  className="gap-2 px-5 py-2.5 h-auto"
-                  style={{ backgroundColor: MORADO, color: "#fff" }}
                 >
                   {solLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {solLoading ? "Generando…" : "Generar"}
                 </Button>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -676,7 +600,6 @@ function AdministracionTab() {
   const [error, setError]       = useState<string | null>(null)
   const [toggling, setToggling]         = useState<number | null>(null)
   const [procesando, setProcesando]     = useState<number | null>(null)
-  const [exportandoGeneral, setExportandoGeneral] = useState(false)
   const { user } = useAuth()
   const limit = 10
   const hasDataRef = useRef(false)
@@ -703,6 +626,7 @@ function AdministracionTab() {
     reutilizacionesPage * ITEMS_PER_PAGE,
   )
   useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery])
+  useEffect(() => { if (reutilizacionesPage > reutilizacionesTotalPages) setReutilizacionesPage(reutilizacionesTotalPages) }, [reutilizacionesTotalPages, reutilizacionesPage])
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedQ(q); setPage(1) }, 400)
@@ -774,91 +698,8 @@ function AdministracionTab() {
       setProcesando(null)
     }
   }
-  const handleExportarReuso = (rec: AdminRecord) => {
-    const rows: (string | number)[][] = [
-      ["Usuario", "Num. Prestadores", "Vigencia", "Creado"],
-      ...rec.catalogo_solicitudes.map((sol) => [
-        sol.usuario.nombre,
-        sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "",
-        sol.nueva_vigencia,
-        new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
-      ]),
-    ]
-    const ws = XLSX.utils.aoa_to_sheet(rows)
-    ws["!cols"] = rows[0].map((_, c) =>
-      ({ wch: Math.min(50, Math.max(12, ...rows.map((r) => String(r[c] ?? "").length))) })
-    )
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Reuso")
-    const folio = rec.solicitud.folio_dictamen ?? rec.solicitud.folio_recepcion ?? String(rec.solicitud.id)
-    XLSX.writeFile(wb, `Reuso_${folio.replace(/\//g, "-")}.xlsx`, { bookType: "xlsx", type: "binary" })
-  }
-  const handleExportarGeneral = async () => {
-    setExportandoGeneral(true)
-    setError(null)
-    try {
-      let all: AdminRecord[] = []
-      let p = 1
-      const pageLimit = 100
-      while (true) {
-        const params = new URLSearchParams({ q: "", page: String(p), limit: String(pageLimit), userId: user?.id ?? "" })
-        const res = await fetch(`/api/catalogo-justificaciones/admin?${params}`)
-        if (!res.ok) throw new Error((await res.json()).error ?? "Error al exportar")
-        const data = await res.json()
-        all = all.concat(data.records)
-        if (all.length >= data.total || data.records.length === 0) break
-        p++
-      }
-
-      const catalogoRows: (string | number)[][] = [
-        ["Entidad", "Folio de Dictamen", "Régimen", "Vigencia", "Num. Prestadores", "Creado", "Reuso", "Estado"],
-        ...all.map((rec) => [
-          entidadNombre(rec).split(" > ")[0],
-          rec.solicitud.folio_dictamen ?? "—",
-          fmtCapitalize(rec.regimen_contratacion),
-          rec.vigencia ?? "—",
-          rec.numero_personas ?? "—",
-          new Date(rec.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
-          rec._count.catalogo_solicitudes,
-          rec.activo ? "Activo" : "Inactivo",
-        ]),
-      ]
-
-      const reusoRows: (string | number)[][] = [
-        ["Folio de Dictamen", "Entidad", "Usuario", "Num. Prestadores", "Vigencia", "Creado"],
-        ...all.flatMap((rec) =>
-          rec.catalogo_solicitudes.map((sol) => [
-            rec.solicitud.folio_dictamen ?? "—",
-            entidadNombre(rec).split(" > ")[0],
-            sol.usuario.nombre,
-            sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "",
-            sol.nueva_vigencia,
-            new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
-          ]),
-        ),
-      ]
-
-      const wb = XLSX.utils.book_new()
-      const wsCatalogo = XLSX.utils.aoa_to_sheet(catalogoRows)
-      wsCatalogo["!cols"] = catalogoRows[0].map((_, c) =>
-        ({ wch: Math.min(50, Math.max(12, ...catalogoRows.map((r) => String(r[c] ?? "").length))) })
-      )
-      XLSX.utils.book_append_sheet(wb, wsCatalogo, "Catálogo")
-
-      const wsReuso = XLSX.utils.aoa_to_sheet(reusoRows)
-      wsReuso["!cols"] = reusoRows[0].map((_, c) =>
-        ({ wch: Math.min(50, Math.max(12, ...reusoRows.map((r) => String(r[c] ?? "").length))) })
-      )
-      XLSX.utils.book_append_sheet(wb, wsReuso, "Reuso")
-
-      XLSX.writeFile(wb, `Catalogo_Reporte_General_${new Date().toISOString().slice(0, 10)}.xlsx`, { bookType: "xlsx", type: "binary" })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al exportar el reporte general")
-    } finally {
-      setExportandoGeneral(false)
-    }
-  }
   const totalPages = Math.max(1, Math.ceil(total / limit))
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [totalPages, page])
   return (
     <>
       <div className="flex items-center gap-3 mb-5">
@@ -870,11 +711,6 @@ function AdministracionTab() {
         />
         <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </Button>
-        <span className="text-sm text-muted-foreground">{total} registro{total !== 1 ? "s" : ""}</span>
-        <Button variant="outline" size="sm" onClick={handleExportarGeneral} disabled={exportandoGeneral} className="gap-1.5 ml-auto">
-          {exportandoGeneral ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          Reporte General
         </Button>
       </div>
       {error && (
@@ -889,27 +725,26 @@ function AdministracionTab() {
             <thead>
               <tr className="bg-muted/30 border-b border-border">
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Entidad</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Folio de Dictamen</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa / Proyecto</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Régimen</th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">Vigencia</th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground whitespace-nowrap">Num. Prestadores</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Reuso</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">Reutilizaciones</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Estado</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground"><div className="flex justify-end">Acciones</div></th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center">
+                  <td colSpan={8} className="px-4 py-10 text-center">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                   </td>
                 </tr>
               )}
-              {!loading && records.length === 0 &&(
+              {!loading && records.length === 0 && (
                 <tr className="empty-row">
-                  <td colSpan={9}><EmptyState icon={Inbox} title="Sin registros en el catálogo" description="No se encontraron registros." /></td>
+                  <td colSpan={8}><EmptyState icon={Inbox} title="Sin registros en el catálogo" description="No se encontraron registros." /></td>
                 </tr>
               )}
               {!loading && records.map((rec) => {
@@ -919,20 +754,19 @@ function AdministracionTab() {
                   <td className="px-4 py-3 text-xs max-w-[140px] truncate" title={entidadNombre(rec)}>
                     {entidadNombre(rec).split(" > ")[0]}
                   </td>
-                  <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.solicitud.folio_dictamen ?? ""}>{fmt(rec.solicitud.folio_dictamen)}</td>
+                  <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.programa_proyecto}>{fmt(rec.programa_proyecto)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-center text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
-                  <td className="px-4 py-3 text-xs text-center text-muted-foreground">{rec.numero_personas ?? "—"}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(rec.vigencia)}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                     {new Date(rec.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
                   </td>
                   <td className="px-4 py-3 text-xs text-center">
                     {hasSols ? (
                       <span
-                        className="inline-flex items-center justify-center rounded-full w-6 h-6 text-xs font-semibold"
-                        style={{ backgroundColor: "var(--secondary)", opacity: 0.5 }}
+                        className="inline-flex items-center justify-center rounded-full w-6 h-6 text-xs font-semibold text-white"
+                        style={{ backgroundColor: "var(--secondary)" }}
                       >
                         {rec._count.catalogo_solicitudes}
                       </span>
@@ -949,8 +783,8 @@ function AdministracionTab() {
                       <StatusBadge label="Inactivo" />
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex items-center justify-center gap-2">
                       {toggling === rec.id && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -965,9 +799,6 @@ function AdministracionTab() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openReutilizaciones(rec)}>
                             <Eye className="h-4 w-4" /> Ver
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExportarReuso(rec)} disabled={!hasSols}>
-                            <Download className="h-4 w-4" /> Exportar
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setConfirmToggle(rec)} disabled={toggling === rec.id}>
                             {rec.activo
@@ -988,74 +819,51 @@ function AdministracionTab() {
       </div>
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       <Dialog open={showReutilizaciones} onOpenChange={setShowReutilizaciones}>
-        <DialogContent showCloseButton={false} className="w-[70vw] max-w-3xl sm:max-w-3xl bg-white p-0 gap-0 overflow-hidden flex flex-col max-h-[520px]">
-          <DialogHeader className="pl-4 pr-3 py-2.5 border-b border-[var(--sem-border-md)] shrink-0 flex-row flex-nowrap items-center justify-between gap-3">
-            <DialogTitle className="text-sm font-semibold text-content-high truncate min-w-0">
-              Reuso{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
+        <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl bg-white p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-5 py-4 border-b border-[var(--sem-border-md)]">
+            <DialogTitle className="ds-title-md text-content-high">
+              Reutilizaciones{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
             </DialogTitle>
-            <div className="flex items-center gap-6 shrink-0">
-              {viewRec && viewRec.catalogo_solicitudes.length > 0 && (
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  Total prestadores:{" "}
-                  <span className="font-semibold text-content-high">
-                    {viewRec.catalogo_solicitudes.reduce(
-                      (acc, sol) => acc + (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0),
-                      0,
-                    )}
-                  </span>
-                </span>
-              )}
-              <DialogClose className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--sem-content-low)] opacity-70 transition-all hover:opacity-100 hover:bg-[var(--sem-support-disabled-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-support-focus focus-visible:ring-offset-2">
-                <X className="h-4 w-4" />
-                <span className="sr-only">Cerrar</span>
-              </DialogClose>
-            </div>
           </DialogHeader>
-          <div className="flex flex-col flex-1 min-h-0 p-3 gap-2">
+          <div className="max-h-[80vh] overflow-y-auto p-4">
             {viewRec && viewRec.catalogo_solicitudes.length > 0 ? (
               <>
                 <SearchInput
                   value={reutilizacionesQuery}
                   onChange={(e) => setReutilizacionesQuery(e.target.value)}
                   placeholder="Buscar por usuario o vigencia…"
-                  className="h-8 text-xs"
-                  containerClassName="shrink-0"
+                  containerClassName="mb-3"
                 />
-                <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
-                  <div className="overflow-y-auto overflow-x-auto flex-1 min-h-0">
-                    <table className="w-full reuso-table table-fixed text-sm">
+                <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-fixed text-sm">
                       <colgroup>
-                        <col className="w-[18%]" />
-                        <col className="w-[24%]" />
-                        <col className="w-[36%]" />
-                        <col className="w-[22%]" />
+                        <col className="w-[40%]" />
+                        <col className="w-[35%]" />
+                        <col className="w-[25%]" />
                       </colgroup>
-                      <thead className="sticky top-0 z-10">
-                        <tr className="bg-muted/90 backdrop-blur-sm border-b border-border">
-                          <th className="px-3 py-2 text-left text-sm font-semibold text-muted-foreground">Usuario</th>
-                          <th className="px-3 py-2 text-center text-sm font-semibold text-muted-foreground whitespace-nowrap">Num. Prestadores</th>
-                          <th className="px-6 py-2 text-center text-sm font-semibold text-muted-foreground">Vigencia</th>
-                          <th className="px-3 py-2 text-left text-sm font-semibold text-muted-foreground">Creado</th>
+                      <thead>
+                        <tr className="bg-muted/30 border-b border-border">
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
-                          <tr>
-                            <td colSpan={4}>
+                          <tr className="empty-row">
+                            <td colSpan={3}>
                               <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
                           </tr>
                         )}
                         {reutilizacionesVisibles.map((sol) => (
                           <tr key={sol.id} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
-                            <td className="px-3 py-2 text-[13px] font-medium text-card-foreground truncate text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
+                            <td className="px-4 py-3 text-xs font-medium text-card-foreground truncate text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
                               {sol.usuario.nombre}
                             </td>
-                            <td className="px-3 py-2 text-[13px] text-muted-foreground text-center">
-                              {sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—"}
-                            </td>
-                            <td className="pl-[46px] pr-4 py-2 text-[13px] text-muted-foreground whitespace-nowrap text-left">{sol.nueva_vigencia}</td>
-                            <td className="px-3 py-2 text-[13px] text-muted-foreground truncate text-left">
+                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">{sol.nueva_vigencia}</td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
                               {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
                             </td>
                           </tr>
@@ -1064,13 +872,11 @@ function AdministracionTab() {
                     </table>
                   </div>
                 </div>
-                <div className="shrink-0">
-                  <TablePagination
-                    currentPage={reutilizacionesPage}
-                    totalPages={reutilizacionesTotalPages}
-                    onPageChange={setReutilizacionesPage}
-                  />
-                </div>
+                <TablePagination
+                  currentPage={reutilizacionesPage}
+                  totalPages={reutilizacionesTotalPages}
+                  onPageChange={setReutilizacionesPage}
+                />
               </>
             ) : (
               <EmptyState icon={Inbox} title="Sin reutilizaciones registradas" description="Ajusta los filtros para ver más resultados." />
@@ -1103,11 +909,11 @@ export function CatalogoJustificacionesPage() {
       {isAdmin ? (
         <Tabs defaultValue="consulta" className="w-full gap-3">
           <TabsList>
-            <TabsTrigger value="consulta" className="gap-1.5 min-w-[11rem]">
+            <TabsTrigger value="consulta" className="gap-1.5">
               <Search className="h-4 w-4" />
               Consulta
             </TabsTrigger>
-            <TabsTrigger value="administracion" className="gap-1.5 min-w-[11rem]">
+            <TabsTrigger value="administracion" className="gap-1.5">
               <ListChecks className="h-4 w-4" />
               Administración
             </TabsTrigger>

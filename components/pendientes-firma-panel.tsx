@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { StatusBadge, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
-import { Loader2, RefreshCw, AlertCircle, Inbox, Stamp } from "lucide-react"
+import { AlertCircle, Inbox, Stamp, Eye } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
 import { FirmaProgresoDialog } from "@/components/firma-progreso-dialog"
@@ -131,7 +131,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                 <th className="px-4 py-3 text-left font-semibold">Rol a firmar</th>
                 <th className="px-4 py-3 text-left font-semibold">Progreso</th>
                 <th className="px-4 py-3 text-left font-semibold">Turno</th>
-                <th className="px-4 py-3"></th>
+                <th className="px-4 py-3 text-left font-semibold">Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -151,7 +151,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                           bgColor={p.sellado_emision_subido ? C_AZUL_REVISION_BG : C_AMARILLO_BG}
                         />
                       </td>
-                      <td className="px-4 py-2 text-right">
+                      <td className="px-4 py-2">
                         <Button
                           variant="default"
                           size="sm"
@@ -180,24 +180,24 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                         bgColor={C_AMARILLO_BG}
                       />
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-4 py-2">
                       {esMiTurno ? (
                         <Button
-                          variant="ghost"
-                          size="sm"
+                          variant="ghost" size="sm"
                           onClick={() => miFirmante && setFirmanteDialogId(miFirmante.id)}
-                          className="text-secondary hover:text-primary gap-1.5"
+                          className="gap-1.5 font-medium -ml-3"
+                          style={{ color: "var(--sem-content-low)" }}
                         >
                           <Stamp className="h-4 w-4" />Firmar
                         </Button>
                       ) : (
                         <Button
-                          variant="ghost"
-                          size="sm"
+                          variant="ghost" size="sm"
                           onClick={() => setProgresoTarget(p)}
-                          className="text-secondary hover:text-primary gap-1.5"
+                          className="gap-1.5 font-medium -ml-3"
+                          style={{ color: "var(--sem-content-low)" }}
                         >
-                          <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
+                          <Eye className="h-4 w-4" />Ver
                         </Button>
                       )}
                     </td>

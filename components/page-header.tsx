@@ -13,7 +13,7 @@ export function PageHeader({ title, subtitle }: PageHeaderProps) {
 const { toggle } = useSidebar()
   return (
     <div className="bg-bg-base border-b border-border-low">
-      <div className="flex items-center gap-4 px-8 py-6">
+      <div className="flex items-center gap-3 md:gap-4 px-4 md:px-8 py-4 md:py-6">
         <button
           type="button"
           onClick={toggle}
@@ -22,8 +22,8 @@ const { toggle } = useSidebar()
         >
           <PanelLeft className="h-5 w-5" />
         </button>
-        <div className="flex-1">
-          <h1 className="font-sans text-[32px] font-light leading-[120%] text-content-high">
+        <div className="flex-1 min-w-0">
+          <h1 className="font-sans text-[22px] md:text-[32px] font-light leading-[120%] text-content-high">
             {title}
           </h1>
           {subtitle && (

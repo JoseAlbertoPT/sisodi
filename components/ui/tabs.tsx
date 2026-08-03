@@ -1,34 +1,56 @@
-'use client'
+"use client"
 
-import * as React from 'react'
-import * as TabsPrimitive from '@radix-ui/react-tabs'
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import * as TabsPrimitive from "@radix-ui/react-tabs"
 
-import { cn } from '@/lib/utils'
+import { cn } from "@/lib/utils"
 
 function Tabs({
   className,
+  orientation = "horizontal",
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
-      className={cn('flex flex-col gap-2', className)}
+      data-orientation={orientation}
+      orientation={orientation}
+      className={cn(
+        "group/tabs flex gap-2 data-[orientation=horizontal]:flex-col",
+        className,
+      )}
       {...props}
     />
   )
 }
 
+const tabsListVariants = cva(
+  "group/tabs-list inline-flex w-fit items-center justify-center gap-1 rounded-[24px] p-1.5 text-content-low group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col data-[variant=line]:rounded-none",
+  {
+    variants: {
+      variant: {
+        default: "bg-bg-surface-low/60",
+        line: "gap-1 bg-transparent",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+)
+
 function TabsList({
   className,
+  variant = "default",
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
+}: React.ComponentProps<typeof TabsPrimitive.List> &
+  VariantProps<typeof tabsListVariants>) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn(
-        'inline-flex h-auto w-fit items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1',
-        className,
-      )}
+      data-variant={variant}
+      className={cn(tabsListVariants({ variant }), className)}
       {...props}
     />
   )
@@ -42,11 +64,10 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-transparent bg-transparent px-5 py-2 text-sm font-light text-content-high whitespace-nowrap transition-all",
-        "hover:bg-black/5",
-        "data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-[var(--color-core-bosque-30)]",
-        "focus-visible:ring-2 focus-visible:ring-support-focus focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[18px] border border-transparent px-5 py-2 text-sm font-light whitespace-nowrap text-content-high transition-colors group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start hover:bg-black/5 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 group-data-[variant=default]/tabs-list:data-[state=active]:shadow-sm group-data-[variant=line]/tabs-list:data-[state=active]:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-[state=active]:bg-transparent",
+        "data-[state=active]:bg-bg-base data-[state=active]:text-[var(--color-core-bosque-30)] data-[state=active]:border-border-low data-[state=active]:hover:bg-bg-base",
+        "after:absolute after:bg-accent-primary after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-[state=active]:after:opacity-100",
         className,
       )}
       {...props}
@@ -61,10 +82,10 @@ function TabsContent({
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn('flex-1 outline-none', className)}
+      className={cn("flex-1 outline-none", className)}
       {...props}
     />
   )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }

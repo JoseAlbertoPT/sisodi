@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
-  CalendarDays, Pencil, Loader2, Check, X,
+  Loader2, Check, X,
   CalendarPlus, ChevronDown,
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
@@ -271,20 +271,20 @@ export function CalendarioPage() {
                 </Button>
               )
             ) : (
-              <div className="flex items-center gap-1.5 rounded-lg border border-secondary/30 bg-secondary/5 p-1">
-                <Button size="sm" variant="primary" className="gap-1.5 text-xs h-7" onClick={handleSaveEdit} disabled={saving}>
+              <>
+                <Button size="sm" variant="primary" className="gap-1.5 text-xs h-9" onClick={handleSaveEdit} disabled={saving}>
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}Guardar
                 </Button>
                 <Button
                   variant="default"
                   size="sm"
-                  className="gap-1.5 text-xs h-7"
+                  className="gap-1.5 text-xs h-9"
                   onClick={handleCancelEdit}
                   disabled={saving}
                 >
                   <X className="h-3 w-3" />Cancelar
                 </Button>
-              </div>
+              </>
             )}
             {!editing && !showNewYearInput && <div className="h-5 w-px bg-border" />}
             {!editing && !showNewYearInput && (
@@ -341,10 +341,12 @@ export function CalendarioPage() {
         {!loading && (!isEmpty || editing) && (
           <>
             {editing && (
-              <div className="flex items-center gap-2 rounded-lg bg-secondary/5 border border-secondary/20 px-4 py-2.5">
-                <Pencil className="h-3.5 w-3.5 text-secondary shrink-0" />
-                <span className="text-sm font-bold text-black">
-                  En Modo Edición — Ingrese el Día en Cada celda. El Mes y Año se Asignan Automáticamente.
+              <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
+                  <span className="text-[12px] font-bold text-white leading-none">i</span>
+                </div>
+                <span className="text-sm font-light text-[#3266cb]">
+                  En Modo Edición — Ingrese el día en cada celda. El mes y año se asignan automáticamente.
                 </span>
               </div>
             )}

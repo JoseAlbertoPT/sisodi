@@ -20,8 +20,8 @@ export function PageLayout({ title, description, children, noContainer = false }
   return (
     <div className="flex flex-1 flex-col">
       {(title != null || description != null) && (
-        <div className="border-b border-border-low px-8 py-6 shrink-0">
-          <div className="flex items-center gap-4">
+        <div className="border-b border-border-low px-4 md:px-8 py-4 md:py-6 shrink-0">
+          <div className="flex items-center gap-3 md:gap-4">
             <button
               type="button"
               onClick={toggle}
@@ -32,7 +32,7 @@ export function PageLayout({ title, description, children, noContainer = false }
             </button>
             <div className="flex-1">
               {title != null && (
-                <h1 className="font-sans text-[32px] font-light leading-[120%] text-content-high">
+                <h1 className="font-sans text-[22px] md:text-[32px] font-light leading-[120%] text-content-high">
                   {title}
                 </h1>
               )}
@@ -45,7 +45,7 @@ export function PageLayout({ title, description, children, noContainer = false }
           </div>
         </div>
       )}
-      <div className="flex-1 p-6 flex flex-col gap-3">
+      <div className="flex-1 p-4 md:p-6 flex flex-col gap-3 min-w-0">
         {children}
       </div>
     </div>

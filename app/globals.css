@@ -700,7 +700,7 @@ table.w-full tbody tr {
   background-color: var(--sem-bg-base) !important;
 }
 table.w-full tbody tr:hover {
-  background-color: var(--sem-bg-surface-low) !important;
+  background-color: color-mix(in srgb, var(--sem-bg-surface-low) 50%, transparent) !important;
 }
 table.w-full tbody tr.empty-row:hover { background-color: transparent !important; }
 table.w-full tbody td {
@@ -713,6 +713,10 @@ table.w-full tbody td {
   color: var(--sem-content-high) !important;
 }
 table.w-full tbody tr:last-child td { border-bottom: none !important; }
+table.w-full thead th.text-center,
+table.w-full tbody td.text-center { text-align: center !important; }
+table.w-full thead th.text-right,
+table.w-full tbody td.text-right { text-align: right !important; }
 table.w-full tfoot tr {
   background-color: var(--sem-bg-surface-low) !important;
   border-top: 1px solid var(--sem-border-low) !important;

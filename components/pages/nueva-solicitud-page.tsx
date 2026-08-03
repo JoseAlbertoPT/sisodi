@@ -1233,19 +1233,19 @@ function SelectConBusqueda({
         {/* ── Buscador interno ── */}
         <div className="sticky top-0 z-10 bg-white pb-1.5 px-0.5">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#9CA3AF] pointer-events-none" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sem-border-high)]" />
             <Input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar…"
-              className="h-9 rounded-full border-[#E5E7EB] bg-white text-sm pl-9 pr-8 focus:border-[#2D3B2D]"
+              placeholder="Buscar..."
+              className="h-9 rounded-xl border border-border bg-white shadow-sm text-sm font-light text-foreground placeholder:text-[var(--sem-border-high)] pl-9 pr-8 focus:border-[#2D3B2D]"
               onKeyDown={(e) => e.stopPropagation()}
               autoFocus
             />
             {busqueda && (
               <button
                 onClick={() => setBusqueda("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#374151]"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--sem-border-high)] hover:text-foreground"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -4035,7 +4035,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     if (nuevo === "nombramiento") setTipo("nombramiento")
                     else setTipo("prestacion")
                   }}>
-                    <SelectTrigger className="w-full vino-force"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
                     <SelectContent className="vino-force">
                       <SelectItem value="honorarios">Honorarios</SelectItem>
                       <SelectItem value="asimilados">Honorarios asimilados a Salarios</SelectItem>
@@ -4047,7 +4047,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Mes de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
-                      <SelectTrigger className="w-full vino-force"><SelectValue placeholder="Seleccione mes" /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione mes" /></SelectTrigger>
                       <SelectContent className="vino-force">{calHonorarios.map((r) => <SelectItem key={r.mes} value={r.mes}>{r.mes}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
@@ -4056,7 +4056,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
-                      <SelectTrigger className="w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
                       <SelectContent className="vino-force">{calAsimilados.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
@@ -4065,7 +4065,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
-                      <SelectTrigger className="w-full vino-force"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione quincena" /></SelectTrigger>
                       <SelectContent className="vino-force">{calNombramiento.map((r) => <SelectItem key={r.quincena} value={r.quincena}>{r.quincena}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>

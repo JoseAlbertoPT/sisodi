@@ -2,7 +2,6 @@
 
 import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
@@ -16,8 +15,8 @@ import {
 
   Search, KeyRound, MoreVertical, MoreHorizontal, Pencil, X, PowerOff, Power,
   ChevronRight, Building2,
-  Loader2, Shield, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
-  Landmark, Factory, Inbox,
+  Loader2, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
+  Landmark, Factory, Inbox, Info,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -49,6 +48,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
+import { FilterTabs } from "@/components/ui/filter-tabs"
 
 const ROLES = ["Emisor", "Validador", "Revisor", "Capturista", "UEFA", "Administrador"]
 
@@ -65,6 +65,7 @@ type Usuario = {
 }
 
 const API = "/api"
+
 async function fetchUsuarios(): Promise<Usuario[]> {
   const res = await fetch(`${API}/usuarios`)
   if (!res.ok) throw new Error("Error al cargar usuarios")
@@ -759,13 +760,18 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
               </div>
             </div>
           </div>
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20">
-            <Button variant="destructive-low" size="sm" className="text-xs h-9" onClick={() => setShowConfirm(false)} disabled={loading}>
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+            <Button
+              variant="default"
+              className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+              onClick={() => setShowConfirm(false)}
+              disabled={loading}
+            >
               Regresar
             </Button>
             <Button
-              size="sm"
-              className="text-xs h-9 rounded-full shadow-sm gap-1.5 bg-[#72243E] hover:bg-[#72243E] active:bg-[#72243E] active:text-white text-white border-0"
+              variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm"
               onClick={handleSubmit}
               disabled={loading}
             >
@@ -1462,30 +1468,27 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
-          <div className="flex gap-2">
-            <Button
-              variant="default"
-              size="sm"
-              className="text-xs h-9"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              size="sm"
-              variant="primary" className="text-xs h-9 gap-1.5"
-              onClick={handleSubmit}
-              disabled={loading}
-              >
-              {loading ? (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
-              ) : (
-                "Guardar cambios"
-              )}
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border shrink-0">
+          <Button
+            variant="default"
+            className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="vino"
+            className="rounded-full h-10 px-6 font-normal shadow-sm"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" />Guardando...</>
+            ) : (
+              "Guardar"
+            )}
+          </Button>
         </div>
       </div>
     </div>
@@ -1620,18 +1623,23 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   return (
     <>
     <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
-      <AlertDialogContent>
+      <AlertDialogContent size="sm" onOpenAutoFocus={(e) => e.preventDefault()}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Cambios sin guardar</AlertDialogTitle>
+          <Info className="size-7 text-content-high" strokeWidth={1.75} />
+          <AlertDialogTitle className="text-[18px]">Cambios sin guardar</AlertDialogTitle>
+        </AlertDialogHeader>
+        <div className="px-6 pt-2">
           <AlertDialogDescription>
             Hay cambios en los permisos que no se han guardado. ¿Deseas guardar antes de cerrar o cerrar sin guardar?
           </AlertDialogDescription>
-        </AlertDialogHeader>
+        </div>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <Button onClick={() => void handleSaveAndClose()} disabled={permisosSaveLoading}>
+          <AlertDialogCancel onClick={() => { setShowCloseConfirm(false); onClose() }}>
+            Cancelar
+          </AlertDialogCancel>
+          <Button variant="primary" className="flex-1" onClick={() => void handleSaveAndClose()} disabled={permisosSaveLoading}>
             {permisosSaveLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Guardar y cerrar
+            Guardar
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -1642,16 +1650,11 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     >
       <div className="w-full max-w-2xl max-h-[90vh] rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="ds-title-md text-content-high">
-                Permisos de menús
-              </h2>
-              <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
-          </div>
+          <div>
+            <h2 className="ds-title-md text-content-high">
+              Permisos de menús
+            </h2>
+            <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 " onClick={requestClose}>
           <X className="h-4 w-4" />
@@ -1802,20 +1805,19 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
           )}
           <Button
             variant="default"
-            size="sm"
-            className="text-xs h-9"
+            className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
             onClick={requestClose}
           >
             Cerrar
           </Button>
           {!permisosLoading && permisos != null && (
-            <Button variant="primary"
+            <Button variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm"
               onClick={() => void handleSavePermisos()}
               disabled={permisosSaveLoading}
-              className="min-w-[140px] text-xs h-9"
             >
               {permisosSaveLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Guardar permisos
+              Guardar
             </Button>
           )}
         </div>
@@ -1897,6 +1899,7 @@ export function UsuariosPage() {
 
   useEffect(() => { setCurrentPage(1) }, [tabEstatus, filtroAdmin, searchTerm])
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(Math.max(1, totalPages)) }, [totalPages, currentPage])
   const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const hasActivePermiso = (id: string) =>
@@ -1941,34 +1944,15 @@ export function UsuariosPage() {
         />
       )}
 
-      <div className="flex w-full justify-start">
-        <div className="flex items-center gap-0.5 rounded-2xl border border-border bg-muted/60 p-1 w-fit">
-          <button
-            onClick={() => setTabEstatus("activos")}
-            className={`rounded-xl px-5 py-2 text-sm font-light transition-all flex items-center gap-1.5 text-content-high ${
-              tabEstatus === "activos" ? "bg-card shadow-sm" : "hover:bg-black/5"
-            }`}
-          >
-            <Power className="h-3.5 w-3.5" />
-            Activos
-            <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[#773357] text-white">
-              {activos.length}
-            </span>
-          </button>
-          <button
-            onClick={() => setTabEstatus("deshabilitados")}
-            className={`rounded-xl px-5 py-2 text-sm font-light transition-all flex items-center gap-1.5 text-content-high ${
-              tabEstatus === "deshabilitados" ? "bg-card shadow-sm" : "hover:bg-black/5"
-            }`}
-          >
-            <PowerOff className="h-3.5 w-3.5" />
-            Deshabilitados
-            <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[#773357] text-white">
-              {deshabilitados.length}
-            </span>
-          </button>
-        </div>
-      </div>
+      <FilterTabs
+        value={tabEstatus}
+        onValueChange={(v) => setTabEstatus(v as "activos" | "deshabilitados")}
+        items={[
+          { value: "activos", label: "Activos", count: activos.length },
+          { value: "deshabilitados", label: "Deshabilitados", count: deshabilitados.length },
+        ]}
+        sectionLabel="Estatus"
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput
@@ -1983,30 +1967,24 @@ export function UsuariosPage() {
         </Button>
       </div>
 
-      <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">
-            {loading ? "Cargando..." : `${filtered.length} ${tabEstatus === "activos" ? "usuarios activos" : "usuarios deshabilitados"}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadError && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive mb-4">
-              {loadError}
-            </div>
-          )}
-          <div className="overflow-x-auto">
-            <table className="w-full">
+      {loadError && (
+        <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-xs text-destructive">
+          {loadError}
+        </div>
+      )}
+      <div className="rounded-2xl bg-background border border-border shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
               <thead>
                 <tr>
                   <th>Nombre</th>
                   <th>Correo</th>
                   <th>RFC</th>
                   <th>Rol</th>
-                  <th>Administracion</th>
+                  <th className="whitespace-nowrap">Administracion</th>
                   <th>Secretaría</th>
                   <th>Estatus</th>
-                  <th className="px-4 py-3 font-semibold"><div className="flex justify-end">Acciones</div></th>
+                  <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -2026,7 +2004,7 @@ export function UsuariosPage() {
                     <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
                       {row.rfc ?? <span className="text-muted-foreground/50 italic">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{row.rol}</td>
+                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{row.rol}</td>
                     <td className="px-4 py-3">
                       {row.tipoAdministracion === "centralizada" ? (
                         <StatusBadge label="Centralizada" color={C_AZUL_REVISION} bgColor={C_AZUL_REVISION_BG} />
@@ -2044,8 +2022,8 @@ export function UsuariosPage() {
                         <StatusBadge label="Inactivo" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right">
-  <div className="flex items-center justify-end">
+                    <td className="px-4 py-3 text-center">
+  <div className="flex items-center justify-center">
     <DropdownMenu>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -2091,8 +2069,7 @@ export function UsuariosPage() {
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       <ConfirmDialog
         open={!!confirmToggleUser}
