@@ -166,13 +166,75 @@ interface PdfOverrides {
   numeroPersonas?: number
 }
 
+async function buildJustificacionBufferDesdeCatalogo(
+  catalogoId: string,
+  overrides: PdfOverrides,
+): Promise<{ buffer: Buffer | Uint8Array; filename: string; sol: any } | null> {
+  // Registro histórico sin solicitud viva: solo existe el ramo "Prestacion de Servicios"
+  // (ningún importado del histórico es tipo nombramiento) y siempre es firma autógrafa,
+  // así que no hay constancia de firma electrónica que agregar.
+  const cj = await prisma.catalogo_justificacion.findUnique({ where: { id: Number(catalogoId) } });
+  if (!cj) return null;
+
+  const folio = cj.folio_dictamen ?? cj.folio_recepcion ?? String(cj.id);
+  const fechaDictaminacion = cj.fecha_emision
+    ? new Date(cj.fecha_emision).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })
+    : "";
+
+  const dataHonorarios: JustificacionData = {
+    tipoAdministracion: cj.tipo_administracion === "paraestatal" ? "paraestatal" : "centralizada",
+    formato: "fisico",
+    secretaria: cj.secretaria ?? "",
+    unidadAdministrativa: cj.unidad_administrativa ?? "",
+    unidadResponsable: cj.unidad_responsable ?? "",
+    regimenContratacion: cj.regimen_contratacion ?? "",
+    numeroPrestadores: overrides.numeroPersonas ?? cj.numero_personas ?? 1,
+    programaProyecto: applyTextRules(formatString(cj.programa_proyecto)),
+    tipoActividades: applyTextRules(formatString(cj.tipo_actividad)),
+    vigenciaInicio: overrides.vigenciaInicio ?? (cj.vigencia_inicio ? cj.vigencia_inicio.toISOString().split("T")[0] : ""),
+    vigenciaTermino: overrides.vigenciaFin ?? (cj.vigencia_fin ? cj.vigencia_fin.toISOString().split("T")[0] : ""),
+    importeBruto: cj.importe_bruto
+      ? `$${Number(cj.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
+      : "",
+    tipoPago: (cj.tipo_pago ?? "").replace(/_/g, " "),
+    esRenovacion: cj.es_renovacion ?? false,
+    folioAnterior: "",
+    objetoContratacion: applyTextRules(cj.objeto ?? ""),
+    actividades: applyTextRulesArray(cj.actividades ?? []),
+    responsabilidades: applyTextRulesArray(cj.responsabilidades ?? []),
+    perfil: {
+      escolaridadMinima: applyTextRulesArray(splitToArray(cj.escolaridad)),
+      competenciasAdministrativas: applyTextRulesArray(splitToArray(cj.comp_adm)),
+      competenciasTecnicas: applyTextRulesArray(splitToArray(cj.comp_tec)),
+      competenciasSociales: applyTextRulesArray(splitToArray(cj.comp_soc)),
+      valores: applyTextRulesArray(splitToArray(cj.valores)),
+      areasExperiencia: applyTextRulesArray(splitToArray(cj.areas_exp)),
+    },
+    fechaDictaminacion,
+    ocultarFirmas: true,
+    clave: claveParaPdf(cj.secretaria, folio, true),
+  };
+
+  const pdfElement = React.createElement(PlantillaJustificacionServicios as React.FC<any>, { data: dataHonorarios });
+  const folioFilename = cj.folio_recepcion ?? cj.folio_justificacion ?? folio;
+  const filename = `Justificacion_${folioFilename.replace(/\//g, "-")}.pdf`;
+  const pdfStream = await renderToStream(pdfElement as any);
+  const pdfFinal = await streamToBuffer(pdfStream);
+
+  return { buffer: pdfFinal, filename, sol: null };
+}
+
 export async function buildJustificacionBuffer(
-  solicitudId: string,
+  solicitudId: string | null,
   firmasInput: FirmaNames = {},
   soloFirmanteId: number | null = null,
   overrides: PdfOverrides = {},
   sinFirmas = false,
+  catalogoId: string | null = null,
 ): Promise<{ buffer: Buffer | Uint8Array; filename: string; sol: any } | null> {
+  if (!solicitudId) {
+    return catalogoId ? buildJustificacionBufferDesdeCatalogo(catalogoId, overrides) : null;
+  }
   let firmas: FirmaNames = { ...firmasInput };
   {
     const sol = await prisma.solicitud.findUnique({
@@ -414,16 +476,16 @@ export async function buildJustificacionBuffer(
   }
 }
 
-async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null, overrides: PdfOverrides = {}, sinFirmas = false) {
+async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null, overrides: PdfOverrides = {}, sinFirmas = false, catalogoId: string | null = null) {
   try {
-    if (!solicitudId) {
+    if (!solicitudId && !catalogoId) {
       return NextResponse.json(
-        { ok: false, error: "Falta solicitudId" },
+        { ok: false, error: "Falta solicitudId o catalogoId" },
         { status: 400 }
       );
     }
 
-    const result = await buildJustificacionBuffer(solicitudId, firmasInput, soloFirmanteId, overrides, sinFirmas);
+    const result = await buildJustificacionBuffer(solicitudId, firmasInput, soloFirmanteId, overrides, sinFirmas, catalogoId);
     if (!result) {
       return NextResponse.json(
         { ok: false, error: "Solicitud no encontrada" },
@@ -457,12 +519,14 @@ export async function POST(req: NextRequest) {
     firmaDictEmitioNombre: body.firmaDictEmitioNombre,
     formato: body.formato === 'en_linea' ? 'en_linea' : 'fisico',
   };
-  return generatePDFResponse(body.solicitudId, firmas);
+  const catalogoId = body.catalogoId ? String(body.catalogoId) : null;
+  return generatePDFResponse(body.solicitudId, firmas, null, {}, false, catalogoId);
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
+  const catalogoId = searchParams.get("catalogoId");
   const firmanteIdRaw = searchParams.get("firmanteId");
   let firmanteId: number | null = null;
   if (firmanteIdRaw !== null && firmanteIdRaw !== "") {
@@ -489,5 +553,5 @@ export async function GET(req: NextRequest) {
   const vf = searchParams.get("vigenciaFin");    if (vf) overrides.vigenciaFin    = vf
   const np = searchParams.get("numeroPersonas"); if (np) overrides.numeroPersonas = Number(np)
   const sinFirmas = searchParams.get("sinFirmas") === "true"
-  return generatePDFResponse(solicitudId, firmas, firmanteId, overrides, sinFirmas);
+  return generatePDFResponse(solicitudId, firmas, firmanteId, overrides, sinFirmas, catalogoId);
 }

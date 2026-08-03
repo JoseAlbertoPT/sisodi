@@ -304,7 +304,7 @@ function ConsultaTab() {
             <table className="w-full">
               <thead>
                 <tr>
-                  {["Programa / Proyecto", "Tipo de actividad", "Régimen", "Tipo de pago", "Importe bruto", "Acciones"].map((h) => (
+                  {["Folio de Dictamen", "Programa / Proyecto", "Tipo de actividad", "Régimen", "Tipo de pago", "Importe bruto", "Acciones"].map((h) => (
                     <th key={h} className={h === "Acciones" ? "text-center" : ""}>{h}</th>
                   ))}
                 </tr>
@@ -312,18 +312,21 @@ function ConsultaTab() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={6} className="text-center">
+                    <td colSpan={7} className="text-center">
                       <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                     </td>
                   </tr>
                 )}
                 {!loading && visibleRows.length === 0 && (
                   <tr className="empty-row">
-                    <td colSpan={6}><EmptyState icon={Inbox} title="Sin registros de honorarios" description="No se encontraron registros en el catálogo." /></td>
+                    <td colSpan={7}><EmptyState icon={Inbox} title="Sin registros de honorarios" description="No se encontraron registros en el catálogo." /></td>
                   </tr>
                 )}
                 {!loading && visibleRows.map((rec) => (
                   <tr key={rec.id}>
+                    <td className="max-w-[200px] truncate font-medium" title={rec.solicitud.folio_dictamen ?? ""}>
+                      {fmt(rec.solicitud.folio_dictamen)}
+                    </td>
                     <td className="max-w-[220px] truncate" title={rec.programa_proyecto}>
                       {fmt(rec.programa_proyecto)}
                     </td>
@@ -368,7 +371,7 @@ function ConsultaTab() {
             <table className="w-full">
               <thead>
                 <tr>
-                  {["Programa / Proyecto", "Denominación", "Puesto jefe inmediato", "Tipo de actividad", "Personas", "Importe neto", "Tipo de pago", "Acciones"].map((h) => (
+                  {["Folio de Dictamen", "Programa / Proyecto", "Denominación", "Puesto jefe inmediato", "Tipo de actividad", "Personas", "Importe neto", "Tipo de pago", "Acciones"].map((h) => (
                     <th key={h} className={h === "Acciones" ? "text-center" : ""}>{h}</th>
                   ))}
                 </tr>
@@ -376,18 +379,21 @@ function ConsultaTab() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={8} className="text-center">
+                    <td colSpan={9} className="text-center">
                       <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                     </td>
                   </tr>
                 )}
                 {!loading && visibleRows.length === 0 && (
                   <tr className="empty-row">
-                    <td colSpan={8}><EmptyState icon={Inbox} title="Sin registros de nombramiento" description="No se encontraron registros en el catálogo." /></td>
+                    <td colSpan={9}><EmptyState icon={Inbox} title="Sin registros de nombramiento" description="No se encontraron registros en el catálogo." /></td>
                   </tr>
                 )}
                 {!loading && visibleRows.map((rec) => (
                   <tr key={rec.id}>
+                    <td className="max-w-[200px] truncate font-medium" title={rec.solicitud.folio_dictamen ?? ""}>
+                      {fmt(rec.solicitud.folio_dictamen)}
+                    </td>
                     <td className="max-w-[200px] truncate" title={rec.programa_proyecto}>
                       {fmt(rec.programa_proyecto)}
                     </td>
@@ -740,6 +746,7 @@ function AdministracionTab() {
             <thead>
               <tr className="bg-muted/30 border-b border-border">
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Entidad</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Folio de Dictamen</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa / Proyecto</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Régimen</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
@@ -752,14 +759,14 @@ function AdministracionTab() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center">
+                  <td colSpan={9} className="px-4 py-10 text-center">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                   </td>
                 </tr>
               )}
               {!loading && records.length === 0 && (
                 <tr className="empty-row">
-                  <td colSpan={8}><EmptyState icon={Inbox} title="Sin registros en el catálogo" description="No se encontraron registros." /></td>
+                  <td colSpan={9}><EmptyState icon={Inbox} title="Sin registros en el catálogo" description="No se encontraron registros." /></td>
                 </tr>
               )}
               {!loading && records.map((rec) => {
@@ -769,6 +776,7 @@ function AdministracionTab() {
                   <td className="px-4 py-3 text-xs max-w-[140px] truncate" title={entidadNombre(rec)}>
                     {entidadNombre(rec).split(" > ")[0]}
                   </td>
+                  <td className="px-4 py-3 text-xs max-w-[200px] truncate font-medium" title={rec.solicitud.folio_dictamen ?? ""}>{fmt(rec.solicitud.folio_dictamen)}</td>
                   <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.programa_proyecto}>{fmt(rec.programa_proyecto)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />

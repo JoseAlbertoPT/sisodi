@@ -5,9 +5,11 @@ import {
   PlantillaCartaDescriptivaServicios,
   type CartaDescriptivaData,
 } from "@/components/plantillas/PlantillaCartaDescriptivaServicios";
+import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import React from "react";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -41,7 +43,16 @@ export async function buildCartaDescriptivaBuffer(
   catalogoId?: string | null,
 ) {
   const sol = solicitudId
-    ? await prisma.solicitud.findUnique({ where: { id: Number(solicitudId) } })
+    ? await prisma.solicitud.findUnique({
+        where: { id: Number(solicitudId) },
+        include: {
+          historial_solicitud: {
+            where: { comentario: { contains: MARCA_HISTORICO_IMPORTADO } },
+            take: 1,
+            select: { id: true },
+          },
+        },
+      })
     : null;
 
   let source: {
@@ -56,9 +67,12 @@ export async function buildCartaDescriptivaBuffer(
     valores: string | null;
     areas_exp: string | null;
     folioBase: string;
+    clave: string;
   } | null = null;
 
   if (sol) {
+    const esHistoricoImportado = sol.historial_solicitud.length > 0;
+    const folio = sol.folio_dictamen ?? sol.folio_recepcion ?? String(sol.id);
     source = {
       fecha: formatFechaMesAnio(sol.fecha_creacion ?? sol.fecha_envio),
       objeto: sol.objeto,
@@ -71,12 +85,14 @@ export async function buildCartaDescriptivaBuffer(
       valores: sol.valores,
       areas_exp: sol.areas_exp,
       folioBase: sol.folio_recepcion ?? sol.folio_dictamen ?? String(sol.id),
+      clave: claveOverride ?? claveParaPdf(sol.secretaria, folio, esHistoricoImportado),
     };
   } else if (catalogoId) {
     // Registro histórico sin solicitud viva (ver prisma/import-historico-consolidado.ts):
     // los datos ya se archivaron directo en catalogo_justificacion.
     const cj = await prisma.catalogo_justificacion.findUnique({ where: { id: Number(catalogoId) } });
     if (!cj) return null;
+    const folio = cj.folio_dictamen ?? cj.folio_recepcion ?? String(cj.id);
     source = {
       fecha: formatFechaMesAnio(cj.fecha_emision ?? cj.creado_en),
       objeto: cj.objeto,
@@ -89,14 +105,15 @@ export async function buildCartaDescriptivaBuffer(
       valores: cj.valores,
       areas_exp: cj.areas_exp,
       folioBase: cj.folio_recepcion ?? cj.folio_dictamen ?? String(cj.id),
+      // Histórico: siempre sin siglas, folio real tal cual.
+      clave: claveOverride ?? claveParaPdf(cj.secretaria, folio, true),
     };
   }
 
   if (!source) return null;
 
   const data: CartaDescriptivaData = {
-    // ponytail: clave llega por override; pendiente definir dónde nace en sistema
-    clave: claveOverride ?? "",
+    clave: source.clave,
     fecha: source.fecha,
     objetoContratacion: source.objeto ?? "",
     actividades: source.actividades,
