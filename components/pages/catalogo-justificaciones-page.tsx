@@ -461,6 +461,7 @@ function ConsultaTab() {
             ) : pdfBlobUrl ? (
               <PdfPreview fileUrl={pdfBlobUrl} />
             ) : (
+
               <div className="flex flex-col items-center justify-center h-full gap-3">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/20">
                   <AlertCircle className="h-7 w-7 text-white/70" />
