@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { getEstadoId } from "@/lib/estado-cache"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -129,25 +130,19 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    const solicitud = await prisma.solicitud.findUnique({
-      where:   { id: idNum },
-      include: { estado: true, usuario: { select: { secretaria_id: true, secretaria_texto: true, area_id: true } } },
-    })
+    const [solicitud, estadoNuevoId] = await Promise.all([
+      prisma.solicitud.findUnique({
+        where:   { id: idNum },
+        include: { estado: true, usuario: { select: { secretaria_id: true, secretaria_texto: true, area_id: true } } },
+      }),
+      getEstadoId(nuevoEstado, { crearSiNoExiste: { descripcion: `Estado: ${nuevoEstado}` } }),
+    ])
 
     if (!solicitud) {
       return NextResponse.json(
         { ok: false, error: "Solicitud no encontrada" },
         { status: 404 }
       )
-    }
-
-    let estadoNuevo = await prisma.estado.findFirst({
-      where: { nombre: { equals: nuevoEstado, mode: "insensitive" } },
-    })
-    if (!estadoNuevo) {
-      estadoNuevo = await prisma.estado.create({
-        data: { nombre: nuevoEstado, descripcion: `Estado: ${nuevoEstado}` },
-      })
     }
 
     const esEnvioAValidacion =
@@ -212,29 +207,30 @@ export async function PATCH(req: NextRequest) {
       folioJustificacionNuevo = `JUST-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
     }
 
-    const solicitudActualizada = await prisma.solicitud.update({
-      where:   { id: idNum },
-      data:    {
-        estado_id: estadoNuevo.id,
-        ...(esEnvioAValidacion && { fecha_envio: new Date() }),
-        ...(folioRecepcionNuevo    && { folio_recepcion:     folioRecepcionNuevo }),
-        ...(folioJustificacionNuevo && { folio_justificacion: folioJustificacionNuevo }),
-        ...(revisorId && { revisor_asignado_id: revisorId }),
-      },
-      include: { estado: true, periodo: true },
-    })
+    const [solicitudActualizada] = await Promise.all([
+      prisma.solicitud.update({
+        where:   { id: idNum },
+        data:    {
+          estado_id: estadoNuevoId!,
+          ...(esEnvioAValidacion && { fecha_envio: new Date() }),
+          ...(folioRecepcionNuevo    && { folio_recepcion:     folioRecepcionNuevo }),
+          ...(folioJustificacionNuevo && { folio_justificacion: folioJustificacionNuevo }),
+          ...(revisorId && { revisor_asignado_id: revisorId }),
+        },
+        include: { estado: true, periodo: true },
+      }),
+      prisma.historial_solicitud.create({
+        data: {
+          solicitud_id:       idNum,
+          usuario_id:         usuarioId,
+          estado_anterior_id: solicitud.estado_id,
+          estado_nuevo_id:    estadoNuevoId!,
+          comentario:         comentario ?? null,
+        },
+      }),
+    ])
 
-    await prisma.historial_solicitud.create({
-      data: {
-        solicitud_id:       idNum,
-        usuario_id:         usuarioId,
-        estado_anterior_id: solicitud.estado_id,
-        estado_nuevo_id:    estadoNuevo.id,
-        comentario:         comentario ?? null,
-      },
-    })
-
-    console.log(`[validacion PATCH] solicitud=${idNum} estado_anterior="${solicitud.estado.nombre}" → estado_nuevo="${estadoNuevo.nombre}"`)
+    console.log(`[validacion PATCH] solicitud=${idNum} estado_anterior="${solicitud.estado.nombre}" → estado_nuevo="${nuevoEstado}"`)
     broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({
       ok:    true,

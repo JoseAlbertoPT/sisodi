@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { getEstadoId } from "@/lib/estado-cache"
 
 function parseDate(v: unknown): Date | null {
   if (!v) return null
@@ -87,10 +88,29 @@ export async function POST(req: NextRequest) {
     } = body
     if (!usuarioId)      return NextResponse.json({ ok: false, error: "usuarioId es requerido" }, { status: 400 })
     if (!tipo_solicitud) return NextResponse.json({ ok: false, error: "tipo_solicitud es requerido" }, { status: 400 })
-    const usuarioCreador = await prisma.usuario.findUnique({
-      where:  { id: usuarioId },
-      select: { secretaria_id: true, secretaria_texto: true, area_id: true },
-    })
+    const estadoNombre = estado_nombre ?? "En Captura"
+
+    const [usuarioCreador, estadoIdResuelto, periodoIdResuelto] = await Promise.all([
+      prisma.usuario.findUnique({
+        where:  { id: usuarioId },
+        select: { secretaria_id: true, secretaria_texto: true, area_id: true },
+      }),
+      (async () => {
+        const id = await getEstadoId(estadoNombre)
+        if (id) return id
+        if (estadoNombre === "Borrador") return getEstadoId("En Captura")
+        return null
+      })(),
+      resolverPeriodoId(periodoId, periodoMes, periodoAnio),
+    ])
+
+    if (!estadoIdResuelto) {
+      return NextResponse.json(
+        { ok: false, error: `Estado '${estadoNombre}' no existe en la base de datos` },
+        { status: 500 }
+      )
+    }
+
     const tipoFolioJUST = usuarioCreador?.secretaria_id
       ? `JUST-${usuarioCreador.secretaria_id}`
       : usuarioCreador?.area_id
@@ -98,28 +118,41 @@ export async function POST(req: NextRequest) {
         : secretaria
           ? `JUST-SEC-${secretaria.trim().toUpperCase().replace(/\s+/g, "_").slice(0, 30)}`
           : "JUST-P"
-    const estadoNombre = estado_nombre ?? "En Captura"
-    let estadoInicial = await prisma.estado.findFirst({
-      where: { nombre: { equals: estadoNombre, mode: "insensitive" } },
-    })
-    if (!estadoInicial && estadoNombre === "Borrador") {
-      estadoInicial = await prisma.estado.findFirst({
-        where: { nombre: { equals: "En Captura", mode: "insensitive" } },
-      })
-    }
-    if (!estadoInicial) {
-      return NextResponse.json(
-        { ok: false, error: `Estado '${estadoNombre}' no existe en la base de datos` },
-        { status: 500 }
-      )
-    }
 
     const trunc = (val: string | null | undefined, max: number): string | null =>
         val ? val.substring(0, max) : null
+
+    const year       = new Date().getFullYear()
+    const esBorrador = estadoNombre === "Borrador"
+    let folioJustificacion: string | null = null
+    if (!esBorrador) {
+      if (esExtemporanea) {
+        const registroActual = await prisma.consecutivo_folio.findFirst({
+          where: { tipo: tipoFolioJUST, mes: 0, anio: year },
+        })
+        const ultimoConsecutivo = registroActual?.consecutivo ?? 1
+        const basePadded    = String(ultimoConsecutivo).padStart(4, "0")
+        const baseParaFolio = `JUST-${year}-${basePadded}`
+        const yaExistentes = await prisma.solicitud.findMany({
+          where:  { folio_justificacion: { startsWith: `${baseParaFolio}-` } },
+          select: { folio_justificacion: true },
+        })
+        const sufijo = yaExistentes.length + 1
+        folioJustificacion = `${baseParaFolio}-${sufijo}`
+      } else {
+        const registro = await prisma.consecutivo_folio.upsert({
+          where:  { tipo_mes_anio: { tipo: tipoFolioJUST, mes: 0, anio: year } },
+          update: { consecutivo: { increment: 1 } },
+          create: { tipo: tipoFolioJUST, mes: 0, anio: year, consecutivo: 1 },
+        })
+        folioJustificacion = `JUST-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
+      }
+    }
+
     const nueva = await prisma.solicitud.create({
       data: {
         usuario_id:            usuarioId,
-        estado_id:             estadoInicial.id,
+        estado_id:             estadoIdResuelto,
         tipo_solicitud,
         tipo_administracion:      trunc(tipo_administracion ?? "centralizada", 20),
         secretaria_id_snapshot:   (tipo_administracion ?? "centralizada") !== "paraestatal"
@@ -128,7 +161,8 @@ export async function POST(req: NextRequest) {
         secretaria_txt_snapshot:  (tipo_administracion ?? "centralizada") === "paraestatal"
                                     ? (usuarioCreador?.secretaria_texto ?? null)
                                     : null,
-        periodo_id:            ((await resolverPeriodoId(periodoId, periodoMes, periodoAnio)) ?? periodoId ?? 1) as number,
+        periodo_id:            (periodoIdResuelto ?? periodoId ?? 1) as number,
+        folio_justificacion:   folioJustificacion,
         es_extemporanea:       esExtemporanea ?? false,
         secretaria:            trunc(secretaria, 200),
         unidad_administrativa: trunc(unidad_administrativa, 200),
@@ -167,41 +201,6 @@ export async function POST(req: NextRequest) {
         condicion_viajar:           condicion_viajar ?? false,
         resguardo_activos:          typeof resguardo_activos === "boolean" ? (resguardo_activos ? "si" : "no") : trunc(resguardo_activos, 10),
       },
-    })
-
-    const fechaCreacion = nueva.fecha_creacion ?? new Date()
-    const year          = fechaCreacion.getFullYear()
-    const esBorrador    = estadoNombre === "Borrador"
-    let folioJustificacion: string | null = null
-    if (!esBorrador) {
-      if (esExtemporanea) {
-        const registroActual = await prisma.consecutivo_folio.findFirst({
-          where: { tipo: tipoFolioJUST, mes: 0, anio: year },
-        })
-        const ultimoConsecutivo = registroActual?.consecutivo ?? 1
-        const basePadded    = String(ultimoConsecutivo).padStart(4, "0")
-        const baseParaFolio = `JUST-${year}-${basePadded}`
-        const yaExistentes = await prisma.solicitud.findMany({
-          where:  { folio_justificacion: { startsWith: `${baseParaFolio}-` } },
-          select: { folio_justificacion: true },
-        })
-        const sufijo = yaExistentes.length + 1
-        folioJustificacion = `${baseParaFolio}-${sufijo}`
-      } else {
-        const registro = await prisma.consecutivo_folio.upsert({
-          where:  { tipo_mes_anio: { tipo: tipoFolioJUST, mes: 0, anio: year } },
-          update: { consecutivo: { increment: 1 } },
-          create: { tipo: tipoFolioJUST, mes: 0, anio: year, consecutivo: 1 },
-        })
-        folioJustificacion = `JUST-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
-      }
-    }
-
-    const nuevaConFolio = await prisma.solicitud.update({
-      where: { id: nueva.id },
-      data: {
-        folio_justificacion: folioJustificacion,
-      },
       include: {
         estado: true, periodo: true,
         usuario: {
@@ -217,7 +216,7 @@ export async function POST(req: NextRequest) {
     await prisma.historial_solicitud.create({
       data: {
         solicitud_id:    nueva.id,
-        estado_nuevo_id: estadoInicial.id,
+        estado_nuevo_id: estadoIdResuelto,
         usuario_id:      usuarioId,
         comentario:      estadoNombre === "Borrador"
           ? "Borrador guardado por la URG"
@@ -225,7 +224,7 @@ export async function POST(req: NextRequest) {
       },
     })
     broadcastUpdate(ALL_APARTADOS)
-    return NextResponse.json({ ok: true, data: nuevaConFolio, folio: folioJustificacion }, { status: 201 })
+    return NextResponse.json({ ok: true, data: nueva, folio: folioJustificacion }, { status: 201 })
   } catch (error: any) {
     console.error("[POST /api/solicitudes]", error)
     return NextResponse.json({ ok: false, error: error?.message ?? "Error al crear solicitud" }, { status: 500 })
@@ -329,15 +328,15 @@ export async function PATCH(req: NextRequest) {
     })
 
     if (usuarioId && historialDiff && historialDiff.length > 0) {
-      let estadoMod = await prisma.estado.findFirst({ where: { nombre: { equals: "Modificada", mode: "insensitive" } } })
-      if (!estadoMod) estadoMod = await prisma.estado.create({ data: { nombre: "Modificada", descripcion: "Solicitud editada por el capturista" } })
-      const estadoActual = await prisma.solicitud.findUnique({ where: { id: solicitudId }, select: { estado_id: true } })
+      const estadoModId = await getEstadoId("Modificada", {
+        crearSiNoExiste: { descripcion: "Solicitud editada por el capturista" },
+      })
       await prisma.historial_solicitud.create({
         data: {
           solicitud_id:       solicitudId,
           usuario_id:         usuarioId,
-          estado_anterior_id: estadoActual?.estado_id ?? null,
-          estado_nuevo_id:    estadoMod.id,
+          estado_anterior_id: updated.estado_id ?? null,
+          estado_nuevo_id:    estadoModId!,
           comentario:         JSON.stringify({ tipo: "edicion", cambios: historialDiff }),
         },
       })

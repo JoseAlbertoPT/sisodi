@@ -1062,6 +1062,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, g
         <div className="flex items-center gap-3">
           <Button
             variant="default"
+            size="sm"
             className="gap-1.5"
             onClick={() => setShowDescargarConfirm(true)}
           >
