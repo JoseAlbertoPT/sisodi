@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ records: [], total: 0, page, limit })
     }
 
-    const conditions: string[] = ["cj.activo = true"]
+    const conditions: string[] = []
     const params: any[] = [viewerSecretaria]
     conditions.push(`lower(trim(split_part(COALESCE(cj.secretaria, s.secretaria), '>', 1))) = lower($1)`)
 
