@@ -182,10 +182,12 @@ function ConsultaTab() {
   useEffect(() => {
     if (!showView || !viewRec) return
     setPdfBlobUrl(null)
-    if (!viewRec.solicitud.id) { setPdfLoading(false); return }
     const controller = new AbortController()
     setPdfLoading(true)
-    fetch(`/api/pdf/carta-descriptiva?id=${viewRec.solicitud.id}`, { signal: controller.signal })
+    const pdfParams = viewRec.solicitud.id
+      ? `id=${viewRec.solicitud.id}`
+      : `catalogoId=${viewRec.id}`
+    fetch(`/api/pdf/carta-descriptiva?${pdfParams}`, { signal: controller.signal })
       .then((r) => { if (!r.ok) throw new Error("Error al generar PDF"); return r.blob() })
       .then((blob) => {
         if (controller.signal.aborted) return

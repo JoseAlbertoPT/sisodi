@@ -416,6 +416,24 @@ model catalogo_justificacion {
   secretaria_txt_snapshot   String?              @db.VarChar(512)
   folio_recepcion           String?              @db.VarChar(50)
   folio_dictamen            String?              @db.VarChar(50)
+  folio_justificacion       String?              @db.VarChar(50)
+  folio_anterior            String?              @db.VarChar(50)
+  objeto                    String?
+  actividades               String[]             @default([])
+  responsabilidades         String[]             @default([])
+  escolaridad               String?
+  comp_adm                  String?
+  comp_tec                  String?
+  comp_soc                  String?
+  valores                   String?
+  areas_exp                 String?
+  unidad_administrativa     String?              @db.VarChar(200)
+  unidad_responsable        String?              @db.VarChar(200)
+  vigencia_inicio           DateTime?            @db.Date
+  vigencia_fin              DateTime?            @db.Date
+  es_renovacion             Boolean?             @default(false)
+  tipo_administracion       String?              @db.VarChar(20)
+  fecha_emision             DateTime?            @db.Timestamp(6)
   solicitud                 solicitud?           @relation(fields: [solicitud_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   catalogo_solicitudes      catalogo_solicitud[]
 }

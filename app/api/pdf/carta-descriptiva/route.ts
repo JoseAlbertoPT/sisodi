@@ -36,28 +36,77 @@ function formatFechaMesAnio(d: Date | null | undefined): string {
 }
 
 export async function buildCartaDescriptivaBuffer(
-  solicitudId: string,
+  solicitudId: string | null,
   claveOverride: string | null,
+  catalogoId?: string | null,
 ) {
-  const sol = await prisma.solicitud.findUnique({
-    where: { id: Number(solicitudId) },
-  });
+  const sol = solicitudId
+    ? await prisma.solicitud.findUnique({ where: { id: Number(solicitudId) } })
+    : null;
 
-  if (!sol) return null;
+  let source: {
+    fecha: string;
+    objeto: string | null;
+    actividades: string[];
+    responsabilidades: string[];
+    escolaridad: string | null;
+    comp_adm: string | null;
+    comp_tec: string | null;
+    comp_soc: string | null;
+    valores: string | null;
+    areas_exp: string | null;
+    folioBase: string;
+  } | null = null;
+
+  if (sol) {
+    source = {
+      fecha: formatFechaMesAnio(sol.fecha_creacion ?? sol.fecha_envio),
+      objeto: sol.objeto,
+      actividades: sol.actividades ?? [],
+      responsabilidades: sol.responsabilidades ?? [],
+      escolaridad: sol.escolaridad,
+      comp_adm: sol.comp_adm,
+      comp_tec: sol.comp_tec,
+      comp_soc: sol.comp_soc,
+      valores: sol.valores,
+      areas_exp: sol.areas_exp,
+      folioBase: sol.folio_recepcion ?? sol.folio_dictamen ?? String(sol.id),
+    };
+  } else if (catalogoId) {
+    // Registro histórico sin solicitud viva (ver prisma/import-historico-consolidado.ts):
+    // los datos ya se archivaron directo en catalogo_justificacion.
+    const cj = await prisma.catalogo_justificacion.findUnique({ where: { id: Number(catalogoId) } });
+    if (!cj) return null;
+    source = {
+      fecha: formatFechaMesAnio(cj.fecha_emision ?? cj.creado_en),
+      objeto: cj.objeto,
+      actividades: cj.actividades ?? [],
+      responsabilidades: cj.responsabilidades ?? [],
+      escolaridad: cj.escolaridad,
+      comp_adm: cj.comp_adm,
+      comp_tec: cj.comp_tec,
+      comp_soc: cj.comp_soc,
+      valores: cj.valores,
+      areas_exp: cj.areas_exp,
+      folioBase: cj.folio_recepcion ?? cj.folio_dictamen ?? String(cj.id),
+    };
+  }
+
+  if (!source) return null;
 
   const data: CartaDescriptivaData = {
     // ponytail: clave llega por override; pendiente definir dónde nace en sistema
     clave: claveOverride ?? "",
-    fecha: formatFechaMesAnio(sol.fecha_creacion ?? sol.fecha_envio),
-    objetoContratacion: sol.objeto ?? "",
-    actividades: sol.actividades ?? [],
-    responsabilidades: sol.responsabilidades ?? [],
-    escolaridad: splitToArray(sol.escolaridad),
-    competenciasAdministrativas: splitToArray(sol.comp_adm),
-    competenciasTecnicas: splitToArray(sol.comp_tec),
-    competenciasSociales: splitToArray(sol.comp_soc),
-    valores: splitToArray(sol.valores),
-    areasExperiencia: splitToArray(sol.areas_exp),
+    fecha: source.fecha,
+    objetoContratacion: source.objeto ?? "",
+    actividades: source.actividades,
+    responsabilidades: source.responsabilidades,
+    escolaridad: splitToArray(source.escolaridad),
+    competenciasAdministrativas: splitToArray(source.comp_adm),
+    competenciasTecnicas: splitToArray(source.comp_tec),
+    competenciasSociales: splitToArray(source.comp_soc),
+    valores: splitToArray(source.valores),
+    areasExperiencia: splitToArray(source.areas_exp),
   };
 
   const stream = await renderToStream(
@@ -68,9 +117,7 @@ export async function buildCartaDescriptivaBuffer(
   );
   const buffer = await streamToBuffer(stream as unknown as NodeJS.ReadableStream);
 
-  const folioBase =
-    sol.folio_recepcion ?? sol.folio_dictamen ?? String(sol.id);
-  const filename = `CartaDescriptiva_${folioBase.replace(/\//g, "-")}.pdf`;
+  const filename = `CartaDescriptiva_${source.folioBase.replace(/\//g, "-")}.pdf`;
 
   return { buffer, sol, filename };
 }
@@ -78,15 +125,16 @@ export async function buildCartaDescriptivaBuffer(
 async function buildPDFResponse(
   solicitudId: string | null,
   claveOverride: string | null,
+  catalogoId: string | null = null,
 ) {
-  if (!solicitudId) {
+  if (!solicitudId && !catalogoId) {
     return NextResponse.json(
-      { ok: false, error: "Falta solicitudId" },
+      { ok: false, error: "Falta solicitudId o catalogoId" },
       { status: 400 },
     );
   }
 
-  const result = await buildCartaDescriptivaBuffer(solicitudId, claveOverride);
+  const result = await buildCartaDescriptivaBuffer(solicitudId, claveOverride, catalogoId);
   if (!result) {
     return NextResponse.json(
       { ok: false, error: "Solicitud no encontrada" },
@@ -108,12 +156,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
   const clave = searchParams.get("clave");
-  return buildPDFResponse(solicitudId, clave);
+  const catalogoId = searchParams.get("catalogoId");
+  return buildPDFResponse(solicitudId, clave, catalogoId);
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const solicitudId = body?.solicitudId ? String(body.solicitudId) : null;
   const clave = body?.clave ? String(body.clave) : null;
-  return buildPDFResponse(solicitudId, clave);
+  const catalogoId = body?.catalogoId ? String(body.catalogoId) : null;
+  return buildPDFResponse(solicitudId, clave, catalogoId);
 }
