@@ -15,8 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
-  Download, FileCheck, Stamp, Printer,
-  Loader2, AlertTriangle, RefreshCw, MoreVertical, MoreHorizontal, Eye, Inbox,
+  Download,
+  Loader2, AlertTriangle, MoreHorizontal, Eye, Inbox,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
@@ -464,6 +464,7 @@ export function DictamenesPage() {
   useEffect(() => { setCurrentPage(1) }, [searchTerm, filterAnio, filterMes, filterSecretaria, filterTipo])
 
   const totalPages    = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(Math.max(1, totalPages)) }, [totalPages, currentPage])
   const paginated     = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const totalDictamenes  = dictamenes.filter((d) => d.tipoDoc === "dictamen").length
@@ -518,23 +519,17 @@ export function DictamenesPage() {
         </div>
       </div>
 
-      <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">
-            {loading
-              ? "Cargando..."
-              : `${filtered.length} registro${filtered.length !== 1 ? "s" : ""} encontrado${filtered.length !== 1 ? "s" : ""}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12 gap-3">
-              <Loader2 className="h-6 w-6 animate-spin text-secondary" />
-              <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+      {loading ? (
+        <div className="rounded-2xl bg-background border border-border shadow-sm">
+          <div className="flex items-center justify-center py-12 gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-secondary" />
+            <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-background border border-border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-bg-base text-content-high">
                     <th className="px-4 py-3 text-left font-semibold">Folio Dictamen</th>
@@ -544,8 +539,8 @@ export function DictamenesPage() {
                     <th className="px-4 py-3 text-left font-semibold">Denominación</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha Dict.</th>
                     <th className="px-4 py-3 text-left font-semibold">Modalidad</th>
-                    <th className="px-4 py-3 text-left font-semibold">Destinatarios</th>
-                    <th className="px-4 py-3 font-semibold"><div className="flex justify-end">Acciones</div></th>
+                    <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Destinatarios</th>
+                    <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -613,8 +608,8 @@ export function DictamenesPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end">
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex justify-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 bg-bg-surface-low border border-border-low">
@@ -650,9 +645,8 @@ export function DictamenesPage() {
                 </tbody>
               </table>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+      )}
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </PageLayout>
   )

@@ -444,9 +444,21 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 {error}
               </p>
             )}
-            <div className="flex justify-end gap-2">
-              <Button variant="default" onClick={() => { reset(); onClose() }} disabled={trabajando}>Cancelar</Button>
-              <Button type="submit" variant="vino" disabled={trabajando}>
+            <div className="-mx-8 -mb-6 mt-2 flex items-center justify-end gap-2 border-t border-[var(--sem-border-md)] px-6 py-4">
+              <Button
+                variant="default"
+                className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+                onClick={() => { reset(); onClose() }}
+                disabled={trabajando}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="vino"
+                className="rounded-full h-10 px-6 font-normal shadow-sm"
+                disabled={trabajando}
+              >
                 {trabajando && <Loader2 className="h-4 w-4 animate-spin" />}
                 {esEmisor ? "Firmar y Emitir" : "Firmar"}
               </Button>

@@ -107,7 +107,7 @@ export function TablePagination({ currentPage, totalPages, onPageChange }: Table
           onBlur={submitGoTo}
           onKeyDown={(e) => { if (e.key === "Enter") { e.currentTarget.blur() } }}
           aria-label="Ir a la página"
-          className="h-9 w-14 rounded-md border border-border bg-white text-center text-sm text-content-high [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="h-9 min-w-9 rounded-md border border-border bg-white px-2 text-center text-sm text-content-high field-sizing-content [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <span>de {totalPages}</span>
       </div>

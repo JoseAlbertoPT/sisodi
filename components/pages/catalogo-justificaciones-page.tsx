@@ -22,20 +22,13 @@ import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { SearchInput, SEARCH_INPUT_MAX_W_MD, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
 import {
-
   Search,
   Loader2,
   Eye,
-  BookOpen,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
-  ToggleLeft,
-  ToggleRight,
   ListChecks,
   Send,
   AlertCircle,
-  MoreVertical,
   MoreHorizontal,
   Power,
   PowerOff,
@@ -102,9 +95,6 @@ interface AdminRecord extends CatalogoRecord {
   }[]
 }
 
-const C_VERDE: string = "#2d4a3e"
-const C_BEIGE: string = "#f0ede4"
-const C_VINO: string  = "var(--sem-accent-primary)"
 function fmt(val: string | null | undefined) {
   return val ?? "—"
 }
@@ -275,10 +265,8 @@ function ConsultaTab() {
   const nombramiento  = records.filter((r) =>  isParaestatal(r))
   const allVisible    = tipoTab === "honorarios" ? honorarios : nombramiento
   const totalPages    = Math.max(1, Math.ceil(allVisible.length / limit))
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [totalPages, page])
   const visibleRows   = allVisible.slice((page - 1) * limit, page * limit)
-  const VERDE  = C_VERDE
-  const BEIGE  = C_BEIGE
-  const MORADO = C_VINO
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
@@ -298,6 +286,9 @@ function ConsultaTab() {
             <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado ({nombramiento.length})</SelectItem>
           </SelectContent>
         </Select>
+        <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        </Button>
       </div>
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3">
@@ -305,47 +296,22 @@ function ConsultaTab() {
           <span className="text-sm text-destructive">{error}</span>
         </div>
       )}
-      <div
-        className="rounded-xl overflow-hidden mb-5"
-        style={{ boxShadow: "0 2px 12px rgba(0,0,0,.08)", border: "1px solid #e2ddd6" }}
-      >
-        <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-[#e2ddd6]">
-          <span className="text-xs text-muted-foreground">
-            {allVisible.length} registro{allVisible.length !== 1 ? "s" : ""}{q.trim() ? ` de ${allRecords.length}` : ""}
-          </span>
-          <button
-            type="button"
-            onClick={fetchData}
-            disabled={loading}
-            className="flex items-center justify-center rounded-lg w-7 h-7 border transition-colors hover:bg-muted/30 disabled:opacity-40"
-            style={{ borderColor: "rgb(120 5 84 / 0.62)" }}
-          >
-            {loading
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-              : <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />}
-          </button>
-        </div>
+      <div className="rounded-2xl bg-background border border-border shadow-sm overflow-hidden mb-5">
         <div className="overflow-x-auto">
           {tipoTab === "honorarios" ? (
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: VERDE }}>
+                <tr>
                   {["Programa / Proyecto", "Tipo de actividad", "Régimen", "Tipo de pago", "Importe bruto", "Acciones"].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "rgba(255,255,255,.9)" }}
-                    >
-                      {h}
-                    </th>
+                    <th key={h} className={h === "Acciones" ? "text-center" : ""}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center">
-                      <Loader2 className="h-5 w-5 animate-spin mx-auto" style={{ color: VERDE }} />
+                    <td colSpan={6} className="text-center">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                     </td>
                   </tr>
                 )}
@@ -354,27 +320,19 @@ function ConsultaTab() {
                     <td colSpan={6}><EmptyState icon={Inbox} title="Sin registros de honorarios" description="No se encontraron registros en el catálogo." /></td>
                   </tr>
                 )}
-                {!loading && visibleRows.map((rec, idx) => (
-                  <tr
-                    key={rec.id}
-                    className="transition-colors"
-                    style={{
-                      backgroundColor: idx % 2 === 1 ? BEIGE : "#fff",
-                      borderBottom: "1px solid #e8e4dc",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e8e2d8")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = idx % 2 === 1 ? BEIGE : "#fff")}
-                  >
-                    <td className="px-4 py-3 text-xs max-w-[220px] truncate font-medium" style={{ color: "#2a2a2a" }} title={rec.programa_proyecto}>
+                {!loading && visibleRows.map((rec) => (
+                  <tr key={rec.id}>
+                    <td className="max-w-[220px] truncate" title={rec.programa_proyecto}>
                       {fmt(rec.programa_proyecto)}
                     </td>
-                    <td className="px-4 py-3 text-xs max-w-[200px] truncate text-gray-600">{fmt(rec.tipo_actividad)}</td>
-                    <td className="px-4 py-3">
+                    <td className="max-w-[200px] truncate">{fmt(rec.tipo_actividad)}</td>
+                    <td>
                       <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 capitalize">{fmt(rec.tipo_pago)}</td>
-                    <td className="px-4 py-3 text-xs font-medium" style={{ color: "#2a2a2a" }}>{fmtMoney(rec.importe_bruto)}</td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="capitalize">{fmt(rec.tipo_pago)}</td>
+                    <td>{fmtMoney(rec.importe_bruto)}</td>
+                    <td className="text-center">
+                      <div className="flex justify-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -394,31 +352,26 @@ function ConsultaTab() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: VERDE }}>
+                <tr>
                   {["Programa / Proyecto", "Denominación", "Puesto jefe inmediato", "Tipo de actividad", "Personas", "Importe neto", "Tipo de pago", "Acciones"].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-semibold whitespace-nowrap"
-                      style={{ color: "rgba(255,255,255,.9)" }}
-                    >
-                      {h}
-                    </th>
+                    <th key={h} className={h === "Acciones" ? "text-center" : ""}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
-                      <Loader2 className="h-5 w-5 animate-spin mx-auto" style={{ color: VERDE }} />
+                    <td colSpan={8} className="text-center">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                     </td>
                   </tr>
                 )}
@@ -427,29 +380,21 @@ function ConsultaTab() {
                     <td colSpan={8}><EmptyState icon={Inbox} title="Sin registros de nombramiento" description="No se encontraron registros en el catálogo." /></td>
                   </tr>
                 )}
-                {!loading && visibleRows.map((rec, idx) => (
-                  <tr
-                    key={rec.id}
-                    className="transition-colors"
-                    style={{
-                      backgroundColor: idx % 2 === 1 ? BEIGE : "#fff",
-                      borderBottom: "1px solid #e8e4dc",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e8e2d8")}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = idx % 2 === 1 ? BEIGE : "#fff")}
-                  >
-                    <td className="px-4 py-3 text-xs max-w-[200px] truncate font-medium" style={{ color: "#2a2a2a" }} title={rec.programa_proyecto}>
+                {!loading && visibleRows.map((rec) => (
+                  <tr key={rec.id}>
+                    <td className="max-w-[200px] truncate" title={rec.programa_proyecto}>
                       {fmt(rec.programa_proyecto)}
                     </td>
-                    <td className="px-4 py-3 text-xs max-w-[200px] truncate text-gray-600" title={rec.denominacion_nombramiento ?? ""}>
+                    <td className="max-w-[200px] truncate" title={rec.denominacion_nombramiento ?? ""}>
                       {fmt(rec.denominacion_nombramiento)}
                     </td>
-                    <td className="px-4 py-3 text-xs max-w-[160px] truncate text-gray-500">{fmt(rec.puesto_jefe_inmediato)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{fmt(rec.tipo_actividad)}</td>
-                    <td className="px-4 py-3 text-xs text-center text-gray-600">{rec.numero_personas ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs font-medium" style={{ color: "#2a2a2a" }}>{fmtMoney(rec.importe_bruto)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500 capitalize">{fmt(rec.tipo_pago)}</td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="max-w-[160px] truncate">{fmt(rec.puesto_jefe_inmediato)}</td>
+                    <td>{fmt(rec.tipo_actividad)}</td>
+                    <td>{rec.numero_personas ?? "—"}</td>
+                    <td>{fmtMoney(rec.importe_bruto)}</td>
+                    <td className="capitalize">{fmt(rec.tipo_pago)}</td>
+                    <td className="text-center">
+                      <div className="flex justify-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -469,6 +414,7 @@ function ConsultaTab() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -519,15 +465,15 @@ function ConsultaTab() {
           <div className="px-4 pb-4 pt-3 flex justify-end gap-3 border-t border-border shrink-0">
             <Button
               variant="default"
+              className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
               onClick={() => setShowView(false)}
-              className="px-5 py-2.5 h-auto"
             >
               Cerrar
             </Button>
             <Button
+              variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm"
               onClick={() => { if (viewRec) { setShowView(false); openSol(viewRec) } }}
-              className="gap-2 px-5 py-2.5 h-auto rounded-2xl hover:opacity-90 font-medium"
-              style={{ backgroundColor: MORADO, color: "#fff" }}
             >
               Solicitar
             </Button>
@@ -542,99 +488,101 @@ function ConsultaTab() {
             </DialogTitle>
           </div>
           {solRec && (
-            <div className="flex flex-col gap-4 px-6 py-5">
-              <p className="text-xs text-[var(--sem-content-low)]">
-                {isParaestatal(solRec)
-                  ? "Ajusta la vigencia y el número de personas. Se descargará el PDF del dictamen sin firmas."
-                  : "Ajusta la vigencia y el número de prestadores de servicio. Se descargará el PDF del dictamen sin firmas."}
-              </p>
-              <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
-                <p className="font-semibold text-[#1F2937]">{entidadNombre(solRec)}</p>
-                <p className="text-[var(--sem-content-low)]">{fmt(solRec.programa_proyecto)}</p>
-                <p className="text-[var(--sem-content-low)]">
-                  Vigencia actual:{" "}
-                  <span className="font-medium text-[#1F2937]">{fmt(solRec.vigencia)}</span>
+            <>
+              <div className="flex flex-col gap-4 px-6 py-5">
+                <p className="text-xs text-[var(--sem-content-low)]">
+                  {isParaestatal(solRec)
+                    ? "Ajusta la vigencia y el número de personas. Se descargará el PDF del dictamen sin firmas."
+                    : "Ajusta la vigencia y el número de prestadores de servicio. Se descargará el PDF del dictamen sin firmas."}
                 </p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium flex items-center gap-1.5">
-                  Nueva vigencia
-                </Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Inicio</span>
-                    <DatePickerHabil
-                      value={solVigInicio}
-                      onChange={(d) => setSolVigInicio(d)}
-                      placeholder="Seleccionar inicio"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Término</span>
-                    <DatePickerHabil
-                      value={solVigFin}
-                      fromDate={solVigInicio}
-                      onChange={(d) => setSolVigFin(d)}
-                      placeholder="Seleccionar término"
-                    />
+                <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
+                  <p className="font-semibold text-[#1F2937]">{entidadNombre(solRec)}</p>
+                  <p className="text-[var(--sem-content-low)]">{fmt(solRec.programa_proyecto)}</p>
+                  <p className="text-[var(--sem-content-low)]">
+                    Vigencia actual:{" "}
+                    <span className="font-medium text-[#1F2937]">{fmt(solRec.vigencia)}</span>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    Nueva vigencia
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Inicio</span>
+                      <DatePickerHabil
+                        value={solVigInicio}
+                        onChange={(d) => setSolVigInicio(d)}
+                        placeholder="Seleccionar inicio"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Término</span>
+                      <DatePickerHabil
+                        value={solVigFin}
+                        fromDate={solVigInicio}
+                        onChange={(d) => setSolVigFin(d)}
+                        placeholder="Seleccionar término"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-2">
-                {isParaestatal(solRec) ? (
-                  <>
-                    <Label className="text-sm font-medium">Núm. personas a contratar</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="—"
-                      value={solPersonas}
-                      onChange={(e) => setSolPersonas(e.target.value)}
-                      disabled={solLoading}
-                      className="bg-background"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Label className="text-sm font-medium">Núm. prestadores de servicio</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="—"
-                      value={solPrestadores}
-                      onChange={(e) => setSolPrestadores(e.target.value)}
-                      disabled={solLoading}
-                      className="bg-background"
-                    />
-                  </>
+                <div className="flex flex-col gap-2">
+                  {isParaestatal(solRec) ? (
+                    <>
+                      <Label className="text-sm font-medium">Núm. personas a contratar</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="—"
+                        value={solPersonas}
+                        onChange={(e) => setSolPersonas(e.target.value)}
+                        disabled={solLoading}
+                        className="bg-background"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Label className="text-sm font-medium">Núm. prestadores de servicio</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="—"
+                        value={solPrestadores}
+                        onChange={(e) => setSolPrestadores(e.target.value)}
+                        disabled={solLoading}
+                        className="bg-background"
+                      />
+                    </>
+                  )}
+                </div>
+                {solError && (
+                  <div className="flex items-center gap-2 text-xs text-destructive">
+                    <AlertCircle className="h-4 w-4 shrink-0" />{solError}
+                  </div>
                 )}
               </div>
-              {solError && (
-                <div className="flex items-center gap-2 text-xs text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0" />{solError}
-                </div>
-              )}
-              <div className="flex items-center justify-end gap-2 pt-1 border-t border-[var(--sem-border-md)]">
+              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
                 <Button
                   variant="default"
+                  className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
                   onClick={() => setShowSol(false)}
                   disabled={solLoading}
-                  className="px-5 py-2.5 h-auto"
                 >
                   Cancelar
                 </Button>
                 <Button
+                  variant="vino"
+                  className="rounded-full h-10 px-6 font-normal shadow-sm"
                   onClick={handleSolicitar}
                   disabled={solLoading || !solVigInicio || !solVigFin}
-                  className="gap-2 px-5 py-2.5 h-auto"
-                  style={{ backgroundColor: MORADO, color: "#fff" }}
                 >
                   {solLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {solLoading ? "Generando…" : "Generar"}
                 </Button>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -678,6 +626,7 @@ function AdministracionTab() {
     reutilizacionesPage * ITEMS_PER_PAGE,
   )
   useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery])
+  useEffect(() => { if (reutilizacionesPage > reutilizacionesTotalPages) setReutilizacionesPage(reutilizacionesTotalPages) }, [reutilizacionesTotalPages, reutilizacionesPage])
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedQ(q); setPage(1) }, 400)
@@ -750,6 +699,7 @@ function AdministracionTab() {
     }
   }
   const totalPages = Math.max(1, Math.ceil(total / limit))
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [totalPages, page])
   return (
     <>
       <div className="flex items-center gap-3 mb-5">
@@ -762,7 +712,6 @@ function AdministracionTab() {
         <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </Button>
-        <span className="text-sm text-muted-foreground">{total} registro{total !== 1 ? "s" : ""}</span>
       </div>
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3 mb-4">
@@ -780,9 +729,9 @@ function AdministracionTab() {
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Régimen</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Reutilizaciones</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">Reutilizaciones</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Estado</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground"><div className="flex justify-end">Acciones</div></th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -816,8 +765,8 @@ function AdministracionTab() {
                   <td className="px-4 py-3 text-xs text-center">
                     {hasSols ? (
                       <span
-                        className="inline-flex items-center justify-center rounded-full w-6 h-6 text-xs font-semibold"
-                        style={{ backgroundColor: "var(--secondary)", opacity: 0.5 }}
+                        className="inline-flex items-center justify-center rounded-full w-6 h-6 text-xs font-semibold text-white"
+                        style={{ backgroundColor: "var(--secondary)" }}
                       >
                         {rec._count.catalogo_solicitudes}
                       </span>
@@ -834,8 +783,8 @@ function AdministracionTab() {
                       <StatusBadge label="Inactivo" />
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex items-center justify-center gap-2">
                       {toggling === rec.id && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -902,7 +851,7 @@ function AdministracionTab() {
                       </thead>
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
-                          <tr>
+                          <tr className="empty-row">
                             <td colSpan={3}>
                               <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
@@ -960,11 +909,11 @@ export function CatalogoJustificacionesPage() {
       {isAdmin ? (
         <Tabs defaultValue="consulta" className="w-full gap-3">
           <TabsList>
-            <TabsTrigger value="consulta" className="gap-1.5 min-w-[11rem]">
+            <TabsTrigger value="consulta" className="gap-1.5">
               <Search className="h-4 w-4" />
               Consulta
             </TabsTrigger>
-            <TabsTrigger value="administracion" className="gap-1.5 min-w-[11rem]">
+            <TabsTrigger value="administracion" className="gap-1.5">
               <ListChecks className="h-4 w-4" />
               Administración
             </TabsTrigger>

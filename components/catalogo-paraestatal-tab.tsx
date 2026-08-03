@@ -66,6 +66,7 @@ function paginationPages(total: number, current: number): (number | "...")[] {
 
 function OrganoRow({
   node, allOrganismos, onRefresh, onDragStart, onDragOver, onDrop, draggingIndex, index,
+  open, onOpenChange,
 }: {
   node: CategoriaParaestatalItem
   allOrganismos: CategoriaParaestatalItem[]
@@ -75,8 +76,10 @@ function OrganoRow({
   onDrop: (i: number) => void
   draggingIndex: number | null
   index: number
+  open: boolean
+  onOpenChange: (v: boolean) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const setOpen = onOpenChange
   const [areas, setAreas] = useState<OrganoParaestatalItem[]>(node.organos)
   const [areaDragging, setAreaDragging] = useState<number | null>(null)
   const [addAreaOpen, setAddAreaOpen] = useState(false)
@@ -468,6 +471,7 @@ export function CatalogoParaestatalTab({ onCountChange }: { onCountChange?: (n: 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+  const [openId, setOpenId] = useState<number | null>(null)
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
   const [addOrgOpen, setAddOrgOpen] = useState(false)
   const [newOrgNombre, setNewOrgNombre] = useState("")
@@ -555,6 +559,8 @@ export function CatalogoParaestatalTab({ onCountChange }: { onCountChange?: (n: 
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={handleDrop}
                   draggingIndex={draggingIndex}
+                  open={openId === org.id}
+                  onOpenChange={(v) => setOpenId(v ? org.id : null)}
                 />
               ))}
             </div>

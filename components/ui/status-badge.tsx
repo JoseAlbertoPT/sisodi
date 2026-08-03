@@ -121,7 +121,7 @@ export function StatusBadge({ label, color, bgColor, className }: StatusBadgePro
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit",
+        "inline-flex items-center rounded-md px-2.5 py-2 text-xs font-light w-fit whitespace-nowrap",
         className,
       )}
       style={{ backgroundColor: bg, color: c }}

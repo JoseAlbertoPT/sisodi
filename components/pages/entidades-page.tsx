@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building2, Landmark, FileSpreadsheet, Upload, Loader2, Trash2, FileText, AlertCircle, CheckCircle2 } from "lucide-react"
+import { FileSpreadsheet, Upload, Loader2, Trash2, FileText, AlertCircle, CheckCircle2 } from "lucide-react"
 import { FileDropZone } from "@/components/ui/file-drop-zone"
 import { PageLayout } from "@/components/page-layout"
 import { CatalogoCentralizadaTab } from "@/components/catalogo-centralizada-tab"
@@ -193,12 +193,10 @@ export function EntidadesPage() {
       <Tabs defaultValue="centralizada" className="w-full">
         <TabsList>
           <TabsTrigger value="centralizada" className="gap-1.5">
-            <Building2 className="h-4 w-4" />
             Centralizada
             {cCount !== null && <span className={BADGE}>{cCount}</span>}
           </TabsTrigger>
           <TabsTrigger value="paraestatal" className="gap-1.5">
-            <Landmark className="h-4 w-4" />
             Paraestatal
             {pCount !== null && <span className={BADGE}>{pCount}</span>}
           </TabsTrigger>

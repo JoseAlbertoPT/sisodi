@@ -23,10 +23,10 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion"
 import {
-  CheckCircle2, RotateCcw, Download, History, FileText, Inbox,
-  AlertTriangle, ChevronDown, ChevronRight, ArrowLeft, FileCheck,
-  RefreshCw, Loader2, HelpCircle, Printer, Stamp, Lock,
-  Shield, FileSignature, X,
+  CheckCircle2, History, FileText, Inbox,
+  AlertTriangle, ArrowLeft, FileCheck,
+  Loader2, Printer, Stamp, Lock,
+  Shield, FileSignature, X, Eye,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
@@ -1405,6 +1405,7 @@ export function ValidacionUefaPage() {
 
   useEffect(() => { setCurrentPage(1) }, [activeTab])
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE)
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(Math.max(1, totalPages)) }, [totalPages, currentPage])
   const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const selectedSolicitud  = selectedId    !== null ? solicitudes.find(s => s.id === selectedId)    ?? null : null
@@ -1491,21 +1492,17 @@ export function ValidacionUefaPage() {
       />
 
       {}
-      <Card className="shadow-sm border-border">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-card-foreground">
-            {loading ? "Cargando solicitudes..." : `${filtered.length} solicitud${filtered.length !== 1 ? "es" : ""}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12 gap-3">
-              <Loader2 className="h-6 w-6 animate-spin text-secondary" />
-              <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+      {loading ? (
+        <div className="rounded-2xl bg-background border border-border shadow-sm">
+          <div className="flex items-center justify-center py-12 gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-secondary" />
+            <span className="text-sm text-muted-foreground">Cargando desde la base de datos...</span>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-background border border-border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-bg-base text-content-high">
                     <th className="px-4 py-3 text-left font-semibold">Folio de Justificación</th>
@@ -1516,7 +1513,7 @@ export function ValidacionUefaPage() {
                     {activeTab === "Emitidas" && (
                       <th className="px-4 py-3 text-left font-semibold">Modalidad</th>
                     )}
-                    <th className="px-4 py-3 font-semibold"><div className="flex justify-end">Acciones</div></th>
+                    <th className="px-4 py-3 font-semibold text-left">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1562,22 +1559,24 @@ export function ValidacionUefaPage() {
                             )}
                           </td>
                         )}
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end">
+                        <td className="px-4 py-3">
+                          <div className="flex">
                           {solTab === "Pendiente Firma" ? (
-                            <div className="flex justify-end gap-2">
+                            <div className="flex gap-2">
                               <Button
                                 variant="ghost" size="sm"
                                 onClick={() => setSelectedId(sol.id)}
-                                className="text-secondary hover:text-primary gap-1.5"
+                                className="gap-1.5 font-medium -ml-3"
+                                style={{ color: "var(--sem-content-low)" }}
                               >
-                                <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
+                                <Eye className="h-4 w-4" />Ver
                               </Button>
                               <Button
                                 variant="ghost" size="sm"
                                 onClick={() => setFirmaTargetId(sol.id)}
                                 disabled={guardando}
-                                className="text-secondary hover:text-primary gap-1.5"
+                                className="gap-1.5 font-medium"
+                                style={{ color: "var(--sem-content-low)" }}
                               >
                                 <Stamp className="h-4 w-4" />Firmar
                               </Button>
@@ -1586,9 +1585,10 @@ export function ValidacionUefaPage() {
                             <Button
                               variant="ghost" size="sm"
                               onClick={() => setSelectedId(sol.id)}
-                              className="text-secondary hover:text-primary gap-1.5"
+                              className="gap-1.5 font-medium -ml-3"
+                              style={{ color: "var(--sem-content-low)" }}
                             >
-                              <img src="/iconos2/visibility.svg" alt="ver" className="h-4 w-4" />Ver
+                              <Eye className="h-4 w-4" />Ver
                             </Button>
                           )}
                           </div>
@@ -1606,9 +1606,8 @@ export function ValidacionUefaPage() {
                 </tbody>
               </table>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+      )}
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
 
       <ConfirmAlertDialog

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter,
 } from "@/components/ui/dialog"
 import {
   KeyRound, Eye, EyeOff, AlertCircle,
@@ -168,7 +168,7 @@ export function PerfilPage() {
               Cambiar Contraseña
             </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
+          <DialogBody className="flex flex-col gap-4">
             {[
               { label: "Contraseña Actual",          val: passwordActual,   setVal: setPasswordActual,   show: showActual,   setShow: setShowActual },
               { label: "Nueva Contraseña",           val: passwordNueva,    setVal: setPasswordNueva,    show: showNueva,    setShow: setShowNueva },
@@ -203,19 +203,25 @@ export function PerfilPage() {
                 <p className="text-sm text-[var(--sem-support-error)]">{error}</p>
               </div>
             )}
-            <div className="flex justify-end gap-3 pt-1">
-              <Button variant="outline" onClick={() => setModalAbierto(false)} disabled={cargando}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={() => void handleCambiarPassword()}
-                disabled={cargando}
-               
-              >
-                {cargando ? "Guardando..." : "Cambiar Contraseña"}
-              </Button>
-            </div>
-          </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="default"
+              className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+              onClick={() => setModalAbierto(false)}
+              disabled={cargando}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm"
+              onClick={() => void handleCambiarPassword()}
+              disabled={cargando}
+            >
+              {cargando ? "Guardando..." : "Cambiar Contraseña"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PageLayout>

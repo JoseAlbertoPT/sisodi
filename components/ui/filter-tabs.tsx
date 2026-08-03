@@ -24,14 +24,14 @@ interface FilterTabsProps {
   activeCountClassName?: string
 }
 
-const DEFAULT_ACTIVE_TAB_CLASS = "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
+const DEFAULT_ACTIVE_TAB_CLASS = "bg-bg-base shadow-sm border-border-low text-[var(--color-core-bosque-30)]"
 const DEFAULT_ACTIVE_COUNT_CLASS = "bg-[var(--sem-accent-primary)] text-white"
 
 export function FilterTabs({ value, onValueChange, items, sectionLabel, className, fullWidth, activeClassName, activeCountClassName }: FilterTabsProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1",
+        "inline-flex flex-wrap items-center gap-1 rounded-[24px] bg-bg-surface-low/60 p-1.5",
         fullWidth ? "w-full" : "w-fit",
         className
       )}
@@ -50,11 +50,11 @@ export function FilterTabs({ value, onValueChange, items, sectionLabel, classNam
             id={`tab-${item.value}`}
             onClick={() => onValueChange(item.value)}
             className={cn(
-              "rounded-xl px-5 py-2 text-sm font-light transition-colors flex items-center justify-center gap-1.5 text-content-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-support-focus focus-visible:ring-offset-2",
+              "relative inline-flex items-center justify-center gap-1.5 rounded-[18px] border px-5 py-2 text-sm font-light transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-support-focus focus-visible:ring-offset-2",
               fullWidth && "flex-1",
               isActive
                 ? (activeClassName ?? DEFAULT_ACTIVE_TAB_CLASS)
-                : "hover:bg-black/5"
+                : "border-transparent text-content-high hover:bg-black/5"
             )}
           >
             <span>{item.label}</span>
