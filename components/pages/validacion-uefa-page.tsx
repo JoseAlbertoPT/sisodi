@@ -211,12 +211,12 @@ function resolverFolioDictamen(item: any): string | null {
   )
 }
 
-/* function ordinalRegreso(n: number): string {
+ function ordinalRegreso(n: number): string {
   if (n === 1) return "1er Regreso"
   if (n === 2) return "2do Regreso"
   if (n === 3) return "3er Regreso"
   return `${n}° Regreso`
-}*/
+}
 
 function getDevolucionLabel(estado: string): string {
   const n = norm(estado)
