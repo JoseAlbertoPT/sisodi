@@ -27,7 +27,14 @@ import {
   AlertTriangle, ArrowLeft, FileCheck,
   Loader2, Printer, Stamp, Lock,
   Shield, FileSignature, X, Eye,
+  MoreHorizontal,
 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { generateJustificacionPDF, generateJustificacionPDFBase64 } from "@/lib/generate-justificacion-pdf"
@@ -1564,8 +1571,33 @@ export function ValidacionUefaPage() {
                         )}
                         <td className="px-4 py-3">
                           <div className="flex">
-                          {solTab === "Pendiente Firma" ? (
-                            <div className="flex gap-2">
+                            {solTab === "Pendiente Firma" ? (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost" size="icon"
+                                    className="-ml-2"
+                                    style={{ color: "var(--sem-content-low)" }}
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  <DropdownMenuItem onClick={() => setSelectedId(sol.id)} className="gap-2 cursor-pointer">
+                                    <Eye className="h-4 w-4" />
+                                    Ver
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => setFirmaTargetId(sol.id)}
+                                    disabled={guardando}
+                                    className="gap-2 cursor-pointer"
+                                  >
+                                    <Stamp className="h-4 w-4" />
+                                    Firmar
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ) : (
                               <Button
                                 variant="ghost" size="sm"
                                 onClick={() => setSelectedId(sol.id)}
@@ -1574,26 +1606,7 @@ export function ValidacionUefaPage() {
                               >
                                 <Eye className="h-4 w-4" />Ver
                               </Button>
-                              <Button
-                                variant="ghost" size="sm"
-                                onClick={() => setFirmaTargetId(sol.id)}
-                                disabled={guardando}
-                                className="gap-1.5 font-medium"
-                                style={{ color: "var(--sem-content-low)" }}
-                              >
-                                <Stamp className="h-4 w-4" />Firmar
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              variant="ghost" size="sm"
-                              onClick={() => setSelectedId(sol.id)}
-                              className="gap-1.5 font-medium -ml-3"
-                              style={{ color: "var(--sem-content-low)" }}
-                            >
-                              <Eye className="h-4 w-4" />Ver
-                            </Button>
-                          )}
+                            )}
                           </div>
                         </td>
                       </tr>
