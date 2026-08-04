@@ -156,13 +156,7 @@ function getTabForEstado(estado: string): UefaTab {
   const n = norm(estado)
 
   if (n === "en captura" || n.includes("en validacion justificaciones") || n.includes("enviada a validacion")) return "Nuevas"
-  if (
-    n.includes("pendiente firma justificacion") ||
-    n.includes("pendiente firma revision") ||
-    n.includes("pendiente firma validacion") ||
-    n.includes("pendiente firma dictamen") ||
-    n.includes("pendiente firma emisor")
-  ) return "Pendiente Firma"
+  if (n.includes("pendiente firma justificacion")) return "Pendiente Firma"
   if (n.includes("observado por validacion") && !n.includes("final")) return "Observadas/Devueltas"
   if (n.includes("observado por do") || n.includes("observado do")) return "Observadas/Devueltas"
   if (n.includes("observado por revisor")) return "Observadas/Devueltas"
@@ -171,6 +165,10 @@ function getTabForEstado(estado: string): UefaTab {
 
   if (n.includes("observado por validacion final")) return "Observadas/Devueltas"
   if (
+    n.includes("pendiente firma revision") ||
+    n.includes("pendiente firma validacion") ||
+    n.includes("pendiente firma dictamen") ||
+    n.includes("pendiente firma emisor") ||
     n.includes("en revision") ||
     n.includes("en validacion final") ||
     n.includes("pendiente do") ||

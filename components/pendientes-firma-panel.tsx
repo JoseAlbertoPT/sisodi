@@ -3,10 +3,16 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { StatusBadge, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
-import { AlertCircle, Inbox, Stamp, Eye } from "lucide-react"
+import { AlertCircle, Inbox, Stamp, Eye, MoreHorizontal } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
 import { FirmaProgresoDialog } from "@/components/firma-progreso-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface FirmanteInfo {
   id: number
@@ -182,14 +188,26 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                     </td>
                     <td className="px-4 py-2">
                       {esMiTurno ? (
-                        <Button
-                          variant="ghost" size="sm"
-                          onClick={() => miFirmante && setFirmanteDialogId(miFirmante.id)}
-                          className="gap-1.5 font-medium -ml-3"
-                          style={{ color: "var(--sem-content-low)" }}
-                        >
-                          <Stamp className="h-4 w-4" />Firmar
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" style={{ color: "var(--sem-content-low)" }}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => setProgresoTarget(p)} className="gap-2 cursor-pointer">
+                              <Eye className="h-4 w-4" />
+                              Ver
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => miFirmante && setFirmanteDialogId(miFirmante.id)}
+                              className="gap-2 cursor-pointer"
+                            >
+                              <Stamp className="h-4 w-4" />
+                              Firmar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       ) : (
                         <Button
                           variant="ghost" size="sm"

@@ -437,12 +437,8 @@ export async function buildJustificacionBuffer(
       let firmasPortal: FirmaPortal[] = [];
 
       if (bypass) {
-        const dummyFirmantes = (firmaProceso as any)?.firmantes ?? [];
-        if (dummyFirmantes.length > 0) {
-          firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
-        } else if (!soloFirmanteId) {
-          firmasPortal = [buildFirmaFicticia({}, firmaProceso?.uuid)];
-        }
+        const dummyFirmantes = ((firmaProceso as any)?.firmantes ?? []).filter((f: any) => f.firmado);
+        firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
       } else if (firmaProceso?.proceso_id) {
         const estado: any = await efirmaClient.estado(firmaProceso.proceso_id);
         firmasPortal = Array.isArray(estado?.firmas)
@@ -462,12 +458,14 @@ export async function buildJustificacionBuffer(
           : [];
       }
 
-      pdfFinal = await agregarConstanciaFirma({
-        pdfBase: pdfFinal as Buffer,
-        firmas: firmasPortal,
-        nombreArchivo: filename,
-        folio,
-      });
+      if (firmasPortal.length > 0) {
+        pdfFinal = await agregarConstanciaFirma({
+          pdfBase: pdfFinal as Buffer,
+          firmas: firmasPortal,
+          nombreArchivo: filename,
+          folio,
+        });
+      }
     } catch (errFirma) {
       console.error("[pdf/justificacion] Error agregando constancia de firma:", errFirma);
     }
