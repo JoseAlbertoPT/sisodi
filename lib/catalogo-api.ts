@@ -134,13 +134,19 @@ export function deleteOrganoParaestatal(id: number) {
 }
 
 export interface ImportRowCentralizada {
-  nombre: string
-  ua_clave_administrativa?: string
-  clave_reporte_plazas?: string
+  secretaria: string
+  ua: string
+  clave?: string
+}
+
+export interface ImportCentralizadaResult {
+  secretariasCreadas: number
+  uasCreadas: number
+  saltadas: { secretaria: string; ua: string; motivo: string }[]
 }
 
 export function importCentralizadaBulk(rows: ImportRowCentralizada[]) {
-  return api<{ inserted: number }>("/api/catalogo/centralizada/import", {
+  return api<ImportCentralizadaResult>("/api/catalogo/centralizada/import", {
     method: "POST",
     ...jsonBody({ rows }),
   })

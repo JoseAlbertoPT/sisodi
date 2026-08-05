@@ -12,9 +12,11 @@ import {
 } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { FilterTabs } from "@/components/ui/filter-tabs"
+import { FileDropZone } from "@/components/ui/file-drop-zone"
 import {
   Plus, Pencil, Trash2, MoreHorizontal,
-  Building2, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Inbox,
+  Building2, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Inbox, CheckCircle2, Download,
 } from "lucide-react"
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
@@ -24,8 +26,11 @@ import {
   createOrganoCentralizado,
   updateOrganoCentralizado,
   deleteOrganoCentralizado,
+  importCentralizadaBulk,
   type OrganoCentralizadoNode,
+  type ImportCentralizadaResult,
 } from "@/lib/catalogo-api"
+import { parseSecretariasExcel, downloadSecretariasTemplate, type SecretariaImportRow, type SecretariaImportSkip } from "@/lib/parse-excel-secretarias"
 
 const VINO = "var(--sem-accent-primary)"
 const VINO_HOVER = "var(--sem-accent-primary)"
@@ -121,9 +126,9 @@ function ClaveInput({ value, onChange }: { value: string; onChange: (v: string) 
 
 
 function SecretariaRow({
-                         node, allTree, onRefresh, onDragStart, onDragOver, onDrop, draggingIndex, index,
-                         open, onOpenChange,
-                       }: {
+   node, allTree, onRefresh, onDragStart, onDragOver, onDrop, draggingIndex, index,
+   open, onOpenChange,
+   }: {
   node: OrganoCentralizadoNode
   allTree: OrganoCentralizadoNode[]
   onRefresh: () => void
@@ -150,7 +155,6 @@ function SecretariaRow({
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState("")
 
-  // Search + pagination inside the expanded panel
   const [uaSearch, setUaSearch] = useState("")
   const [uaPage, setUaPage] = useState(0)
 
@@ -310,12 +314,8 @@ function SecretariaRow({
               </DropdownMenu>
             </div>
           </div>
-
-          {/* Unidades Administrativas */}
           <CollapsibleContent>
             <div className="mt-2 mb-2 ml-6 border-l-2 border-[var(--sem-accent-primary)]/15 pl-3">
-
-              {/* Search bar */}
               {uas.length > 0 && (
                   <div className="flex items-center gap-2 py-2">
                     <SearchInput
@@ -332,7 +332,6 @@ function SecretariaRow({
                   </div>
               )}
 
-              {/* UA items */}
               <div className="space-y-0.5">
                 {uasPageItems.map((ua, pageIdx) => {
                   const globalIdx = !uaSearch ? safePage * UA_PAGE_SIZE + pageIdx : pageIdx
@@ -394,7 +393,6 @@ function SecretariaRow({
                 )}
               </div>
 
-              {/* Pagination */}
               {uaTotalPages > 1 && (
                   <div className="mt-2 pt-2 border-t border-[var(--color-core-piedra-90)]/60">
                     <div className="flex justify-center items-center gap-1">
@@ -562,6 +560,55 @@ export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n:
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState("")
 
+
+  const [addSecMode, setAddSecMode] = useState<"manual" | "masiva">("manual")
+  const [excelFiles, setExcelFiles] = useState<File[]>([])
+  const [parsingExcel, setParsingExcel] = useState(false)
+  const [excelError, setExcelError] = useState<string | null>(null)
+  const [excelRows, setExcelRows] = useState<SecretariaImportRow[]>([])
+  const [excelSkipped, setExcelSkipped] = useState<SecretariaImportSkip[]>([])
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<ImportCentralizadaResult | null>(null)
+
+  const resetAddSecDialog = useCallback(() => {
+    setAddSecMode("manual")
+    setNewSecNombre("")
+    setFormError("")
+    setExcelFiles([])
+    setExcelError(null)
+    setExcelRows([])
+    setExcelSkipped([])
+    setImportResult(null)
+  }, [])
+
+  const handleExcelFilesChange = useCallback(async (files: File[]) => {
+    setExcelFiles(files)
+    setExcelError(null)
+    setImportResult(null)
+    setExcelRows([])
+    setExcelSkipped([])
+    if (!files[0]) return
+    setParsingExcel(true)
+    try {
+      const { rows, skipped } = await parseSecretariasExcel(files[0])
+      if (rows.length === 0) {
+        setExcelError("No se encontraron filas válidas en el archivo")
+      } else {
+        setExcelRows(rows)
+        setExcelSkipped(skipped)
+      }
+    } catch (e) {
+      setExcelError(e instanceof Error ? e.message : "Error al leer el archivo")
+    } finally {
+      setParsingExcel(false)
+    }
+  }, [])
+
+  const excelSecretariasCount = useMemo(
+    () => new Set(excelRows.map((r) => r.secretaria.trim().toLowerCase())).size,
+    [excelRows]
+  )
+
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
@@ -575,6 +622,21 @@ export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n:
   }, [onCountChange])
 
   useEffect(() => { void load() }, [load])
+
+  const handleImportExcel = useCallback(async () => {
+    if (excelRows.length === 0) return
+    setImporting(true)
+    setExcelError(null)
+    try {
+      const result = await importCentralizadaBulk(excelRows)
+      setImportResult(result)
+      await load()
+    } catch (e) {
+      setExcelError(e instanceof Error ? e.message : "Error al importar el archivo")
+    } finally {
+      setImporting(false)
+    }
+  }, [excelRows, load])
 
   const filtered = search
       ? tree.filter((n) => n.nombre.toLowerCase().includes(search.toLowerCase()) || n.children.some((c) => c.nombre.toLowerCase().includes(search.toLowerCase())))
@@ -611,7 +673,7 @@ export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n:
               size="sm"
               variant="primary"
               className="shrink-0 gap-1.5"
-              onClick={() => { setNewSecNombre(""); setFormError(""); setAddSecOpen(true) }}
+              onClick={() => { resetAddSecDialog(); setAddSecOpen(true) }}
           >
             Agregar Secretaría
           </Button>
@@ -657,25 +719,104 @@ export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n:
         </Card>
 
         {/* Dialog nueva secretaría */}
-        <Dialog open={addSecOpen} onOpenChange={setAddSecOpen}>
+        <Dialog open={addSecOpen} onOpenChange={(v) => { setAddSecOpen(v); if (!v) resetAddSecDialog() }}>
           <DialogContent>
             <DialogHeader><DialogTitle>Nueva Secretaría</DialogTitle></DialogHeader>
             <DialogBody>
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <Label>Nombre <span className="text-destructive">*</span></Label>
-                  <Input className="h-9 text-sm font-light" value={newSecNombre} onChange={(e) => setNewSecNombre(e.target.value)} placeholder="Ej. Secretaría de Educación" onKeyDown={(e) => e.key === "Enter" && handleAddSec()} autoFocus />
-                </div>
-                {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
+              <div className="flex flex-col gap-4">
+                <FilterTabs
+                    value={addSecMode}
+                    onValueChange={(v) => setAddSecMode(v as "manual" | "masiva")}
+                    items={[{ value: "manual", label: "Manual" }, { value: "masiva", label: "Masiva" }]}
+                    fullWidth
+                />
+
+                {addSecMode === "manual" ? (
+                    <div className="flex flex-col gap-1.5">
+                      <Label>Nombre <span className="text-destructive">*</span></Label>
+                      <Input className="h-9 text-sm font-light" value={newSecNombre} onChange={(e) => setNewSecNombre(e.target.value)} placeholder="Ej. Secretaría de Educación" onKeyDown={(e) => e.key === "Enter" && handleAddSec()} autoFocus />
+                      {formError && <p className="text-xs text-destructive flex items-center gap-1 mt-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
+                    </div>
+                ) : importResult ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-green-500 bg-green-50 px-4 py-3">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                        <span className="text-sm text-green-700">
+                          Se crearon <strong>{importResult.secretariasCreadas}</strong> secretaría{importResult.secretariasCreadas !== 1 ? "s" : ""} y <strong>{importResult.uasCreadas}</strong> unidad{importResult.uasCreadas !== 1 ? "es" : ""} administrativa{importResult.uasCreadas !== 1 ? "s" : ""}.
+                        </span>
+                      </div>
+                      {importResult.saltadas.length > 0 && (
+                          <div className="flex flex-col gap-1.5 rounded-lg border-l-4 border-l-amber-500 bg-amber-50 px-4 py-3">
+                            <span className="text-xs font-medium text-amber-800">{importResult.saltadas.length} fila{importResult.saltadas.length !== 1 ? "s fueron" : " fue"} omitida{importResult.saltadas.length !== 1 ? "s" : ""}:</span>
+                            <ul className="text-xs text-amber-700 list-disc list-inside max-h-32 overflow-y-auto">
+                              {importResult.saltadas.map((s, i) => (
+                                  <li key={i}>{s.secretaria} / {s.ua} — {s.motivo}</li>
+                              ))}
+                            </ul>
+                          </div>
+                      )}
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-3">
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Sube un archivo <span className="font-semibold text-card-foreground">.xlsx</span> con las columnas <strong>Secretaría</strong>, <strong>Unidad Administrativa</strong> y <strong>Clave</strong>. Se crearán automáticamente las secretarías y sus unidades administrativas con su clave.
+                      </p>
+                      {/* TODO: reactivar botón de descarga de plantilla
+                      <button
+                          type="button"
+                          onClick={() => downloadSecretariasTemplate()}
+                          className="flex w-fit items-center gap-1.5 text-xs font-medium text-[var(--sem-accent-primary)] hover:underline"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Descargar plantilla de ejemplo
+                      </button>
+                      */}
+                      <FileDropZone
+                          accept=".xlsx"
+                          hint=".xlsx · máx. 10 MB"
+                          multiple={false}
+                          files={excelFiles}
+                          onFilesChange={handleExcelFilesChange}
+                          loading={parsingExcel}
+                          loadingText="Leyendo archivo..."
+                          disabled={importing}
+                      />
+                      {excelError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{excelError}</p>}
+                      {excelRows.length > 0 && !excelError && (
+                          <div className="flex flex-col gap-1.5 rounded-lg border border-[var(--color-core-piedra-90)] bg-[#f9f8f5] px-4 py-3">
+                            <span className="text-xs text-content-high">
+                              Se detectaron <strong>{excelSecretariasCount}</strong> secretaría{excelSecretariasCount !== 1 ? "s" : ""} y <strong>{excelRows.length}</strong> unidad{excelRows.length !== 1 ? "es" : ""} administrativa{excelRows.length !== 1 ? "s" : ""}.
+                            </span>
+                            {excelSkipped.length > 0 && (
+                                <span className="text-xs text-amber-700">{excelSkipped.length} fila{excelSkipped.length !== 1 ? "s" : ""} se omitirá{excelSkipped.length !== 1 ? "n" : ""} por datos incompletos.</span>
+                            )}
+                          </div>
+                      )}
+                    </div>
+                )}
               </div>
             </DialogBody>
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
-              </DialogClose>
-              <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddSec} disabled={saving || !newSecNombre.trim()}>
-                {saving ? "Creando..." : "Crear"}
-              </Button>
+              {addSecMode === "masiva" && importResult ? (
+                  <DialogClose asChild>
+                    <Button type="button" variant="vino" className={BTN_CONFIRM_CLASS}>Cerrar</Button>
+                  </DialogClose>
+              ) : (
+                  <>
+                    <DialogClose asChild>
+                      <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
+                    </DialogClose>
+                    {addSecMode === "manual" ? (
+                        <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddSec} disabled={saving || !newSecNombre.trim()}>
+                          {saving ? "Creando..." : "Crear"}
+                        </Button>
+                    ) : (
+                        <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleImportExcel} disabled={importing || parsingExcel || excelRows.length === 0}>
+                          {importing ? "Importando..." : "Importar"}
+                        </Button>
+                    )}
+                  </>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
