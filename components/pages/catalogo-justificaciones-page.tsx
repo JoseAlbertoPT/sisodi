@@ -236,10 +236,12 @@ function ConsultaTab() {
       })
       const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
       const params = new URLSearchParams({
-        id: String(solRec.solicitud.id),
         vigenciaInicio: vi,
         vigenciaFin: vf,
       })
+
+      if (solRec.solicitud.id) params.set("id", String(solRec.solicitud.id))
+      else params.set("catalogoId", String(solRec.id))
       if (np) params.set("numeroPersonas", np)
       const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo?${params}`)
       if (!pdfRes.ok) throw new Error("Error al generar el PDF")
@@ -352,11 +354,7 @@ function ConsultaTab() {
                           <DropdownMenuItem onClick={() => openView(rec)}>
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => { if (rec.solicitud.id) openSol(rec) }}
-                            disabled={!rec.solicitud.id}
-                            title={!rec.solicitud.id ? "No disponible: registro histórico sin solicitud original" : undefined}
-                          >
+                          <DropdownMenuItem onClick={() => openSol(rec)}>
                             <Send className="h-4 w-4" /> Solicitar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -421,11 +419,7 @@ function ConsultaTab() {
                           <DropdownMenuItem onClick={() => openView(rec)}>
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => { if (rec.solicitud.id) openSol(rec) }}
-                            disabled={!rec.solicitud.id}
-                            title={!rec.solicitud.id ? "No disponible: registro histórico sin solicitud original" : undefined}
-                          >
+                          <DropdownMenuItem onClick={() => openSol(rec)}>
                             <Send className="h-4 w-4" /> Solicitar
                           </DropdownMenuItem>
                         </DropdownMenuContent>

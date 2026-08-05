@@ -174,18 +174,10 @@ const s = StyleSheet.create({
   },
 
   romanItem: {
-    flexDirection: "row",
     marginLeft: 32,
     marginBottom: 6,
   },
-  romanIndex: {
-    width: 24,
-    fontSize: 10,
-    textAlign: "right",
-    paddingRight: 6,
-  },
   romanText: {
-    flex: 1,
     fontSize: 10,
     textAlign: "justify",
     lineHeight: 1.4,
@@ -220,12 +212,6 @@ const s = StyleSheet.create({
   },
 });
 
-const ROMAN = [
-  "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
-  "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX",
-];
-const toRoman = (i: number) => ROMAN[i] ?? String(i + 1);
-
 function BulletItem({ text }: { text: string }) {
   return (
     <View style={s.bulletRow} wrap={false}>
@@ -235,10 +221,13 @@ function BulletItem({ text }: { text: string }) {
   );
 }
 
-function RomanItem({ text, i }: { text: string; i: number }) {
+// El numeral romano de cada actividad/responsabilidad ya viene incluido en
+// `text` (generado por buildRomanNumberedList en app/api/pdf/carta-descriptiva/
+// route.ts seg\u00fan la posici\u00f3n del \u00edtem) \u2014 este componente solo lo imprime,
+// nunca genera ni lee numerales del dato de origen.
+function RomanItem({ text }: { text: string }) {
   return (
     <View style={s.romanItem} wrap={false}>
-      <Text style={s.romanIndex}>{toRoman(i)}.</Text>
       <Text style={s.romanText}>{text}</Text>
     </View>
   );
@@ -259,11 +248,13 @@ function SubSection({
   items: string[];
   variant: "roman" | "bullet";
 }) {
+  if (items.length === 0) return null;
+
   const first = items[0];
   const rest = items.slice(1);
   const FirstItem =
     variant === "roman" ? (
-      first !== undefined ? <RomanItem text={first} i={0} /> : null
+      first !== undefined ? <RomanItem text={first} /> : null
     ) : first !== undefined ? (
       <BulletItem text={first} />
     ) : null;
@@ -279,7 +270,7 @@ function SubSection({
       </View>
       {rest.map((it, i) =>
         variant === "roman" ? (
-          <RomanItem key={i + 1} text={it} i={i + 1} />
+          <RomanItem key={i + 1} text={it} />
         ) : (
           <BulletItem key={i + 1} text={it} />
         ),
@@ -297,6 +288,8 @@ function SubSubBullets({
   title: string;
   items: string[];
 }) {
+  if (items.length === 0) return null;
+
   const first = items[0];
   const rest = items.slice(1);
   return (
@@ -372,13 +365,15 @@ export function PlantillaCartaDescriptivaServicios({
           <Text style={s.sectionTitle}>1. CARTA DESCRIPTIVA</Text>
         </View>
 
-        <View wrap={false} minPresenceAhead={60}>
-          <View style={s.subSectionRow}>
-            <Text style={s.subSectionNumber}>1.1</Text>
-            <Text style={s.subSectionTitle}>OBJETO DE LA CONTRATACIÓN:</Text>
+        {data.objetoContratacion.trim() !== "" && (
+          <View wrap={false} minPresenceAhead={60}>
+            <View style={s.subSectionRow}>
+              <Text style={s.subSectionNumber}>1.1</Text>
+              <Text style={s.subSectionTitle}>OBJETO DE LA CONTRATACIÓN:</Text>
+            </View>
+            <Text style={s.paragraph}>{data.objetoContratacion}</Text>
           </View>
-          <Text style={s.paragraph}>{data.objetoContratacion}</Text>
-        </View>
+        )}
 
         <SubSection
           number="1.2"
@@ -407,12 +402,17 @@ export function PlantillaCartaDescriptivaServicios({
           variant="bullet"
         />
 
-        <View style={s.subSectionRow} wrap={false} minPresenceAhead={50}>
-          <Text style={s.subSectionNumber}>2.2</Text>
-          <Text style={s.subSectionTitle}>
-            COMPETENCIAS DEL PRESTADOR DE SERVICIOS:
-          </Text>
-        </View>
+        {(data.competenciasAdministrativas.length > 0 ||
+          data.competenciasTecnicas.length > 0 ||
+          data.competenciasSociales.length > 0 ||
+          data.valores.length > 0) && (
+          <View style={s.subSectionRow} wrap={false} minPresenceAhead={50}>
+            <Text style={s.subSectionNumber}>2.2</Text>
+            <Text style={s.subSectionTitle}>
+              COMPETENCIAS DEL PRESTADOR DE SERVICIOS:
+            </Text>
+          </View>
+        )}
 
         <SubSubBullets
           number="2.2.1"

@@ -6,6 +6,7 @@ import {
   type DictamenPrestacionData,
 } from "@/components/plantillas/PlantillaDictamenPrestacionServicios";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
+import { applyTextRules } from "@/lib/utils";
 import React from "react";
 
 export const runtime = "nodejs";
@@ -76,9 +77,9 @@ export async function buildDictamenPrestacionBuffer(
       unidadResponsableGasto: sol.unidad_responsable ?? "",
       unidadAdministrativa: sol.unidad_administrativa ?? "",
       regimenContratacion: sol.regimen ?? "",
-      tipoServicios: sol.tipo_actividades ?? "",
-      claveNombrePrograma: sol.programa_proyecto ?? "",
-      objetoContratacion: sol.objeto ?? "",
+      tipoServicios: applyTextRules(sol.tipo_actividades ?? ""),
+      claveNombrePrograma: applyTextRules(sol.programa_proyecto ?? ""),
+      objetoContratacion: applyTextRules(sol.objeto ?? ""),
       importeBruto: formatImporte(sol.importe_bruto),
       tipoPagoLabel: (sol.tipo_importe ?? "").replace(/_/g, " ") || undefined,
       justificacion: claveParaPdf(sol.secretaria, folio, esHistoricoImportado) || sol.folio_justificacion || "",
@@ -102,9 +103,9 @@ export async function buildDictamenPrestacionBuffer(
       unidadResponsableGasto: cj.unidad_responsable ?? "",
       unidadAdministrativa: cj.unidad_administrativa ?? "",
       regimenContratacion: cj.regimen_contratacion ?? "",
-      tipoServicios: cj.tipo_actividad ?? "",
-      claveNombrePrograma: cj.programa_proyecto ?? "",
-      objetoContratacion: cj.objeto ?? "",
+      tipoServicios: applyTextRules(cj.tipo_actividad ?? ""),
+      claveNombrePrograma: applyTextRules(cj.programa_proyecto ?? ""),
+      objetoContratacion: applyTextRules(cj.objeto ?? ""),
       importeBruto: formatImporte(cj.importe_bruto),
       tipoPagoLabel: (cj.tipo_pago ?? "").replace(/_/g, " ") || undefined,
       // Histórico: sin siglas calculadas, el folio real tal cual (claveParaPdf con esHistorico=true).

@@ -6,6 +6,8 @@ import {
   type CartaDescriptivaData,
 } from "@/components/plantillas/PlantillaCartaDescriptivaServicios";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
+import { buildRomanNumberedList } from "@/lib/roman-list";
+import { applyTextRules } from "@/lib/utils";
 import React from "react";
 
 export const runtime = "nodejs";
@@ -19,11 +21,38 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+// Al pegar listas desde Word/Excel, las viñetas suelen quedar como
+// caracteres del área de uso privado (p. ej. U+F076 de Wingdings). Ningún
+// fuente del PDF tiene un glifo para esos códigos, así que se dibujan como
+// glifo faltante (se ve como "|"). Se eliminan aquí, junto con las viñetas
+// estándar al inicio de cada línea, antes de renderizar.
+const PUA_RANGE_START = 0xe000;
+const PUA_RANGE_END = 0xf8ff;
+
+function stripPUA(str: string): string {
+  return Array.from(str)
+    .filter((ch) => {
+      const cp = ch.codePointAt(0) ?? 0;
+      return cp < PUA_RANGE_START || cp > PUA_RANGE_END;
+    })
+    .join(String());
+}
+
+// El catálogo captura estos campos en MAYÚSCULAS; se normalizan al renderizar
+// con applyTextRules (lib/utils.ts, mismo criterio que ya usa el resto del
+// sistema en app/api/pdf/justificacion/route.ts). El dato en la base de datos
+// no se modifica, solo lo que se imprime en el PDF.
+function cleanBulletText(item: string): string {
+  return applyTextRules(
+    stripPUA(item).replace(/^[\s•‣◦⁃∙\-–—]+/, ""),
+  );
+}
+
 function splitToArray(str: string | null | undefined): string[] {
   if (!str || str.trim() === "") return [];
   return str
     .split(/\n+/)
-    .map((item) => item.trim())
+    .map(cleanBulletText)
     .filter((item) => item.length > 0);
 }
 
@@ -115,9 +144,14 @@ export async function buildCartaDescriptivaBuffer(
   const data: CartaDescriptivaData = {
     clave: source.clave,
     fecha: source.fecha,
-    objetoContratacion: source.objeto ?? "",
-    actividades: source.actividades,
-    responsabilidades: source.responsabilidades,
+    objetoContratacion: applyTextRules(stripPUA(source.objeto ?? "")),
+    // 1.2/1.3: el numeral romano de cada ítem se genera aquí según su posición;
+    // el que traiga el dato de origen (Excel/DB) se descarta por completo.
+    // applyTextRules se aplica al contenido ya sin numeral y ANTES de
+    // anteponer el numeral generado, para no mezclar el numeral con la
+    // primera palabra (ver comentario en buildRomanNumberedList).
+    actividades: buildRomanNumberedList(source.actividades, stripPUA, applyTextRules),
+    responsabilidades: buildRomanNumberedList(source.responsabilidades, stripPUA, applyTextRules),
     escolaridad: splitToArray(source.escolaridad),
     competenciasAdministrativas: splitToArray(source.comp_adm),
     competenciasTecnicas: splitToArray(source.comp_tec),

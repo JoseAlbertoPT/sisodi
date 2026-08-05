@@ -5,10 +5,18 @@ import {
   View,
   Image,
   StyleSheet,
+  Font,
 } from "@react-pdf/renderer";
 import path from "path";
 import fs from "fs";
 import React from "react";
+
+// Mismo glifo de viñeta que la Carta Descriptiva (PlantillaCartaDescriptivaServicios):
+// Helvetica no tiene glifo para ❖ (U+2756), así que se registra esta fuente.
+Font.register({
+  family: "NotoSymbols",
+  src: path.join(process.cwd(), "public/fonts/NotoSansSymbols2-Regular.ttf"),
+});
 
 export interface JustificacionData {
   tipoAdministracion: 'centralizada' | 'paraestatal';
@@ -233,7 +241,7 @@ const s = StyleSheet.create({
   listNum: { width: 15, fontFamily: "Helvetica-Bold" },
   listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.5 },
   bulletItemContainer: { flexDirection: "row", marginBottom: 1, paddingLeft: 20 },
-  bulletSign: { width: 15, fontFamily: "Helvetica" },
+  bulletSign: { width: 15, fontSize: 7, fontFamily: "NotoSymbols" },
 
   firmasWrapper: {
     flexDirection: "row",
@@ -490,14 +498,14 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={{ ...s.bold, marginBottom: 4 }}>II. 1.  ESCOLARIDAD MÍNIMA:</Text>
           {data.perfil?.escolaridadMinima?.slice(0, 1).map((esc, i) => (
             <View key={`esc-${i}`} style={s.bulletItemContainer}>
-              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.bulletSign}>{"❖"}</Text>
               <Text style={s.listTextWrap}>{esc}</Text>
             </View>
           ))}
         </View>
         {data.perfil?.escolaridadMinima?.slice(1).map((esc, i) => (
           <View key={`esc-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 2}.</Text>
+            <Text style={s.bulletSign}>{"❖"}</Text>
             <Text style={s.listTextWrap}>{esc}</Text>
           </View>
         ))}
@@ -507,14 +515,14 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={{ ...s.bold, marginLeft: 15, marginTop: 2 }}>II. 2.1.  Administrativas:</Text>
           {data.perfil?.competenciasAdministrativas?.slice(0, 1).map((comp, i) => (
             <View key={`ca-${i}`} style={s.bulletItemContainer}>
-              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.bulletSign}>{"❖"}</Text>
               <Text style={s.listTextWrap}>{comp}</Text>
             </View>
           ))}
         </View>
         {data.perfil?.competenciasAdministrativas?.slice(1).map((comp, i) => (
           <View key={`ca-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 2}.</Text>
+            <Text style={s.bulletSign}>{"❖"}</Text>
             <Text style={s.listTextWrap}>{comp}</Text>
           </View>
         ))}
@@ -523,14 +531,14 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={{ ...s.bold, marginLeft: 15, marginTop: 5, marginBottom: 2 }}>II. 2.2.  Técnicas:</Text>
           {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
             <View key={`ct-${i}`} style={s.bulletItemContainer}>
-              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.bulletSign}>{"❖"}</Text>
               <Text style={s.listTextWrap}>{comp}</Text>
             </View>
           ))}
         </View>
         {data.perfil?.competenciasTecnicas?.slice(1).map((comp, i) => (
           <View key={`ct-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 2}.</Text>
+            <Text style={s.bulletSign}>{"❖"}</Text>
             <Text style={s.listTextWrap}>{comp}</Text>
           </View>
         ))}
@@ -539,14 +547,14 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={{ ...s.bold, marginLeft: 15, marginTop: 5, marginBottom: 2 }}>II. 2.3.  Sociales:</Text>
           {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
             <View key={`cs-${i}`} style={s.bulletItemContainer}>
-              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.bulletSign}>{"❖"}</Text>
               <Text style={s.listTextWrap}>{comp}</Text>
             </View>
           ))}
         </View>
         {data.perfil?.competenciasSociales?.slice(1).map((comp, i) => (
           <View key={`cs-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 2}.</Text>
+            <Text style={s.bulletSign}>{"❖"}</Text>
             <Text style={s.listTextWrap}>{comp}</Text>
           </View>
         ))}
@@ -555,14 +563,14 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={{ ...s.bold, marginLeft: 15, marginTop: 5, marginBottom: 2 }}>II. 2.4.  Valores:</Text>
           {data.perfil?.valores?.slice(0, 1).map((val, i) => (
             <View key={`val-${i}`} style={s.bulletItemContainer}>
-              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.bulletSign}>{"❖"}</Text>
               <Text style={s.listTextWrap}>{val}</Text>
             </View>
           ))}
         </View>
         {data.perfil?.valores?.slice(1).map((val, i) => (
           <View key={`val-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 2}.</Text>
+            <Text style={s.bulletSign}>{"❖"}</Text>
             <Text style={s.listTextWrap}>{val}</Text>
           </View>
         ))}
@@ -571,14 +579,14 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={{ ...s.bold, marginTop: 6, marginBottom: 2 }}>II.3.  ÁREAS DE EXPERIENCIA:</Text>
           {data.perfil?.areasExperiencia?.slice(0, 1).map((area, i) => (
             <View key={`ae-${i}`} style={s.bulletItemContainer}>
-              <Text style={s.bulletSign}>{i + 1}.</Text>
+              <Text style={s.bulletSign}>{"❖"}</Text>
               <Text style={s.listTextWrap}>{area}</Text>
             </View>
           ))}
         </View>
         {data.perfil?.areasExperiencia?.slice(1).map((area, i) => (
           <View key={`ae-${i + 1}`} style={s.bulletItemContainer} wrap={false}>
-            <Text style={s.bulletSign}>{i + 2}.</Text>
+            <Text style={s.bulletSign}>{"❖"}</Text>
             <Text style={s.listTextWrap}>{area}</Text>
           </View>
         ))}

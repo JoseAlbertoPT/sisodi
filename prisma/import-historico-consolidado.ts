@@ -91,12 +91,31 @@ function parseImporte(raw: string): { value: number | null; error: string | null
   return { value, error: null }
 }
 
-function splitBullets(raw: string): string[] {
+// Actividades (col. Q) y Responsabilidades (col. R) del catálogo ya vienen
+// pre-numeradas con romanos por línea, una línea = un punto, separadas por
+// salto de línea real. No hay que generar ni parsear/extraer el numeral con
+// regex — eso es lo que causaba la doble numeración y las líneas basura
+// (el numeral capturado colándose como elemento propio del arreglo, o el
+// match sin anclar `^` devolviendo un numeral distinto al real). Solo se
+// separa por salto de línea, se recorta espacios y se descartan líneas vacías;
+// cada línea se guarda tal cual, numeral incluido.
+function parseListField(raw: string): string[] {
   const s = (raw ?? "").trim()
   if (!s) return []
-  const byRoman = s.split(/\n?\s*(?=[IVXLCDM]{1,6}\.\s)/g).map((x) => x.trim()).filter(Boolean)
-  if (byRoman.length > 1) return byRoman
-  return s.split(/\n+/).map((x) => x.replace(/^[•\-]\s*/, "").trim()).filter(Boolean)
+  return s
+    .split(/\r\n|\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+}
+
+const ROMAN_MARKER_RE = /^[IVXLCDM]+\.\s/
+
+// Valida que cada línea de una lista pre-numerada (Q/R) realmente traiga su
+// numeral romano de origen. Si una fila nueva del catálogo no respeta ese
+// formato (todo en una línea, numeración arábiga, etc.) se debe avisar en
+// vez de dejar que el PDF salga mal en silencio.
+function tieneFormatoNumeradoValido(items: string[]): boolean {
+  return items.every((line) => ROMAN_MARKER_RE.test(line))
 }
 
 function normalizeRegimen(raw: string): string | null {
@@ -238,6 +257,18 @@ async function main() {
     const regimen = normalizeRegimen(getCell(row, COL.regimen))
     if (!regimen) { regimenNoReconocido++; reportar(`RÉGIMEN no reconocido: "${getCell(row, COL.regimen)}"`) }
 
+    // Q y R deben venir pre-numeradas (una línea = un punto romano). Si una fila
+    // no respeta ese formato de origen, se avisa (no bloquea el import) para
+    // que se detecte en captura y no hasta ver el PDF final.
+    const actividadesItems = parseListField(getCell(row, COL.actividades))
+    const responsabilidadesItems = parseListField(getCell(row, COL.responsabilidades))
+    if (actividadesItems.length > 0 && !tieneFormatoNumeradoValido(actividadesItems)) {
+      advertencias.push("ACTIVIDADES: hay líneas sin numeral romano al inicio; revisar formato de origen en el Excel (columna Q)")
+    }
+    if (responsabilidadesItems.length > 0 && !tieneFormatoNumeradoValido(responsabilidadesItems)) {
+      advertencias.push("RESPONSABILIDADES: hay líneas sin numeral romano al inicio; revisar formato de origen en el Excel (columna R)")
+    }
+
     // Cadena de resolución de periodo: vigencia inicio -> folio dictamen -> folio justificación -> (solo en modo borrador) periodo de hoy.
     let periodoId: number | null = null
     let periodoOrigen = ""
@@ -289,8 +320,8 @@ async function main() {
         importe_bruto:         importeBruto,
         nivel_tabulador:       getCell(row, COL.nivelCategoria) || null,
         objeto:                getCell(row, COL.objeto) || null,
-        actividades:           splitBullets(getCell(row, COL.actividades)),
-        responsabilidades:     splitBullets(getCell(row, COL.responsabilidades)),
+        actividades:           actividadesItems,
+        responsabilidades:     responsabilidadesItems,
         escolaridad:           getCell(row, COL.escolaridad) || null,
         comp_adm:              getCell(row, COL.compAdm) || null,
         comp_tec:              getCell(row, COL.compTec) || null,
@@ -321,13 +352,14 @@ async function main() {
       console.log(`  Fila ${r.idx} [${r.secretariaRaw}] folio=${r.folioDictamen || "(sin folio)"}: ${r.errores.join(" | ")}`)
     }
   }
-  if (MODO_BORRADOR) {
-    const conAdvertencias = resultados.filter((r) => r.errores.length === 0 && r.advertencias.length > 0)
-    if (conAdvertencias.length > 0) {
-      console.log(`\nModo borrador: ${conAdvertencias.length} filas se van a importar igual, con estos datos incompletos/dudosos para revisión manual:`)
-      for (const r of conAdvertencias) {
-        console.log(`  Fila ${r.idx} [${r.secretariaRaw}] folio=${r.folioDictamen || "(sin folio)"}: ${r.advertencias.join(" | ")}`)
-      }
+  // Filas que sí se importan pero con advertencias (formato de origen dudoso,
+  // p. ej. Q/R sin numeral romano) — se muestran siempre, no solo en borrador,
+  // para detectarlas en captura y no hasta ver el PDF final.
+  const conAdvertencias = resultados.filter((r) => r.errores.length === 0 && r.advertencias.length > 0)
+  if (conAdvertencias.length > 0) {
+    console.log(`\n${conAdvertencias.length} filas se importan con advertencias, revisar manualmente:`)
+    for (const r of conAdvertencias) {
+      console.log(`  Fila ${r.idx} [${r.secretariaRaw}] folio=${r.folioDictamen || "(sin folio)"}: ${r.advertencias.join(" | ")}`)
     }
   }
 

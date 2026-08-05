@@ -22,15 +22,15 @@ export function construirClave(secretaria: string | null | undefined, folioDicta
 }
 
 // Marca usada en historial_solicitud para las solicitudes cargadas desde el histórico
-// consolidado DGSAC (prisma/import-historico-consolidado.ts). Esas ya traen su folio real
-// del proceso en papel, así que no deben llevar siglas calculadas encima.
+// consolidado DGSAC (prisma/import-historico-consolidado.ts).
 export const MARCA_HISTORICO_IMPORTADO = "Importado de histórico consolidado DGSAC";
 
+// La Clave (carta descriptiva) y la Justificación (dictamen técnico) siempre llevan
+// siglas de secretaría + folio de dictamen, sea la solicitud viva o histórico importado.
 export function claveParaPdf(
   secretaria: string | null | undefined,
   folioDictamen: string | null | undefined,
-  esHistoricoImportado: boolean,
+  _esHistoricoImportado: boolean,
 ): string {
-  if (esHistoricoImportado) return folioDictamen ?? "";
   return construirClave(secretaria, folioDictamen);
 }

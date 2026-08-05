@@ -13,7 +13,20 @@ import { efirmaClient } from "@/lib/efirma-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
+import { stripLeadingRomanNumeral } from "@/lib/roman-list";
 import React from "react";
+
+// Actividades/responsabilidades traen su numeral romano de origen pegado al
+// texto (columnas Q/R del catálogo). Esta plantilla ya antepone su propio
+// número arábigo por separado (ver PlantillaJustificacionServicios/
+// PlantillaNombramientoDeterminado), así que ese numeral de origen se quita
+// antes de aplicar applyTextRules: si se dejara, quedaría duplicado
+// ("1.  I. Coadyuvar...") y además rompe la capitalización de numerales de
+// más de una letra (II, III, IV...), que applyTextRules no reconoce como
+// numeral y deja a medio capitalizar ("Ii.", "Iii.").
+function applyTextRulesToList(items: string[]): string[] {
+  return applyTextRulesArray(items.map(stripLeadingRomanNumeral));
+}
 
 export const runtime = "nodejs";
 
@@ -200,8 +213,8 @@ async function buildJustificacionBufferDesdeCatalogo(
     esRenovacion: cj.es_renovacion ?? false,
     folioAnterior: "",
     objetoContratacion: applyTextRules(cj.objeto ?? ""),
-    actividades: applyTextRulesArray(cj.actividades ?? []),
-    responsabilidades: applyTextRulesArray(cj.responsabilidades ?? []),
+    actividades: applyTextRulesToList(cj.actividades ?? []),
+    responsabilidades: applyTextRulesToList(cj.responsabilidades ?? []),
     perfil: {
       escolaridadMinima: applyTextRulesArray(splitToArray(cj.escolaridad)),
       competenciasAdministrativas: applyTextRulesArray(splitToArray(cj.comp_adm)),
@@ -306,9 +319,9 @@ export async function buildJustificacionBuffer(
         folioAnterior: sol.folio_anterior ?? "",
 
         objetoNombramiento: applyTextRules(sol.objeto ?? ""),
-        funcionesPrincipales: applyTextRulesArray(sol.actividades ?? []),
-        responsabilidades: applyTextRulesArray(sol.responsabilidades ?? []),
-        marcoNormativo: applyTextRulesArray(sol.marco_normativo ?? []),
+        funcionesPrincipales: applyTextRulesToList(sol.actividades ?? []),
+        responsabilidades: applyTextRulesToList(sol.responsabilidades ?? []),
+        marcoNormativo: applyTextRulesToList(sol.marco_normativo ?? []),
 
         condiciones: {
           cambioDomicilio: sol.condicion_cambio_domicilio ?? false,
@@ -375,9 +388,9 @@ export async function buildJustificacionBuffer(
 
         objetoContratacion: applyTextRules(sol.objeto ?? ""),
 
-        actividades:        applyTextRulesArray(sol.actividades ?? []),
+        actividades:        applyTextRulesToList(sol.actividades ?? []),
 
-        responsabilidades:  applyTextRulesArray(sol.responsabilidades ?? []),
+        responsabilidades:  applyTextRulesToList(sol.responsabilidades ?? []),
 
         perfil: {
           escolaridadMinima:          applyTextRulesArray(splitToArray(sol.escolaridad)),
