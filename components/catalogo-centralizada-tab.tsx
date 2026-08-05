@@ -124,7 +124,6 @@ function ClaveInput({ value, onChange }: { value: string; onChange: (v: string) 
   )
 }
 
-
 function SecretariaRow({
    node, allTree, onRefresh, onDragStart, onDragOver, onDrop, draggingIndex, index,
    open, onOpenChange,
