@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { ensureOrganismoParaestatal } from "@/lib/sync-organismo-paraestatal"
 
 function err(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status })
@@ -70,15 +71,19 @@ export async function POST(req: NextRequest) {
     })
     if (duplicate) return err("Ya existe un registro con ese nombre")
 
-    const created = await prisma.organo_centralizado.create({
-      data: {
-        nombre: nombre.trim(),
-        parent_id: parentId || null,
-        orden: orden ?? 0,
-        tipo: tipo || null,
-        ua_clave_administrativa: ua_clave_administrativa?.trim() || null,
-        clave_reporte_plazas: clave_reporte_plazas?.trim() || null,
-      },
+    const created = await prisma.$transaction(async (tx) => {
+      const secretaria = await tx.organo_centralizado.create({
+        data: {
+          nombre: nombre.trim(),
+          parent_id: parentId || null,
+          orden: orden ?? 0,
+          tipo: tipo || null,
+          ua_clave_administrativa: ua_clave_administrativa?.trim() || null,
+          clave_reporte_plazas: clave_reporte_plazas?.trim() || null,
+        },
+      })
+      if (!parentId) await ensureOrganismoParaestatal(tx, secretaria.nombre)
+      return secretaria
     })
     return NextResponse.json(created, { status: 201 })
   } catch (e) {

@@ -91,6 +91,20 @@ function parseImporte(raw: string): { value: number | null; error: string | null
   return { value, error: null }
 }
 
+// La celda IMPORTE BRUTO trae, además del monto, la periodicidad como texto libre
+// ("$348,00 POR HORA", "$43,773.59 MENSUAL", "POR DÍA", "POR TALLER", "ÚNICO"...).
+// parseImporte() ya descarta ese texto al quedarse solo con el número; acá se
+// extrae la periodicidad para no perderla. Si la celda no la menciona explícitamente,
+// se asume "Mensual" (mismo criterio de default que usa el resto de la app).
+function parseTipoPago(raw: string): string {
+  const u = norm(raw)
+  if (u.includes("POR HORA")) return "Por_hora"
+  if (u.includes("POR DIA")) return "Por_dia"
+  if (u.includes("POR TALLER")) return "Por_taller"
+  if (u.includes("UNICO")) return "Unico"
+  return "Mensual"
+}
+
 // Actividades (col. Q) y Responsabilidades (col. R) del catálogo ya vienen
 // pre-numeradas con romanos por línea, una línea = un punto, separadas por
 // salto de línea real. No hay que generar ni parsear/extraer el numeral con
@@ -253,6 +267,7 @@ async function main() {
 
     const { value: importeBruto, error: errImp } = parseImporte(getCell(row, COL.importeBruto))
     if (errImp) reportar(errImp)
+    const tipoImporte = parseTipoPago(getCell(row, COL.importeBruto))
 
     const regimen = normalizeRegimen(getCell(row, COL.regimen))
     if (!regimen) { regimenNoReconocido++; reportar(`RÉGIMEN no reconocido: "${getCell(row, COL.regimen)}"`) }
@@ -318,6 +333,7 @@ async function main() {
         vigencia_inicio:       vigenciaInicio,
         vigencia_fin:          vigenciaFin,
         importe_bruto:         importeBruto,
+        tipo_importe:          tipoImporte,
         nivel_tabulador:       getCell(row, COL.nivelCategoria) || null,
         objeto:                getCell(row, COL.objeto) || null,
         actividades:           actividadesItems,

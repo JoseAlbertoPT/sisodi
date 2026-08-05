@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { ensureOrganismoParaestatal } from "@/lib/sync-organismo-paraestatal"
 
 interface ImportRow {
   secretaria: string
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
           secretariasByName.set(secretariaKey, secretaria)
           uasPorSecretaria.set(secretaria.id, new Set())
           secretariasCreadas++
+          await ensureOrganismoParaestatal(tx, secretaria.nombre)
         }
 
         const uaSet = uasPorSecretaria.get(secretaria.id)!

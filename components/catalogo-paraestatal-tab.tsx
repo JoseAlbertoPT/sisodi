@@ -11,9 +11,11 @@ import {
 } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { FilterTabs } from "@/components/ui/filter-tabs"
+import { FileDropZone } from "@/components/ui/file-drop-zone"
 import {
   Plus, Pencil, Trash2, MoreHorizontal,
-  Landmark, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Search, X, Inbox,
+  Landmark, Loader2, GripVertical, AlertCircle, ChevronRight, ChevronLeft, Search, X, Inbox, CheckCircle2,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import {
@@ -27,9 +29,12 @@ import {
   createOrganoParaestatal,
   updateOrganoParaestatal,
   deleteOrganoParaestatal,
+  importParaestatalBulk,
   type CategoriaParaestatalItem,
   type OrganoParaestatalItem,
+  type ImportParaestatalResult,
 } from "@/lib/catalogo-api"
+import { parseOrganismosExcel, type OrganismoImportRow, type OrganismoImportSkip } from "@/lib/parse-excel-organismos"
 
 const VINO = "var(--sem-accent-primary)"
 const VINO_HOVER = "var(--sem-accent-primary)"
@@ -478,6 +483,54 @@ export function CatalogoParaestatalTab({ onCountChange }: { onCountChange?: (n: 
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState("")
 
+  const [addOrgMode, setAddOrgMode] = useState<"manual" | "masiva">("manual")
+  const [excelFiles, setExcelFiles] = useState<File[]>([])
+  const [parsingExcel, setParsingExcel] = useState(false)
+  const [excelError, setExcelError] = useState<string | null>(null)
+  const [excelRows, setExcelRows] = useState<OrganismoImportRow[]>([])
+  const [excelSkipped, setExcelSkipped] = useState<OrganismoImportSkip[]>([])
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<ImportParaestatalResult | null>(null)
+
+  const resetAddOrgDialog = useCallback(() => {
+    setAddOrgMode("manual")
+    setNewOrgNombre("")
+    setFormError("")
+    setExcelFiles([])
+    setExcelError(null)
+    setExcelRows([])
+    setExcelSkipped([])
+    setImportResult(null)
+  }, [])
+
+  const handleExcelFilesChange = useCallback(async (files: File[]) => {
+    setExcelFiles(files)
+    setExcelError(null)
+    setImportResult(null)
+    setExcelRows([])
+    setExcelSkipped([])
+    if (!files[0]) return
+    setParsingExcel(true)
+    try {
+      const { rows, skipped } = await parseOrganismosExcel(files[0])
+      if (rows.length === 0) {
+        setExcelError("No se encontraron filas válidas en el archivo")
+      } else {
+        setExcelRows(rows)
+        setExcelSkipped(skipped)
+      }
+    } catch (e) {
+      setExcelError(e instanceof Error ? e.message : "Error al leer el archivo")
+    } finally {
+      setParsingExcel(false)
+    }
+  }, [])
+
+  const excelOrganismosCount = useMemo(
+    () => new Set(excelRows.map((r) => r.organismo.trim().toLowerCase())).size,
+    [excelRows]
+  )
+
   const load = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
@@ -491,6 +544,21 @@ export function CatalogoParaestatalTab({ onCountChange }: { onCountChange?: (n: 
   }, [onCountChange])
 
   useEffect(() => { void load() }, [load])
+
+  const handleImportExcel = useCallback(async () => {
+    if (excelRows.length === 0) return
+    setImporting(true)
+    setExcelError(null)
+    try {
+      const result = await importParaestatalBulk(excelRows)
+      setImportResult(result)
+      await load()
+    } catch (e) {
+      setExcelError(e instanceof Error ? e.message : "Error al importar el archivo")
+    } finally {
+      setImporting(false)
+    }
+  }, [excelRows, load])
 
   const filtered = search
     ? organismos.filter((n) => n.nombre.toLowerCase().includes(search.toLowerCase()) || n.organos.some((a) => a.nombre.toLowerCase().includes(search.toLowerCase())))
@@ -527,7 +595,7 @@ export function CatalogoParaestatalTab({ onCountChange }: { onCountChange?: (n: 
           size="sm"
           variant="primary"
           className="shrink-0 gap-1.5"
-          onClick={() => { setNewOrgNombre(""); setFormError(""); setAddOrgOpen(true) }}
+          onClick={() => { resetAddOrgDialog(); setAddOrgOpen(true) }}
         >
           Agregar Organismo
         </Button>
@@ -569,25 +637,94 @@ export function CatalogoParaestatalTab({ onCountChange }: { onCountChange?: (n: 
       </Card>
 
       {/* Dialog nuevo organismo */}
-      <Dialog open={addOrgOpen} onOpenChange={setAddOrgOpen}>
+      <Dialog open={addOrgOpen} onOpenChange={(v) => { setAddOrgOpen(v); if (!v) resetAddOrgDialog() }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nuevo Organismo Paraestatal</DialogTitle></DialogHeader>
           <DialogBody>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label>Nombre <span className="text-destructive">*</span></Label>
-                <Input value={newOrgNombre} onChange={(e) => setNewOrgNombre(e.target.value)} placeholder="Ej. Instituto Morelense de la Vivienda" onKeyDown={(e) => e.key === "Enter" && handleAddOrg()} autoFocus />
-              </div>
-              {formError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
+            <div className="flex flex-col gap-4">
+              <FilterTabs
+                  value={addOrgMode}
+                  onValueChange={(v) => setAddOrgMode(v as "manual" | "masiva")}
+                  items={[{ value: "manual", label: "Manual" }, { value: "masiva", label: "Masiva" }]}
+                  fullWidth
+              />
+
+              {addOrgMode === "manual" ? (
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Nombre <span className="text-destructive">*</span></Label>
+                    <Input value={newOrgNombre} onChange={(e) => setNewOrgNombre(e.target.value)} placeholder="Ej. Instituto Morelense de la Vivienda" onKeyDown={(e) => e.key === "Enter" && handleAddOrg()} autoFocus />
+                    {formError && <p className="text-xs text-destructive flex items-center gap-1 mt-1"><AlertCircle className="h-3.5 w-3.5" />{formError}</p>}
+                  </div>
+              ) : importResult ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-green-500 bg-green-50 px-4 py-3">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                      <span className="text-sm text-green-700">
+                        Se crearon <strong>{importResult.organismosCreados}</strong> organismo{importResult.organismosCreados !== 1 ? "s" : ""} y <strong>{importResult.areasCreadas}</strong> área{importResult.areasCreadas !== 1 ? "s" : ""}.
+                      </span>
+                    </div>
+                    {importResult.saltadas.length > 0 && (
+                        <div className="flex flex-col gap-1.5 rounded-lg border-l-4 border-l-amber-500 bg-amber-50 px-4 py-3">
+                          <span className="text-xs font-medium text-amber-800">{importResult.saltadas.length} fila{importResult.saltadas.length !== 1 ? "s fueron" : " fue"} omitida{importResult.saltadas.length !== 1 ? "s" : ""}:</span>
+                          <ul className="text-xs text-amber-700 list-disc list-inside max-h-32 overflow-y-auto">
+                            {importResult.saltadas.map((s, i) => (
+                                <li key={i}>{s.organismo} / {s.area} — {s.motivo}</li>
+                            ))}
+                          </ul>
+                        </div>
+                    )}
+                  </div>
+              ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Sube un archivo <span className="font-semibold text-card-foreground">.xlsx</span> con las columnas <strong>Organismo</strong> y <strong>Área</strong>. Se crearán automáticamente los organismos y sus áreas internas.
+                    </p>
+                    <FileDropZone
+                        accept=".xlsx"
+                        hint=".xlsx · máx. 10 MB"
+                        multiple={false}
+                        files={excelFiles}
+                        onFilesChange={handleExcelFilesChange}
+                        loading={parsingExcel}
+                        loadingText="Leyendo archivo..."
+                        disabled={importing}
+                    />
+                    {excelError && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{excelError}</p>}
+                    {excelRows.length > 0 && !excelError && (
+                        <div className="flex flex-col gap-1.5 rounded-lg border border-[var(--color-core-piedra-90)] bg-[#f9f8f5] px-4 py-3">
+                          <span className="text-xs text-content-high">
+                            Se detectaron <strong>{excelOrganismosCount}</strong> organismo{excelOrganismosCount !== 1 ? "s" : ""} y <strong>{excelRows.length}</strong> área{excelRows.length !== 1 ? "s" : ""}.
+                          </span>
+                          {excelSkipped.length > 0 && (
+                              <span className="text-xs text-amber-700">{excelSkipped.length} fila{excelSkipped.length !== 1 ? "s" : ""} se omitirá{excelSkipped.length !== 1 ? "n" : ""} por datos incompletos.</span>
+                          )}
+                        </div>
+                    )}
+                  </div>
+              )}
             </div>
           </DialogBody>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
-            </DialogClose>
-            <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
-              {saving ? "Creando..." : "Crear"}
-            </Button>
+            {addOrgMode === "masiva" && importResult ? (
+                <DialogClose asChild>
+                  <Button type="button" variant="vino" className={BTN_CONFIRM_CLASS}>Cerrar</Button>
+                </DialogClose>
+            ) : (
+                <>
+                  <DialogClose asChild>
+                    <Button type="button" className={BTN_CANCEL_CLASS}>Cancelar</Button>
+                  </DialogClose>
+                  {addOrgMode === "manual" ? (
+                      <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleAddOrg} disabled={saving || !newOrgNombre.trim()}>
+                        {saving ? "Creando..." : "Crear"}
+                      </Button>
+                  ) : (
+                      <Button variant="vino" className={BTN_CONFIRM_CLASS} onClick={handleImportExcel} disabled={importing || parsingExcel || excelRows.length === 0}>
+                        {importing ? "Importando..." : "Importar"}
+                      </Button>
+                  )}
+                </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

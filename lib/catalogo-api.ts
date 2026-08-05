@@ -153,14 +153,18 @@ export function importCentralizadaBulk(rows: ImportRowCentralizada[]) {
 }
 
 export interface ImportRowParaestatal {
-  nombre: string
-  ua_clave_administrativa?: string
-  clave_reporte_plazas?: string
-  categoriaId: number
+  organismo: string
+  area: string
+}
+
+export interface ImportParaestatalResult {
+  organismosCreados: number
+  areasCreadas: number
+  saltadas: { organismo: string; area: string; motivo: string }[]
 }
 
 export function importParaestatalBulk(rows: ImportRowParaestatal[]) {
-  return api<{ inserted: number }>("/api/catalogo/paraestatal/import", {
+  return api<ImportParaestatalResult>("/api/catalogo/paraestatal/import", {
     method: "POST",
     ...jsonBody({ rows }),
   })
