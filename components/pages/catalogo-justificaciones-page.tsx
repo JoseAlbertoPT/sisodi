@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FileTypeIcon } from "@/components/ui/file-drop-zone"
+import { FileTypeIcon, FileDropZone } from "@/components/ui/file-drop-zone"
 import { SearchInput, SEARCH_INPUT_MAX_W_MD, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input"
 import { StatusBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
 import {
@@ -33,6 +33,9 @@ import {
   Power,
   PowerOff,
   Inbox,
+  Upload,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -141,6 +144,19 @@ function toTitleCaseES(input: string): string {
 }
 
 const TAB_BADGE = "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[var(--sem-accent-primary)] text-white"
+
+interface ResumenImportExcel {
+  totalFilas: number
+  yaImportadosCount: number
+  listasParaImportar: number
+  conErrores: number
+  sinFolioDictamen: number
+  regimenNoReconocido: number
+  sinPeriodo: number
+  secretariasNoMatch: { nombre: string; count: number }[]
+  filasConError: { idx: number; secretariaRaw: string; folioDictamen: string; errores: string[] }[]
+  filasConAdvertencia: { idx: number; secretariaRaw: string; folioDictamen: string; advertencias: string[] }[]
+}
 
 function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const { user } = useAuth()
@@ -664,6 +680,66 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery])
   useEffect(() => { if (reutilizacionesPage > reutilizacionesTotalPages) setReutilizacionesPage(reutilizacionesTotalPages) }, [reutilizacionesTotalPages, reutilizacionesPage])
 
+  // ── Importar Excel al catálogo ──────────────────────────────────────
+  const [importOpen, setImportOpen]           = useState(false)
+  const [importFiles, setImportFiles]         = useState<File[]>([])
+  const [importPreview, setImportPreview]     = useState<{ formatoLabel: string; resumen: ResumenImportExcel } | null>(null)
+  const [importPreviewLoading, setImportPreviewLoading] = useState(false)
+  const [importError, setImportError]         = useState<string | null>(null)
+  const [importCommitLoading, setImportCommitLoading]   = useState(false)
+  const [importResult, setImportResult]       = useState<{ creadas: number; sincronizacion: { insertados: number } } | null>(null)
+
+  const resetImportDialog = () => {
+    setImportFiles([])
+    setImportPreview(null)
+    setImportError(null)
+    setImportResult(null)
+    setImportPreviewLoading(false)
+    setImportCommitLoading(false)
+  }
+
+  const handleImportFilesChange = async (files: File[]) => {
+    setImportFiles(files)
+    setImportPreview(null)
+    setImportError(null)
+    setImportResult(null)
+    if (files.length === 0 || !user) return
+    setImportPreviewLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", files[0])
+      fd.append("userId", user.id)
+      const res = await fetch("/api/catalogo-justificaciones/importar/preview", { method: "POST", body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "Error al leer el archivo")
+      setImportPreview(data)
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : "Error al leer el archivo")
+    } finally {
+      setImportPreviewLoading(false)
+    }
+  }
+
+  const handleImportCommit = async () => {
+    if (importFiles.length === 0 || !user) return
+    setImportCommitLoading(true)
+    setImportError(null)
+    try {
+      const fd = new FormData()
+      fd.append("file", importFiles[0])
+      fd.append("userId", user.id)
+      const res = await fetch("/api/catalogo-justificaciones/importar/commit", { method: "POST", body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "Error al importar el archivo")
+      setImportResult(data)
+      await fetchData()
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : "Error al importar el archivo")
+    } finally {
+      setImportCommitLoading(false)
+    }
+  }
+
   const fetchData = useCallback(async () => {
     if (!hasDataRef.current) setLoading(true)
     setError(null)
@@ -795,6 +871,14 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
         </Select>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        </Button>
+        <Button
+          variant="outline"
+          className="gap-1.5 shrink-0"
+          onClick={() => { resetImportDialog(); setImportOpen(true) }}
+        >
+          <Upload className="h-4 w-4" />
+          Importar Excel
         </Button>
       </div>
       {error && (
@@ -981,6 +1065,120 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           : "El registro estará disponible nuevamente para reutilización en nuevas solicitudes."}
         confirmLabel={confirmToggle?.activo ? "Sí, desactivar" : "Sí, activar"}
       />
+      <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if (!v) resetImportDialog() }}>
+        <DialogContent className="max-w-lg bg-white p-0 gap-0 overflow-hidden">
+          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
+            <DialogTitle className="ds-title-md text-content-high">
+              Importar Excel al catálogo
+            </DialogTitle>
+          </div>
+          <div className="flex flex-col gap-4 px-6 py-5 max-h-[70vh] overflow-y-auto">
+            {importResult ? (
+              <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-green-500 bg-green-50 px-4 py-3">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                <span className="text-sm text-green-700">
+                  Se crearon <strong>{importResult.creadas}</strong> solicitud{importResult.creadas !== 1 ? "es" : ""} y se sincronizaron <strong>{importResult.sincronizacion.insertados}</strong> registro{importResult.sincronizacion.insertados !== 1 ? "s" : ""} en el catálogo.
+                </span>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Sube un archivo <span className="font-semibold text-card-foreground">.xlsx</span> con justificaciones dictaminadas (formato consolidado de una sola hoja, o una hoja por secretaría). Primero se muestra una vista previa sin guardar nada; tú confirmas antes de escribir en la base de datos.
+                </p>
+                <FileDropZone
+                  accept=".xlsx"
+                  hint=".xlsx · máx. 10 MB"
+                  multiple={false}
+                  files={importFiles}
+                  onFilesChange={handleImportFilesChange}
+                  loading={importPreviewLoading}
+                  loadingText="Leyendo y validando archivo..."
+                  disabled={importCommitLoading}
+                />
+                {importError && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5" />{importError}
+                  </p>
+                )}
+                {importPreview && (
+                  <div className="flex flex-col gap-3">
+                    <div className="rounded-lg border border-[var(--color-core-piedra-90)] bg-[#f9f8f5] px-4 py-3 text-xs space-y-1">
+                      <p className="text-content-high">Formato detectado: <strong>{importPreview.formatoLabel}</strong></p>
+                      <p className="text-content-high">Total de filas con datos: <strong>{importPreview.resumen.totalFilas}</strong></p>
+                      <p className="text-green-700">Listas para importar: <strong>{importPreview.resumen.listasParaImportar}</strong></p>
+                      {importPreview.resumen.yaImportadosCount > 0 && (
+                        <p className="text-muted-foreground">Ya estaban en el catálogo (se omiten): <strong>{importPreview.resumen.yaImportadosCount}</strong></p>
+                      )}
+                      {importPreview.resumen.conErrores > 0 && (
+                        <p className="text-destructive">Con errores (se omiten): <strong>{importPreview.resumen.conErrores}</strong></p>
+                      )}
+                    </div>
+                    {importPreview.resumen.filasConError.length > 0 && (
+                      <div className="flex flex-col gap-1.5 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3">
+                        <span className="text-xs font-medium text-destructive flex items-center gap-1">
+                          <XCircle className="h-3.5 w-3.5" />
+                          {importPreview.resumen.filasConError.length} fila{importPreview.resumen.filasConError.length !== 1 ? "s" : ""} con error (no se importarán):
+                        </span>
+                        <ul className="text-xs text-destructive/90 list-disc list-inside max-h-32 overflow-y-auto">
+                          {importPreview.resumen.filasConError.slice(0, 20).map((r, i) => (
+                            <li key={i}>Fila {r.idx} [{r.secretariaRaw}] folio={r.folioDictamen || "(sin folio)"}: {r.errores.join(" | ")}</li>
+                          ))}
+                        </ul>
+                        {importPreview.resumen.filasConError.length > 20 && (
+                          <span className="text-xs text-destructive/70">…y {importPreview.resumen.filasConError.length - 20} más.</span>
+                        )}
+                      </div>
+                    )}
+                    {importPreview.resumen.filasConAdvertencia.length > 0 && (
+                      <div className="flex flex-col gap-1.5 rounded-lg border-l-4 border-l-amber-500 bg-amber-50 px-4 py-3">
+                        <span className="text-xs font-medium text-amber-800">
+                          {importPreview.resumen.filasConAdvertencia.length} fila{importPreview.resumen.filasConAdvertencia.length !== 1 ? "s se importarán" : " se importará"} con advertencia (revisar manualmente):
+                        </span>
+                        <ul className="text-xs text-amber-700 list-disc list-inside max-h-24 overflow-y-auto">
+                          {importPreview.resumen.filasConAdvertencia.slice(0, 10).map((r, i) => (
+                            <li key={i}>Fila {r.idx} folio={r.folioDictamen || "(sin folio)"}: {r.advertencias.join(" | ")}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
+            {importResult ? (
+              <Button
+                variant="vino"
+                className="rounded-full h-10 px-6 font-normal shadow-sm"
+                onClick={() => { setImportOpen(false); resetImportDialog() }}
+              >
+                Cerrar
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="default"
+                  className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+                  onClick={() => setImportOpen(false)}
+                  disabled={importCommitLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="vino"
+                  className="rounded-full h-10 px-6 font-normal shadow-sm"
+                  onClick={handleImportCommit}
+                  disabled={importCommitLoading || importPreviewLoading || !importPreview || importPreview.resumen.listasParaImportar === 0}
+                >
+                  {importCommitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {importCommitLoading ? "Importando…" : `Confirmar importación${importPreview ? ` (${importPreview.resumen.listasParaImportar})` : ""}`}
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
