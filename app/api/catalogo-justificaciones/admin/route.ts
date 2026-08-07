@@ -9,31 +9,19 @@ export async function GET(req: NextRequest) {
     const guardError = await requireRol(userId, ["Administrador"])
     if (guardError) return guardError
 
-    const q     = searchParams.get("q")?.trim() ?? ""
-    const page  = Math.max(1, Number(searchParams.get("page") ?? "1"))
-    const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "20")))
-    const skip  = (page - 1) * limit
+    const q         = searchParams.get("q")?.trim() ?? ""
+    const page      = Math.max(1, Number(searchParams.get("page") ?? "1"))
+    const limitRaw  = searchParams.get("limit") ?? "20"
+    // limit=all (o 0) trae todos los registros sin paginar (carga ilimitada).
+    const noLimit   = limitRaw === "all" || limitRaw === "0"
+    const limit     = noLimit ? 0 : Math.max(1, Number(limitRaw))
+    const skip      = noLimit ? 0 : (page - 1) * limit
 
-    // El rol Administrador ve el catálogo limitado a su propia secretaría,
-    // igual que la pestaña de Consulta (app/api/catalogo-justificaciones/route.ts).
-    const viewer = await prisma.usuario.findUnique({
-      where:  { id: userId! },
-      select: {
-        secretaria_texto: true,
-        organo_centralizado: { select: { nombre: true } },
-      },
-    })
-    const viewerSecretaria = (viewer?.secretaria_texto ?? viewer?.organo_centralizado?.nombre ?? "")
-      .split(">")[0]
-      .trim()
-
-    if (!viewerSecretaria) {
-      return NextResponse.json({ records: [], total: 0, page, limit })
-    }
-
+    // El rol Administrador ve el catálogo completo (todas las secretarías).
+    // La pestaña de Consulta sigue limitada por secretaría
+    // (app/api/catalogo-justificaciones/route.ts).
     const conditions: string[] = []
-    const params: any[] = [viewerSecretaria]
-    conditions.push(`lower(trim(split_part(COALESCE(cj.secretaria, s.secretaria), '>', 1))) = lower($1)`)
+    const params: any[] = []
 
     if (q) {
       params.push(`%${q}%`)
@@ -57,9 +45,10 @@ export async function GET(req: NextRequest) {
       ${whereClause}
     `
 
-    const listParams = [...params, limit, skip]
-    const limitIdx  = params.length + 1
-    const offsetIdx = params.length + 2
+    const listParams = noLimit ? [...params] : [...params, limit, skip]
+    const paginationSql = noLimit
+      ? ""
+      : `LIMIT $${params.length + 1} OFFSET $${params.length + 2}`
 
     const listSql = `
       SELECT
@@ -88,8 +77,15 @@ export async function GET(req: NextRequest) {
       FROM catalogo_justificacion cj
       LEFT JOIN solicitud s ON s.id = cj.solicitud_id
       ${whereClause}
-      ORDER BY cj.creado_en DESC
-      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+      ORDER BY GREATEST(
+        cj.creado_en,
+        COALESCE((
+          SELECT MAX(cs.creado_en)
+          FROM catalogo_solicitud cs
+          WHERE cs.catalogo_justificacion_id = cj.id
+        ), cj.creado_en)
+      ) DESC
+      ${paginationSql}
     `
 
     const [countRows, rows] = await Promise.all([

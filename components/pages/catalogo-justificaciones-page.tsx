@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import Image from "next/image"
 import { useAuth } from "@/lib/auth-context"
 import { useRealtime } from "@/hooks/use-realtime"
@@ -122,7 +122,27 @@ function entidadNombre(rec: CatalogoRecord) {
     ?? "—"
 }
 
-function ConsultaTab() {
+const PALABRAS_MENORES = new Set([
+  "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
+  "en", "a", "al", "con", "por", "para",
+])
+// Convierte un texto (normalmente en MAYÚSCULAS) a formato tipo título en español.
+function toTitleCaseES(input: string): string {
+  if (!input) return input
+  let wordIndex = 0
+  return input.toLocaleLowerCase("es").replace(/[\p{L}\p{N}]+/gu, (word) => {
+    const capitalized =
+      wordIndex > 0 && PALABRAS_MENORES.has(word)
+        ? word
+        : word.charAt(0).toLocaleUpperCase("es") + word.slice(1)
+    wordIndex++
+    return capitalized
+  })
+}
+
+const TAB_BADGE = "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[var(--sem-accent-primary)] text-white"
+
+function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const { user } = useAuth()
   const [q, setQ]               = useState("")
   const [page, setPage]         = useState(1)
@@ -159,6 +179,7 @@ function ConsultaTab() {
     }
   }, [user?.id])
   useEffect(() => { void fetchData() }, [fetchData])
+  useEffect(() => { onCountChange?.(allRecords.length) }, [allRecords, onCountChange])
   const norm = (s: string | null | undefined) =>
     (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
   const records = q.trim()
@@ -171,6 +192,9 @@ function ConsultaTab() {
             r.denominacion_nombramiento,
             r.vigencia,
             r.regimen_contratacion,
+            r.tipo_pago,
+            r.importe_bruto,
+            r.solicitud.folio_dictamen,
             r.solicitud.secretaria_txt_snapshot,
             r.solicitud.secretaria,
           ].join(" "))
@@ -253,6 +277,8 @@ function ConsultaTab() {
       a.click()
       URL.revokeObjectURL(url)
       setShowSol(false)
+      // Refresca la lista para que el registro reutilizado suba al inicio.
+      void fetchData()
     } catch (e) {
       setSolError(e instanceof Error ? e.message : "Error al generar el PDF")
     } finally {
@@ -329,10 +355,10 @@ function ConsultaTab() {
                     <td className="max-w-[200px] truncate font-medium" title={rec.solicitud.folio_dictamen ?? ""}>
                       {fmt(rec.solicitud.folio_dictamen)}
                     </td>
-                    <td className="max-w-[220px] truncate" title={rec.programa_proyecto}>
-                      {fmt(rec.programa_proyecto)}
+                    <td className="max-w-[220px] truncate" title={toTitleCaseES(fmt(rec.programa_proyecto))}>
+                      {toTitleCaseES(fmt(rec.programa_proyecto))}
                     </td>
-                    <td className="max-w-[200px] truncate">{fmt(rec.tipo_actividad)}</td>
+                    <td className="max-w-[200px] truncate" title={toTitleCaseES(fmt(rec.tipo_actividad))}>{toTitleCaseES(fmt(rec.tipo_actividad))}</td>
                     <td>
                       <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                     </td>
@@ -392,14 +418,14 @@ function ConsultaTab() {
                     <td className="max-w-[200px] truncate font-medium" title={rec.solicitud.folio_dictamen ?? ""}>
                       {fmt(rec.solicitud.folio_dictamen)}
                     </td>
-                    <td className="max-w-[200px] truncate" title={rec.programa_proyecto}>
-                      {fmt(rec.programa_proyecto)}
+                    <td className="max-w-[200px] truncate" title={toTitleCaseES(fmt(rec.programa_proyecto))}>
+                      {toTitleCaseES(fmt(rec.programa_proyecto))}
                     </td>
-                    <td className="max-w-[200px] truncate" title={rec.denominacion_nombramiento ?? ""}>
-                      {fmt(rec.denominacion_nombramiento)}
+                    <td className="max-w-[200px] truncate" title={toTitleCaseES(rec.denominacion_nombramiento ?? "")}>
+                      {toTitleCaseES(fmt(rec.denominacion_nombramiento))}
                     </td>
                     <td className="max-w-[160px] truncate">{fmt(rec.puesto_jefe_inmediato)}</td>
-                    <td>{fmt(rec.tipo_actividad)}</td>
+                    <td title={toTitleCaseES(fmt(rec.tipo_actividad))}>{toTitleCaseES(fmt(rec.tipo_actividad))}</td>
                     <td>{rec.numero_personas ?? "—"}</td>
                     <td>{fmtMoney(rec.importe_bruto)}</td>
                     <td className="capitalize">{fmt(rec.tipo_pago)}</td>
@@ -601,12 +627,11 @@ function ConsultaTab() {
   )
 }
 
-function AdministracionTab() {
+function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const [q, setQ]               = useState("")
-  const [debouncedQ, setDebouncedQ] = useState("")
+  const [secretariaFilter, setSecretariaFilter] = useState("todas")
   const [page, setPage]         = useState(1)
-  const [records, setRecords]   = useState<AdminRecord[]>([])
-  const [total, setTotal]       = useState(0)
+  const [allRecords, setAllRecords] = useState<AdminRecord[]>([])
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
   const [toggling, setToggling]         = useState<number | null>(null)
@@ -639,27 +664,23 @@ function AdministracionTab() {
   useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery])
   useEffect(() => { if (reutilizacionesPage > reutilizacionesTotalPages) setReutilizacionesPage(reutilizacionesTotalPages) }, [reutilizacionesTotalPages, reutilizacionesPage])
 
-  useEffect(() => {
-    const t = setTimeout(() => { setDebouncedQ(q); setPage(1) }, 400)
-    return () => clearTimeout(t)
-  }, [q])
   const fetchData = useCallback(async () => {
     if (!hasDataRef.current) setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ q: debouncedQ, page: String(page), limit: String(limit), userId: user?.id ?? "" })
+      const params = new URLSearchParams({ page: "1", limit: "all", userId: user?.id ?? "" })
       const res = await fetch(`/api/catalogo-justificaciones/admin?${params}`)
       if (!res.ok) throw new Error((await res.json()).error ?? "Error al cargar datos")
       const data = await res.json()
-      setRecords(data.records)
-      setTotal(data.total)
+      setAllRecords(data.records)
+      onCountChange?.(data.total)
       hasDataRef.current = true
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar datos")
     } finally {
       setLoading(false)
     }
-  }, [debouncedQ, page, user?.id])
+  }, [user?.id])
   useEffect(() => { void fetchData() }, [fetchData])
   useRealtime(["catalogo"], fetchData)
   const [confirmToggle, setConfirmToggle] = useState<AdminRecord | null>(null)
@@ -673,7 +694,7 @@ function AdministracionTab() {
         body: JSON.stringify({ activo: !rec.activo, userId: user?.id }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? "Error")
-      setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, activo: !r.activo } : r))
+      setAllRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, activo: !r.activo } : r))
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al actualizar")
     } finally {
@@ -713,17 +734,65 @@ function AdministracionTab() {
       setProcesando(null)
     }
   }
+  // Filtrado en cliente (mismo comportamiento que la pestaña de Consulta):
+  // búsqueda por palabras sobre varios campos + filtro por secretaría.
+  const norm = (s: string | null | undefined) =>
+    (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
+  const secretariaDe = (rec: AdminRecord) => entidadNombre(rec).split(">")[0].trim()
+  const secretarias = useMemo(
+    () => [...new Set(allRecords.map(secretariaDe))].filter(Boolean).sort((a, b) => a.localeCompare(b, "es")),
+    [allRecords],
+  )
+  const filtered = useMemo(() => {
+    let list = allRecords
+    if (secretariaFilter !== "todas") {
+      list = list.filter((r) => secretariaDe(r) === secretariaFilter)
+    }
+    const words = norm(q).split(/\s+/).filter(Boolean)
+    if (words.length) {
+      list = list.filter((r) => {
+        const haystack = norm([
+          r.programa_proyecto,
+          r.tipo_actividad,
+          r.denominacion_nombramiento,
+          r.vigencia,
+          r.regimen_contratacion,
+          r.tipo_pago,
+          r.importe_bruto,
+          r.solicitud.folio_dictamen,
+          r.solicitud.secretaria_txt_snapshot,
+          r.solicitud.secretaria,
+        ].join(" "))
+        return words.every((w) => haystack.includes(w))
+      })
+    }
+    return list
+  }, [allRecords, q, secretariaFilter])
+  const total = filtered.length
   const totalPages = Math.max(1, Math.ceil(total / limit))
   useEffect(() => { if (page > totalPages) setPage(totalPages) }, [totalPages, page])
+  useEffect(() => { setPage(1) }, [q, secretariaFilter])
+  const visibleRows = filtered.slice((page - 1) * limit, page * limit)
   return (
     <>
       <div className="flex items-center gap-3 mb-5">
         <SearchInput
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar registro…"
+          placeholder="Buscar por dependencia, programa, folio…"
           containerClassName={`flex-1 ${SEARCH_INPUT_MAX_W_MD}`}
         />
+        <Select value={secretariaFilter} onValueChange={setSecretariaFilter}>
+          <SelectTrigger className="w-80 bg-card">
+            <SelectValue placeholder="Todas las secretarías" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas las secretarías ({allRecords.length})</SelectItem>
+            {secretarias.map((sec) => (
+              <SelectItem key={sec} value={sec}>{toTitleCaseES(sec)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </Button>
@@ -758,20 +827,20 @@ function AdministracionTab() {
                   </td>
                 </tr>
               )}
-              {!loading && records.length === 0 && (
+              {!loading && visibleRows.length === 0 && (
                 <tr className="empty-row">
                   <td colSpan={9}><EmptyState icon={Inbox} title="Sin registros en el catálogo" description="No se encontraron registros." /></td>
                 </tr>
               )}
-              {!loading && records.map((rec) => {
+              {!loading && visibleRows.map((rec) => {
                 const hasSols = rec.catalogo_solicitudes.length > 0
                 return (
                 <tr key={rec.id} className="border-b border-border hover:bg-muted/10 transition-colors">
-                  <td className="px-4 py-3 text-xs max-w-[140px] truncate" title={entidadNombre(rec)}>
-                    {entidadNombre(rec).split(" > ")[0]}
+                  <td className="px-4 py-3 text-xs max-w-[140px] truncate" title={toTitleCaseES(entidadNombre(rec))}>
+                    {toTitleCaseES(entidadNombre(rec).split(" > ")[0])}
                   </td>
                   <td className="px-4 py-3 text-xs max-w-[200px] truncate font-medium" title={rec.solicitud.folio_dictamen ?? ""}>{fmt(rec.solicitud.folio_dictamen)}</td>
-                  <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={rec.programa_proyecto}>{fmt(rec.programa_proyecto)}</td>
+                  <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={toTitleCaseES(fmt(rec.programa_proyecto))}>{toTitleCaseES(fmt(rec.programa_proyecto))}</td>
                   <td className="px-4 py-3">
                     <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                   </td>
@@ -918,6 +987,18 @@ function AdministracionTab() {
 export function CatalogoJustificacionesPage() {
   const { user } = useAuth()
   const isAdmin = user?.rol === "Administrador"
+  const [consultaCount, setConsultaCount] = useState<number | null>(null)
+  const [adminCount, setAdminCount] = useState<number | null>(null)
+  // Precarga el conteo de Administración para que el badge aparezca aunque
+  // la pestaña no se haya abierto (usa el total real, no la lista cargada).
+  useEffect(() => {
+    if (!isAdmin || !user?.id) return
+    const params = new URLSearchParams({ page: "1", limit: "1", userId: user.id })
+    fetch(`/api/catalogo-justificaciones/admin?${params}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setAdminCount(d.total) })
+      .catch(() => {})
+  }, [isAdmin, user?.id])
   return (
     <PageLayout
       title="Catálogo "
@@ -929,17 +1010,19 @@ export function CatalogoJustificacionesPage() {
             <TabsTrigger value="consulta" className="gap-1.5">
               <Search className="h-4 w-4" />
               Consulta
+              {consultaCount !== null && <span className={TAB_BADGE}>{consultaCount}</span>}
             </TabsTrigger>
             <TabsTrigger value="administracion" className="gap-1.5">
               <ListChecks className="h-4 w-4" />
               Administración
+              {adminCount !== null && <span className={TAB_BADGE}>{adminCount}</span>}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="consulta">
-            <ConsultaTab />
+            <ConsultaTab onCountChange={setConsultaCount} />
           </TabsContent>
           <TabsContent value="administracion">
-            <AdministracionTab />
+            <AdministracionTab onCountChange={setAdminCount} />
           </TabsContent>
         </Tabs>
       ) : (

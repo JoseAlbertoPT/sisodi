@@ -11,7 +11,6 @@ const ADMIN_CORREO  = "admin@sisodij.gob.mx"
 const ESTADO_FINAL        = "Emitido"
 const ESTADO_SIN_DICTAMEN = "En Revision Emisor"
 const ESTADO_BORRADOR     = "Borrador"
-
 const COL = {
   folioJustificacion:     "FOLIO DE JUSTIFICACIÓN/DESCRIPCIÓN",
   fechaJustificacion:     "FECHA DE EMISION DE LA JUSTIFICACION/DESCRIPCION",
@@ -43,6 +42,51 @@ const MANUAL_OVERRIDES: Record<string, string> = {
   "JEFATURA DE LA OFICINA DE LA GOBERNATURA DEL ESTADO": "Jefatura de la Oficina de la Gubernatura del Estado",
 }
 
+const HOJA_FIELD_MATCHERS: [string, (h: string) => boolean][] = [
+  ["folioJustificacion",     (h) => h.includes("FOLIO") && h.includes("JUSTIFICACION") && !h.includes("DICTAMEN")],
+  ["folioDictamen",          (h) => h.includes("FOLIO") && h.includes("DICTAMEN")],
+  ["fechaJustificacion",     (h) => h.includes("FECHA") && h.includes("JUSTIFICACION")],
+  ["fechaDictamen",          (h) => h.includes("FECHA") && h.includes("DICTAMEN")],
+  ["secretaria",             (h) => h.includes("SECRETARIA")],
+  ["unidadAdscripcion",      (h) => h.includes("ADSCRIPCION") || h.includes("ADCRIPCION")],
+  ["unidadResponsableGasto", (h) => h.includes("GASTO")],
+  ["programaProyecto",       (h) => h.includes("PROGRAMA") && h.includes("PROYECTO")],
+  ["regimen",                (h) => h.includes("REGIMEN")],
+  ["tipoActividad",          (h) => h.includes("TIPO DE ACTIVIDAD")],
+  ["numPrestadores",         (h) => h.includes("PRESTADORES")],
+  ["vigenciaInicio",         (h) => h.includes("VIGENCIA") && h.includes("INICIO")],
+  ["vigenciaTermino",        (h) => h.includes("VIGENCIA") && h.includes("TERMINO")],
+  ["tipoPago",               (h) => h.includes("TIPO DE PAGO")],
+  ["importeBruto",           (h) => h.includes("IMPORTE")],
+  ["nivelCategoria",         (h) => h.includes("NIVEL") && h.includes("CATEGORIA")],
+  ["objeto",                 (h) => h.includes("OBJETO")],
+  ["actividades",            (h) => h.includes("ACTIVIDADES") && h.includes("REALIZAR")],
+  ["responsabilidades",      (h) => h.includes("RESPONSABILIDADES") && h.includes("CUMPLIR")],
+  ["escolaridad",            (h) => h.includes("ESCOLARIDAD")],
+  ["compAdm",                (h) => h.includes("COMPETENCIAS") && h.includes("ADMINISTRATIVA")],
+  ["compTec",                (h) => h.includes("COMPETENCIAS") && h.includes("TECNICA")],
+  ["compSoc",                (h) => h.includes("COMPETENCIAS") && h.includes("SOCIAL")],
+  ["valores",                (h) => h === "VALORES"],
+  ["areasExp",               (h) => h.includes("AREAS") && h.includes("EXPERIENCIA")],
+]
+
+const COL_HOJAS: Record<string, string> = Object.fromEntries(
+  HOJA_FIELD_MATCHERS.map(([field]) => [field, field])
+)
+
+function resolveHeaderMapHoja(headers: string[]): Record<string, string> {
+  const normalized = headers.map((h) => norm(h ?? ""))
+  const map: Record<string, string> = {}
+  for (const [field, test] of HOJA_FIELD_MATCHERS) {
+    const idx = normalized.findIndex((h) => h !== "" && test(h))
+    if (idx >= 0) map[field] = headers[idx]
+  }
+  if (!map.folioJustificacion && normalized[0] === "") {
+    map.folioJustificacion = headers[0]
+  }
+  return map
+}
+
 function norm(s: string): string {
   return (s ?? "")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -66,6 +110,21 @@ function parseFechaDMY(raw: string): { date: Date | null; error: string | null }
   return { date, error: null }
 }
 
+function parseFechaMDY(raw: string): { date: Date | null; error: string | null } {
+  const s = (raw ?? "").trim()
+  if (!s) return { date: null, error: null }
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/)
+  if (!m) return { date: null, error: `formato irreconocible: "${s}"` }
+  const mo = parseInt(m[1]), d = parseInt(m[2])
+  let y = parseInt(m[3])
+  if (y < 100) y += 2000
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return { date: null, error: `fecha inválida: "${s}"` }
+  if (y < 2015 || y > 2035) return { date: null, error: `año fuera de rango razonable: "${s}"` }
+  const date = new Date(Date.UTC(y, mo - 1, d))
+  if (date.getUTCMonth() !== mo - 1) return { date: null, error: `día fuera de rango para el mes: "${s}"` }
+  return { date, error: null }
+}
+
 function parseImporte(raw: string): { value: number | null; error: string | null } {
   let s = (raw ?? "").trim()
   if (!s) return { value: null, error: null }
@@ -77,11 +136,18 @@ function parseImporte(raw: string): { value: number | null; error: string | null
     const parts = s.split(",")
     const dec = parts.pop()
     normalized = parts.join("") + "." + dec
-  } else if (dotCount >= 1 && commaCount === 1) {
-    // "$12.500,00" → punto miles, coma decimal
-    normalized = s.replace(/\./g, "").replace(",", ".")
+  } else if (dotCount === 1 && commaCount === 1) {
+    // Con una coma y un punto, cuál es el separador de miles depende de cuál
+    // aparece primero: "22,027.98" (MX/EUA: coma miles, punto decimal) vs
+    // "12.500,00" (europeo: punto miles, coma decimal). Asumir siempre el
+    // formato europeo aquí truncaba de forma silenciosa los montos en pesos
+    // del formato mexicano (ej. "$22,027.98" quedaba en 22.03).
+    const idxComma = s.indexOf(",")
+    const idxDot = s.indexOf(".")
+    normalized = idxComma < idxDot
+      ? s.replace(/,/g, "")
+      : s.replace(/\./g, "").replace(",", ".")
   } else if (commaCount === 1) {
-    // "$14,999,99" con 1 sola coma sería raro; tratamos coma como decimal
     normalized = s.replace(",", ".")
   } else {
     normalized = s
@@ -91,11 +157,6 @@ function parseImporte(raw: string): { value: number | null; error: string | null
   return { value, error: null }
 }
 
-// La celda IMPORTE BRUTO trae, además del monto, la periodicidad como texto libre
-// ("$348,00 POR HORA", "$43,773.59 MENSUAL", "POR DÍA", "POR TALLER", "ÚNICO"...).
-// parseImporte() ya descarta ese texto al quedarse solo con el número; acá se
-// extrae la periodicidad para no perderla. Si la celda no la menciona explícitamente,
-// se asume "Mensual" (mismo criterio de default que usa el resto de la app).
 function parseTipoPago(raw: string): string {
   const u = norm(raw)
   if (u.includes("POR HORA")) return "Por_hora"
@@ -105,14 +166,6 @@ function parseTipoPago(raw: string): string {
   return "Mensual"
 }
 
-// Actividades (col. Q) y Responsabilidades (col. R) del catálogo ya vienen
-// pre-numeradas con romanos por línea, una línea = un punto, separadas por
-// salto de línea real. No hay que generar ni parsear/extraer el numeral con
-// regex — eso es lo que causaba la doble numeración y las líneas basura
-// (el numeral capturado colándose como elemento propio del arreglo, o el
-// match sin anclar `^` devolviendo un numeral distinto al real). Solo se
-// separa por salto de línea, se recorta espacios y se descartan líneas vacías;
-// cada línea se guarda tal cual, numeral incluido.
 function parseListField(raw: string): string[] {
   const s = (raw ?? "").trim()
   if (!s) return []
@@ -124,10 +177,6 @@ function parseListField(raw: string): string[] {
 
 const ROMAN_MARKER_RE = /^[IVXLCDM]+\.\s/
 
-// Valida que cada línea de una lista pre-numerada (Q/R) realmente traiga su
-// numeral romano de origen. Si una fila nueva del catálogo no respeta ese
-// formato (todo en una línea, numeración arábiga, etc.) se debe avisar en
-// vez de dejar que el PDF salga mal en silencio.
 function tieneFormatoNumeradoValido(items: string[]): boolean {
   return items.every((line) => ROMAN_MARKER_RE.test(line))
 }
@@ -140,8 +189,34 @@ function normalizeRegimen(raw: string): string | null {
   return null
 }
 
-function getCell(row: Record<string, string | undefined>, col: string): string {
-  return (row[col] ?? "").toString().trim()
+function getCell(row: Record<string, unknown>, col: string | undefined): string {
+  if (!col) return ""
+  const v = row[col]
+  if (v instanceof Date) {
+    if (isNaN(v.getTime())) return ""
+    const dd = String(v.getUTCDate()).padStart(2, "0")
+    const mm = String(v.getUTCMonth() + 1).padStart(2, "0")
+    return `${dd}/${mm}/${v.getUTCFullYear()}`
+  }
+  return (v ?? "").toString().trim()
+}
+
+function fechaDesdeCelda(
+  row: Record<string, unknown>,
+  col: string | undefined,
+  parserTexto: (s: string) => { date: Date | null; error: string | null },
+): { date: Date | null; error: string | null } {
+  if (!col) return { date: null, error: null }
+  const raw = row[col]
+  if (raw instanceof Date) {
+    if (isNaN(raw.getTime())) return { date: null, error: "fecha inválida" }
+    const y = raw.getUTCFullYear(), mo = raw.getUTCMonth(), d = raw.getUTCDate()
+    if (y < 2015 || y > 2035) return { date: null, error: `año fuera de rango razonable: "${y}-${mo + 1}-${d}"` }
+    return { date: new Date(Date.UTC(y, mo, d)), error: null }
+  }
+  const s = (raw ?? "").toString().trim()
+  if (!s) return { date: null, error: null }
+  return parserTexto(s)
 }
 
 function extraerMesAnioDeFolio(folio: string): { mes: number; anio: number } | null {
@@ -152,7 +227,6 @@ function extraerMesAnioDeFolio(folio: string): { mes: number; anio: number } | n
   return { mes, anio }
 }
 
-// ── Carga de catálogo (organo_centralizado + organo_paraestatal) ─────────
 async function loadCatalogoSecretarias() {
   const centralizadas = await prisma.organo_centralizado.findMany({ where: { tipo: "SECRETARIA" } })
   const paraestatales  = await prisma.organo_paraestatal.findMany()
@@ -179,22 +253,52 @@ async function loadCatalogoSecretarias() {
   return { match }
 }
 
-// ── Main ────────────────────────────────────────────────────────────────
 async function main() {
   console.log(`Leyendo: ${FILE_PATH}`)
   const wb = XLSX.readFile(FILE_PATH)
-  const sheet = wb.Sheets[SHEET_NAME]
-  if (!sheet) throw new Error(`No se encontró la hoja "${SHEET_NAME}". Hojas disponibles: ${wb.SheetNames.join(", ")}`)
 
-  const raw = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "", raw: false }) as string[][]
-  const headers = raw[0]
-  const rows: Record<string, string | undefined>[] = []
-  for (let i = 1; i < raw.length; i++) {
-    const r = raw[i]
-    if (!r || r.every((c) => c === "")) continue
-    const obj: Record<string, string | undefined> = {}
-    headers.forEach((h, j) => { obj[h] = r[j] })
-    rows.push(obj)
+  let rows: Record<string, unknown>[] = []
+  let COL_ACTIVO: Record<string, string>
+  let formatoMultiHoja = false
+
+  if (wb.Sheets[SHEET_NAME]) {
+
+    COL_ACTIVO = COL
+    const sheet = wb.Sheets[SHEET_NAME]
+    const raw = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: "", raw: false }) as string[][]
+    const headers = raw[0]
+    for (let i = 1; i < raw.length; i++) {
+      const r = raw[i]
+      if (!r || r.every((c) => c === "")) continue
+      const obj: Record<string, string | undefined> = {}
+      headers.forEach((h, j) => { obj[h] = r[j] })
+      rows.push(obj)
+    }
+    console.log(`Formato: hoja única "${SHEET_NAME}"`)
+  } else {
+
+    COL_ACTIVO = COL_HOJAS
+    formatoMultiHoja = true
+    const wbFechas = XLSX.readFile(FILE_PATH, { cellDates: true })
+    for (const sheetName of wbFechas.SheetNames) {
+      const sheet = wbFechas.Sheets[sheetName]
+      const raw = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: true }) as unknown[][]
+      if (raw.length === 0) continue
+      const headers = (raw[0] as unknown[]).map((h) => (h ?? "").toString())
+      const headerMap = resolveHeaderMapHoja(headers)
+      for (let i = 1; i < raw.length; i++) {
+        const r = raw[i]
+        if (!r || r.every((c) => c === "")) continue
+        const obj: Record<string, unknown> = {}
+        headers.forEach((h, j) => { obj[h] = r[j] })
+        const canonicalRow: Record<string, unknown> = { _hoja: sheetName }
+        for (const [field, headerText] of Object.entries(headerMap)) {
+          canonicalRow[field] = obj[headerText]
+        }
+        rows.push(canonicalRow)
+      }
+    }
+    console.log(`Formato: multi-hoja (${wbFechas.SheetNames.length} hojas: ${wbFechas.SheetNames.join(", ")})`)
   }
   console.log(`Filas con datos: ${rows.length}`)
 
@@ -207,14 +311,21 @@ async function main() {
   const periodoMap = new Map(periodos.map((p) => [`${p.mes}-${p.anio}`, p.id]))
   const hoy = new Date()
   const periodoHoyId = periodoMap.get(`${hoy.getUTCMonth() + 1}-${hoy.getUTCFullYear()}`) ?? null
-  // folio_dictamen NO es único globalmente en este histórico (cada secretaría llevaba su propio
-  // conteo en el proceso en papel) — deduplicar por folio_justificacion, que sí trae prefijo de
-  // secretaría y es mucho más confiable como identificador único de fila.
   const existentes = await prisma.solicitud.findMany({
     select: { folio_justificacion: true, folio_dictamen: true },
   })
+  // Los catalogo_justificacion "huérfanos" (sin solicitud_id, p. ej. registros históricos con
+  // reutilizaciones que se preservaron a mano) no aparecen en `solicitud` — hay que incluirlos
+  // también, si no el dedup no los ve y el import los vuelve a crear como duplicados.
+  const catalogoHuerfanos = await prisma.catalogo_justificacion.findMany({
+    where: { solicitud_id: null },
+    select: { folio_dictamen: true },
+  })
   const yaImportadosPorJustificacion = new Set(existentes.map((s) => s.folio_justificacion).filter(Boolean))
-  const yaImportadosPorDictamen = new Set(existentes.filter((s) => !s.folio_justificacion).map((s) => s.folio_dictamen).filter(Boolean))
+  const yaImportadosPorDictamen = new Set([
+    ...existentes.filter((s) => !s.folio_justificacion).map((s) => s.folio_dictamen).filter(Boolean),
+    ...catalogoHuerfanos.map((c) => c.folio_dictamen).filter(Boolean),
+  ])
 
   type RowResult = {
     idx: number
@@ -237,8 +348,8 @@ async function main() {
     const row = rows[i]
     const errores: string[] = []
 
-    const folioJustificacion = getCell(row, COL.folioJustificacion)
-    const folioDictamen      = getCell(row, COL.folioDictamen)
+    const folioJustificacion = getCell(row, COL_ACTIVO.folioJustificacion)
+    const folioDictamen      = getCell(row, COL_ACTIVO.folioDictamen)
     if (!folioDictamen) sinFolioDictamen++
 
     const yaExiste = folioJustificacion
@@ -249,7 +360,8 @@ async function main() {
       continue
     }
 
-    const secretariaRaw = getCell(row, COL.secretaria)
+
+    const secretariaRaw = getCell(row, COL_ACTIVO.secretaria) || getCell(row, "_hoja")
     const { canonico } = match(secretariaRaw)
     if (!canonico && secretariaRaw) {
       secretariasNoMatch.set(secretariaRaw, (secretariasNoMatch.get(secretariaRaw) ?? 0) + 1)
@@ -258,25 +370,26 @@ async function main() {
     const advertencias: string[] = []
     const reportar = (msg: string) => { advertencias.push(msg); if (!MODO_BORRADOR) errores.push(msg) }
 
-    const { date: fechaDictamen, error: errFD } = parseFechaDMY(getCell(row, COL.fechaDictamen))
+    const parserTexto = formatoMultiHoja ? parseFechaMDY : parseFechaDMY
+    const { date: fechaDictamen, error: errFD } = fechaDesdeCelda(row, COL_ACTIVO.fechaDictamen, parserTexto)
     if (errFD) reportar(`FECHA DICTAMEN: ${errFD}`)
-    const { date: vigenciaInicio, error: errVI } = parseFechaDMY(getCell(row, COL.vigenciaInicio))
+    const { date: vigenciaInicio, error: errVI } = fechaDesdeCelda(row, COL_ACTIVO.vigenciaInicio, parserTexto)
     if (errVI) reportar(`VIGENCIA INICIO: ${errVI}`)
-    const { date: vigenciaFin, error: errVT } = parseFechaDMY(getCell(row, COL.vigenciaTermino))
+    const { date: vigenciaFin, error: errVT } = fechaDesdeCelda(row, COL_ACTIVO.vigenciaTermino, parserTexto)
     if (errVT) reportar(`VIGENCIA TERMINO: ${errVT}`)
 
-    const { value: importeBruto, error: errImp } = parseImporte(getCell(row, COL.importeBruto))
+    const { value: importeBruto, error: errImp } = parseImporte(getCell(row, COL_ACTIVO.importeBruto))
     if (errImp) reportar(errImp)
-    const tipoImporte = parseTipoPago(getCell(row, COL.importeBruto))
+    const tipoImporte = COL_ACTIVO.tipoPago
+      ? parseTipoPago(getCell(row, COL_ACTIVO.tipoPago))
+      : parseTipoPago(getCell(row, COL_ACTIVO.importeBruto))
 
-    const regimen = normalizeRegimen(getCell(row, COL.regimen))
-    if (!regimen) { regimenNoReconocido++; reportar(`RÉGIMEN no reconocido: "${getCell(row, COL.regimen)}"`) }
+    const regimen = normalizeRegimen(getCell(row, COL_ACTIVO.regimen))
+    if (!regimen) { regimenNoReconocido++; reportar(`RÉGIMEN no reconocido: "${getCell(row, COL_ACTIVO.regimen)}"`) }
 
-    // Q y R deben venir pre-numeradas (una línea = un punto romano). Si una fila
-    // no respeta ese formato de origen, se avisa (no bloquea el import) para
-    // que se detecte en captura y no hasta ver el PDF final.
-    const actividadesItems = parseListField(getCell(row, COL.actividades))
-    const responsabilidadesItems = parseListField(getCell(row, COL.responsabilidades))
+
+    const actividadesItems = parseListField(getCell(row, COL_ACTIVO.actividades))
+    const responsabilidadesItems = parseListField(getCell(row, COL_ACTIVO.responsabilidades))
     if (actividadesItems.length > 0 && !tieneFormatoNumeradoValido(actividadesItems)) {
       advertencias.push("ACTIVIDADES: hay líneas sin numeral romano al inicio; revisar formato de origen en el Excel (columna Q)")
     }
@@ -284,7 +397,6 @@ async function main() {
       advertencias.push("RESPONSABILIDADES: hay líneas sin numeral romano al inicio; revisar formato de origen en el Excel (columna R)")
     }
 
-    // Cadena de resolución de periodo: vigencia inicio -> folio dictamen -> folio justificación -> (solo en modo borrador) periodo de hoy.
     let periodoId: number | null = null
     let periodoOrigen = ""
     const candidatosPeriodo: { origen: string; mesAnio: { mes: number; anio: number } | null }[] = [
@@ -308,6 +420,12 @@ async function main() {
     resultados.push({ idx: i + 2, secretariaRaw, secretariaMatch: canonico, folioDictamen, errores, advertencias })
 
     if (errores.length === 0) {
+      // Marcar el folio como visto de inmediato (no solo al final del run): si el mismo folio
+      // se repite más adelante en este mismo archivo, la siguiente vuelta del loop ya lo detecta
+      // como "ya importado" en vez de crear un duplicado silencioso.
+      if (folioJustificacion) yaImportadosPorJustificacion.add(folioJustificacion)
+      else if (folioDictamen) yaImportadosPorDictamen.add(folioDictamen)
+
       const estadoId = MODO_BORRADOR
         ? estadoBorrador.id
         : (folioDictamen ? estadoFinal.id : estadoSinDictamen.id)
@@ -324,31 +442,30 @@ async function main() {
         secretaria:            canonico ?? (secretariaRaw || null),
         secretaria_txt_snapshot: secretariaRaw || null,
         modalidad_firma:       "autografa",
-        unidad_administrativa: getCell(row, COL.unidadAdscripcion) || null,
-        unidad_responsable:    getCell(row, COL.unidadResponsableGasto) || null,
-        programa_proyecto:     getCell(row, COL.programaProyecto) || null,
+        unidad_administrativa: getCell(row, COL_ACTIVO.unidadAdscripcion) || null,
+        unidad_responsable:    getCell(row, COL_ACTIVO.unidadResponsableGasto) || null,
+        programa_proyecto:     getCell(row, COL_ACTIVO.programaProyecto) || null,
         regimen,
-        tipo_actividades:      getCell(row, COL.tipoActividad) || null,
-        numero_prestadores:    parseInt(getCell(row, COL.numPrestadores)) || null,
+        tipo_actividades:      getCell(row, COL_ACTIVO.tipoActividad) || null,
+        numero_prestadores:    parseInt(getCell(row, COL_ACTIVO.numPrestadores)) || null,
         vigencia_inicio:       vigenciaInicio,
         vigencia_fin:          vigenciaFin,
         importe_bruto:         importeBruto,
         tipo_importe:          tipoImporte,
-        nivel_tabulador:       getCell(row, COL.nivelCategoria) || null,
-        objeto:                getCell(row, COL.objeto) || null,
+        nivel_tabulador:       getCell(row, COL_ACTIVO.nivelCategoria) || null,
+        objeto:                getCell(row, COL_ACTIVO.objeto) || null,
         actividades:           actividadesItems,
         responsabilidades:     responsabilidadesItems,
-        escolaridad:           getCell(row, COL.escolaridad) || null,
-        comp_adm:              getCell(row, COL.compAdm) || null,
-        comp_tec:              getCell(row, COL.compTec) || null,
-        comp_soc:              getCell(row, COL.compSoc) || null,
-        valores:               getCell(row, COL.valores) || null,
-        areas_exp:             getCell(row, COL.areasExp) || null,
+        escolaridad:           getCell(row, COL_ACTIVO.escolaridad) || null,
+        comp_adm:              getCell(row, COL_ACTIVO.compAdm) || null,
+        comp_tec:              getCell(row, COL_ACTIVO.compTec) || null,
+        comp_soc:              getCell(row, COL_ACTIVO.compSoc) || null,
+        valores:               getCell(row, COL_ACTIVO.valores) || null,
+        areas_exp:             getCell(row, COL_ACTIVO.areasExp) || null,
       })
     }
   }
 
-  // ── Reporte ──────────────────────────────────────────────────────────
   const conError = resultados.filter((r) => r.errores.length > 0)
   console.log("\n──────── REPORTE ────────")
   console.log(`Total filas:                 ${rows.length}`)
@@ -368,9 +485,7 @@ async function main() {
       console.log(`  Fila ${r.idx} [${r.secretariaRaw}] folio=${r.folioDictamen || "(sin folio)"}: ${r.errores.join(" | ")}`)
     }
   }
-  // Filas que sí se importan pero con advertencias (formato de origen dudoso,
-  // p. ej. Q/R sin numeral romano) — se muestran siempre, no solo en borrador,
-  // para detectarlas en captura y no hasta ver el PDF final.
+
   const conAdvertencias = resultados.filter((r) => r.errores.length === 0 && r.advertencias.length > 0)
   if (conAdvertencias.length > 0) {
     console.log(`\n${conAdvertencias.length} filas se importan con advertencias, revisar manualmente:`)

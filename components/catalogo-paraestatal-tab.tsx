@@ -81,6 +81,7 @@ function OrganoRow({
   onDrop: (i: number) => void
   draggingIndex: number | null
   index: number
+
   open: boolean
   onOpenChange: (v: boolean) => void
 }) {
@@ -97,8 +98,6 @@ function OrganoRow({
   const [orgNombre, setOrgNombre] = useState(node.nombre)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState("")
-
-  // Search + pagination inside the expanded panel
   const [areaSearch, setAreaSearch] = useState("")
   const [areaPage, setAreaPage] = useState(0)
 
@@ -119,7 +118,7 @@ function OrganoRow({
   const handleAddArea = async () => {
     setFormError("")
     if (!areaNombre.trim()) { setFormError("El nombre es requerido"); return }
-    if (areas.some((a) => normNombre(a.nombre) === normNombre(areaNombre))) {
+           if (areas.some((a) => normNombre(a.nombre) === normNombre(areaNombre))) {
       setFormError("Ya existe un área con ese nombre en este organismo"); return
     }
     setSaving(true)
@@ -239,11 +238,8 @@ function OrganoRow({
           </div>
         </div>
 
-        {/* ── Áreas ── */}
         <CollapsibleContent>
           <div className="mt-2 mb-2 ml-6 border-l-2 border-[var(--sem-accent-primary)]/15 pl-3">
-
-            {/* Search bar */}
             {areas.length > 0 && (
               <div className="flex items-center gap-2 py-2">
                 <div className="relative flex-1">
@@ -373,7 +369,6 @@ function OrganoRow({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Dialogs */}
       <Dialog open={addAreaOpen} onOpenChange={setAddAreaOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Agregar Área</DialogTitle></DialogHeader>

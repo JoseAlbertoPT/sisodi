@@ -18,6 +18,28 @@ Font.register({
   src: path.join(process.cwd(), "public/fonts/NotoSansSymbols2-Regular.ttf"),
 });
 
+// Palabras que se mantienen en minúscula (salvo cuando son la primera palabra).
+const PALABRAS_MENORES = new Set([
+  "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
+  "en", "a", "al", "con", "por", "para",
+]);
+
+// Convierte un texto (normalmente en MAYÚSCULAS) a formato tipo título en español.
+// Ej.: ÓRGANO DESCONCENTRADO DENOMINADO "HÁBITAT MORELOS"
+//   -> Órgano Desconcentrado Denominado "Hábitat Morelos"
+function toTitleCaseES(input: string): string {
+  if (!input) return input;
+  let wordIndex = 0;
+  return input.toLocaleLowerCase("es").replace(/[\p{L}\p{N}]+/gu, (word) => {
+    const capitalized =
+      wordIndex > 0 && PALABRAS_MENORES.has(word)
+        ? word
+        : word.charAt(0).toLocaleUpperCase("es") + word.slice(1);
+    wordIndex++;
+    return capitalized;
+  });
+}
+
 export interface JustificacionData {
   tipoAdministracion: 'centralizada' | 'paraestatal';
   formato: 'fisico' | 'en_linea';
@@ -385,20 +407,20 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         <View style={s.row}>
           <Text style={s.numLabel}>1.</Text>
           <Text style={s.marginLabel}>Secretaría/Subsecretaría/Dependencia/Organismo Auxiliar:</Text>
-          <Text style={s.valueText}>{data.secretaria}</Text>
+          <Text style={s.valueText}>{toTitleCaseES(data.secretaria)}</Text>
         </View>
 
         <View style={s.row}>
           <Text style={s.numLabel}>2.</Text>
           <Text style={s.marginLabel}>Unidad Administrativa de Adscripción:</Text>
           <Text style={{ fontSize: 7, marginRight: 5 }}>(área donde se prestará el servicio)</Text>
-          <Text style={s.valueText}>{data.unidadAdministrativa}</Text>
+          <Text style={s.valueText}>{toTitleCaseES(data.unidadAdministrativa)}</Text>
         </View>
 
         <View style={s.row}>
           <Text style={s.numLabel}>3.</Text>
           <Text style={s.marginLabel}>Unidad Responsable del Gasto:</Text>
-          <Text style={s.valueText}>{data.unidadResponsable}</Text>
+          <Text style={s.valueText}>{toTitleCaseES(data.unidadResponsable)}</Text>
         </View>
 
         <View style={s.row}>

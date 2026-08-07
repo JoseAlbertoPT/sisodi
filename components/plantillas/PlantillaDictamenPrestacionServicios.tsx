@@ -36,6 +36,28 @@ export interface DictamenPrestacionData {
 const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20finanzas.png"));
 const MARCA_MORELOS = fs.readFileSync(path.join(process.cwd(), "public/LOGO_MORELOS_V1.png"));
 
+// Palabras que se mantienen en minúscula (salvo cuando son la primera palabra).
+const PALABRAS_MENORES = new Set([
+  "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
+  "en", "a", "al", "con", "por", "para",
+]);
+
+// Convierte un texto (normalmente en MAYÚSCULAS) a formato tipo título en español.
+// Ej.: ÓRGANO DESCONCENTRADO DENOMINADO "HÁBITAT MORELOS"
+//   -> Órgano Desconcentrado Denominado "Hábitat Morelos"
+function toTitleCaseES(input: string): string {
+  if (!input) return input;
+  let wordIndex = 0;
+  return input.toLocaleLowerCase("es").replace(/[\p{L}\p{N}]+/gu, (word) => {
+    const capitalized =
+      wordIndex > 0 && PALABRAS_MENORES.has(word)
+        ? word
+        : word.charAt(0).toLocaleUpperCase("es") + word.slice(1);
+    wordIndex++;
+    return capitalized;
+  });
+}
+
 const s = StyleSheet.create({
   page: {
     paddingTop: 30,
@@ -328,17 +350,17 @@ export function PlantillaDictamenPrestacionServicios({
 
         <View style={s.fieldRow}>
           <Text style={s.fieldLabelBox}>Secretaría/Dependencia:</Text>
-          <Text style={s.fieldValue}>{data.secretariaDependencia}</Text>
+          <Text style={s.fieldValue}>{toTitleCaseES(data.secretariaDependencia)}</Text>
         </View>
 
         <View style={s.fieldRow}>
           <Text style={s.fieldLabelBox}>Unidad Responsable del Gasto:</Text>
-          <Text style={s.fieldValue}>{data.unidadResponsableGasto}</Text>
+          <Text style={s.fieldValue}>{toTitleCaseES(data.unidadResponsableGasto)}</Text>
         </View>
 
         <View style={s.fieldRow}>
           <Text style={s.fieldLabelBox}>Unidad Administrativa:</Text>
-          <Text style={s.fieldValue}>{data.unidadAdministrativa}</Text>
+          <Text style={s.fieldValue}>{toTitleCaseES(data.unidadAdministrativa)}</Text>
         </View>
 
         <View style={s.regimenRow}>

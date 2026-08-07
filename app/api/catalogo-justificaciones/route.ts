@@ -87,7 +87,14 @@ export async function GET(req: NextRequest) {
       FROM catalogo_justificacion cj
       LEFT JOIN solicitud s ON s.id = cj.solicitud_id
       ${whereClause}
-      ORDER BY cj.creado_en DESC
+      ORDER BY GREATEST(
+        cj.creado_en,
+        COALESCE((
+          SELECT MAX(cs.creado_en)
+          FROM catalogo_solicitud cs
+          WHERE cs.catalogo_justificacion_id = cj.id
+        ), cj.creado_en)
+      ) DESC
       LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `
 
