@@ -124,6 +124,7 @@ export async function GET(req: NextRequest) {
     const viewerUserId = searchParams.get("userId")
 
     let organoFilter: any = {}
+    let tipoAdminFilter: any = {}
     let esRolRevisor = false
     let esAdmin = false
 
@@ -140,6 +141,14 @@ export async function GET(req: NextRequest) {
       if (viewer) {
         esRolRevisor = viewer.rol?.nombre?.toLowerCase() === "revisor"
         esAdmin      = viewer.rol?.nombre?.toLowerCase() === "administrador"
+
+        // Cada usuario solo ve solicitudes de su propio ámbito, sin importar el
+        // rol: un usuario con órgano centralizado ve lo centralizado (incluye
+        // registros sin tipo, tratados como centralizada); uno paraestatal solo
+        // ve lo paraestatal.
+        tipoAdminFilter = viewer.organo_centralizado
+          ? { tipo_administracion: { not: "paraestatal" } }
+          : { tipo_administracion: "paraestatal" }
 
         if (esRolRevisor && filtro !== 1) {
           return NextResponse.json({ ok: true, data: [] })
@@ -161,7 +170,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const whereClause: any = { estado_id: { in: estadoIds }, ...organoFilter }
+    const whereClause: any = { estado_id: { in: estadoIds }, ...organoFilter, ...tipoAdminFilter }
 
     if (esRolRevisor && viewerUserId) {
       whereClause.revisor_asignado_id = viewerUserId

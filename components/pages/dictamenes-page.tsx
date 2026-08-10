@@ -401,7 +401,18 @@ export function DictamenesPage() {
       const res  = await fetch(`/api/emision?vista=emitidos&userId=${userId}`)
       const json = await res.json()
       if (!res.ok || !json.ok) { setError(json.error ?? "Error al cargar dictámenes"); return }
-      setDictamenes((json.data ?? []).map(mapearDictamen))
+      // Cada usuario solo ve dictámenes/opiniones de su propio ámbito. Un usuario
+      // paraestatal ve únicamente lo paraestatal; uno centralizado, el resto
+      // (registros sin tipo se tratan como centralizada).
+      const tipoUsuario = user?.tipoAdministracion
+      const raw = (json.data ?? []) as any[]
+      const scoped = tipoUsuario
+        ? raw.filter((r) => {
+            const t = (r.tipoAdministracion ?? "centralizada") === "paraestatal" ? "paraestatal" : "centralizada"
+            return t === tipoUsuario
+          })
+        : raw
+      setDictamenes(scoped.map(mapearDictamen))
       hasDataRef.current = true
     } catch {
       setError("Error de conexión al servidor")

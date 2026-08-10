@@ -9,6 +9,16 @@ export async function GET(req: NextRequest) {
     const guardError = await requireRol(userId, ["Administrador"])
     if (guardError) return guardError
 
+    // El catálogo se acota al ámbito del usuario: centralizado (registros sin
+    // tipo se tratan como centralizada) o paraestatal.
+    const viewer = userId
+      ? await prisma.usuario.findUnique({
+          where:  { id: userId },
+          select: { organo_centralizado: { select: { id: true } } },
+        })
+      : null
+    const esCentralizada = !!viewer?.organo_centralizado
+
     const q         = searchParams.get("q")?.trim() ?? ""
     const page      = Math.max(1, Number(searchParams.get("page") ?? "1"))
     const limitRaw  = searchParams.get("limit") ?? "20"
@@ -22,6 +32,12 @@ export async function GET(req: NextRequest) {
     // (app/api/catalogo-justificaciones/route.ts).
     const conditions: string[] = []
     const params: any[] = []
+
+    conditions.push(
+      esCentralizada
+        ? `COALESCE(cj.tipo_administracion, 'centralizada') <> 'paraestatal'`
+        : `cj.tipo_administracion = 'paraestatal'`
+    )
 
     if (q) {
       params.push(`%${q}%`)

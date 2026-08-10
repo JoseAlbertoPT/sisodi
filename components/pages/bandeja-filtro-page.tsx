@@ -1318,7 +1318,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       setSolicitudes(json.data ?? [])
       hasDataRef.current = true
       if (filtro === 3) {
-        fetch("/api/solicitudes-seguimiento", { cache: "no-store" })
+        fetch(`/api/solicitudes-seguimiento?viewerId=${encodeURIComponent(userId)}`, { cache: "no-store" })
           .then(r => r.json())
           .then(j => {
             if (gen !== loadGenRef.current) return
@@ -1339,7 +1339,8 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   useEffect(() => {
     if (filtro !== 3) return
     let aborted = false
-    fetch("/api/solicitudes-seguimiento", { cache: "no-store" })
+    const userId = (user as any)?.id ?? ""
+    fetch(`/api/solicitudes-seguimiento?viewerId=${encodeURIComponent(userId)}`, { cache: "no-store" })
       .then(r => r.json())
       .then(json => {
         if (aborted || !json.ok) return
@@ -1350,7 +1351,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       })
       .catch(() => {})
     return () => { aborted = true }
-  }, [filtro])
+  }, [filtro, user])
   useEffect(() => {
     const userId = (user as any)?.id ?? ""
     if (!userId) return

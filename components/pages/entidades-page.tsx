@@ -9,6 +9,7 @@ import { CatalogoCentralizadaTab } from "@/components/catalogo-centralizada-tab"
 import { CatalogoParaestatalTab } from "@/components/catalogo-paraestatal-tab"
 import { useHistoricoStore } from "@/lib/historico-store"
 import { fetchCategoriasParaestatal } from "@/lib/catalogo-api"
+import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -178,35 +179,56 @@ function HistoricoTab() {
 const BADGE = "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[var(--sem-accent-primary)] text-white"
 
 export function EntidadesPage() {
+  const { user } = useAuth()
   const [cCount, setCCount] = useState<number | null>(null)
   const [pCount, setPCount] = useState<number | null>(null)
 
+  // Cada usuario solo administra el catálogo de su ámbito: un usuario paraestatal
+  // ve únicamente la pestaña Paraestatal y viceversa.
+  const esParaestatal = user?.tipoAdministracion === "paraestatal"
+  const verCentralizada = !esParaestatal
+  const verParaestatal  = esParaestatal
+  const defaultTab = esParaestatal ? "paraestatal" : "centralizada"
+
   useEffect(() => {
+    if (!verParaestatal) return
     fetchCategoriasParaestatal().then((data) => setPCount(data.length)).catch(() => {})
-  }, [])
+  }, [verParaestatal])
 
   return (
     <PageLayout
       title="Entidades"
-      description="Gestión de estructuras organizacionales de la administración centralizada y paraestatal."
+      description={
+        esParaestatal
+          ? "Gestión de estructuras organizacionales de la administración paraestatal."
+          : "Gestión de estructuras organizacionales de la administración centralizada."
+      }
     >
-      <Tabs defaultValue="centralizada" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList>
-          <TabsTrigger value="centralizada" className="gap-1.5">
-            Centralizada
-            {cCount !== null && <span className={BADGE}>{cCount}</span>}
-          </TabsTrigger>
-          <TabsTrigger value="paraestatal" className="gap-1.5">
-            Paraestatal
-            {pCount !== null && <span className={BADGE}>{pCount}</span>}
-          </TabsTrigger>
+          {verCentralizada && (
+            <TabsTrigger value="centralizada" className="gap-1.5">
+              Centralizada
+              {cCount !== null && <span className={BADGE}>{cCount}</span>}
+            </TabsTrigger>
+          )}
+          {verParaestatal && (
+            <TabsTrigger value="paraestatal" className="gap-1.5">
+              Paraestatal
+              {pCount !== null && <span className={BADGE}>{pCount}</span>}
+            </TabsTrigger>
+          )}
         </TabsList>
-        <TabsContent value="centralizada" className="mt-3">
-          <CatalogoCentralizadaTab onCountChange={setCCount} />
-        </TabsContent>
-        <TabsContent value="paraestatal" className="mt-3">
-          <CatalogoParaestatalTab onCountChange={setPCount} />
-        </TabsContent>
+        {verCentralizada && (
+          <TabsContent value="centralizada" className="mt-3">
+            <CatalogoCentralizadaTab onCountChange={setCCount} />
+          </TabsContent>
+        )}
+        {verParaestatal && (
+          <TabsContent value="paraestatal" className="mt-3">
+            <CatalogoParaestatalTab onCountChange={setPCount} />
+          </TabsContent>
+        )}
       </Tabs>
     </PageLayout>
   )

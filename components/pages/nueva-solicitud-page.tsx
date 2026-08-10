@@ -1435,6 +1435,7 @@ function getNumeroUA(secretaria: string, unidad: string): string {
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
   datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
+  tipoAdministracionUsuario = "centralizada",
   initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin,
 }: {
   prefilled: boolean
@@ -1449,6 +1450,7 @@ function FormularioPrestacion({
   unidadFija?: string | null
   claveReportePlazas?: string | null
   catalogoUAs?: { clave: string; nombre: string }[]
+  tipoAdministracionUsuario?: "centralizada" | "paraestatal"
   initialData?: Partial<FormularioData>
   existingAdjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
   periodoFechaInicio?: string
@@ -1500,7 +1502,7 @@ function FormularioPrestacion({
     const byClave = catalogoUAs.find((u) => u.clave === urgSeleccionada)
     if (byClave) setUrgSeleccionada(byClave.nombre)
   }, [catalogoUAs])
-  const [tipoAdministracionForm, setTipoAdministracionForm] = useState<"centralizada" | "paraestatal">(initialData?.tipoAdministracionNom ?? "centralizada")
+  const [tipoAdministracionForm, setTipoAdministracionForm] = useState<"centralizada" | "paraestatal">(initialData?.tipoAdministracionNom ?? tipoAdministracionUsuario)
   const [programaSeleccionado, setProgramaSeleccionado] = useState(
     datosRenovacion?.programaProyecto ?? initialData?.programaProyecto ?? ""
   )
@@ -4391,6 +4393,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               unidadFija={userUAOriginal}
               claveReportePlazas={userClaveReporte}
               catalogoUAs={catalogoUAsDelUsuario}
+              tipoAdministracionUsuario={editSolicitud?.formData?.tipoAdministracionNom ?? user?.tipoAdministracion ?? "centralizada"}
               initialData={editSolicitud?.formData}
               existingAdjuntos={editSolicitud?.adjuntos}
               periodoFechaInicio={periodoVigenciaRange.min}

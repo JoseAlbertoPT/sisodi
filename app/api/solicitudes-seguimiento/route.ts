@@ -1,9 +1,26 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
+    // Acota el seguimiento al ámbito del usuario que consulta: centralizado
+    // (registros sin tipo se tratan como centralizada) o paraestatal.
+    const viewerId = req.nextUrl.searchParams.get("viewerId")
+    let tipoAdminFilter: Record<string, unknown> = {}
+    if (viewerId) {
+      const viewer = await prisma.usuario.findUnique({
+        where:  { id: viewerId },
+        select: { organo_centralizado: { select: { id: true } } },
+      })
+      if (viewer) {
+        tipoAdminFilter = viewer.organo_centralizado
+          ? { tipo_administracion: { not: "paraestatal" } }
+          : { tipo_administracion: "paraestatal" }
+      }
+    }
+
     const solicitudes = await prisma.solicitud.findMany({
+      where: tipoAdminFilter,
       orderBy: { fecha_creacion: "desc" },
       include: {
         estado: { select: { id: true, nombre: true } },

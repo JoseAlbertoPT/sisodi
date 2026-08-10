@@ -19,9 +19,20 @@ export async function GET(req: NextRequest) {
     if (viewerUserId) {
       const viewer = await prisma.usuario.findUnique({
         where:  { id: viewerUserId },
-        select: { secretaria_id: true, secretaria_texto: true },
+        select: {
+          secretaria_id:       true,
+          secretaria_texto:    true,
+          organo_centralizado: { select: { id: true } },
+        },
       })
       if (viewer) {
+        // Cada usuario solo ve solicitudes de su propio ámbito: un usuario con
+        // órgano centralizado ve lo centralizado (incluye registros sin tipo);
+        // uno paraestatal solo ve lo paraestatal.
+        where.tipo_administracion = viewer.organo_centralizado
+          ? { not: "paraestatal" }
+          : "paraestatal"
+
         if (viewer.secretaria_id) {
           where.secretaria_id_snapshot = viewer.secretaria_id
         } else if (viewer.secretaria_texto) {

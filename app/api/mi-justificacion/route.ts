@@ -19,6 +19,16 @@ export async function GET(req: NextRequest) {
     })
     const esAdmin = viewer?.rol?.nombre?.toLowerCase() === "administrador"
 
+    // Filtro por tipo de administración: cada usuario solo ve solicitudes de su
+    // ámbito. Un usuario con órgano centralizado ve lo centralizado (incluye
+    // registros sin tipo definido, tratados como centralizada); un usuario sin
+    // órgano centralizado (paraestatal) solo ve lo paraestatal.
+    const tipoAdminFilter: Record<string, unknown> | null = viewer
+      ? viewer.organo_centralizado
+        ? { tipo_administracion: { not: "paraestatal" } }
+        : { tipo_administracion: "paraestatal" }
+      : null
+
     // Filtro por secretaría: el usuario solo ve solicitudes de SU secretaría actual.
     // secretaria_id_snapshot ancla la solicitud a la secretaría vigente al momento de
     // crearla; si el usuario cambió de área, sus registros anteriores permanecen en la
@@ -97,6 +107,9 @@ export async function GET(req: NextRequest) {
     if (Object.keys(secretariaSnapshotFilter).length > 0) {
       andConditions.push(secretariaSnapshotFilter)
     }
+    if (tipoAdminFilter) {
+      andConditions.push(tipoAdminFilter)
+    }
     if (search) {
       andConditions.push({
         OR: [
@@ -171,6 +184,7 @@ export async function GET(req: NextRequest) {
       folio_recepcion:       s.folio_recepcion,
       folio_dictamen:        s.folio_dictamen,
       tipo_solicitud:        s.tipo_solicitud,
+      tipo_administracion:   s.tipo_administracion ?? "centralizada",
       secretaria:            s.secretaria,
       unidad_administrativa: s.unidad_administrativa,
       unidad_responsable:    s.unidad_responsable,
@@ -253,11 +267,14 @@ export async function GET(req: NextRequest) {
         : null,
       slaRestante,
     })})
+    const countAnd: Record<string, unknown>[] = []
+    if (Object.keys(secretariaSnapshotFilter).length > 0) countAnd.push(secretariaSnapshotFilter)
+    if (tipoAdminFilter) countAnd.push(tipoAdminFilter)
     const counts = await prisma.solicitud.groupBy({
       by: ["estado_id"],
       where: {
         ...(!esAdmin && { usuario_id: usuarioId }),
-        ...(Object.keys(secretariaSnapshotFilter).length > 0 && { AND: [secretariaSnapshotFilter] }),
+        ...(countAnd.length > 0 && { AND: countAnd }),
       },
       _count: { id: true },
     })

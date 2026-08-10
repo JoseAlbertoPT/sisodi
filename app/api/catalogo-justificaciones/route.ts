@@ -35,6 +35,16 @@ export async function GET(req: NextRequest) {
     const params: any[] = [viewerSecretaria]
     conditions.push(`lower(trim(split_part(COALESCE(cj.secretaria, s.secretaria), '>', 1))) = lower($1)`)
 
+    // Además de la secretaría, cada usuario solo ve el catálogo de su propio
+    // ámbito: centralizado (registros sin tipo se tratan como centralizada) o
+    // paraestatal.
+    const esCentralizada = !!viewer?.organo_centralizado
+    conditions.push(
+      esCentralizada
+        ? `COALESCE(cj.tipo_administracion, 'centralizada') <> 'paraestatal'`
+        : `cj.tipo_administracion = 'paraestatal'`
+    )
+
     if (q) {
       params.push(`%${q}%`)
       const qIdx = params.length
