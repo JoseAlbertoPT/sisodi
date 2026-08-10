@@ -35,10 +35,12 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
   const rfcValido = rfcRegex.test(rfc.trim())
 
   const reglas = [
-    { label: "Mínimo 8 caracteres", ok: nuevaPassword.length >= 8 },
-    { label: "Al menos una mayúscula", ok: /[A-Z]/.test(nuevaPassword) },
-    { label: "Al menos un número", ok: /[0-9]/.test(nuevaPassword) },
-    { label: "Las contraseñas coinciden", ok: nuevaPassword.length > 0 && nuevaPassword === confirmar },
+    { label: "8+ caracteres", ok: nuevaPassword.length >= 8 },
+    { label: "Una mayúscula", ok: /[A-Z]/.test(nuevaPassword) },
+    { label: "Una minúscula", ok: /[a-z]/.test(nuevaPassword) },
+    { label: "Un número", ok: /[0-9]/.test(nuevaPassword) },
+    { label: "Un carácter especial", ok: /[^A-Za-z0-9]/.test(nuevaPassword) },
+    { label: "Contraseñas coinciden", ok: nuevaPassword.length > 0 && nuevaPassword === confirmar },
   ]
   const todasOk = reglas.every((r) => r.ok)
   const codigoCompleto = codigo.every((d) => d !== "")
@@ -239,13 +241,18 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
                 </button>
               </div>
               {nuevaPassword.length > 0 && (
-                <div className="rounded-2xl bg-white/10 px-4 py-3 flex flex-col gap-1.5">
-                  {reglas.map((r) => (
-                    <div key={r.label} className="flex items-center gap-2">
-                      <div className={`h-1.5 w-1.5 rounded-full ${r.ok ? "bg-green-400" : "bg-white/20"}`} />
-                      <span className={`text-xs ${r.ok ? "text-green-300" : "text-white/40"}`}>{r.label}</span>
-                    </div>
-                  ))}
+                <div className="rounded-2xl bg-white/10 px-4 py-2.5">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                    {reglas.map((r) => (
+                      <div key={r.label} className="flex items-center gap-1.5">
+                        <div className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.ok ? "bg-green-400" : "bg-white/20"}`} />
+                        <span className={`text-[11px] ${r.ok ? "text-green-300" : "text-white/40"}`}>{r.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 flex items-center gap-1.5 border-t border-white/10 pt-1.5 text-[11px] italic text-white/50">
+                    <AlertCircle className="h-3 w-3 shrink-0" /> No debe coincidir con contraseñas anteriores
+                  </p>
                 </div>
               )}
               {saveError && <div className="rounded-full bg-red-500/20 px-5 py-2.5 text-sm text-white text-center border border-red-400/30">{saveError}</div>}
@@ -290,8 +297,16 @@ function ModalCambioContrasena({
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const todasOk =
-    nuevaPassword.length >= 8 && nuevaPassword === confirmarPassword
+  const reglas = [
+    { label: "8+ caracteres", ok: nuevaPassword.length >= 8 },
+    { label: "Una mayúscula", ok: /[A-Z]/.test(nuevaPassword) },
+    { label: "Una minúscula", ok: /[a-z]/.test(nuevaPassword) },
+    { label: "Un número", ok: /[0-9]/.test(nuevaPassword) },
+    { label: "Un carácter especial", ok: /[^A-Za-z0-9]/.test(nuevaPassword) },
+    { label: "Distinta a la anterior", ok: nuevaPassword.length > 0 && nuevaPassword !== passwordActual },
+    { label: "Contraseñas coinciden", ok: nuevaPassword.length > 0 && nuevaPassword === confirmarPassword },
+  ]
+  const todasOk = reglas.every((r) => r.ok)
   const handleGuardar = async () => {
     setError("")
     if (!passwordActual) { setError("Ingrese su contraseña actual."); return }
@@ -352,8 +367,15 @@ function ModalCambioContrasena({
                 {showConfirmar ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
-            {nuevaPassword.length > 0 && nuevaPassword.length < 8 && (
-              <p className="text-xs text-white/50 text-center">Mínimo 8 caracteres</p>
+            {nuevaPassword.length > 0 && (
+              <div className="rounded-2xl bg-white/10 px-4 py-2.5 grid grid-cols-2 gap-x-3 gap-y-1">
+                {reglas.map((r) => (
+                  <div key={r.label} className="flex items-center gap-1.5">
+                    <div className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.ok ? "bg-green-400" : "bg-white/20"}`} />
+                    <span className={`text-[11px] ${r.ok ? "text-green-300" : "text-white/40"}`}>{r.label}</span>
+                  </div>
+                ))}
+              </div>
             )}
             {error && <div className="rounded-full bg-red-500/20 px-5 py-2.5 text-sm text-white text-center border border-red-400/30">{error}</div>}
             <div className="flex gap-3">
@@ -408,10 +430,13 @@ export function LoginForm() {
   }
 
   const reglas = [
-    { label: "Mínimo 8 caracteres",    ok: nuevaPassword.length >= 8 },
-    { label: "Al menos una mayúscula", ok: /[A-Z]/.test(nuevaPassword) },
-    { label: "Al menos un número",     ok: /[0-9]/.test(nuevaPassword) },
-    { label: "Las contraseñas coinciden", ok: nuevaPassword.length > 0 && nuevaPassword === confirmarPassword },
+    { label: "8+ caracteres",         ok: nuevaPassword.length >= 8 },
+    { label: "Una mayúscula",         ok: /[A-Z]/.test(nuevaPassword) },
+    { label: "Una minúscula",         ok: /[a-z]/.test(nuevaPassword) },
+    { label: "Un número",             ok: /[0-9]/.test(nuevaPassword) },
+    { label: "Un carácter especial",  ok: /[^A-Za-z0-9]/.test(nuevaPassword) },
+    { label: "Distinta a la anterior", ok: nuevaPassword.length > 0 && nuevaPassword !== password },
+    { label: "Contraseñas coinciden", ok: nuevaPassword.length > 0 && nuevaPassword === confirmarPassword },
   ]
   const todasOk = reglas.every((r) => r.ok)
 
@@ -532,6 +557,17 @@ export function LoginForm() {
             </button>
           </div>
         </div>
+
+        {nuevaPassword.length > 0 && (
+          <div className="rounded-xl border border-border-high bg-bg-base/50 px-3 py-2 grid grid-cols-2 gap-x-3 gap-y-1">
+            {reglas.map((r) => (
+              <div key={r.label} className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.ok ? "bg-support-success" : "bg-content-low/40"}`} />
+                <span className={`text-[11px] ${r.ok ? "text-support-success" : "text-content-low"}`}>{r.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </>
     )}
 

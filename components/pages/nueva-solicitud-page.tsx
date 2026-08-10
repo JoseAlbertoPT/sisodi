@@ -394,9 +394,7 @@ function OficioUpload({
   existingFiles?: { id: number; nombre_archivo: string; ruta: string }[]
 }) {
   const [archivos, setArchivos] = useState<File[]>([])
-
   const VALID_EXTS = ["pdf","doc","docx","xls","xlsx","ppt","pptx","png","jpg","jpeg","gif","webp","zip","rar","txt","odt","ods"]
-
   const handleFilesChange = (files: File[]) => {
     const filtered = files.filter((f) => {
       const ext = f.name.split(".").pop()?.toLowerCase() ?? ""
