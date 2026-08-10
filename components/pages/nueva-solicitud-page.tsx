@@ -406,7 +406,6 @@ function OficioUpload({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {/* Archivos existentes ya subidos al servidor */}
       {existingFiles && existingFiles.length > 0 && (
         <div className="flex flex-col gap-1.5 mb-1">
           {existingFiles.map((adj) => (

@@ -183,11 +183,11 @@ export function EntidadesPage() {
   const [cCount, setCCount] = useState<number | null>(null)
   const [pCount, setPCount] = useState<number | null>(null)
 
-  // Cada usuario solo administra el catálogo de su ámbito: un usuario paraestatal
-  // ve únicamente la pestaña Paraestatal y viceversa.
+  // En Entidades se muestran siempre ambas pestañas (Centralizada y Paraestatal),
+  // sin importar el ámbito del usuario. La pestaña inicial se abre según su tipo.
   const esParaestatal = user?.tipoAdministracion === "paraestatal"
-  const verCentralizada = !esParaestatal
-  const verParaestatal  = esParaestatal
+  const verCentralizada = true
+  const verParaestatal  = true
   const defaultTab = esParaestatal ? "paraestatal" : "centralizada"
 
   useEffect(() => {
