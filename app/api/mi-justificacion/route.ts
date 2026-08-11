@@ -122,7 +122,9 @@ export async function GET(req: NextRequest) {
     }
 
     const where: Parameters<typeof prisma.solicitud.findMany>[0]["where"] = {
-      ...(!esAdmin && { usuario_id: usuarioId }),
+      // Vista global por secretaría: todos los capturistas de la misma secretaría
+      // ven las solicitudes de su dependencia (el filtro por secretaria_id_snapshot
+      // más abajo ya restringe el alcance), no solo las que creó cada quien.
       ...(estadoNames.length > 0 && {
         estado: { nombre: { in: estadoNames, mode: "insensitive" } },
       }),
@@ -273,7 +275,7 @@ export async function GET(req: NextRequest) {
     const counts = await prisma.solicitud.groupBy({
       by: ["estado_id"],
       where: {
-        ...(!esAdmin && { usuario_id: usuarioId }),
+        // Conteos de tabs alineados con la vista global por secretaría (ver where principal).
         ...(countAnd.length > 0 && { AND: countAnd }),
       },
       _count: { id: true },

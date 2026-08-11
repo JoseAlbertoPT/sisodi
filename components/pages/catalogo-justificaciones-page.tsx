@@ -36,6 +36,7 @@ import {
   Upload,
   CheckCircle2,
   XCircle,
+  FileSpreadsheet,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -46,6 +47,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import dynamic from "next/dynamic"
+import * as XLSX from "xlsx"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
@@ -129,7 +131,6 @@ const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
   "en", "a", "al", "con", "por", "para",
 ])
-// Convierte un texto (normalmente en MAYÚSCULAS) a formato tipo título en español.
 function toTitleCaseES(input: string): string {
   if (!input) return input
   let wordIndex = 0
@@ -144,7 +145,6 @@ function toTitleCaseES(input: string): string {
 }
 
 const TAB_BADGE = "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[var(--sem-accent-primary)] text-white"
-
 interface ResumenImportExcel {
   totalFilas: number
   yaImportadosCount: number
@@ -262,7 +262,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       const vf = dateToIso(solVigFin!)
       const npNum = isParaestatal(solRec) ? (solPersonas ? Number(solPersonas) : null) : null
       const nprNum = !isParaestatal(solRec) ? (solPrestadores ? Number(solPrestadores) : null) : null
-
       await fetch("/api/catalogo-justificaciones/solicitar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -293,7 +292,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       a.click()
       URL.revokeObjectURL(url)
       setShowSol(false)
-      // Refresca la lista para que el registro reutilizado suba al inicio.
       void fetchData()
     } catch (e) {
       setSolError(e instanceof Error ? e.message : "Error al generar el PDF")
@@ -324,11 +322,11 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           containerClassName={SEARCH_INPUT_MAX_W_SM}
         />
         <Select value={tipoTab} onValueChange={(v) => { setTipoTab(v as "honorarios" | "nombramiento"); setPage(1) }}>
-          <SelectTrigger className="w-72 bg-card">
+          <SelectTrigger className="w-auto min-w-72 shrink-0 bg-card">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="honorarios">Honorarios ({honorarios.length})</SelectItem>
+            <SelectItem value="honorarios">Honorarios y Asimilados ({honorarios.length})</SelectItem>
             <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado ({nombramiento.length})</SelectItem>
           </SelectContent>
         </Select>
@@ -397,7 +395,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openSol(rec)}>
-                            <Send className="h-4 w-4" /> Solicitar
+                            <Send className="h-4 w-4" /> Reutilizar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -462,7 +460,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openSol(rec)}>
-                            <Send className="h-4 w-4" /> Solicitar
+                            <Send className="h-4 w-4" /> Reutilizar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -680,7 +678,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery])
   useEffect(() => { if (reutilizacionesPage > reutilizacionesTotalPages) setReutilizacionesPage(reutilizacionesTotalPages) }, [reutilizacionesTotalPages, reutilizacionesPage])
 
-  // ── Importar Excel al catálogo ──────────────────────────────────────
   const [importOpen, setImportOpen]           = useState(false)
   const [importFiles, setImportFiles]         = useState<File[]>([])
   const [importPreview, setImportPreview]     = useState<{ formatoLabel: string; resumen: ResumenImportExcel } | null>(null)
@@ -810,8 +807,96 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       setProcesando(null)
     }
   }
-  // Filtrado en cliente (mismo comportamiento que la pestaña de Consulta):
-  // búsqueda por palabras sobre varios campos + filtro por secretaría.
+
+  const handleReporte = (rec: AdminRecord) => {
+    const fmtFecha = (v: string | null | undefined) =>
+      v ? new Date(v).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"
+    const sols = rec.catalogo_solicitudes ?? []
+    const encabezado: (string | number)[][] = [
+      ["Reporte de Reutilizaciones"],
+      [],
+      ["Entidad", toTitleCaseES(entidadNombre(rec))],
+      ["Folio de Dictamen", fmt(rec.solicitud.folio_dictamen)],
+      ["Programa / Proyecto", toTitleCaseES(fmt(rec.programa_proyecto))],
+      ["Régimen", fmtCapitalize(rec.regimen_contratacion)],
+      ["Total de reutilizaciones", sols.length],
+      [],
+    ]
+    const detalle: (string | number)[][] = [
+      ["#", "Usuario", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Reutilización"],
+      ...sols.map((sol, idx) => [
+        idx + 1,
+        sol.usuario.nombre,
+        sol.nueva_vigencia,
+        sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—",
+        fmtFecha(sol.creado_en),
+      ]),
+    ]
+    const rows = [...encabezado, ...detalle]
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws["!cols"] = detalle[0].map((_, c) =>
+      ({ wch: Math.min(50, Math.max(12, ...detalle.map((r) => String(r[c] ?? "").length))) }),
+    )
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Reutilizaciones")
+    const folio = rec.solicitud.folio_dictamen ?? rec.solicitud.folio_recepcion ?? String(rec.id)
+    XLSX.writeFile(wb, `reporte-reutilizaciones-${folio}.xlsx`, { bookType: "xlsx", type: "binary" })
+  }
+
+  const handleReporteGeneral = () => {
+    const fmtFecha = (v: string | null | undefined) =>
+      v ? new Date(v).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"
+    const prestadoresDe = (sol: AdminRecord["catalogo_solicitudes"][0]) =>
+      sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0
+
+    // Hoja 1: Resumen — un renglón por registro del catálogo
+    const resumen: (string | number)[][] = [
+      ["Entidad", "Folio de Dictamen", "Programa / Proyecto", "Régimen", "Total de Reutilizaciones", "Total de Prestadores"],
+      ...filtered.map((rec) => {
+        const sols = rec.catalogo_solicitudes ?? []
+        return [
+          toTitleCaseES(entidadNombre(rec)),
+          fmt(rec.solicitud.folio_dictamen),
+          toTitleCaseES(fmt(rec.programa_proyecto)),
+          fmtCapitalize(rec.regimen_contratacion),
+          sols.length,
+          sols.reduce((s, sol) => s + prestadoresDe(sol), 0),
+        ]
+      }),
+    ]
+
+    // Hoja 2: Detalle — un renglón por cada reutilización de todos los registros
+    const detalle: (string | number)[][] = [
+      ["Folio de Dictamen", "Entidad", "Programa / Proyecto", "Usuario", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Reutilización"],
+    ]
+    filtered.forEach((rec) => {
+      (rec.catalogo_solicitudes ?? []).forEach((sol) => {
+        detalle.push([
+          fmt(rec.solicitud.folio_dictamen),
+          toTitleCaseES(entidadNombre(rec)),
+          toTitleCaseES(fmt(rec.programa_proyecto)),
+          sol.usuario.nombre,
+          sol.nueva_vigencia,
+          prestadoresDe(sol),
+          fmtFecha(sol.creado_en),
+        ])
+      })
+    })
+
+    const autoCols = (data: (string | number)[][]) =>
+      data[0].map((_, c) => ({ wch: Math.min(50, Math.max(12, ...data.map((r) => String(r[c] ?? "").length))) }))
+
+    const wb = XLSX.utils.book_new()
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumen)
+    wsResumen["!cols"] = autoCols(resumen)
+    XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen")
+    const wsDetalle = XLSX.utils.aoa_to_sheet(detalle)
+    wsDetalle["!cols"] = autoCols(detalle)
+    XLSX.utils.book_append_sheet(wb, wsDetalle, "Detalle")
+    const fecha = new Date().toISOString().slice(0, 10)
+    XLSX.writeFile(wb, `reporte-general-catalogo-${fecha}.xlsx`, { bookType: "xlsx", type: "binary" })
+  }
+
   const norm = (s: string | null | undefined) =>
     (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
   const secretariaDe = (rec: AdminRecord) => entidadNombre(rec).split(">")[0].trim()
@@ -869,9 +954,16 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        <Button
+          variant="default"
+          className="gap-1.5 shrink-0"
+          onClick={handleReporteGeneral}
+          disabled={filtered.length === 0}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          Reporte general
         </Button>
+        {/* Botón de Importar Excel ocultado temporalmente
         <Button
           variant="outline"
           className="gap-1.5 shrink-0"
@@ -880,6 +972,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <Upload className="h-4 w-4" />
           Importar Excel
         </Button>
+        */}
       </div>
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3 mb-4">
@@ -970,6 +1063,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                           <DropdownMenuItem onClick={() => openReutilizaciones(rec)}>
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleReporte(rec)}
+                            disabled={rec.catalogo_solicitudes.length === 0}
+                          >
+                            <FileSpreadsheet className="h-4 w-4" /> Reporte
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setConfirmToggle(rec)} disabled={toggling === rec.id}>
                             {rec.activo
                               ? <><PowerOff className="h-4 w-4" /> Desactivar</>
@@ -989,11 +1088,18 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       </div>
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       <Dialog open={showReutilizaciones} onOpenChange={setShowReutilizaciones}>
-        <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl bg-white p-0 gap-0 overflow-hidden">
+        <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl bg-white p-0 gap-0 overflow-hidden [&>button]:top-2">
           <DialogHeader className="px-5 py-4 border-b border-[var(--sem-border-md)]">
-            <DialogTitle className="ds-title-md text-content-high">
-              Reutilizaciones{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-3 pr-10">
+              <DialogTitle className="ds-title-md text-content-high">
+                Reutilizaciones{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
+              </DialogTitle>
+              {viewRec && viewRec.catalogo_solicitudes.length > 0 && (
+                <span className="text-sm font-normal text-muted-foreground shrink-0">
+                  Total de prestadores: {viewRec.catalogo_solicitudes.reduce((sum, sol) => sum + (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0), 0)}
+                </span>
+              )}
+            </div>
           </DialogHeader>
           <div className="max-h-[80vh] overflow-y-auto p-4">
             {viewRec && viewRec.catalogo_solicitudes.length > 0 ? (
@@ -1008,21 +1114,23 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                   <div className="overflow-x-auto">
                     <table className="w-full table-fixed text-sm">
                       <colgroup>
-                        <col className="w-[40%]" />
-                        <col className="w-[35%]" />
-                        <col className="w-[25%]" />
+                        <col className="w-[34%]" />
+                        <col className="w-[28%]" />
+                        <col className="w-[18%]" />
+                        <col className="w-[20%]" />
                       </colgroup>
                       <thead>
                         <tr className="bg-muted/30 border-b border-border">
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Num. Prestadores</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
                           <tr className="empty-row">
-                            <td colSpan={3}>
+                            <td colSpan={4}>
                               <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
                           </tr>
@@ -1033,6 +1141,9 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                               {sol.usuario.nombre}
                             </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">{sol.nueva_vigencia}</td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
+                              {sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—"}
+                            </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
                               {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
                             </td>

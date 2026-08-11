@@ -746,7 +746,7 @@ function syncLength(arr: string[], count: number): string[] {
 
 function DynamicList({
   label, items, onChange, max = 100, readonly = false,
-  minRequired, nivelTabulador, forbiddenTexts, onBlurItem, matchCountLabel = false,
+  minRequired, nivelTabulador, forbiddenTexts, onBlurItem, matchCountLabel = false, rangeLabel = false,
   }: {
   label: string
   items: string[]
@@ -758,7 +758,9 @@ function DynamicList({
   forbiddenTexts?: Set<string>
   onBlurItem?: (value: string) => string
   matchCountLabel?: boolean
+  rangeLabel?: boolean
   }) {
+
   const minEfectivo = useMemo(() => {
     if (minRequired !== undefined) return minRequired
     if (!nivelTabulador) return 5
@@ -814,7 +816,8 @@ function DynamicList({
               <span className="text-sm text-muted-foreground py-2">—</span>
             ) : readonly ? (
               <span
-                className="flex-1 text-sm text-muted-foreground py-2"
+                className="flex-1 text-sm text-m
+                uted-foreground py-2"
                 style={{ whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word", minWidth: 0 }}
               >
                 {item}
@@ -891,9 +894,11 @@ function DynamicList({
           <AlertTriangle className="h-3 w-3 shrink-0" />
           {hasDups
             ? "Elimine los textos duplicados antes de continuar."
-            : matchCountLabel
-              ? `Se requieren el mismo número, ${minEfectivo} elementos. Llevas ${filledCount}.`
-              : `Se requieren al menos ${minEfectivo} elementos. Llevas ${filledCount}.`}
+            : rangeLabel
+              ? `Se requieren mínimo ${minEfectivo} y máximo ${maxEfectivo} elementos. Llevas ${filledCount}.`
+              : matchCountLabel
+                ? `Se requieren el mismo número, ${minEfectivo} elementos. Llevas ${filledCount}.`
+                : `Se requieren al menos ${minEfectivo} elementos. Llevas ${filledCount}.`}
         </p>
       )}
     </div>
@@ -913,14 +918,14 @@ function StepIndicator({ step, tipo, progreso = 0 }: { step: Step; tipo: TipoSol
         const isDone    = i < currentIndex
         const isActive  = i === currentIndex
 
-        /* Circle style */
+
         const circleStyle: React.CSSProperties = isDone
           ? { width: 32, height: 32, flexShrink: 0, position: 'relative', zIndex: 1 }
           : isActive
           ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#773357', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
           : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
 
-        /* Label style */
+
         const labelStyle: React.CSSProperties = isActive
           ? { fontSize: 12, fontWeight: 400, color: '#374151', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : isDone
@@ -930,7 +935,7 @@ function StepIndicator({ step, tipo, progreso = 0 }: { step: Step; tipo: TipoSol
         return (
           <div key={s.key} className="flex flex-1 flex-col items-center" style={{ position: 'relative' }}>
 
-            {/* ── Connector line (between circles) ────────── */}
+
             {i > 0 && (
               <div style={{ position: 'absolute', top: 16, left: '-50%', width: '100%', height: 2, zIndex: 0 }}>
                 <div style={{ position: 'absolute', inset: 0, backgroundColor: '#D1D5DB' }} />
@@ -1227,7 +1232,7 @@ function SelectConBusqueda({
         </span>
       </SelectTrigger>
       <SelectContent className="rounded-[12px] border-[#E5E7EB] shadow-lg p-1.5">
-        {/* ── Buscador interno ── */}
+
         <div className="sticky top-0 z-10 bg-white pb-1.5 px-0.5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sem-border-high)]" />
@@ -1254,7 +1259,7 @@ function SelectConBusqueda({
             </p>
           )}
         </div>
-        {/* ── Opciones ── */}
+
         <div className="max-h-52 overflow-y-auto">
           {filtradas.length === 0
             ? <div className="px-3 py-3 text-xs text-muted-foreground text-center">Sin resultados para "{busqueda}"</div>
@@ -1281,7 +1286,6 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
       <div className="relative z-10 w-full max-w-md bg-white flex flex-col overflow-hidden"
         style={{ borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
 
-        {/* Header */}
         <div className="flex items-center gap-3 px-6 pt-6 pb-4" style={{ borderBottom: "1px solid #E5E7EB" }}>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
             style={{ backgroundColor: "#F3E8F0", border: "1px solid #E8D0E0" }}>
@@ -1297,7 +1301,6 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
           </button>
         </div>
 
-        {/* Body */}
         <div className="px-6 py-6 flex flex-col gap-3">
           <p className="text-sm text-[#374151]">
             Este apartado deberá contar con <strong>validación previa por la UEF</strong> o su equivalente antes de su envío.
@@ -1307,7 +1310,6 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
           </p>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end px-6 py-4" style={{ borderTop: "1px solid #E5E7EB" }}>
           <button
             type="button"
@@ -1366,10 +1368,10 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* ── Separador ── */}
+
         <div style={{ borderBottom: "1px solid #E5E7EB" }} />
 
-        {/* ── Contenido / Tabla ── */}
+
         <div className="overflow-auto px-6 py-4" style={{ maxHeight: "65vh" }}>
           <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
             <tbody>
@@ -1405,7 +1407,7 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
           </table>
         </div>
 
-        {/* ── Footer ── */}
+
         <div
           className="flex justify-center px-6 py-4"
           style={{ borderTop: "1px solid #E5E7EB" }}
@@ -1844,10 +1846,9 @@ function FormularioPrestacion({
                 />
               )}
             </div>
-
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Programas o Proyectos
+                Programas o Proyectos.
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -2197,9 +2198,9 @@ function FormularioPrestacion({
                   setter(newItems)
                 }}
                 readonly={bloqueadoPorRenovacion}
-                minRequired={actividades.length}
-                matchCountLabel
-                max={10}
+                minRequired={3}
+                rangeLabel
+                max={5}
                 forbiddenTexts={forbiddenTextsPS[fKey]}
               />
             </div>
@@ -3108,9 +3109,9 @@ function FormularioNombramiento({
                   setter(newItems)
                 }}
                 readonly={bloqueadoPorRenovacion}
-                minRequired={funciones.length}
-                matchCountLabel
-                max={10}
+                minRequired={3}
+                rangeLabel
+                max={5}
                 forbiddenTexts={forbiddenTextsNom[fKey]}
               />
             </div>
@@ -3474,6 +3475,7 @@ export type EditSolicitudPayload = {
   estadoSiguienteTrasSave?: string
   adjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
 }
+
 export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoToBandeja }: { editSolicitud?: EditSolicitudPayload; onAfterSave?: () => void; onCancel?: () => void; onGoToBandeja?: () => void }) {
   const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
   const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")

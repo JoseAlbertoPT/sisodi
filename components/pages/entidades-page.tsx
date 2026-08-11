@@ -22,7 +22,7 @@ function HistoricoTab() {
   const [uploadOk, setUploadOk]   = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
 
-  const handleUpload = useCallback(async () => {
+ const handleUpload = useCallback(async () => {
     if (!files[0]) return
     setUploading(true)
     setUploadError(null)
@@ -182,9 +182,6 @@ export function EntidadesPage() {
   const { user } = useAuth()
   const [cCount, setCCount] = useState<number | null>(null)
   const [pCount, setPCount] = useState<number | null>(null)
-
-  // En Entidades se muestran siempre ambas pestañas (Centralizada y Paraestatal),
-  // sin importar el ámbito del usuario. La pestaña inicial se abre según su tipo.
   const esParaestatal = user?.tipoAdministracion === "paraestatal"
   const verCentralizada = true
   const verParaestatal  = true
