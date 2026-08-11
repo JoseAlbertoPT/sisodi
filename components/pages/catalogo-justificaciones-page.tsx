@@ -849,8 +849,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     const prestadoresDe = (sol: AdminRecord["catalogo_solicitudes"][0]) =>
       sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0
 
-    // Hoja 1: Resumen — un renglón por registro del catálogo
-    const resumen: (string | number)[][] = [
+     const resumen: (string | number)[][] = [
       ["Entidad", "Folio de Dictamen", "Programa / Proyecto", "Régimen", "Total de Reutilizaciones", "Total de Prestadores"],
       ...filtered.map((rec) => {
         const sols = rec.catalogo_solicitudes ?? []
@@ -865,7 +864,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       }),
     ]
 
-    // Hoja 2: Detalle — un renglón por cada reutilización de todos los registros
     const detalle: (string | number)[][] = [
       ["Folio de Dictamen", "Entidad", "Programa / Proyecto", "Usuario", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Reutilización"],
     ]
@@ -963,16 +961,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <FileSpreadsheet className="h-4 w-4" />
           Reporte general
         </Button>
-        {/* Botón de Importar Excel ocultado temporalmente
-        <Button
-          variant="outline"
-          className="gap-1.5 shrink-0"
-          onClick={() => { resetImportDialog(); setImportOpen(true) }}
-        >
-          <Upload className="h-4 w-4" />
-          Importar Excel
-        </Button>
-        */}
       </div>
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3 mb-4">
