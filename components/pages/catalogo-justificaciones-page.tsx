@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import Image from "next/image"
 import { useAuth } from "@/lib/auth-context"
@@ -182,14 +183,12 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [solPrestadores, setSolPrestadores] = useState("")
   const [solLoading, setSolLoading]   = useState(false)
   const [solError, setSolError]       = useState<string | null>(null)
-  // Cancelación: reutiliza la información del registro y solo captura nueva vigencia.
   const [canRec, setCanRec]           = useState<CatalogoRecord | null>(null)
   const [showCan, setShowCan]         = useState(false)
   const [canVigInicio, setCanVigInicio] = useState<Date | undefined>(undefined)
   const [canVigFin,    setCanVigFin]    = useState<Date | undefined>(undefined)
   const [canLoading, setCanLoading]   = useState(false)
   const [canError, setCanError]       = useState<string | null>(null)
-  // Proyectos: consulta de la información de programa/proyecto del registro.
   const [proyRec, setProyRec]         = useState<CatalogoRecord | null>(null)
   const [showProy, setShowProy]       = useState(false)
   const fetchData = useCallback(async () => {
@@ -337,7 +336,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           tipo: "cancelacion",
         }),
       })
-      // Carta descriptiva + dictamen con la vigencia ajustada, tomando como base la justificación.
       const params = new URLSearchParams({ vigenciaInicio: vi, vigenciaFin: vf })
       if (canRec.solicitud.id) params.set("id", String(canRec.solicitud.id))
       else params.set("catalogoId", String(canRec.id))
@@ -469,7 +467,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <FolderKanban className="h-4 w-4" /> Proyectos
                           </DropdownMenuItem>
                         </DropdownMenuContent>
-
                       </DropdownMenu>
                       </div>
                     </td>
@@ -1007,8 +1004,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     }
   }
 
-  // Generador único de reportes (mismo formato para el reporte por fila y el general):
-  // una sola hoja, un renglón por reutilización, repitiendo los datos del registro.
   const buildReporteWorkbook = (records: AdminRecord[]) => {
     const fmtFecha = (v: string | null | undefined) =>
       v ? new Date(v).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"
