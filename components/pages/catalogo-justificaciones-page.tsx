@@ -808,89 +808,54 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     }
   }
 
-  const handleReporte = (rec: AdminRecord) => {
-    const fmtFecha = (v: string | null | undefined) =>
-      v ? new Date(v).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"
-    const sols = rec.catalogo_solicitudes ?? []
-    const encabezado: (string | number)[][] = [
-      ["Reporte de Reutilizaciones"],
-      [],
-      ["Entidad", toTitleCaseES(entidadNombre(rec))],
-      ["Folio de Dictamen", fmt(rec.solicitud.folio_dictamen)],
-      ["Programa / Proyecto", toTitleCaseES(fmt(rec.programa_proyecto))],
-      ["Régimen", fmtCapitalize(rec.regimen_contratacion)],
-      ["Total de reutilizaciones", sols.length],
-      [],
-    ]
-    const detalle: (string | number)[][] = [
-      ["#", "Usuario", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Reutilización"],
-      ...sols.map((sol, idx) => [
-        idx + 1,
-        sol.usuario.nombre,
-        sol.nueva_vigencia,
-        sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—",
-        fmtFecha(sol.creado_en),
-      ]),
-    ]
-    const rows = [...encabezado, ...detalle]
-    const ws = XLSX.utils.aoa_to_sheet(rows)
-    ws["!cols"] = detalle[0].map((_, c) =>
-      ({ wch: Math.min(50, Math.max(12, ...detalle.map((r) => String(r[c] ?? "").length))) }),
-    )
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Reutilizaciones")
-    const folio = rec.solicitud.folio_dictamen ?? rec.solicitud.folio_recepcion ?? String(rec.id)
-    XLSX.writeFile(wb, `reporte-reutilizaciones-${folio}.xlsx`, { bookType: "xlsx", type: "binary" })
-  }
-
-  const handleReporteGeneral = () => {
+  // Generador único de reportes (mismo formato para el reporte por fila y el general):
+  // una sola hoja, un renglón por reutilización, repitiendo los datos del registro.
+  const buildReporteWorkbook = (records: AdminRecord[]) => {
     const fmtFecha = (v: string | null | undefined) =>
       v ? new Date(v).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"
     const prestadoresDe = (sol: AdminRecord["catalogo_solicitudes"][0]) =>
       sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0
 
-     const resumen: (string | number)[][] = [
-      ["Entidad", "Folio de Dictamen", "Programa / Proyecto", "Régimen", "Total de Reutilizaciones", "Total de Prestadores"],
-      ...filtered.map((rec) => {
-        const sols = rec.catalogo_solicitudes ?? []
-        return [
-          toTitleCaseES(entidadNombre(rec)),
-          fmt(rec.solicitud.folio_dictamen),
-          toTitleCaseES(fmt(rec.programa_proyecto)),
-          fmtCapitalize(rec.regimen_contratacion),
-          sols.length,
-          sols.reduce((s, sol) => s + prestadoresDe(sol), 0),
-        ]
-      }),
+    const rows: (string | number)[][] = [
+      ["#", "Usuario", "Entidad", "Folio de Dictamen", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Reutilización", "Programa / Proyecto", "Régimen", "Total de reutilizaciones"],
     ]
-
-    const detalle: (string | number)[][] = [
-      ["Folio de Dictamen", "Entidad", "Programa / Proyecto", "Usuario", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Reutilización"],
-    ]
-    filtered.forEach((rec) => {
-      (rec.catalogo_solicitudes ?? []).forEach((sol) => {
-        detalle.push([
-          fmt(rec.solicitud.folio_dictamen),
-          toTitleCaseES(entidadNombre(rec)),
-          toTitleCaseES(fmt(rec.programa_proyecto)),
+    let i = 0
+    records.forEach((rec) => {
+      const sols = rec.catalogo_solicitudes ?? []
+      sols.forEach((sol) => {
+        i++
+        rows.push([
+          i,
           sol.usuario.nombre,
+          toTitleCaseES(entidadNombre(rec)),
+          fmt(rec.solicitud.folio_dictamen),
           sol.nueva_vigencia,
           prestadoresDe(sol),
           fmtFecha(sol.creado_en),
+          toTitleCaseES(fmt(rec.programa_proyecto)),
+          fmtCapitalize(rec.regimen_contratacion),
+          sols.length,
         ])
       })
     })
 
-    const autoCols = (data: (string | number)[][]) =>
-      data[0].map((_, c) => ({ wch: Math.min(50, Math.max(12, ...data.map((r) => String(r[c] ?? "").length))) }))
-
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws["!cols"] = rows[0].map((_, c) =>
+      ({ wch: Math.min(50, Math.max(12, ...rows.map((r) => String(r[c] ?? "").length))) }),
+    )
     const wb = XLSX.utils.book_new()
-    const wsResumen = XLSX.utils.aoa_to_sheet(resumen)
-    wsResumen["!cols"] = autoCols(resumen)
-    XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen")
-    const wsDetalle = XLSX.utils.aoa_to_sheet(detalle)
-    wsDetalle["!cols"] = autoCols(detalle)
-    XLSX.utils.book_append_sheet(wb, wsDetalle, "Detalle")
+    XLSX.utils.book_append_sheet(wb, ws, "Reutilizaciones")
+    return wb
+  }
+
+  const handleReporte = (rec: AdminRecord) => {
+    const wb = buildReporteWorkbook([rec])
+    const folio = rec.solicitud.folio_dictamen ?? rec.solicitud.folio_recepcion ?? String(rec.id)
+    XLSX.writeFile(wb, `reporte-reutilizaciones-${folio}.xlsx`, { bookType: "xlsx", type: "binary" })
+  }
+
+  const handleReporteGeneral = () => {
+    const wb = buildReporteWorkbook(filtered)
     const fecha = new Date().toISOString().slice(0, 10)
     XLSX.writeFile(wb, `reporte-general-catalogo-${fecha}.xlsx`, { bookType: "xlsx", type: "binary" })
   }
