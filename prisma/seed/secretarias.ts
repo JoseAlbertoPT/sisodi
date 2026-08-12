@@ -298,9 +298,16 @@ export const CENTRALIZADAS: Secretaria[] = [
 ]
 
 export async function seedSecretarias(prisma: PrismaClient) {
-  await prisma.$executeRawUnsafe(`UPDATE usuario SET secretaria_id = NULL WHERE secretaria_id IS NOT NULL`)
-  await prisma.organo_centralizado.deleteMany({})
-  console.log("organo_centralizado limpiado")
+  // GUARDIA DE SEGURIDAD: este seed es destructivo (recrea organo_centralizado con IDs
+  // nuevos). Si la tabla ya tiene datos, NO se ejecuta, para no dejar huérfanos los
+  // secretaria_id de los usuarios (lo que los haría verse como "paraestatal").
+  // El poblado/actualización sobre una base con datos debe hacerse con una migración
+  // o un script idempotente, nunca borrando aquí.
+  const yaHayOrganos = await prisma.organo_centralizado.count()
+  if (yaHayOrganos > 0) {
+    console.log(`organo_centralizado ya tiene ${yaHayOrganos} registros — seed de secretarías OMITIDO (evita borrar datos)`)
+    return
+  }
 
   let totalUnidades = 0
   for (const sec of CENTRALIZADAS) {

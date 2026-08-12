@@ -1101,6 +1101,25 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
 
   useEffect(() => {
     setTreeLoading(true)
+    // Si el usuario editado es paraestatal, cargamos directamente el árbol paraestatal
+    // para que coincida con el tipo de administración. Los usuarios paraestatales no
+    // guardan secretaria_id (es FK solo a órganos centralizados), así que se identifican
+    // por su texto; cargar el árbol centralizado aquí provocaba que, al elegir un nodo,
+    // se guardara un órgano centralizado y el usuario cambiara de tipo a "centralizada".
+    if (tipoAdminFijo === "paraestatal") {
+      fetchCategoriasParaestatal()
+        .then(paraestatalToTree)
+        .then((paraTree) => {
+          setTree(paraTree)
+          if (usuario.secretariaId) {
+            const paraFound = findNodePath(paraTree, `org-${usuario.secretariaId}`)
+            if (paraFound) setForm((f) => ({ ...f, secretariaId: `org-${usuario.secretariaId}` }))
+          }
+        })
+        .catch(() => setTree([]))
+        .finally(() => setTreeLoading(false))
+      return
+    }
     fetchCentralizadaTree()
       .then((central) => {
         if (usuario.secretariaId) {
@@ -1252,7 +1271,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
-
         <div className="flex items-center gap-3 px-6 py-3 bg-muted/40 border-b border-border/50 shrink-0">
           <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
             <span className="text-sm font-medium text-primary">{initials}</span>

@@ -75,6 +75,28 @@ export async function PATCH(
       secretariaId !== undefined && secretariaId !== usuarioActual.secretaria_id
     const secretariaTextoCambia =
       secretariaTexto !== undefined && secretariaTexto !== usuarioActual.secretaria_texto
+    const rolCambia = rolNombre !== undefined && rol_id !== usuarioActual.rol_id
+
+    // Conservar permisos de menú: si al editar cambia el contexto del usuario
+    // (secretaría, tipo de administración o rol) y el usuario aún NO tiene permisos
+    // explícitos (usa los del rol por defecto), congelamos sus menús efectivos ACTUALES
+    // en usuario_menu. Así sus permisos quedan fijos y no se pierden con el cambio; a
+    // partir de aquí solo se modifican desde el módulo de Permisos de Menú.
+    if (secretariaIdCambia || secretariaTextoCambia || rolCambia) {
+      const permisosExplicitos = await prisma.usuario_menu.count({ where: { usuario_id: id } })
+      if (permisosExplicitos === 0) {
+        const rolMenus = await prisma.rol_menu.findMany({
+          where: { rol_id: usuarioActual.rol_id },
+          select: { menu_id: true },
+        })
+        if (rolMenus.length > 0) {
+          await prisma.usuario_menu.createMany({
+            data: rolMenus.map((rm) => ({ usuario_id: id, menu_id: rm.menu_id })),
+            skipDuplicates: true,
+          })
+        }
+      }
+    }
 
     // Antes de actualizar la secretaría, fijar el snapshot en las solicitudes del usuario
     // que aún lo tienen en null. Usamos la secretaría ANTERIOR para que esos registros

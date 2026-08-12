@@ -117,9 +117,14 @@ export const PARAESTATALES: Categoria[] = [
 ]
 
 export async function seedParaestatales(prisma: PrismaClient) {
-  await prisma.organo_paraestatal.deleteMany({})
-  await prisma.categoria_paraestatal.deleteMany({})
-  console.log("paraestatales limpiado")
+  // GUARDIA DE SEGURIDAD: seed destructivo. Si ya hay datos, no se ejecuta para no
+  // recrear las tablas con IDs nuevos sobre una base en uso.
+  const yaHayParaestatales = await prisma.organo_paraestatal.count()
+  const yaHayCategorias = await prisma.categoria_paraestatal.count()
+  if (yaHayParaestatales > 0 || yaHayCategorias > 0) {
+    console.log(`paraestatales ya poblados (${yaHayParaestatales} órganos, ${yaHayCategorias} categorías) — seed OMITIDO (evita borrar datos)`)
+    return
+  }
 
   let total = 0
   for (const cat of PARAESTATALES) {
