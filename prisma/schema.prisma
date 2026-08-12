@@ -445,6 +445,7 @@ model catalogo_solicitud {
   nueva_vigencia             String                 @db.VarChar(200)
   nuevo_numero_personas      Int?
   nuevos_numero_prestadores  Int?
+  tipo                       String                 @default("reutilizacion") @db.VarChar(20)
   archivo_pdf_generado       String?                @db.VarChar(500)
   procesado                  Boolean                @default(false)
   procesado_en               DateTime?              @db.Timestamp(6)

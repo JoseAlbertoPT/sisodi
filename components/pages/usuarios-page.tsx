@@ -108,9 +108,14 @@ async function actualizarUsuario(
     secretariaTexto?: string | null
   }
 ): Promise<Usuario> {
+  let currentUserId = ""
+  try {
+    const raw = typeof window !== "undefined" ? localStorage.getItem("sdtf_user") : null
+    currentUserId = raw ? (JSON.parse(raw)?.id ?? "") : ""
+  } catch { currentUserId = "" }
   const res = await fetch(`${API}/usuarios/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-user-id": currentUserId },
     body: JSON.stringify(data),
   })
   if (!res.ok) {
@@ -1101,11 +1106,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
 
   useEffect(() => {
     setTreeLoading(true)
-    // Si el usuario editado es paraestatal, cargamos directamente el árbol paraestatal
-    // para que coincida con el tipo de administración. Los usuarios paraestatales no
-    // guardan secretaria_id (es FK solo a órganos centralizados), así que se identifican
-    // por su texto; cargar el árbol centralizado aquí provocaba que, al elegir un nodo,
-    // se guardara un órgano centralizado y el usuario cambiara de tipo a "centralizada".
     if (tipoAdminFijo === "paraestatal") {
       fetchCategoriasParaestatal()
         .then(paraestatalToTree)
@@ -1886,6 +1886,8 @@ export function UsuariosPage() {
   const [showNewForm,           setShowNewForm]           = useState(false)
   const [newFormKey,            setNewFormKey]            = useState(0)
   const { permisos } = useAutorizaciones()
+  const { user: currentUser } = useAuth()
+  const esAdmin = currentUser?.rol === "Administrador"
 
   const recargarUsuarios = useCallback(() => {
     fetchUsuarios()
@@ -2041,6 +2043,9 @@ export function UsuariosPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
+  {/* Los usuarios con rol Administrador solo pueden ser gestionados por otro Administrador.
+      Para los demás, no se muestran las acciones (3 puntos) en filas de Administrador. */}
+  {esAdmin || row.rol !== "Administrador" ? (
   <div className="flex items-center justify-center">
     <DropdownMenu>
                         <Tooltip>
@@ -2081,6 +2086,9 @@ export function UsuariosPage() {
       </DropdownMenuContent>
     </DropdownMenu>
   </div>
+  ) : (
+    <span className="text-muted-foreground text-xs">—</span>
+  )}
 </td>
                   </tr>
                 ))}

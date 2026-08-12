@@ -132,11 +132,8 @@ export async function POST(req: NextRequest) {
 
     // Folio
     const year = nueva.fecha_creacion?.getFullYear() ?? new Date().getFullYear()
-    const tipoFolio = usuarioCreador?.secretaria_id
-      ? `JUST-${usuarioCreador.secretaria_id}`
-      : usuarioCreador?.area_id
-        ? `JUST-A-${usuarioCreador.area_id}`
-        : "JUST-P"
+    // Folio de justificación GLOBAL (contador único para todo el sistema).
+    const tipoFolio = "JUST-GLOBAL"
 
     const registro = await prisma.consecutivo_folio.upsert({
       where:  { tipo_mes_anio: { tipo: tipoFolio, mes: 0, anio: year } },

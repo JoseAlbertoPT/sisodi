@@ -200,16 +200,8 @@ export async function PATCH(req: NextRequest) {
     let folioJustificacionNuevo: string | undefined
     if (esEnvioAValidacion && !solicitud.folio_justificacion) {
       const year = new Date().getFullYear()
-      let tipoFolio: string
-      if (solicitud.usuario?.secretaria_id) {
-        tipoFolio = `JUST-${solicitud.usuario.secretaria_id}`
-      } else if (solicitud.usuario?.area_id) {
-        tipoFolio = `JUST-A-${solicitud.usuario.area_id}`
-      } else if ((solicitud as any).secretaria) {
-        tipoFolio = `JUST-SEC-${String((solicitud as any).secretaria).trim().toUpperCase().replace(/\s+/g, "_").slice(0, 30)}`
-      } else {
-        tipoFolio = "JUST-P"
-      }
+      // Folio de justificación GLOBAL (contador único para todo el sistema).
+      const tipoFolio = "JUST-GLOBAL"
       const registro = await prisma.consecutivo_folio.upsert({
         where:  { tipo_mes_anio: { tipo: tipoFolio, mes: 0, anio: year } },
         update: { consecutivo: { increment: 1 } },

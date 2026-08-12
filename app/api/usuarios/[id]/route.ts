@@ -15,8 +15,22 @@ export async function PATCH(
     const { id } = await params
     const { nombre, correo, rfc, password, rolNombre, areaNombre, activo, secretariaId, secretariaTexto } = await req.json()
 
-    const usuarioActual = await prisma.usuario.findUnique({ where: { id } })
+    const usuarioActual = await prisma.usuario.findUnique({ where: { id }, include: { rol: true } })
     if (!usuarioActual) return err("Usuario no encontrado", 404)
+
+    // Solo un Administrador puede modificar/gestionar a otro usuario con rol Administrador.
+    if (usuarioActual.rol?.nombre?.toLowerCase() === "administrador") {
+      const solicitanteId = req.headers.get("x-user-id")
+      const solicitante = solicitanteId
+        ? await prisma.usuario.findUnique({
+            where: { id: solicitanteId },
+            select: { rol: { select: { nombre: true } } },
+          })
+        : null
+      if (solicitante?.rol?.nombre?.toLowerCase() !== "administrador") {
+        return err("Solo un administrador puede modificar a un usuario administrador", 403)
+      }
+    }
 
     let rol_id = usuarioActual.rol_id
     if (rolNombre) {

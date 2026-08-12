@@ -111,13 +111,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const tipoFolioJUST = usuarioCreador?.secretaria_id
-      ? `JUST-${usuarioCreador.secretaria_id}`
-      : usuarioCreador?.area_id
-        ? `JUST-A-${usuarioCreador.area_id}`
-        : secretaria
-          ? `JUST-SEC-${secretaria.trim().toUpperCase().replace(/\s+/g, "_").slice(0, 30)}`
-          : "JUST-P"
+    // Folio de justificación GLOBAL: un solo contador para todo el sistema, de modo que
+    // cada solicitud reciba un folio único y nunca se repita entre secretarías.
+    const tipoFolioJUST = "JUST-GLOBAL"
 
     const trunc = (val: string | null | undefined, max: number): string | null =>
         val ? val.substring(0, max) : null

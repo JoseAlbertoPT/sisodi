@@ -30,6 +30,8 @@ import {
   Send,
   AlertCircle,
   MoreHorizontal,
+  Ban,
+  FolderKanban,
   Power,
   PowerOff,
   Inbox,
@@ -91,6 +93,7 @@ interface AdminRecord extends CatalogoRecord {
     nueva_vigencia: string
     nuevo_numero_personas: number | null
     nuevos_numero_prestadores: number | null
+    tipo: string
     procesado: boolean
     procesado_en: string | null
     solicitud_nueva_id: number | null
@@ -179,6 +182,16 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [solPrestadores, setSolPrestadores] = useState("")
   const [solLoading, setSolLoading]   = useState(false)
   const [solError, setSolError]       = useState<string | null>(null)
+  // Cancelación: reutiliza la información del registro y solo captura nueva vigencia.
+  const [canRec, setCanRec]           = useState<CatalogoRecord | null>(null)
+  const [showCan, setShowCan]         = useState(false)
+  const [canVigInicio, setCanVigInicio] = useState<Date | undefined>(undefined)
+  const [canVigFin,    setCanVigFin]    = useState<Date | undefined>(undefined)
+  const [canLoading, setCanLoading]   = useState(false)
+  const [canError, setCanError]       = useState<string | null>(null)
+  // Proyectos: consulta de la información de programa/proyecto del registro.
+  const [proyRec, setProyRec]         = useState<CatalogoRecord | null>(null)
+  const [showProy, setShowProy]       = useState(false)
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -299,6 +312,56 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       setSolLoading(false)
     }
   }
+  const openCan = (rec: CatalogoRecord) => {
+    setCanRec(rec)
+    setCanVigInicio(undefined)
+    setCanVigFin(undefined)
+    setCanError(null)
+    setShowCan(true)
+  }
+  const handleCancelar = async () => {
+    if (!canRec || !user) return
+    if (!canVigInicio || !canVigFin) { setCanError("La vigencia es requerida"); return }
+    setCanLoading(true)
+    setCanError(null)
+    try {
+      const vi = dateToIso(canVigInicio!)
+      const vf = dateToIso(canVigFin!)
+      await fetch("/api/catalogo-justificaciones/solicitar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          catalogo_justificacion_id: canRec.id,
+          usuario_id: user.id,
+          nueva_vigencia: `${vi} / ${vf}`,
+          tipo: "cancelacion",
+        }),
+      })
+      // Carta descriptiva + dictamen con la vigencia ajustada, tomando como base la justificación.
+      const params = new URLSearchParams({ vigenciaInicio: vi, vigenciaFin: vf })
+      if (canRec.solicitud.id) params.set("id", String(canRec.solicitud.id))
+      else params.set("catalogoId", String(canRec.id))
+      const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo?${params}`)
+      if (!pdfRes.ok) throw new Error("Error al generar el PDF")
+      const blob = await pdfRes.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `Cancelacion_${canRec.solicitud.folio_dictamen ?? canRec.solicitud.folio_recepcion ?? canRec.id}_${vi}_${vf}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      setShowCan(false)
+      void fetchData()
+    } catch (e) {
+      setCanError(e instanceof Error ? e.message : "Error al generar el PDF")
+    } finally {
+      setCanLoading(false)
+    }
+  }
+  const openProy = (rec: CatalogoRecord) => {
+    setProyRec(rec)
+    setShowProy(true)
+  }
   const isParaestatal = (rec: CatalogoRecord) => {
     const t = rec.solicitud.tipo_solicitud.toLowerCase()
     return t.includes("paraestatal") || t.includes("nombramiento")
@@ -390,14 +453,23 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <MoreHorizontal className="h-4 w-4 text-content-low" />
                           </button>
                         </DropdownMenuTrigger>
+
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openView(rec)}>
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
+
                           <DropdownMenuItem onClick={() => openSol(rec)}>
-                            <Send className="h-4 w-4" /> Reutilizar
+                            <Send className="h-4 w-4" /> Renovación
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openCan(rec)}>
+                            <Ban className="h-4 w-4" /> Cancelación
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openProy(rec)}>
+                            <FolderKanban className="h-4 w-4" /> Proyectos
                           </DropdownMenuItem>
                         </DropdownMenuContent>
+
                       </DropdownMenu>
                       </div>
                     </td>
@@ -460,7 +532,13 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openSol(rec)}>
-                            <Send className="h-4 w-4" /> Reutilizar
+                            <Send className="h-4 w-4" /> Renovación
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openCan(rec)}>
+                            <Ban className="h-4 w-4" /> Cancelación
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openProy(rec)}>
+                            <FolderKanban className="h-4 w-4" /> Proyectos
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -637,6 +715,123 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           )}
         </DialogContent>
       </Dialog>
+      <Dialog open={showCan} onOpenChange={setShowCan}>
+        <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
+          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
+            <DialogTitle className="ds-title-md text-content-high">
+              Generar cancelación
+            </DialogTitle>
+          </div>
+          {canRec && (
+            <>
+              <div className="flex flex-col gap-4 px-6 py-5">
+                <p className="text-xs text-[var(--sem-content-low)]">
+                  Ajusta únicamente la vigencia. Se generará el documento de cancelación (carta descriptiva y dictamen) tomando como base esta justificación.
+                </p>
+                <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
+                  <p className="font-semibold text-[#1F2937]">{entidadNombre(canRec)}</p>
+                  <p className="text-[var(--sem-content-low)]">{fmt(canRec.programa_proyecto)}</p>
+                  <p className="text-[var(--sem-content-low)]">
+                    Vigencia actual:{" "}
+                    <span className="font-medium text-[#1F2937]">{fmt(canRec.vigencia)}</span>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    Nueva vigencia
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Inicio</span>
+                      <DatePickerHabil
+                        value={canVigInicio}
+                        onChange={(d) => setCanVigInicio(d)}
+                        placeholder="Seleccionar inicio"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Término</span>
+                      <DatePickerHabil
+                        value={canVigFin}
+                        fromDate={canVigInicio}
+                        onChange={(d) => setCanVigFin(d)}
+                        placeholder="Seleccionar término"
+                      />
+                    </div>
+                  </div>
+                </div>
+                {canError && (
+                  <div className="flex items-center gap-2 text-xs text-destructive">
+                    <AlertCircle className="h-4 w-4 shrink-0" />{canError}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
+                <Button
+                  variant="default"
+                  className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+                  onClick={() => setShowCan(false)}
+                  disabled={canLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="vino"
+                  className="rounded-full h-10 px-6 font-normal shadow-sm"
+                  onClick={handleCancelar}
+                  disabled={canLoading || !canVigInicio || !canVigFin}
+                >
+                  {canLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {canLoading ? "Generando…" : "Generar cancelación"}
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showProy} onOpenChange={setShowProy}>
+        <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
+          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
+            <DialogTitle className="ds-title-md text-content-high">
+              Proyectos
+            </DialogTitle>
+          </div>
+          {proyRec && (
+            <>
+              <div className="flex flex-col gap-4 px-6 py-5">
+                <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
+                  <p className="font-semibold text-[#1F2937]">{entidadNombre(proyRec)}</p>
+                  <p className="text-[var(--sem-content-low)]">
+                    Folio de dictamen:{" "}
+                    <span className="font-medium text-[#1F2937]">{fmt(proyRec.solicitud.folio_dictamen)}</span>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Programa / Proyecto</span>
+                  <p className="text-sm font-medium text-content-high">{toTitleCaseES(fmt(proyRec.programa_proyecto))}</p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Tipo de actividad</span>
+                  <p className="text-sm text-content-high">{toTitleCaseES(fmt(proyRec.tipo_actividad))}</p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Vigencia actual</span>
+                  <p className="text-sm text-content-high">{fmt(proyRec.vigencia)}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
+                <Button
+                  variant="default"
+                  className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+                  onClick={() => setShowProy(false)}
+                >
+                  Cerrar
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -657,13 +852,17 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   const [showReutilizaciones, setShowReutilizaciones] = useState(false)
   const [reutilizacionesPage, setReutilizacionesPage] = useState(1)
   const [reutilizacionesQuery, setReutilizacionesQuery] = useState("")
+  const [movimientosTipo, setMovimientosTipo] = useState<"todas" | "reutilizacion" | "cancelacion">("todas")
   const openReutilizaciones = (rec: AdminRecord) => {
     setViewRec(rec)
     setReutilizacionesPage(1)
     setReutilizacionesQuery("")
+    setMovimientosTipo("todas")
     setShowReutilizaciones(true)
   }
+  const esCancelacion = (sol: AdminRecord["catalogo_solicitudes"][0]) => sol.tipo === "cancelacion"
   const reutilizacionesFiltradas = (viewRec?.catalogo_solicitudes ?? []).filter((sol) => {
+    if (movimientosTipo !== "todas" && sol.tipo !== movimientosTipo) return false
     const q = reutilizacionesQuery.trim().toLowerCase()
     if (!q) return true
     return sol.usuario.nombre.toLowerCase().includes(q)
@@ -675,7 +874,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     (reutilizacionesPage - 1) * ITEMS_PER_PAGE,
     reutilizacionesPage * ITEMS_PER_PAGE,
   )
-  useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery])
+  useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery, movimientosTipo])
   useEffect(() => { if (reutilizacionesPage > reutilizacionesTotalPages) setReutilizacionesPage(reutilizacionesTotalPages) }, [reutilizacionesTotalPages, reutilizacionesPage])
 
   const [importOpen, setImportOpen]           = useState(false)
@@ -817,7 +1016,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0
 
     const rows: (string | number)[][] = [
-      ["#", "Usuario", "Entidad", "Folio de Dictamen", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Reutilización", "Programa / Proyecto", "Régimen", "Total de reutilizaciones"],
+      ["#", "Tipo", "Usuario", "Entidad", "Folio de Dictamen", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Creación", "Programa / Proyecto", "Régimen", "Total de movimientos"],
     ]
     let i = 0
     records.forEach((rec) => {
@@ -826,11 +1025,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
         i++
         rows.push([
           i,
+          sol.tipo === "cancelacion" ? "Cancelación" : "Reutilización",
           sol.usuario.nombre,
           toTitleCaseES(entidadNombre(rec)),
           fmt(rec.solicitud.folio_dictamen),
           sol.nueva_vigencia,
-          prestadoresDe(sol),
+          sol.tipo === "cancelacion" ? "—" : prestadoresDe(sol),
           fmtFecha(sol.creado_en),
           toTitleCaseES(fmt(rec.programa_proyecto)),
           fmtCapitalize(rec.regimen_contratacion),
@@ -844,7 +1044,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       ({ wch: Math.min(50, Math.max(12, ...rows.map((r) => String(r[c] ?? "").length))) }),
     )
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Reutilizaciones")
+    XLSX.utils.book_append_sheet(wb, ws, "Movimientos")
     return wb
   }
 
@@ -944,7 +1144,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Régimen</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">Reutilizaciones</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">Movimientos</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Estado</th>
                 <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground text-center">Acciones</th>
               </tr>
@@ -1045,11 +1245,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <DialogHeader className="px-5 py-4 border-b border-[var(--sem-border-md)]">
             <div className="flex items-center justify-between gap-3 pr-10">
               <DialogTitle className="ds-title-md text-content-high">
-                Reutilizaciones{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
+                Movimientos{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
               </DialogTitle>
               {viewRec && viewRec.catalogo_solicitudes.length > 0 && (
                 <span className="text-sm font-normal text-muted-foreground shrink-0">
-                  Total de prestadores: {viewRec.catalogo_solicitudes.reduce((sum, sol) => sum + (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0), 0)}
+                  Reutilizaciones: {viewRec.catalogo_solicitudes.filter((s) => !esCancelacion(s)).length}
+                  {" · "}Cancelaciones: {viewRec.catalogo_solicitudes.filter(esCancelacion).length}
                 </span>
               )}
             </div>
@@ -1057,23 +1258,44 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <div className="max-h-[80vh] overflow-y-auto p-4">
             {viewRec && viewRec.catalogo_solicitudes.length > 0 ? (
               <>
-                <SearchInput
-                  value={reutilizacionesQuery}
-                  onChange={(e) => setReutilizacionesQuery(e.target.value)}
-                  placeholder="Buscar por usuario o vigencia…"
-                  containerClassName="mb-3"
-                />
+                <div className="flex items-center gap-2 mb-3">
+                  <SearchInput
+                    value={reutilizacionesQuery}
+                    onChange={(e) => setReutilizacionesQuery(e.target.value)}
+                    placeholder="Buscar por usuario o vigencia…"
+                    containerClassName="flex-1"
+                  />
+                  <div className="flex items-center gap-1 shrink-0">
+                    {([
+                      ["todas", "Todas"],
+                      ["reutilizacion", "Reutilizaciones"],
+                      ["cancelacion", "Cancelaciones"],
+                    ] as const).map(([val, label]) => (
+                      <Button
+                        key={val}
+                        size="sm"
+                        variant={movimientosTipo === val ? "vino" : "default"}
+                        className="rounded-full h-8 px-3 text-xs font-normal"
+                        onClick={() => setMovimientosTipo(val)}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
                 <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full table-fixed text-sm">
                       <colgroup>
-                        <col className="w-[34%]" />
+                        <col className="w-[16%]" />
                         <col className="w-[28%]" />
+                        <col className="w-[22%]" />
+                        <col className="w-[16%]" />
                         <col className="w-[18%]" />
-                        <col className="w-[20%]" />
                       </colgroup>
                       <thead>
                         <tr className="bg-muted/30 border-b border-border">
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Tipo</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Num. Prestadores</th>
@@ -1083,19 +1305,24 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
                           <tr className="empty-row">
-                            <td colSpan={4}>
+                            <td colSpan={5}>
                               <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
                           </tr>
                         )}
                         {reutilizacionesVisibles.map((sol) => (
                           <tr key={sol.id} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
+                            <td className="px-4 py-3 text-left">
+                              {esCancelacion(sol)
+                                ? <StatusBadge label="Cancelación" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
+                                : <StatusBadge label="Reutilización" color={C_AZUL_REVISION} bgColor={C_AZUL_REVISION_BG} />}
+                            </td>
                             <td className="px-4 py-3 text-xs font-medium text-card-foreground truncate text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
                               {sol.usuario.nombre}
                             </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">{sol.nueva_vigencia}</td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
-                              {sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—"}
+                              {esCancelacion(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—")}
                             </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
                               {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
@@ -1113,7 +1340,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                 />
               </>
             ) : (
-              <EmptyState icon={Inbox} title="Sin reutilizaciones registradas" description="Ajusta los filtros para ver más resultados." />
+              <EmptyState icon={Inbox} title="Sin movimientos registrados" description="Aún no hay reutilizaciones ni cancelaciones para este registro." />
             )}
           </div>
         </DialogContent>

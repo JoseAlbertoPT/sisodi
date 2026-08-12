@@ -11,11 +11,16 @@ export async function POST(req: NextRequest) {
       nueva_vigencia,
       nuevo_numero_personas,
       nuevos_numero_prestadores,
+      tipo,
     } = body
 
     if (!catalogo_justificacion_id || !usuario_id || !nueva_vigencia?.trim()) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
+
+    // La cancelación no captura número de prestadores/personas, solo vigencia.
+    const tipoNormalizado = tipo === "cancelacion" ? "cancelacion" : "reutilizacion"
+    const esCancelacion = tipoNormalizado === "cancelacion"
 
     const catalogo = await prisma.catalogo_justificacion.findUnique({
       where: { id: Number(catalogo_justificacion_id) },
@@ -29,8 +34,9 @@ export async function POST(req: NextRequest) {
         catalogo_justificacion_id: Number(catalogo_justificacion_id),
         usuario_id: String(usuario_id),
         nueva_vigencia: String(nueva_vigencia).trim(),
-        nuevo_numero_personas: nuevo_numero_personas ? Number(nuevo_numero_personas) : null,
-        nuevos_numero_prestadores: nuevos_numero_prestadores ? Number(nuevos_numero_prestadores) : null,
+        nuevo_numero_personas: esCancelacion || !nuevo_numero_personas ? null : Number(nuevo_numero_personas),
+        nuevos_numero_prestadores: esCancelacion || !nuevos_numero_prestadores ? null : Number(nuevos_numero_prestadores),
+        tipo: tipoNormalizado,
       },
     })
 
