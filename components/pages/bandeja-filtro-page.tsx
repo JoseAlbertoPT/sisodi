@@ -37,6 +37,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { useAuth } from "@/lib/auth-context"
+import { esSesionInvalida, forzarReLogin } from "@/lib/sesion-invalida"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
@@ -876,6 +877,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
       }),
     })
     const json = await res.json()
+    if (esSesionInvalida(json)) { forzarReLogin(json.error); return }
     if (json.ok) setFolioDictamen(folio)
   }
   const yaEstuvoEnRevisor = (solicitud._raw?.historial_solicitud ?? []).some(
@@ -1391,6 +1393,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
+      if (esSesionInvalida(json)) { forzarReLogin(json.error); return }
       if (!res.ok || !json.ok) { showToast("error", "Error al aprobar", json.error ?? "No se pudo aprobar la solicitud."); return }
       void cargar()
       setSuccessMsg({ title: "Solicitud enviada al siguiente filtro", description: "La solicitud fue procesada exitosamente y avanzó a la siguiente bandeja.", type: 'approve' })
@@ -1413,6 +1416,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
+      if (esSesionInvalida(json)) { forzarReLogin(json.error); return }
       if (!res.ok || !json.ok) { showToast("error", "Error al observar", json.error ?? "No se pudo registrar la observación."); return }
       setObservarTarget(null)
       userChangedTabRef.current = true
@@ -1436,6 +1440,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
+      if (esSesionInvalida(json)) { forzarReLogin(json.error); return }
       if (!res.ok || !json.ok) { showToast("error", "Error al aceptar", json.error ?? "No se pudo aceptar la solicitud."); return }
       showToast("success", "Solicitud aceptada", "La solicitud ha sido aceptada para revisión.")
       setSolicitudes(prev =>
@@ -1458,6 +1463,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         }),
       })
       const json = await res.json()
+      if (esSesionInvalida(json)) { forzarReLogin(json.error); return }
       if (!res.ok || !json.ok) { showToast("error", "Error al asignar revisor", json.error ?? "No se pudo asignar el revisor."); return }
       showToast("success", "Revisor asignado", "El revisor fue asignado correctamente.")
       setSolicitudes(prev =>

@@ -264,6 +264,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     setSolError(null)
     setShowSol(true)
   }
+
   const handleSolicitar = async () => {
     if (!solRec || !user) return
     if (!solVigInicio || !solVigFin) { setSolError("La vigencia es requerida"); return }
@@ -311,6 +312,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       setSolLoading(false)
     }
   }
+
   const openCan = (rec: CatalogoRecord) => {
     setCanRec(rec)
     setCanVigInicio(undefined)

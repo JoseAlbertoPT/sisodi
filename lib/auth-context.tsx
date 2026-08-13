@@ -27,7 +27,7 @@ interface AuthContextType {
   changePassword: (rfc: string, nuevaPassword: string) => Promise<void>
 }
 
-const AUTH_KEY = "sdtf_user"
+export const AUTH_KEY = "sdtf_user"
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {

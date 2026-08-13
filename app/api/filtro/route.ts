@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { getSecretariaScopeIds } from "@/lib/secretaria-scope"
+import { checkSesionUsuario } from "@/lib/validar-sesion"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -412,6 +413,27 @@ export async function PATCH(req: NextRequest) {
         { ok: false, error: "solicitudId debe ser un número válido" },
         { status: 400 }
       )
+    }
+
+    // Validar que el usuario que ejecuta la acción exista en la base, para evitar
+    // el error de FK `historial_solicitud_usuario_id_fkey` cuando el navegador tiene
+    // una sesión vieja (ver lib/validar-sesion.ts).
+    const sesionErr = await checkSesionUsuario(usuarioId)
+    if (sesionErr) return sesionErr
+
+    // Si se asigna revisor, validar también que el revisor exista para no violar
+    // la FK `solicitud_revisor_asignado_id_fkey`.
+    if (revisorId) {
+      const revisorExiste = await prisma.usuario.findUnique({
+        where:  { id: revisorId },
+        select: { id: true },
+      })
+      if (!revisorExiste) {
+        return NextResponse.json(
+          { ok: false, error: "El revisor seleccionado no existe en el sistema. Actualiza la lista e inténtalo de nuevo." },
+          { status: 400 }
+        )
+      }
     }
 
     if (accion === "asignarFolio") {
