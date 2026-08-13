@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getSecretariaScopeIds } from "@/lib/secretaria-scope"
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,9 +24,11 @@ export async function GET(req: NextRequest) {
     // ámbito. Un usuario con órgano centralizado ve lo centralizado (incluye
     // registros sin tipo definido, tratados como centralizada); un usuario sin
     // órgano centralizado (paraestatal) solo ve lo paraestatal.
+    // `{ not: "paraestatal" }` excluye los NULL en SQL; por eso el OR explícito
+    // con null para que los registros sin tipo se traten como centralizada.
     const tipoAdminFilter: Record<string, unknown> | null = viewer
       ? viewer.organo_centralizado
-        ? { tipo_administracion: { not: "paraestatal" } }
+        ? { OR: [{ tipo_administracion: { not: "paraestatal" } }, { tipo_administracion: null }] }
         : { tipo_administracion: "paraestatal" }
       : null
 
@@ -36,10 +39,14 @@ export async function GET(req: NextRequest) {
     // El null fallback se elimina a propósito: registros sin snapshot no tienen secretaría
     // definida y mostrarlos causaría que se vean solicitudes de la secretaría anterior.
     // El segundo backfill en PATCH /api/usuarios/:id asigna snapshot a cualquier null restante.
+    // Alcance a nivel Secretaría: se incluyen todos los nodos (Direcciones,
+    // Subdirecciones, etc.) de la misma Secretaría que el usuario, no solo su nodo
+    // exacto, para que un usuario de una Dirección vea todo lo de su Secretaría.
     let secretariaSnapshotFilter: Record<string, unknown> = {}
     if (viewer) {
       if (viewer.secretaria_id) {
-        secretariaSnapshotFilter = { secretaria_id_snapshot: viewer.secretaria_id }
+        const scopeIds = await getSecretariaScopeIds(viewer.secretaria_id)
+        secretariaSnapshotFilter = { secretaria_id_snapshot: { in: scopeIds } }
       } else if (viewer.secretaria_texto) {
         secretariaSnapshotFilter = { secretaria_txt_snapshot: viewer.secretaria_texto }
       } else if (!esAdmin) {

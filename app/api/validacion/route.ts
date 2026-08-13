@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { getEstadoId } from "@/lib/estado-cache"
+import { getSecretariaScopeIds } from "@/lib/secretaria-scope"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -27,14 +28,24 @@ export async function GET(req: NextRequest) {
       })
       if (viewer) {
         // Cada usuario solo ve solicitudes de su propio ámbito: un usuario con
-        // órgano centralizado ve lo centralizado (incluye registros sin tipo);
-        // uno paraestatal solo ve lo paraestatal.
-        where.tipo_administracion = viewer.organo_centralizado
-          ? { not: "paraestatal" }
-          : "paraestatal"
+        // órgano centralizado ve lo centralizado (incluye registros sin tipo,
+        // tratados como centralizada); uno paraestatal solo ve lo paraestatal.
+        // NOTA: `{ not: "paraestatal" }` excluye los NULL en SQL, por eso el OR
+        // explícito con null para no perder registros sin tipo definido.
+        if (viewer.organo_centralizado) {
+          where.OR = [
+            { tipo_administracion: { not: "paraestatal" } },
+            { tipo_administracion: null },
+          ]
+        } else {
+          where.tipo_administracion = "paraestatal"
+        }
 
         if (viewer.secretaria_id) {
-          where.secretaria_id_snapshot = viewer.secretaria_id
+          // Alcance a nivel Secretaría: todos los nodos (Direcciones, etc.) de la
+          // misma Secretaría, no solo el nodo exacto del usuario.
+          const scopeIds = await getSecretariaScopeIds(viewer.secretaria_id)
+          where.secretaria_id_snapshot = { in: scopeIds }
         } else if (viewer.secretaria_texto) {
           where.secretaria_txt_snapshot = viewer.secretaria_texto
         } else {

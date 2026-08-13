@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { getSecretariaScopeIds } from "@/lib/secretaria-scope"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -146,8 +147,10 @@ export async function GET(req: NextRequest) {
         // rol: un usuario con órgano centralizado ve lo centralizado (incluye
         // registros sin tipo, tratados como centralizada); uno paraestatal solo
         // ve lo paraestatal.
+        // `{ not: "paraestatal" }` excluye los NULL en SQL; por eso el OR explícito
+        // con null para que los registros sin tipo se traten como centralizada.
         tipoAdminFilter = viewer.organo_centralizado
-          ? { tipo_administracion: { not: "paraestatal" } }
+          ? { OR: [{ tipo_administracion: { not: "paraestatal" } }, { tipo_administracion: null }] }
           : { tipo_administracion: "paraestatal" }
 
         if (esRolRevisor && filtro !== 1) {
@@ -156,7 +159,10 @@ export async function GET(req: NextRequest) {
 
         if (!esRolRevisor && !esAdmin) {
           if (viewer.secretaria_id) {
-            organoFilter = { secretaria_id_snapshot: viewer.secretaria_id }
+            // Alcance a nivel Secretaría: todos los nodos (Direcciones, etc.) de la
+            // misma Secretaría, no solo el nodo exacto del usuario.
+            const scopeIds = await getSecretariaScopeIds(viewer.secretaria_id)
+            organoFilter = { secretaria_id_snapshot: { in: scopeIds } }
           } else if (viewer.secretaria_texto) {
             organoFilter = { secretaria_txt_snapshot: viewer.secretaria_texto }
           } else if (filtro !== 3) {

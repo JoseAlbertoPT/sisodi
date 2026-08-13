@@ -13,8 +13,10 @@ export async function GET(req: NextRequest) {
         select: { organo_centralizado: { select: { id: true } } },
       })
       if (viewer) {
+        // `{ not: "paraestatal" }` excluye los NULL en SQL; por eso el OR explícito
+        // con null para que los registros sin tipo se traten como centralizada.
         tipoAdminFilter = viewer.organo_centralizado
-          ? { tipo_administracion: { not: "paraestatal" } }
+          ? { OR: [{ tipo_administracion: { not: "paraestatal" } }, { tipo_administracion: null }] }
           : { tipo_administracion: "paraestatal" }
       }
     }
