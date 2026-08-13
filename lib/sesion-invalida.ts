@@ -15,13 +15,21 @@ export function esSesionInvalida(json: unknown): boolean {
   )
 }
 
+let yaRedirigiendo = false
+
 /**
  * Limpia la sesión guardada y recarga la página para volver al login.
  * Funciona fuera de React (no necesita el hook `useAuth`), así se puede invocar
- * desde cualquier manejador de respuesta. Al recargar, `app/page.tsx` ve que ya
- * no hay sesión y muestra `<LoginForm />`.
+ * desde cualquier manejador de respuesta o desde el interceptor global. Al
+ * recargar, `app/page.tsx` ve que ya no hay sesión y muestra `<LoginForm />`.
+ *
+ * Es idempotente: si ya se disparó (p. ej. desde el interceptor global y desde el
+ * manejador de una acción a la vez), las llamadas siguientes se ignoran para no
+ * mostrar el aviso ni recargar dos veces.
  */
 export function forzarReLogin(mensaje?: string): void {
+  if (yaRedirigiendo) return
+  yaRedirigiendo = true
   try { localStorage.removeItem(AUTH_KEY) } catch { /* noop */ }
   try { sessionStorage.removeItem("sdtf_just_logged_in") } catch { /* noop */ }
   if (mensaje) { try { alert(mensaje) } catch { /* noop */ } }

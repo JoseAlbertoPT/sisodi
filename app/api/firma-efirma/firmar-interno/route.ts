@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { efirmaClient, firmadosCount, normalizarEstado } from "@/lib/efirma-client"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { checkSesionUsuario } from "@/lib/validar-sesion"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -17,6 +18,10 @@ export async function POST(req: NextRequest) {
     if (!firmanteId || !usuarioId || !cargoFirmante) {
       return NextResponse.json({ ok: false, error: "Faltan campos requeridos" }, { status: 400 })
     }
+
+    // Evita el error de FK historial_solicitud_usuario_id_fkey con sesión vieja.
+    const sesionErr = await checkSesionUsuario(usuarioId)
+    if (sesionErr) return sesionErr
     if (!BYPASS && (!certificado || !clavePrivada || !fraseClavePrivada)) {
       return NextResponse.json({ ok: false, error: "Faltan credenciales de e.firma" }, { status: 400 })
     }

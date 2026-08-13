@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { checkSesionUsuario } from "@/lib/validar-sesion"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -23,6 +24,10 @@ export async function POST(req: NextRequest) {
     if (!solicitudId || !usuarioId) {
       return NextResponse.json({ ok: false, error: "Faltan solicitudId o usuarioId" }, { status: 400 })
     }
+
+    // Evita el error de FK historial_solicitud_usuario_id_fkey con sesión vieja.
+    const sesionErr = await checkSesionUsuario(usuarioId)
+    if (sesionErr) return sesionErr
 
     const sid = Number(solicitudId)
     if (isNaN(sid)) {

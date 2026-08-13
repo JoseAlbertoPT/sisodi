@@ -2,6 +2,7 @@
 
 import { useEffect, useState,useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { SessionInvalidWatcher } from "@/components/session-invalid-watcher"
 import { AppSidebar, type PageKey } from "@/components/app-sidebar"
 import { DashboardPage } from "@/components/pages/dashboard-page"
 import { BandejaFiltroPage } from "@/components/pages/bandeja-filtro-page"
@@ -167,6 +168,7 @@ export function AppShell() {
 
   return (
     <SidebarContext.Provider value={{ collapsed , toggle }}>
+      <SessionInvalidWatcher />
       <div className="flex h-screen overflow-hidden bg-bg-surface-low p-1 md:p-2 gap-1 md:gap-2">
         <AppSidebar
           currentPage={sidebarCurrentPage}
