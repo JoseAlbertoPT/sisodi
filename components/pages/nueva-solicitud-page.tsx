@@ -1431,6 +1431,39 @@ function getNumeroUA(secretaria: string, unidad: string): string {
   return idx >= 0 ? String(idx + 1) : unidad
 }
 
+/**
+ * Consulta "Programa o Proyecto" contra SIGeF filtrado por Secretaría. Mientras
+ * la Secretaría no tenga un idUnidad de SIGeF configurado (`configured: false`),
+ * el formulario debe seguir usando el catálogo/captura actual — no es un error.
+ */
+function useProgramasSigef(secretaria: string): {
+  proyectos: { value: string; label: string }[]
+  cargando: boolean
+  configured: boolean
+} {
+  const [proyectos, setProyectos] = useState<{ value: string; label: string }[]>([])
+  const [cargando, setCargando] = useState(false)
+  const [configured, setConfigured] = useState(false)
+
+  useEffect(() => {
+    if (!secretaria) { setProyectos([]); setConfigured(false); return }
+    const controller = new AbortController()
+    setCargando(true)
+    fetch(`/api/sigef/proyectos?secretaria=${encodeURIComponent(secretaria)}`, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : { configured: false, proyectos: [] }))
+      .then((d) => {
+        if (controller.signal.aborted) return
+        setConfigured(!!d.configured)
+        setProyectos(d.proyectos ?? [])
+      })
+      .catch((e) => { if (e?.name !== "AbortError") setConfigured(false) })
+      .finally(() => { if (!controller.signal.aborted) setCargando(false) })
+    return () => controller.abort()
+  }, [secretaria])
+
+  return { proyectos, cargando, configured }
+}
+
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
   datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
@@ -1537,6 +1570,7 @@ function FormularioPrestacion({
   const programasDelExcel       = useProgramas(excelRows, unidadSeleccionada || undefined)
   const programasDeLaSecretaria = datosRelacionados?.programas ?? []
   const programas = programasDelExcel.length > 0 ? programasDelExcel : programasDeLaSecretaria
+  const sigef = useProgramasSigef(secretariaConfirmada)
   const tiposActividadPorPrograma = useTiposActividadPorPrograma(
     programaSeleccionado, regimenEfectivo, excelRows, tipoAdministracionForm, secretariaConfirmada
   )
@@ -1855,6 +1889,14 @@ function FormularioPrestacion({
                 <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground">{programaSeleccionado || "—"}</span>
                 </div>
+              ) : sigef.configured ? (
+                <SelectConBusqueda
+                  opciones={sigef.proyectos}
+                  value={programaSeleccionado}
+                  onValueChange={handleProgramaChange}
+                  placeholder={sigef.cargando ? "Cargando programas de SIGeF…" : "Seleccione programa"}
+                  disabled={!camposDependientesHabilitados || sigef.cargando}
+                />
               ) : programas.length > 0 ? (
                 <SelectConBusqueda
                   opciones={programas.map((p) => ({ value: p, label: p }))}
@@ -2293,6 +2335,7 @@ function FormularioNombramiento({
     if (byClave) setUrgSeleccionada(byClave.nombre)
   }, [catalogoUAs])
   const [programaInput, setProgramaInput] = useState(datosRenovacion?.programaProyecto ?? initialData?.programaProyecto ?? (prefilled ? "P-005 Fortalecimiento Institucional" : ""))
+  const sigef = useProgramasSigef(secretariaConfirmada)
   const [vigenciaInicio, setVigenciaInicio] = useState(initialData?.vigenciaInicio ?? (prefilled ? "2026-03-01" : ""))
   const [vigenciaFin,    setVigenciaFin]    = useState(initialData?.vigenciaFin ?? (prefilled ? "2026-08-31" : ""))
   const [numeroPrestadores, setNumeroPrestadores] = useState(datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "2" : ""))
@@ -2592,19 +2635,33 @@ function FormularioNombramiento({
                 Programa o Proyecto
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
-              <Input
-                value={programaInput}
-                onChange={(e) => { if (!bloqueadoPorRenovacion) setProgramaInput(e.target.value) }}
-                placeholder="Nombre del programa"
-                maxLength={200}
-                className={`${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
-                readOnly={bloqueadoPorRenovacion}
-                disabled={!bloqueadoPorRenovacion && !camposDependientesHabilitados}
-              />
-              {!bloqueadoPorRenovacion && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />Puede Obtenerse desde el Oficio de Suficiencia Presupuestal.
-                </p>
+              {bloqueadoPorRenovacion ? (
+                <Input
+                  value={programaInput}
+                  readOnly
+                  className="bg-muted/40 text-muted-foreground cursor-not-allowed"
+                />
+              ) : sigef.configured ? (
+                <SelectConBusqueda
+                  opciones={sigef.proyectos}
+                  value={programaInput}
+                  onValueChange={setProgramaInput}
+                  placeholder={sigef.cargando ? "Cargando programas de SIGeF…" : "Seleccione programa"}
+                  disabled={!camposDependientesHabilitados || sigef.cargando}
+                />
+              ) : (
+                <>
+                  <Input
+                    value={programaInput}
+                    onChange={(e) => setProgramaInput(e.target.value)}
+                    placeholder="Nombre del programa"
+                    maxLength={200}
+                    disabled={!camposDependientesHabilitados}
+                  />
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />Puede Obtenerse desde el Oficio de Suficiencia Presupuestal.
+                  </p>
+                </>
               )}
             </div>
 

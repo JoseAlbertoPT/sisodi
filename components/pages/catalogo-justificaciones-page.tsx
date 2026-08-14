@@ -130,8 +130,6 @@ function entidadNombre(rec: CatalogoRecord) {
     ?? rec.solicitud.secretaria
     ?? "—"
 }
-// Límite máximo al reutilizar un registro: Seguridad Pública permite hasta
-// 100 prestadores; el resto de las secretarías, hasta 50.
 function maxPrestadoresPermitido(secretaria: string | null | undefined): number {
   const s = (secretaria ?? "").toLowerCase()
   return s.includes("seguridad p") ? 100 : 50
@@ -1217,7 +1215,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/30 border-b border-border">
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Entidad</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Secretaría / Dependencia</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Folio de Dictamen</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa / Proyecto</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Régimen</th>
