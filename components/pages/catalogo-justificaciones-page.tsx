@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import Image from "next/image"
 import { useAuth } from "@/lib/auth-context"
@@ -26,7 +25,6 @@ import {
   Search,
   Loader2,
   Eye,
-  RefreshCw,
   ListChecks,
   Send,
   AlertCircle,
@@ -110,6 +108,10 @@ function fmt(val: string | null | undefined) {
 function fmtCapitalize(val: string | null | undefined) {
   if (!val) return "—"
   return val.charAt(0).toUpperCase() + val.slice(1).toLowerCase()
+}
+function fmtTipoPago(val: string | null | undefined) {
+  if (!val) return "—"
+  return val.replace(/_/g, " ")
 }
 function regimenBadgeColor(raw: string | null | undefined): { color: string; bgColor: string } {
   const r = (raw ?? "").toLowerCase().trim()
@@ -264,7 +266,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     setSolError(null)
     setShowSol(true)
   }
-
   const handleSolicitar = async () => {
     if (!solRec || !user) return
     if (!solVigInicio || !solVigFin) { setSolError("La vigencia es requerida"); return }
@@ -291,7 +292,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         vigenciaInicio: vi,
         vigenciaFin: vf,
       })
-
       if (solRec.solicitud.id) params.set("id", String(solRec.solicitud.id))
       else params.set("catalogoId", String(solRec.id))
       if (np) params.set("numeroPersonas", np)
@@ -312,7 +312,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       setSolLoading(false)
     }
   }
-
   const openCan = (rec: CatalogoRecord) => {
     setCanRec(rec)
     setCanVigInicio(undefined)
@@ -393,9 +392,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
             <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado ({nombramiento.length})</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </Button>
       </div>
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3">
@@ -439,7 +435,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     <td>
                       <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                     </td>
-                    <td className="capitalize">{fmt(rec.tipo_pago)}</td>
+                    <td className="capitalize">{fmtTipoPago(rec.tipo_pago)}</td>
                     <td>{fmtMoney(rec.importe_bruto)}</td>
                     <td className="text-center">
                       <div className="flex justify-center">
@@ -513,7 +509,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     <td title={toTitleCaseES(fmt(rec.tipo_actividad))}>{toTitleCaseES(fmt(rec.tipo_actividad))}</td>
                     <td>{rec.numero_personas ?? "—"}</td>
                     <td>{fmtMoney(rec.importe_bruto)}</td>
-                    <td className="capitalize">{fmt(rec.tipo_pago)}</td>
+                    <td className="capitalize">{fmtTipoPago(rec.tipo_pago)}</td>
                     <td className="text-center">
                       <div className="flex justify-center">
                       <DropdownMenu>
