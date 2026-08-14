@@ -58,7 +58,7 @@ export default function Home() {
 
         <div className="text-center">
           <h1 className="font-sans text-[28px] font-normal leading-[120%] text-content-high">
-            SISODIJ
+            SEDIT
           </h1>
           <p className="font-sans text-[14px] font-light leading-[140%] text-content-low mt-1">
             Gobierno del Estado de Morelos

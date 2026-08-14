@@ -1740,7 +1740,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                       <td className="px-4 py-3">
                         <FoliosCell sol={sol} />
                       </td>
-                      <td className="px-4 py-3 text-xs break-words max-w-[180px]">
+                      <td className="px-4 py-3 text-xs whitespace-normal break-words max-w-[180px]">
                         <span className="text-muted-foreground">
                           {formatRegimen(sol.regimen)}
                         </span>

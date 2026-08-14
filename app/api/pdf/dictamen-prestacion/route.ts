@@ -5,7 +5,7 @@ import {
   PlantillaDictamenPrestacionServicios,
   type DictamenPrestacionData,
 } from "@/components/plantillas/PlantillaDictamenPrestacionServicios";
-import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
+import { claveParaPdf, folioSinSiglas, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import { applyTextRules } from "@/lib/utils";
 import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
 import React from "react";
@@ -73,8 +73,8 @@ export async function buildDictamenPrestacionBuffer(
       sol.folio_recepcion ??
       String(sol.id);
     data = {
-      folio,
-      fecha: formatFechaLarga(sol.dictamen?.fecha_emision ?? sol.fecha_emision),
+      folio: folioSinSiglas(folio),
+      fecha: formatFechaLarga(new Date()),
       secretariaDependencia: sol.secretaria ?? "",
       unidadResponsableGasto: sol.unidad_responsable ?? "",
       unidadAdministrativa: sol.unidad_administrativa ?? "",
@@ -100,8 +100,8 @@ export async function buildDictamenPrestacionBuffer(
     if (!cj) return null;
     folio = cj.folio_dictamen ?? cj.folio_recepcion ?? String(cj.id);
     data = {
-      folio,
-      fecha: formatFechaLarga(cj.fecha_emision ?? cj.creado_en),
+      folio: folioSinSiglas(folio),
+      fecha: formatFechaLarga(new Date()),
       secretariaDependencia: cj.secretaria ?? "",
       unidadResponsableGasto: cj.unidad_responsable ?? "",
       unidadAdministrativa: cj.unidad_administrativa ?? "",

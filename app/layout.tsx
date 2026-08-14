@@ -40,7 +40,7 @@ const twogetherSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Sistema de Solicitudes de Dictaminación de Justificaciones',
+  title: 'Sistema de Emisión de Dictaminaciones Técnicas (SEDIT)',
   description: 'Sistema institucional de gestion y dictaminacion tecnica funcional',
   icons: {
     icon: [

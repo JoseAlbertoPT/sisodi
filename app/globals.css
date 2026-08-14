@@ -719,7 +719,6 @@ table.w-full tbody td {
   font-weight: 300 !important;
   line-height: 1.4 !important;
   color: var(--sem-content-high) !important;
-  white-space: nowrap !important;
 }
 table.w-full tbody tr:last-child td { border-bottom: none !important; }
 table.w-full thead th.text-center,

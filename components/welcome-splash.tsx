@@ -23,7 +23,7 @@ export function WelcomePage({ userName, userRole }: WelcomePageProps) {
         <div className="relative w-full overflow-hidden rounded-xl border border-border shadow-sm h-[calc(100vh-220px)]">
           <Image
             src="/img.png"
-            alt="Panel SISODIJ"
+            alt="Panel SEDIT"
             fill
             priority
             className="object-cover"

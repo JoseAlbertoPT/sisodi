@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
+// Límite máximo al reutilizar un registro: Seguridad Pública permite hasta
+// 100 prestadores; el resto de las secretarías, hasta 50.
+function maxPrestadoresPermitido(secretaria: string | null | undefined): number {
+  const s = (secretaria ?? "").toLowerCase()
+  return s.includes("seguridad p") ? 100 : 50
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -27,6 +34,16 @@ export async function POST(req: NextRequest) {
     })
     if (!catalogo) {
       return NextResponse.json({ error: "Registro de catálogo no encontrado" }, { status: 404 })
+    }
+
+    if (!esCancelacion && nuevos_numero_prestadores) {
+      const maxPrestadores = maxPrestadoresPermitido(catalogo.secretaria_txt_snapshot ?? catalogo.secretaria)
+      if (Number(nuevos_numero_prestadores) > maxPrestadores) {
+        return NextResponse.json(
+          { error: `El número de prestadores no puede exceder ${maxPrestadores} para esta secretaría` },
+          { status: 400 },
+        )
+      }
     }
 
     const record = await prisma.catalogo_solicitud.create({

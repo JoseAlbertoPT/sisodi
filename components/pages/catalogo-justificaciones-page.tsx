@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import dynamic from "next/dynamic"
 import * as XLSX from "xlsx"
+import { folioSinSiglas } from "@/lib/clave-dictamen"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
@@ -128,6 +129,12 @@ function entidadNombre(rec: CatalogoRecord) {
   return rec.solicitud.secretaria_txt_snapshot
     ?? rec.solicitud.secretaria
     ?? "—"
+}
+// Límite máximo al reutilizar un registro: Seguridad Pública permite hasta
+// 100 prestadores; el resto de las secretarías, hasta 50.
+function maxPrestadoresPermitido(secretaria: string | null | undefined): number {
+  const s = (secretaria ?? "").toLowerCase()
+  return s.includes("seguridad p") ? 100 : 50
 }
 const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
@@ -277,6 +284,13 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     if (!solRec || !user) return
     if (!solVigInicio || !solVigFin) { setSolError("La vigencia es requerida"); return }
     if (solVigFin > addMonths(solVigInicio, 6)) { setSolError("La nueva vigencia no puede exceder 6 meses"); return }
+    if (!isParaestatal(solRec) && solPrestadores) {
+      const maxPrestadores = maxPrestadoresPermitido(entidadNombre(solRec))
+      if (Number(solPrestadores) > maxPrestadores) {
+        setSolError(`El número de prestadores no puede exceder ${maxPrestadores} para esta secretaría`)
+        return
+      }
+    }
     setSolLoading(true)
     setSolError(null)
     try {
@@ -390,7 +404,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && fetchData()}
-          placeholder="Buscar por dependencia, programa, denominación…"
+          placeholder="Secretaría, Dependencia u Órgano Desconcentrado"
           containerClassName={`flex-1 min-w-[220px] ${SEARCH_INPUT_MAX_W_SM}`}
         />
         <Select value={tipoTab} onValueChange={(v) => { setTipoTab(v as "honorarios" | "nombramiento"); setPage(1) }}>
@@ -435,8 +449,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 )}
                 {!loading && visibleRows.map((rec) => (
                   <tr key={rec.id}>
-                    <td className="max-w-[200px] truncate font-medium" title={rec.solicitud.folio_dictamen ?? ""}>
-                      {fmt(rec.solicitud.folio_dictamen)}
+                    <td className="max-w-[200px] truncate font-medium" title={folioSinSiglas(rec.solicitud.folio_dictamen) ?? ""}>
+                      {fmt(folioSinSiglas(rec.solicitud.folio_dictamen))}
                     </td>
                     <td className="max-w-[220px] truncate" title={toTitleCaseES(fmt(rec.programa_proyecto))}>
                       {toTitleCaseES(fmt(rec.programa_proyecto))}
@@ -445,8 +459,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     <td>
                       <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />
                     </td>
-                    <td className="capitalize">{fmtTipoPago(rec.tipo_pago)}</td>
-                    <td>{fmtMoney(rec.importe_bruto)}</td>
+                    <td className="capitalize whitespace-nowrap">{fmtTipoPago(rec.tipo_pago)}</td>
+                    <td className="whitespace-nowrap">{fmtMoney(rec.importe_bruto)}</td>
                     <td className="text-center">
                       <div className="flex justify-center">
                       <DropdownMenu>
@@ -506,8 +520,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 )}
                 {!loading && visibleRows.map((rec) => (
                   <tr key={rec.id}>
-                    <td className="max-w-[200px] truncate font-medium" title={rec.solicitud.folio_dictamen ?? ""}>
-                      {fmt(rec.solicitud.folio_dictamen)}
+                    <td className="max-w-[200px] truncate font-medium" title={folioSinSiglas(rec.solicitud.folio_dictamen) ?? ""}>
+                      {fmt(folioSinSiglas(rec.solicitud.folio_dictamen))}
                     </td>
                     <td className="max-w-[200px] truncate" title={toTitleCaseES(fmt(rec.programa_proyecto))}>
                       {toTitleCaseES(fmt(rec.programa_proyecto))}
@@ -517,9 +531,9 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     </td>
                     <td className="max-w-[160px] truncate">{fmt(rec.puesto_jefe_inmediato)}</td>
                     <td title={toTitleCaseES(fmt(rec.tipo_actividad))}>{toTitleCaseES(fmt(rec.tipo_actividad))}</td>
-                    <td>{rec.numero_personas ?? "—"}</td>
-                    <td>{fmtMoney(rec.importe_bruto)}</td>
-                    <td className="capitalize">{fmtTipoPago(rec.tipo_pago)}</td>
+                    <td className="whitespace-nowrap">{rec.numero_personas ?? "—"}</td>
+                    <td className="whitespace-nowrap">{fmtMoney(rec.importe_bruto)}</td>
+                    <td className="capitalize whitespace-nowrap">{fmtTipoPago(rec.tipo_pago)}</td>
                     <td className="text-center">
                       <div className="flex justify-center">
                       <DropdownMenu>
@@ -680,16 +694,32 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     </>
                   ) : (
                     <>
-                      <Label className="text-sm font-medium">Núm. prestadores de servicio</Label>
+                      <Label className="text-sm font-medium">
+                        Núm. prestadores de servicio
+                        <span className="ml-1 font-normal text-muted-foreground">
+                          (máx. {maxPrestadoresPermitido(entidadNombre(solRec))})
+                        </span>
+                      </Label>
                       <Input
                         type="number"
                         min={1}
+                        max={maxPrestadoresPermitido(entidadNombre(solRec))}
                         placeholder="—"
                         value={solPrestadores}
                         onChange={(e) => setSolPrestadores(e.target.value)}
                         disabled={solLoading}
-                        className="bg-background"
+                        className={
+                          Number(solPrestadores || 0) > maxPrestadoresPermitido(entidadNombre(solRec))
+                            ? "bg-background border-destructive focus-visible:border-destructive"
+                            : "bg-background"
+                        }
                       />
+                      {Number(solPrestadores || 0) > maxPrestadoresPermitido(entidadNombre(solRec)) && (
+                        <div className="flex items-center gap-2 text-xs text-destructive">
+                          <AlertCircle className="h-4 w-4 shrink-0" />
+                          No puede exceder {maxPrestadoresPermitido(entidadNombre(solRec))} prestadores para esta secretaría
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -712,7 +742,12 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                   variant="vino"
                   className="rounded-full h-10 px-6 font-normal shadow-sm"
                   onClick={handleSolicitar}
-                  disabled={solLoading || !solVigInicio || !solVigFin}
+                  disabled={
+                    solLoading ||
+                    !solVigInicio ||
+                    !solVigFin ||
+                    (!isParaestatal(solRec) && Number(solPrestadores || 0) > maxPrestadoresPermitido(entidadNombre(solRec)))
+                  }
                 >
                   {solLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {solLoading ? "Generando…" : "Generar"}
@@ -812,7 +847,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                   <p className="font-semibold text-[#1F2937]">{entidadNombre(proyRec)}</p>
                   <p className="text-[var(--sem-content-low)]">
                     Folio de dictamen:{" "}
-                    <span className="font-medium text-[#1F2937]">{fmt(proyRec.solicitud.folio_dictamen)}</span>
+                    <span className="font-medium text-[#1F2937]">{fmt(folioSinSiglas(proyRec.solicitud.folio_dictamen))}</span>
                   </p>
                 </div>
                 <div className="flex flex-col gap-1">
@@ -1065,7 +1100,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           sol.tipo === "cancelacion" ? "Cancelación" : "Reutilización",
           sol.usuario.nombre,
           toTitleCaseES(entidadNombre(rec)),
-          fmt(rec.solicitud.folio_dictamen),
+          fmt(folioSinSiglas(rec.solicitud.folio_dictamen)),
           sol.nueva_vigencia,
           sol.tipo === "cancelacion" ? "—" : prestadoresDe(sol),
           fmtFecha(sol.creado_en),
@@ -1213,7 +1248,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                   <td className="px-4 py-3 text-xs max-w-[140px] truncate" title={toTitleCaseES(entidadNombre(rec))}>
                     {toTitleCaseES(entidadNombre(rec).split(" > ")[0])}
                   </td>
-                  <td className="px-4 py-3 text-xs max-w-[200px] truncate font-medium" title={rec.solicitud.folio_dictamen ?? ""}>{fmt(rec.solicitud.folio_dictamen)}</td>
+                  <td className="px-4 py-3 text-xs max-w-[200px] truncate font-medium" title={folioSinSiglas(rec.solicitud.folio_dictamen) ?? ""}>{fmt(folioSinSiglas(rec.solicitud.folio_dictamen))}</td>
                   <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={toTitleCaseES(fmt(rec.programa_proyecto))}>{toTitleCaseES(fmt(rec.programa_proyecto))}</td>
                   <td className="px-4 py-3">
                     <StatusBadge label={fmtCapitalize(rec.regimen_contratacion)} {...regimenBadgeColor(rec.regimen_contratacion)} />

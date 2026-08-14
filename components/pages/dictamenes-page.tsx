@@ -574,7 +574,7 @@ export function DictamenesPage() {
                         {formatearFolio(d.folioRecepcion)}
                       </td>
 
-                      <td className="px-4 py-3 text-muted-foreground text-xs break-words max-w-[200px]">{d.secretaria}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs whitespace-normal break-words max-w-[200px]">{d.secretaria}</td>
 
                       <td className="px-4 py-3">
                         <StatusBadge
@@ -584,7 +584,7 @@ export function DictamenesPage() {
                         />
                       </td>
 
-                      <td className="px-4 py-3 text-muted-foreground text-xs max-w-[200px] break-words">
+                      <td className="px-4 py-3 text-muted-foreground text-xs max-w-[200px] whitespace-normal break-words">
                         <span className="line-clamp-2">{d.denominacion ?? "—"}</span>
                       </td>
 

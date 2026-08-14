@@ -1707,12 +1707,12 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                             }
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground text-xs max-w-[180px] break-words">
+                        <td className="px-4 py-3 text-muted-foreground text-xs max-w-[180px] whitespace-normal break-words">
                           <span className="line-clamp-2">{formatRegimen(sol._raw?.regimen)}</span>
                         </td>
 
                         {}
-                        <td className="px-4 py-3 text-muted-foreground text-xs break-words max-w-[200px]">{sol.secretaria}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-normal break-words max-w-[200px]">{sol.secretaria}</td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
                           {sol.fechaRecepcionDO
                             ? (() => { const [y,m,d] = sol.fechaRecepcionDO!.split("-"); return new Date(+y,+m-1,+d).toLocaleDateString("es-MX") })()

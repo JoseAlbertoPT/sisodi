@@ -251,10 +251,10 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 text-xs max-w-[180px]">
+                      <td className="px-3 py-2.5 text-xs max-w-[180px] whitespace-normal">
                         <span className="line-clamp-2">{s.secretaria ?? "—"}</span>
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-[160px]">
+                      <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-[160px] whitespace-normal">
                         <span className="line-clamp-2">{s.regimen ?? "—"}</span>
                       </td>
                       <td className="px-3 py-2.5 text-xs text-muted-foreground">

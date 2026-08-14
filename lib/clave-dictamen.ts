@@ -14,6 +14,14 @@ export function siglasSecretaria(nombre: string | null | undefined): string {
     .join("");
 }
 
+// El Excel de origen a veces trae el folio de dictamen con las siglas de la
+// secretaría pegadas al inicio (p.ej. "SF/56/08/2026"). En tabla y documentos
+// el folio de dictamen debe mostrarse limpio, sin letras: "56/08/2026".
+export function folioSinSiglas<T extends string | null | undefined>(folio: T): T {
+  if (!folio) return folio;
+  return folio.replace(/^[^\d/]+\/+/, "") as T;
+}
+
 export function construirClave(secretaria: string | null | undefined, folioDictamen: string | null | undefined): string {
   const siglas = siglasSecretaria(secretaria);
   if (!siglas && !folioDictamen) return "";

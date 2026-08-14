@@ -2032,7 +2032,7 @@ export function UsuariosPage() {
                         <StatusBadge label="Paraestatal" color={C_AMARILLO} bgColor={C_AMARILLO_BG} />
                       )}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px]">
+                    <td className="px-4 py-3 text-muted-foreground text-xs leading-tight max-w-[180px] whitespace-normal">
                       {row.secretaria?.split(" > ")[0] ?? "—"}
                     </td>
                     <td className="px-4 py-3">

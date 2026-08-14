@@ -51,7 +51,7 @@ export function AppHeader({ onToggleSidebar, sidebarCollapsed }: HeaderProps) {
 
         <div className="hidden sm:block">
           <h1 className="text-sm font-semibold text-foreground">
-            Sistema de Solicitudes de Dictaminación de Justificaciones
+            Sistema de Emisión de Dictaminaciones Técnicas (SEDIT)
           </h1>
         </div>
       </div>
