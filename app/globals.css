@@ -701,6 +701,7 @@ table.w-full thead th {
   border-bottom: 1px solid var(--sem-border-low) !important;
   text-align: left !important;
   text-decoration: none !important;
+  white-space: nowrap !important;
 }
 table.w-full tbody td:hover { text-decoration: none !important; }
 table.w-full tbody tr {
@@ -718,6 +719,7 @@ table.w-full tbody td {
   font-weight: 300 !important;
   line-height: 1.4 !important;
   color: var(--sem-content-high) !important;
+  white-space: nowrap !important;
 }
 table.w-full tbody tr:last-child td { border-bottom: none !important; }
 table.w-full thead th.text-center,

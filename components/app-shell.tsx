@@ -45,14 +45,25 @@ export function AppShell() {
     if (storedPage && storedPage !== "revision-do") setCurrentPage(storedPage)
     const storedSidebar = localStorage.getItem(SIDEBAR_KEY)
     if (storedSidebar === "true") setSidebarCollapsed(true)
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
-      setCollapsed(true)
-    }
     if (sessionStorage.getItem("sdtf_just_logged_in")) {
       sessionStorage.removeItem("sdtf_just_logged_in")
       setShowSplash(true)
     }
     setHydrated(true)
+  }, [])
+
+  // Mantiene el sidebar sincronizado con el breakpoint md (768px) en todo momento,
+  // no solo al montar: el zoom del navegador y el resize de ventana cambian el ancho
+  // efectivo en vivo, y sin este listener el sidebar se queda "abierto en escritorio"
+  // (position: fixed superpuesto al contenido) cuando el CSS ya cruzó a modo móvil.
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)")
+    if (mql.matches) setCollapsed(true)
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setCollapsed(true)
+    }
+    mql.addEventListener("change", handleChange)
+    return () => mql.removeEventListener("change", handleChange)
   }, [])
 
   useEffect(() => {

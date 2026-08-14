@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { DatePickerHabil, dateToIso } from "@/components/ui/date-picker-habil"
+import { DatePickerHabil, dateToIso, isoToDate } from "@/components/ui/date-picker-habil"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -101,7 +101,6 @@ interface AdminRecord extends CatalogoRecord {
     usuario: { nombre: string; rfc: string }
   }[]
 }
-
 function fmt(val: string | null | undefined) {
   return val ?? "—"
 }
@@ -119,20 +118,17 @@ function regimenBadgeColor(raw: string | null | undefined): { color: string; bgC
   if (r.includes("nombramiento") || r.includes("tiempo determinado")) return { color: C_AMARILLO, bgColor: C_AMARILLO_BG }
   return { color: C_VERDE_ESTADO, bgColor: C_VERDE_ESTADO_BG }
 }
-
 function fmtMoney(val: string | null | undefined) {
   if (!val) return "—"
   const n = Number(val)
   if (isNaN(n)) return val
   return n.toLocaleString("es-MX", { style: "currency", currency: "MXN" })
 }
-
 function entidadNombre(rec: CatalogoRecord) {
   return rec.solicitud.secretaria_txt_snapshot
     ?? rec.solicitud.secretaria
     ?? "—"
 }
-
 const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
   "en", "a", "al", "con", "por", "para",
@@ -149,7 +145,6 @@ function toTitleCaseES(input: string): string {
     return capitalized
   })
 }
-
 const TAB_BADGE = "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[var(--sem-accent-primary)] text-white"
 interface ResumenImportExcel {
   totalFilas: number
@@ -163,7 +158,6 @@ interface ResumenImportExcel {
   filasConError: { idx: number; secretariaRaw: string; folioDictamen: string; errores: string[] }[]
   filasConAdvertencia: { idx: number; secretariaRaw: string; folioDictamen: string; advertencias: string[] }[]
 }
-
 function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const { user } = useAuth()
   const [q, setQ]               = useState("")
@@ -177,6 +171,16 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [pdfLoading, setPdfLoading] = useState(false)
   const pdfBlobRef = useRef<string | null>(null)
+  const todayStart = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  }, [])
+  const addMonths = (d: Date, months: number) => {
+    const r = new Date(d)
+    r.setMonth(r.getMonth() + months)
+    return r
+  }
   const [solRec, setSolRec]       = useState<CatalogoRecord | null>(null)
   const [showSol, setShowSol]     = useState(false)
   const [solVigInicio, setSolVigInicio]     = useState<Date | undefined>(undefined)
@@ -256,6 +260,9 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       controller.abort()
     }
   }, [showView, viewRec])
+  useEffect(() => {
+    if (solVigFin && solVigFin > addMonths(solVigInicio ?? todayStart, 6)) setSolVigFin(undefined)
+  }, [solVigInicio])
   const openView = (rec: CatalogoRecord) => { setViewRec(rec); setShowView(true) }
   const openSol  = (rec: CatalogoRecord) => {
     setSolRec(rec)
@@ -269,6 +276,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const handleSolicitar = async () => {
     if (!solRec || !user) return
     if (!solVigInicio || !solVigFin) { setSolError("La vigencia es requerida"); return }
+    if (solVigFin > addMonths(solVigInicio, 6)) { setSolError("La nueva vigencia no puede exceder 6 meses"); return }
     setSolLoading(true)
     setSolError(null)
     try {
@@ -314,7 +322,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   }
   const openCan = (rec: CatalogoRecord) => {
     setCanRec(rec)
-    setCanVigInicio(undefined)
+    const inicioActual = rec.vigencia?.split("/")[0]?.trim()
+    setCanVigInicio(inicioActual ? isoToDate(inicioActual) : undefined)
     setCanVigFin(undefined)
     setCanError(null)
     setShowCan(true)
@@ -322,6 +331,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const handleCancelar = async () => {
     if (!canRec || !user) return
     if (!canVigInicio || !canVigFin) { setCanError("La vigencia es requerida"); return }
+    if (canVigFin > addMonths(canVigInicio, 6)) { setCanError("La nueva vigencia no puede exceder 6 meses"); return }
     setCanLoading(true)
     setCanError(null)
     try {
@@ -375,13 +385,13 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const visibleRows   = allVisible.slice((page - 1) * limit, page * limit)
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <SearchInput
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && fetchData()}
           placeholder="Buscar por dependencia, programa, denominación…"
-          containerClassName={SEARCH_INPUT_MAX_W_SM}
+          containerClassName={`flex-1 min-w-[220px] ${SEARCH_INPUT_MAX_W_SM}`}
         />
         <Select value={tipoTab} onValueChange={(v) => { setTipoTab(v as "honorarios" | "nombramiento"); setPage(1) }}>
           <SelectTrigger className="w-auto min-w-72 shrink-0 bg-card">
@@ -637,6 +647,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                       <DatePickerHabil
                         value={solVigInicio}
                         onChange={(d) => setSolVigInicio(d)}
+                        fromDate={todayStart}
                         placeholder="Seleccionar inicio"
                       />
                     </div>
@@ -644,7 +655,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                       <span className="text-xs text-muted-foreground">Término</span>
                       <DatePickerHabil
                         value={solVigFin}
-                        fromDate={solVigInicio}
+                        fromDate={solVigInicio ?? todayStart}
+                        toDate={addMonths(solVigInicio ?? todayStart, 6)}
                         onChange={(d) => setSolVigFin(d)}
                         placeholder="Seleccionar término"
                       />
@@ -741,6 +753,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                       <DatePickerHabil
                         value={canVigInicio}
                         onChange={(d) => setCanVigInicio(d)}
+                        disabled
                         placeholder="Seleccionar inicio"
                       />
                     </div>
@@ -749,6 +762,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                       <DatePickerHabil
                         value={canVigFin}
                         fromDate={canVigInicio}
+                        toDate={canVigInicio ? addMonths(canVigInicio, 6) : undefined}
                         onChange={(d) => setCanVigFin(d)}
                         placeholder="Seleccionar término"
                       />
@@ -1092,12 +1106,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   const visibleRows = filtered.slice((page - 1) * limit, page * limit)
   return (
     <>
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex flex-wrap items-center gap-3 mb-5">
         <SearchInput
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar por dependencia, programa, folio…"
-          containerClassName={`flex-1 ${SEARCH_INPUT_MAX_W_MD}`}
+          containerClassName={`flex-1 min-w-[220px] ${SEARCH_INPUT_MAX_W_MD}`}
         />
         <Select value={secretariaFilter} onValueChange={setSecretariaFilter}>
           <SelectTrigger className="w-80 bg-card">
