@@ -46,6 +46,14 @@ function splitToArray(str: string | null | undefined): string[] {
     .filter((item) => item.length > 0);
 }
 
+// La escolaridad siempre se imprime como un solo renglón/viñeta, aunque el
+// Excel importado traiga la celda con saltos de línea internos: se unen en
+// una sola oración en lugar de generar una viñeta por cada línea.
+function escolaridadToSingleLine(str: string | null | undefined): string[] {
+  const joined = splitToArray(str).join(" ");
+  return joined ? [joined] : [];
+}
+
 function formatString(str: string | null | undefined): string {
   if (!str) return "";
   const spaced = str.replace(/_/g, " ");
@@ -216,7 +224,7 @@ async function buildJustificacionBufferDesdeCatalogo(
     actividades: applyTextRulesToList(cj.actividades ?? []),
     responsabilidades: applyTextRulesToList(cj.responsabilidades ?? []),
     perfil: {
-      escolaridadMinima: applyTextRulesArray(splitToArray(cj.escolaridad)),
+      escolaridadMinima: applyTextRulesArray(escolaridadToSingleLine(cj.escolaridad)),
       competenciasAdministrativas: applyTextRulesArray(splitToArray(cj.comp_adm)),
       competenciasTecnicas: applyTextRulesArray(splitToArray(cj.comp_tec)),
       competenciasSociales: applyTextRulesArray(splitToArray(cj.comp_soc)),
@@ -337,7 +345,7 @@ export async function buildJustificacionBuffer(
         resguardoActivos: sol.resguardo_activos === "si",
 
         perfil: {
-          escolaridadMinima: applyTextRulesArray(splitToArray(sol.escolaridad)),
+          escolaridadMinima: applyTextRulesArray(escolaridadToSingleLine(sol.escolaridad)),
           competenciasAdministrativas: applyTextRulesArray(splitToArray(sol.comp_adm)),
           competenciasTecnicas: applyTextRulesArray(splitToArray(sol.comp_tec)),
           competenciasSociales: applyTextRulesArray(splitToArray(sol.comp_soc)),
@@ -393,7 +401,7 @@ export async function buildJustificacionBuffer(
         responsabilidades:  applyTextRulesToList(sol.responsabilidades ?? []),
 
         perfil: {
-          escolaridadMinima:          applyTextRulesArray(splitToArray(sol.escolaridad)),
+          escolaridadMinima:          applyTextRulesArray(escolaridadToSingleLine(sol.escolaridad)),
           competenciasAdministrativas: applyTextRulesArray(splitToArray(sol.comp_adm)),
           competenciasTecnicas:        applyTextRulesArray(splitToArray(sol.comp_tec)),
           competenciasSociales:        applyTextRulesArray(splitToArray(sol.comp_soc)),

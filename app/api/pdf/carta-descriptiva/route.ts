@@ -56,6 +56,19 @@ function splitToArray(str: string | null | undefined): string[] {
     .filter((item) => item.length > 0);
 }
 
+// La escolaridad siempre se imprime como un solo renglón/viñeta, aunque el
+// Excel importado traiga la celda con saltos de línea internos: se unen en
+// una sola oración en lugar de generar una viñeta por cada línea.
+function toSingleLine(str: string | null | undefined): string[] {
+  if (!str || str.trim() === "") return [];
+  const joined = str
+    .split(/\n+/)
+    .map(cleanBulletText)
+    .filter((item) => item.length > 0)
+    .join(" ");
+  return joined ? [joined] : [];
+}
+
 function formatFechaMesAnio(d: Date | null | undefined): string {
   if (!d) return "";
   const meses = [
@@ -152,7 +165,7 @@ export async function buildCartaDescriptivaBuffer(
     // primera palabra (ver comentario en buildRomanNumberedList).
     actividades: buildRomanNumberedList(source.actividades, stripPUA, applyTextRules),
     responsabilidades: buildRomanNumberedList(source.responsabilidades, stripPUA, applyTextRules),
-    escolaridad: splitToArray(source.escolaridad),
+    escolaridad: toSingleLine(source.escolaridad),
     competenciasAdministrativas: splitToArray(source.comp_adm),
     competenciasTecnicas: splitToArray(source.comp_tec),
     competenciasSociales: splitToArray(source.comp_soc),
