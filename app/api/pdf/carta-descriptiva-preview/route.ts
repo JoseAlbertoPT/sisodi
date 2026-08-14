@@ -19,7 +19,7 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
 export async function GET() {
   const mock: CartaDescriptivaData = {
     clave: "SDEyT/34/01/2026",
-    fecha: "Enero 2026",
+    fecha: "01 de enero de 2026",
     objetoContratacion:
       "Ejecutar acciones estratégicas de difusión y comunicación institucional sobre los proyectos de inversión y el crecimiento económico del Estado de Morelos, a través de medios digitales, redes sociales y materiales informativos, con el objetivo de dar visibilidad a los proyectos, fortalecer la confianza del sector empresarial, atraer nuevas inversiones y consolidar al Estado como un destino competitivo para la instalación y expansión de proyectos productivos.",
     actividades: [

@@ -364,6 +364,17 @@ model calendario {
   @@unique([ejercicio, regimen, periodo])
 }
 
+// Textos editables compartidos entre plantillas de PDF (p. ej. la nota al
+// pie del Dictamen Técnico Funcional y de la Justificación de Prestación de
+// Servicios): un solo registro por `clave`, editado desde la UI, leído por
+// todas las rutas de generación de PDF que lo usan.
+model configuracion_texto {
+  id             Int      @id @default(autoincrement())
+  clave          String   @unique @db.VarChar(50)
+  valor          String
+  actualizado_en DateTime @default(now()) @updatedAt
+}
+
 model organo_centralizado {
   id                      String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   nombre                  String                @db.VarChar(512)

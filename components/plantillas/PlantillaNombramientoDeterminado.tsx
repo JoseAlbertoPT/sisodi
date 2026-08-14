@@ -98,7 +98,14 @@ export interface JustificacionNombramientoData {
   fechaDictaminacion?: string;
   ocultarFirmas?: boolean;
   clave?: string;
+  notaDictamen?: string;
 }
+
+// Debe coincidir con NOTA_DICTAMEN_DEFAULT en lib/configuracion-texto.ts;
+// se duplica aquí (en vez de importarla) para no acoplar esta plantilla,
+// que solo debe depender de @react-pdf/renderer, al cliente de Prisma.
+const NOTA_DICTAMEN_DEFAULT =
+  "Esta Dirección General únicamente dictamina sobre la funcionalidad de las actividades conforme con la metodología establecida y queda fuera de sus atribuciones la distribución y ejecución de los recursos para el pago de las contrataciones, en las cuales se deberá observar lo dispuesto por el Artículo Quinto del Presupuesto de Egresos del Gobierno del Estado de Morelos para el ejercicio fiscal 2026 y demás normatividad aplicable.";
 
 const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20finanzas.png"));
 const MARCA_MORELOS = fs.readFileSync(path.join(process.cwd(), "public/LOGO_MORELOS_V1.png"));
@@ -448,7 +455,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         <View style={s.fechaRow}>
           <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 5, marginBottom: 5 }}>Fecha de elaboración de la Justificación: </Text>
           <Text style={{ borderBottomWidth: 1, minWidth: 100, textAlign: "center", marginTop: 5, marginBottom: 5 }}>
-            {new Date().toLocaleDateString("es-MX")}
+            {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}
           </Text>
         </View>
 
@@ -934,7 +941,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           <View style={s.dictBoxRow2}>
             <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginBottom: 4 }}>Nota:</Text>
             <Text style={{ fontSize: 8, textAlign: "justify", lineHeight: 1.4 }}>
-              Esta Dirección General únicamente dictamina sobre la funcionalidad de las actividades conforme con la metodología establecida y queda fuera de sus atribuciones la distribución y ejecución de los recursos para el pago de las contrataciones, en las cuales se deberá observar lo dispuesto por el Artículo Quinto del Presupuesto de Egresos del Gobierno del Estado de Morelos para el ejercicio fiscal 2026 y demás normatividad aplicable.
+              {data.notaDictamen ?? NOTA_DICTAMEN_DEFAULT}
             </Text>
           </View>
         </View>

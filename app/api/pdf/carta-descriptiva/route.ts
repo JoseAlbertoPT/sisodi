@@ -21,11 +21,6 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-// Al pegar listas desde Word/Excel, las viñetas suelen quedar como
-// caracteres del área de uso privado (p. ej. U+F076 de Wingdings). Ningún
-// fuente del PDF tiene un glifo para esos códigos, así que se dibujan como
-// glifo faltante (se ve como "|"). Se eliminan aquí, junto con las viñetas
-// estándar al inicio de cada línea, antes de renderizar.
 const PUA_RANGE_START = 0xe000;
 const PUA_RANGE_END = 0xf8ff;
 
@@ -38,10 +33,6 @@ function stripPUA(str: string): string {
     .join(String());
 }
 
-// El catálogo captura estos campos en MAYÚSCULAS; se normalizan al renderizar
-// con applyTextRules (lib/utils.ts, mismo criterio que ya usa el resto del
-// sistema en app/api/pdf/justificacion/route.ts). El dato en la base de datos
-// no se modifica, solo lo que se imprime en el PDF.
 function cleanBulletText(item: string): string {
   return applyTextRules(
     stripPUA(item).replace(/^[\s•‣◦⁃∙\-–—]+/, ""),
@@ -56,9 +47,7 @@ function splitToArray(str: string | null | undefined): string[] {
     .filter((item) => item.length > 0);
 }
 
-// La escolaridad siempre se imprime como un solo renglón/viñeta, aunque el
-// Excel importado traiga la celda con saltos de línea internos: se unen en
-// una sola oración en lugar de generar una viñeta por cada línea.
+
 function toSingleLine(str: string | null | undefined): string[] {
   if (!str || str.trim() === "") return [];
   const joined = str
@@ -69,14 +58,13 @@ function toSingleLine(str: string | null | undefined): string[] {
   return joined ? [joined] : [];
 }
 
-function formatFechaMesAnio(d: Date | null | undefined): string {
+function formatFechaLarga(d: Date | null | undefined): string {
   if (!d) return "";
-  const meses = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-  ];
-  const dt = new Date(d);
-  return `${meses[dt.getMonth()]} ${dt.getFullYear()}`;
+  return new Date(d).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export async function buildCartaDescriptivaBuffer(
@@ -116,7 +104,7 @@ export async function buildCartaDescriptivaBuffer(
     const esHistoricoImportado = sol.historial_solicitud.length > 0;
     const folio = sol.folio_dictamen ?? sol.folio_recepcion ?? String(sol.id);
     source = {
-      fecha: formatFechaMesAnio(sol.fecha_creacion ?? sol.fecha_envio),
+      fecha: formatFechaLarga(sol.fecha_creacion ?? sol.fecha_envio),
       objeto: sol.objeto,
       actividades: sol.actividades ?? [],
       responsabilidades: sol.responsabilidades ?? [],
@@ -130,13 +118,11 @@ export async function buildCartaDescriptivaBuffer(
       clave: claveOverride ?? claveParaPdf(sol.secretaria, folio, esHistoricoImportado),
     };
   } else if (catalogoId) {
-    // Registro histórico sin solicitud viva (ver prisma/import-historico-consolidado.ts):
-    // los datos ya se archivaron directo en catalogo_justificacion.
     const cj = await prisma.catalogo_justificacion.findUnique({ where: { id: Number(catalogoId) } });
     if (!cj) return null;
     const folio = cj.folio_dictamen ?? cj.folio_recepcion ?? String(cj.id);
     source = {
-      fecha: formatFechaMesAnio(cj.fecha_emision ?? cj.creado_en),
+      fecha: formatFechaLarga(cj.fecha_emision ?? cj.creado_en),
       objeto: cj.objeto,
       actividades: cj.actividades ?? [],
       responsabilidades: cj.responsabilidades ?? [],
@@ -147,7 +133,6 @@ export async function buildCartaDescriptivaBuffer(
       valores: cj.valores,
       areas_exp: cj.areas_exp,
       folioBase: cj.folio_recepcion ?? cj.folio_dictamen ?? String(cj.id),
-      // Histórico: siempre sin siglas, folio real tal cual.
       clave: claveOverride ?? claveParaPdf(cj.secretaria, folio, true),
     };
   }
@@ -158,11 +143,6 @@ export async function buildCartaDescriptivaBuffer(
     clave: source.clave,
     fecha: source.fecha,
     objetoContratacion: applyTextRules(stripPUA(source.objeto ?? "")),
-    // 1.2/1.3: el numeral romano de cada ítem se genera aquí según su posición;
-    // el que traiga el dato de origen (Excel/DB) se descarta por completo.
-    // applyTextRules se aplica al contenido ya sin numeral y ANTES de
-    // anteponer el numeral generado, para no mezclar el numeral con la
-    // primera palabra (ver comentario en buildRomanNumberedList).
     actividades: buildRomanNumberedList(source.actividades, stripPUA, applyTextRules),
     responsabilidades: buildRomanNumberedList(source.responsabilidades, stripPUA, applyTextRules),
     escolaridad: toSingleLine(source.escolaridad),

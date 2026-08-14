@@ -7,6 +7,7 @@ import {
 } from "@/components/plantillas/PlantillaDictamenPrestacionServicios";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import { applyTextRules } from "@/lib/utils";
+import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
 import React from "react";
 
 export const runtime = "nodejs";
@@ -62,6 +63,7 @@ export async function buildDictamenPrestacionBuffer(
 
   let data: DictamenPrestacionData;
   let folio: string;
+  const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
 
   if (sol) {
     const esHistoricoImportado = sol.historial_solicitud.length > 0;
@@ -90,6 +92,7 @@ export async function buildDictamenPrestacionBuffer(
       vigenciaFin: overrides.vigenciaFin ?? (sol.vigencia_fin
         ? sol.vigencia_fin.toISOString().split("T")[0]
         : ""),
+      notaDictamen,
     };
   } else if (catalogoId) {
     // Registro histórico sin solicitud viva — datos archivados directo en catalogo_justificacion.
@@ -117,6 +120,7 @@ export async function buildDictamenPrestacionBuffer(
       vigenciaFin: overrides.vigenciaFin ?? (cj.vigencia_fin
         ? cj.vigencia_fin.toISOString().split("T")[0]
         : ""),
+      notaDictamen,
     };
   } else {
     return null;

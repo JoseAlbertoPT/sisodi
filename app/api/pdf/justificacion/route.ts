@@ -14,6 +14,7 @@ import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estamp
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import { stripLeadingRomanNumeral } from "@/lib/roman-list";
+import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
 import React from "react";
 
 // Actividades/responsabilidades traen su numeral romano de origen pegado al
@@ -46,9 +47,7 @@ function splitToArray(str: string | null | undefined): string[] {
     .filter((item) => item.length > 0);
 }
 
-// La escolaridad siempre se imprime como un solo renglón/viñeta, aunque el
-// Excel importado traiga la celda con saltos de línea internos: se unen en
-// una sola oración en lugar de generar una viñeta por cada línea.
+
 function escolaridadToSingleLine(str: string | null | undefined): string[] {
   const joined = splitToArray(str).join(" ");
   return joined ? [joined] : [];
@@ -191,9 +190,6 @@ async function buildJustificacionBufferDesdeCatalogo(
   catalogoId: string,
   overrides: PdfOverrides,
 ): Promise<{ buffer: Buffer | Uint8Array; filename: string; sol: any } | null> {
-  // Registro histórico sin solicitud viva: solo existe el ramo "Prestacion de Servicios"
-  // (ningún importado del histórico es tipo nombramiento) y siempre es firma autógrafa,
-  // así que no hay constancia de firma electrónica que agregar.
   const cj = await prisma.catalogo_justificacion.findUnique({ where: { id: Number(catalogoId) } });
   if (!cj) return null;
 
@@ -201,6 +197,7 @@ async function buildJustificacionBufferDesdeCatalogo(
   const fechaDictaminacion = cj.fecha_emision
     ? new Date(cj.fecha_emision).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })
     : "";
+  const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
 
   const dataHonorarios: JustificacionData = {
     tipoAdministracion: cj.tipo_administracion === "paraestatal" ? "paraestatal" : "centralizada",
@@ -234,6 +231,7 @@ async function buildJustificacionBufferDesdeCatalogo(
     fechaDictaminacion,
     ocultarFirmas: true,
     clave: claveParaPdf(cj.secretaria, folio, true),
+    notaDictamen,
   };
 
   const pdfElement = React.createElement(PlantillaJustificacionServicios as React.FC<any>, { data: dataHonorarios });
@@ -289,6 +287,8 @@ export async function buildJustificacionBuffer(
     if (!sinFirmas) {
       firmas = await resolverNombresFirmantes(Number(solicitudId), firmas, soloFirmanteId);
     }
+
+    const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
 
     const tipoAdministracion: 'centralizada' | 'paraestatal' =
       sol.tipo_administracion === 'paraestatal' ? 'paraestatal'
@@ -362,6 +362,7 @@ export async function buildJustificacionBuffer(
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
         clave: claveParaPdf(sol.secretaria, sol.folio_dictamen, esHistoricoImportado),
+        notaDictamen,
       };
 
       pdfElement = React.createElement(
@@ -421,6 +422,7 @@ export async function buildJustificacionBuffer(
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
         clave: claveParaPdf(sol.secretaria, sol.folio_dictamen, esHistoricoImportado),
+        notaDictamen,
       };
 
       pdfElement = React.createElement(

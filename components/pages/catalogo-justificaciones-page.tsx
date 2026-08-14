@@ -466,7 +466,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                           </DropdownMenuItem>
 
                           <DropdownMenuItem onClick={() => openSol(rec)}>
-                            <Send className="h-4 w-4" /> Renovación
+                            <Send className="h-4 w-4" /> Reutilizar
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openCan(rec)}>
                             <Ban className="h-4 w-4" /> Cancelación
@@ -537,7 +537,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openSol(rec)}>
-                            <Send className="h-4 w-4" /> Renovación
+                            <Send className="h-4 w-4" /> Reutilizar
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openCan(rec)}>
                             <Ban className="h-4 w-4" /> Cancelación
@@ -861,17 +861,47 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   const [showReutilizaciones, setShowReutilizaciones] = useState(false)
   const [reutilizacionesPage, setReutilizacionesPage] = useState(1)
   const [reutilizacionesQuery, setReutilizacionesQuery] = useState("")
-  const [movimientosTipo, setMovimientosTipo] = useState<"todas" | "reutilizacion" | "cancelacion">("todas")
+  const [showEditNota, setShowEditNota] = useState(false)
+  const [notaValue, setNotaValue]       = useState("")
+  const [notaLoading, setNotaLoading]   = useState(false)
+  const [notaSaving, setNotaSaving]     = useState(false)
+  const [notaError, setNotaError]       = useState<string | null>(null)
+  const abrirEditNota = () => {
+    setShowEditNota(true)
+    setNotaError(null)
+    setNotaLoading(true)
+    fetch("/api/configuracion/nota-dictamen")
+      .then((res) => res.json())
+      .then((json) => { if (json.ok) setNotaValue(json.valor) })
+      .catch(() => setNotaError("No se pudo cargar la nota"))
+      .finally(() => setNotaLoading(false))
+  }
+  const guardarNota = async () => {
+    setNotaSaving(true)
+    setNotaError(null)
+    try {
+      const res = await fetch("/api/configuracion/nota-dictamen", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ valor: notaValue }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) throw new Error(json.error || "Error al guardar la nota")
+      setShowEditNota(false)
+    } catch (e) {
+      setNotaError(e instanceof Error ? e.message : "Error al guardar la nota")
+    } finally {
+      setNotaSaving(false)
+    }
+  }
   const openReutilizaciones = (rec: AdminRecord) => {
     setViewRec(rec)
     setReutilizacionesPage(1)
     setReutilizacionesQuery("")
-    setMovimientosTipo("todas")
     setShowReutilizaciones(true)
   }
   const esCancelacion = (sol: AdminRecord["catalogo_solicitudes"][0]) => sol.tipo === "cancelacion"
   const reutilizacionesFiltradas = (viewRec?.catalogo_solicitudes ?? []).filter((sol) => {
-    if (movimientosTipo !== "todas" && sol.tipo !== movimientosTipo) return false
     const q = reutilizacionesQuery.trim().toLowerCase()
     if (!q) return true
     return sol.usuario.nombre.toLowerCase().includes(q)
@@ -883,7 +913,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     (reutilizacionesPage - 1) * ITEMS_PER_PAGE,
     reutilizacionesPage * ITEMS_PER_PAGE,
   )
-  useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery, movimientosTipo])
+  useEffect(() => { setReutilizacionesPage(1) }, [reutilizacionesQuery])
   useEffect(() => { if (reutilizacionesPage > reutilizacionesTotalPages) setReutilizacionesPage(reutilizacionesTotalPages) }, [reutilizacionesTotalPages, reutilizacionesPage])
 
   const [importOpen, setImportOpen]           = useState(false)
@@ -1133,6 +1163,13 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <FileSpreadsheet className="h-4 w-4" />
           Reporte general
         </Button>
+        <Button
+          variant="default"
+          className="gap-1.5 shrink-0"
+          onClick={abrirEditNota}
+        >
+          Editar nota
+        </Button>
       </div>
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3 mb-4">
@@ -1272,23 +1309,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                     placeholder="Buscar por usuario o vigencia…"
                     containerClassName="flex-1"
                   />
-                  <div className="flex items-center gap-1 shrink-0">
-                    {([
-                      ["todas", "Todas"],
-                      ["reutilizacion", "Reutilizaciones"],
-                      ["cancelacion", "Cancelaciones"],
-                    ] as const).map(([val, label]) => (
-                      <Button
-                        key={val}
-                        size="sm"
-                        variant={movimientosTipo === val ? "vino" : "default"}
-                        className="rounded-full h-8 px-3 text-xs font-normal"
-                        onClick={() => setMovimientosTipo(val)}
-                      >
-                        {label}
-                      </Button>
-                    ))}
-                  </div>
                 </div>
                 <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
@@ -1474,6 +1494,56 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                 </Button>
               </>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showEditNota} onOpenChange={setShowEditNota}>
+        <DialogContent className="max-w-xl bg-white p-0 gap-0 overflow-hidden">
+          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
+            <DialogTitle className="ds-title-md text-content-high">
+              Editar nota
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Este texto se imprime en la nota del Dictamen Técnico Funcional y de la Justificación de Prestación de Servicios. Al guardar, se actualiza en ambos documentos.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 px-6 py-5">
+            {notaLoading ? (
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-8">
+                <Loader2 className="h-4 w-4 animate-spin" />Cargando…
+              </div>
+            ) : (
+              <textarea
+                value={notaValue}
+                onChange={(e) => setNotaValue(e.target.value)}
+                rows={8}
+                className="w-full rounded-lg border border-[var(--sem-border-md)] px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-[#2D3B2D]"
+              />
+            )}
+            {notaError && (
+              <p className="text-xs text-destructive flex items-center gap-1">
+                <AlertCircle className="h-3.5 w-3.5" />{notaError}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
+            <Button
+              variant="default"
+              className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+              onClick={() => setShowEditNota(false)}
+              disabled={notaSaving}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm gap-1.5"
+              onClick={guardarNota}
+              disabled={notaSaving || notaLoading}
+            >
+              {notaSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {notaSaving ? "Guardando…" : "Guardar"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

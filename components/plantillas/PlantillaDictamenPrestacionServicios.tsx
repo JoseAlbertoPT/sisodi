@@ -10,6 +10,12 @@ import path from "path";
 import fs from "fs";
 import React from "react";
 
+// Debe coincidir con NOTA_DICTAMEN_DEFAULT en lib/configuracion-texto.ts;
+// se duplica aquí (en vez de importarla) para no acoplar esta plantilla,
+// que solo debe depender de @react-pdf/renderer, al cliente de Prisma.
+const NOTA_DICTAMEN_DEFAULT =
+  "Esta Dirección General únicamente dictamina sobre la funcionalidad de las actividades conforme con la metodología establecida y queda fuera de sus atribuciones la distribución y ejecución de los recursos para el pago de las contrataciones, en las cuales se deberá observar lo dispuesto por el Artículo Quinto del Presupuesto de Egresos del Gobierno del Estado de Morelos para el ejercicio fiscal 2026 y demás normatividad aplicable.";
+
 export interface DictamenPrestacionData {
   folio: string;
   fecha: string;
@@ -31,6 +37,7 @@ export interface DictamenPrestacionData {
   anexoDoc?: string;
   referenciaDoc?: string;
   revisionDoc?: string;
+  notaDictamen?: string;
 }
 
 const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20finanzas.png"));
@@ -483,13 +490,7 @@ export function PlantillaDictamenPrestacionServicios({
         <View style={s.notaWrapper} wrap={false}>
           <Text style={s.notaTitle}>NOTA:</Text>
           <Text style={s.notaText}>
-            Esta Dirección General únicamente dictamina sobre la funcionalidad
-            de las actividades conforme con la metodología establecida y queda
-            fuera de sus atribuciones la distribución y ejecución de los
-            recursos para el pago de las contrataciones, en las cuales se
-            deberá observar lo dispuesto por el Artículo Quinto del Presupuesto
-            de Egresos del Gobierno del Estado de Morelos para el ejercicio
-            fiscal 2026 y demás normatividad aplicable.
+            {data.notaDictamen ?? NOTA_DICTAMEN_DEFAULT}
           </Text>
         </View>
 
