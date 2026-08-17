@@ -50,6 +50,8 @@ import {
 import dynamic from "next/dynamic"
 import * as XLSX from "xlsx"
 import { folioSinSiglas } from "@/lib/clave-dictamen"
+import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
+import { useProgramasSigef } from "@/hooks/use-programas-sigef"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
@@ -87,12 +89,15 @@ interface CatalogoRecord {
   }
   _count: { catalogo_solicitudes: number }
 }
+
 interface AdminRecord extends CatalogoRecord {
   catalogo_solicitudes: {
     id: number
     nueva_vigencia: string
     nuevo_numero_personas: number | null
     nuevos_numero_prestadores: number | null
+    programa_anterior: string | null
+    nuevo_programa_proyecto: string | null
     tipo: string
     procesado: boolean
     procesado_en: string | null
@@ -202,6 +207,10 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [canError, setCanError]       = useState<string | null>(null)
   const [proyRec, setProyRec]         = useState<CatalogoRecord | null>(null)
   const [showProy, setShowProy]       = useState(false)
+  const [nuevoPrograma, setNuevoPrograma] = useState("")
+  const [progLoading, setProgLoading] = useState(false)
+  const [progError, setProgError]     = useState<string | null>(null)
+  const progSigef = useProgramasSigef(proyRec ? entidadNombre(proyRec) : "")
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -381,7 +390,47 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   }
   const openProy = (rec: CatalogoRecord) => {
     setProyRec(rec)
+    setNuevoPrograma("")
+    setProgError(null)
     setShowProy(true)
+  }
+  const handleGuardarPrograma = async () => {
+    if (!proyRec || !user) return
+    if (!nuevoPrograma.trim()) { setProgError("Selecciona el nuevo Programa o Proyecto"); return }
+    setProgLoading(true)
+    setProgError(null)
+    try {
+      await fetch("/api/catalogo-justificaciones/solicitar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          catalogo_justificacion_id: proyRec.id,
+          usuario_id: user.id,
+          nueva_vigencia: proyRec.vigencia || "—",
+          tipo: "programa",
+          programa_anterior: proyRec.programa_proyecto,
+          nuevo_programa_proyecto: nuevoPrograma,
+        }),
+      })
+      const params = new URLSearchParams({ programaProyecto: nuevoPrograma })
+      if (proyRec.solicitud.id) params.set("id", String(proyRec.solicitud.id))
+      else params.set("catalogoId", String(proyRec.id))
+      const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo?${params}`)
+      if (!pdfRes.ok) throw new Error("Error al generar el PDF")
+      const blob = await pdfRes.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `Programa_${proyRec.solicitud.folio_dictamen ?? proyRec.solicitud.folio_recepcion ?? proyRec.id}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      setShowProy(false)
+      void fetchData()
+    } catch (e) {
+      setProgError(e instanceof Error ? e.message : "Error al generar el PDF")
+    } finally {
+      setProgLoading(false)
+    }
   }
   const isParaestatal = (rec: CatalogoRecord) => {
     const t = rec.solicitud.tipo_solicitud.toLowerCase()
@@ -484,7 +533,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <Ban className="h-4 w-4" /> Cancelación
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openProy(rec)}>
-                            <FolderKanban className="h-4 w-4" /> Proyectos
+                            <FolderKanban className="h-4 w-4" /> Programa
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -555,7 +604,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <Ban className="h-4 w-4" /> Cancelación
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openProy(rec)}>
-                            <FolderKanban className="h-4 w-4" /> Proyectos
+                            <FolderKanban className="h-4 w-4" /> Programa
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -831,11 +880,11 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           )}
         </DialogContent>
       </Dialog>
-      <Dialog open={showProy} onOpenChange={setShowProy}>
+      <Dialog open={showProy} onOpenChange={(v) => { setShowProy(v); if (!v) setProgError(null) }}>
         <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
             <DialogTitle className="ds-title-md text-content-high">
-              Proyectos
+              Programa
             </DialogTitle>
           </div>
           {proyRec && (
@@ -849,25 +898,62 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                   </p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Programa / Proyecto</span>
+                  <span className="text-xs text-muted-foreground">Programa / Proyecto actual</span>
                   <p className="text-sm font-medium text-content-high">{toTitleCaseES(fmt(proyRec.programa_proyecto))}</p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Tipo de actividad</span>
-                  <p className="text-sm text-content-high">{toTitleCaseES(fmt(proyRec.tipo_actividad))}</p>
+                  <span className="text-xs text-muted-foreground">Régimen de contratación</span>
+                  <p className="text-sm text-content-high">{fmtCapitalize(proyRec.regimen_contratacion)}</p>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Vigencia actual</span>
-                  <p className="text-sm text-content-high">{fmt(proyRec.vigencia)}</p>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-content-high">Nuevo Programa o Proyecto</span>
+                  {progSigef.configured && progSigef.proyectos.length > 0 ? (
+                    <SelectConBusqueda
+                      opciones={progSigef.proyectos}
+                      value={nuevoPrograma}
+                      onValueChange={setNuevoPrograma}
+                      placeholder={progSigef.cargando ? "Cargando programas de SIGeF…" : "Seleccione programa"}
+                      disabled={progSigef.cargando}
+                    />
+                  ) : progSigef.cargando ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Cargando programas de SIGeF…</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-3 py-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+                      <span className="text-xs text-destructive">
+                        {progSigef.error
+                          ? `No se pudo cargar el catálogo de SIGeF. (${progSigef.error})`
+                          : "No existen programas o proyectos disponibles para la Secretaría seleccionada."}
+                      </span>
+                    </div>
+                  )}
                 </div>
+                {progError && (
+                  <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-3 py-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+                    <span className="text-xs text-destructive">{progError}</span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
                 <Button
                   variant="default"
                   className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
                   onClick={() => setShowProy(false)}
+                  disabled={progLoading}
                 >
-                  Cerrar
+                  Cancelar
+                </Button>
+                <Button
+                  variant="default"
+                  className="rounded-full h-10 px-6 font-normal"
+                  onClick={handleGuardarPrograma}
+                  disabled={progLoading || !nuevoPrograma.trim() || !progSigef.configured || progSigef.proyectos.length === 0}
+                >
+                  {progLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
                 </Button>
               </div>
             </>
@@ -934,6 +1020,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     setShowReutilizaciones(true)
   }
   const esCancelacion = (sol: AdminRecord["catalogo_solicitudes"][0]) => sol.tipo === "cancelacion"
+  const esPrograma = (sol: AdminRecord["catalogo_solicitudes"][0]) => sol.tipo === "programa"
   const reutilizacionesFiltradas = (viewRec?.catalogo_solicitudes ?? []).filter((sol) => {
     const q = reutilizacionesQuery.trim().toLowerCase()
     if (!q) return true
@@ -1095,12 +1182,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
         i++
         rows.push([
           i,
-          sol.tipo === "cancelacion" ? "Cancelación" : "Reutilización",
+          sol.tipo === "cancelacion" ? "Cancelación" : sol.tipo === "programa" ? "Programa" : "Reutilización",
           sol.usuario.nombre,
           toTitleCaseES(entidadNombre(rec)),
           fmt(folioSinSiglas(rec.solicitud.folio_dictamen)),
           sol.nueva_vigencia,
-          sol.tipo === "cancelacion" ? "—" : prestadoresDe(sol),
+          sol.tipo === "cancelacion" || sol.tipo === "programa" ? "—" : prestadoresDe(sol),
           fmtFecha(sol.creado_en),
           toTitleCaseES(fmt(rec.programa_proyecto)),
           fmtCapitalize(rec.regimen_contratacion),
@@ -1326,8 +1413,9 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
               </DialogTitle>
               {viewRec && viewRec.catalogo_solicitudes.length > 0 && (
                 <span className="text-sm font-normal text-muted-foreground shrink-0">
-                  Reutilizaciones: {viewRec.catalogo_solicitudes.filter((s) => !esCancelacion(s)).length}
+                  Reutilizaciones: {viewRec.catalogo_solicitudes.filter((s) => !esCancelacion(s) && !esPrograma(s)).length}
                   {" · "}Cancelaciones: {viewRec.catalogo_solicitudes.filter(esCancelacion).length}
+                  {" · "}Programa: {viewRec.catalogo_solicitudes.filter(esPrograma).length}
                 </span>
               )}
             </div>
@@ -1347,10 +1435,11 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                   <div className="overflow-x-auto">
                     <table className="w-full table-fixed text-sm">
                       <colgroup>
-                        <col className="w-[16%]" />
-                        <col className="w-[28%]" />
-                        <col className="w-[22%]" />
-                        <col className="w-[16%]" />
+                        <col className="w-[13%]" />
+                        <col className="w-[17%]" />
+                        <col className="w-[13%]" />
+                        <col className="w-[12%]" />
+                        <col className="w-[27%]" />
                         <col className="w-[18%]" />
                       </colgroup>
                       <thead>
@@ -1359,13 +1448,14 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Num. Prestadores</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa (anterior → nuevo)</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
                           <tr className="empty-row">
-                            <td colSpan={5}>
+                            <td colSpan={6}>
                               <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
                           </tr>
@@ -1375,6 +1465,8 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                             <td className="px-4 py-3 text-left">
                               {esCancelacion(sol)
                                 ? <StatusBadge label="Cancelación" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
+                                : esPrograma(sol)
+                                ? <StatusBadge label="Programa" color={C_AMARILLO} bgColor={C_AMARILLO_BG} />
                                 : <StatusBadge label="Reutilización" color={C_AZUL_REVISION} bgColor={C_AZUL_REVISION_BG} />}
                             </td>
                             <td className="px-4 py-3 text-xs font-medium text-card-foreground truncate text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
@@ -1382,7 +1474,10 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                             </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">{sol.nueva_vigencia}</td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
-                              {esCancelacion(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—")}
+                              {esCancelacion(sol) || esPrograma(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—")}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left" title={esPrograma(sol) ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto ?? "—"}` : ""}>
+                              {esPrograma(sol) ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto ?? "—"}` : "—"}
                             </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
                               {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}

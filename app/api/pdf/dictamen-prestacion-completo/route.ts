@@ -11,6 +11,7 @@ interface PdfOverrides {
   vigenciaInicio?: string
   vigenciaFin?: string
   numeroPrestadores?: number
+  programaProyecto?: string
 }
 
 async function buildResponse(solicitudId: string | null, overrides: PdfOverrides = {}, catalogoId: string | null = null) {
@@ -110,6 +111,7 @@ export async function GET(req: NextRequest) {
   const vf = searchParams.get("vigenciaFin");    if (vf) overrides.vigenciaFin    = vf;
   const np = searchParams.get("numeroPrestadores") ?? searchParams.get("numeroPersonas");
   if (np) overrides.numeroPrestadores = Number(np);
+  const pp = searchParams.get("programaProyecto"); if (pp) overrides.programaProyecto = pp;
   return buildResponse(solicitudId, overrides, catalogoId);
 }
 
@@ -122,5 +124,6 @@ export async function POST(req: NextRequest) {
   if (body?.vigenciaFin)    overrides.vigenciaFin    = String(body.vigenciaFin);
   const np = body?.numeroPrestadores ?? body?.numeroPersonas;
   if (np) overrides.numeroPrestadores = Number(np);
+  if (body?.programaProyecto) overrides.programaProyecto = String(body.programaProyecto);
   return buildResponse(solicitudId, overrides, catalogoId);
 }

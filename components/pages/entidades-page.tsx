@@ -177,7 +177,6 @@ function HistoricoTab() {
 }
 
 const BADGE = "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-normal bg-[var(--sem-accent-primary)] text-white"
-
 export function EntidadesPage() {
   const { user } = useAuth()
   const [cCount, setCCount] = useState<number | null>(null)
@@ -194,11 +193,11 @@ export function EntidadesPage() {
 
   return (
     <PageLayout
-      title="Entidades"
+      title="Unidades Administrativas"
       description={
         esParaestatal
-          ? "Gestión de estructuras organizacionales de la administración paraestatal."
-          : "Gestión de estructuras organizacionales de la administración centralizada."
+          ? "Gestión de estructuras organizacionales de la administración ."
+          : "Gestión de estructuras organizacionales de la administración ."
       }
     >
       <Tabs defaultValue={defaultTab} className="w-full">

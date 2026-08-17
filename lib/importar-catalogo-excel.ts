@@ -35,7 +35,7 @@ const COL_LEGACY = {
   areasExp:                "ÁREAS DE EXPERIENCIA",
 } as const
 
-const MANUAL_OVERRIDES: Record<string, string> = {
+export const MANUAL_OVERRIDES: Record<string, string> = {
   "JEFATURA DE LA OFICINA DE LA GOBERNATURA DEL ESTADO": "Jefatura de la Oficina de la Gubernatura del Estado",
 }
 

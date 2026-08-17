@@ -8,77 +8,62 @@ Objetivo: que el campo **"Programa o Proyecto"** del formulario Nueva Solicitud 
 
 | | Estado |
 |---|---|
-| Cliente SOAP + parsing de la respuesta | ✅ Implementado, con manejo de errores corregido |
-| Endpoint interno que expone esto al frontend | ✅ Implementado |
-| Timeout ante servicio caído/no disponible | ✅ Implementado (10s por default, configurable) |
-| Aviso visible al usuario si SIGeF falla | ✅ Implementado (antes era silencioso) |
+| Cliente SOAP (3 operaciones: `proyectos`, `dependencias`, `unidades`) | ✅ Implementado y probado contra el servicio real |
+| Bug de comillas XML (`&quot;`) sin decodificar | ✅ Encontrado y corregido, verificado contra respuesta real |
+| Endpoint interno + caché de 10 min | ✅ Implementado |
+| Timeout ante servicio caído/no disponible | ✅ Implementado y probado contra una caída real del servicio |
+| Aviso visible al usuario si SIGeF falla | ✅ Implementado y confirmado en pantalla (screenshot real) |
 | Campo "Programa o Proyecto" en ambos formularios | ✅ Implementado, con fallback al comportamiento anterior |
-| Mapeo `idUnidad` por Secretaría | ⚠️ Solo hay **1 valor confirmado** (`530`) — pendiente con SIGeF |
-| Prueba contra el WS real (no mockeado) | ❌ No realizada — requiere acceso a la red interna `192.168.114.116:8080` |
-| Variables de entorno en staging/producción | ❌ No verificado — solo están documentadas en `.env.example` |
+| Mapeo Secretaría → SIGeF | ✅ **16 de 17 Secretarías configuradas** (backfill automático contra el catálogo real de SIGeF, 2026-08-17) |
+| Prueba contra el WS real | ✅ Hecha — las 3 operaciones, con datos reales, incluyendo una caída real del servicio |
 
-**En una frase:** el código está listo y probado contra respuestas simuladas (incluyendo casos de error y timeout), pero **nunca se ha ejecutado contra el servicio real**, y solo una Secretaría tiene el `idUnidad` necesario para activarse — el resto sigue funcionando exactamente igual que antes (catálogo interno / captura manual) hasta que se configure su `idUnidad`.
+**En una frase:** la integración está funcionalmente completa y probada contra el servicio real (no solo mockeado). Lo único pendiente es operativo: que el servicio de SIGeF esté disponible de forma estable (hoy corre de forma intermitente desde la máquina del proveedor) y que confirmen la URL de QA.
 
-## Archivos implementados
+## Cómo funciona (diseño actual)
 
-- **`lib/sigef-client.ts`** — cliente SOAP. Arma el envelope XML a mano (no se agregó ninguna librería SOAP), hace el POST con timeout, extrae `<proyectosReturn>` con regex y parsea el JSON anidado que trae adentro.
-- **`app/api/sigef/proyectos/route.ts`** — `GET /api/sigef/proyectos?secretaria=<nombre>`. Resuelve el `idUnidad` de esa Secretaría, llama al cliente SOAP, filtra y deduplica resultados. Si la Secretaría no tiene `idUnidad` configurado, responde `{ configured: false }` (no es un error).
-- **`prisma/schema.prisma`** + **`prisma/migrations/20260814220000_add_sigef_id_unidad/`** — nuevo campo nullable `sigef_id_unidad` en `organo_centralizado`, para asignarle a cada Secretaría (nodo raíz) su `idUnidad` de SIGeF.
-- **`app/api/catalogo/centralizada/[id]/route.ts`** — el `PATCH` ya acepta `sigef_id_unidad`, así que se puede configurar por API aunque no exista una pantalla dedicada.
-- **`components/pages/nueva-solicitud-page.tsx`**:
-  - Hook `useProgramasSigef(secretaria)`: hace el fetch a `/api/sigef/proyectos`, expone `{ proyectos, cargando, configured, error }`.
-  - `FormularioPrestacion` y `FormularioNombramiento`: el campo "Programa o Proyecto" usa `SelectConBusqueda` con las opciones de SIGeF cuando `sigef.configured === true`; si no, cae al catálogo interno/Excel o a captura manual (comportamiento previo, sin cambios).
-  - Aviso visible (`text-destructive`, ícono `AlertCircle`) cuando `sigef.error` tiene contenido, con el mensaje real del error.
-- **`.env.example`** — documenta `SIGEF_WS_URL`, `SIGEF_APP_ID`, `SIGEF_TIMEOUT_MS`.
+`proyectos` de SIGeF solo acepta un **idUnidad** (una oficina/unidad específica), no un idDependencia. Se confirmó el 2026-08-17 que **cada unidad dentro de una misma Secretaría tiene su propio catálogo de proyectos, sin traslape** (ej. Oficina del Titular de Secretaría de Gobierno vs. Subsecretaría de Gobierno: cero proyectos en común). Por lo tanto:
 
-## Cómo funciona (flujo end-to-end)
+1. El usuario abre Nueva Solicitud con su Secretaría ya conocida (`secretariaConfirmada`).
+2. `useProgramasSigef` llama a `GET /api/sigef/proyectos?secretaria=<nombre>`.
+3. La API busca el `sigef_id_dependencia` de esa Secretaría en `organo_centralizado`.
+   - Si no está configurado → `{ configured: false }`, el formulario sigue con el catálogo local/captura manual (sin cambios).
+4. Si está configurado, `consultarProyectosPorDependencia(idDependencia)`:
+   - Llama a `unidades({appId, idDependencia})` → trae todas las unidades de esa Secretaría.
+   - Llama a `proyectos({appId, idUnidad})` **en paralelo** para cada unidad (`Promise.allSettled`, tolera que algunas unidades fallen sin tumbar todo).
+   - Une los resultados, deduplicados por clave de proyecto.
+5. El resultado se cachea 10 minutos por `idDependencia` (evita repetir N llamadas SOAP en cada apertura del formulario — para la Secretaría con más unidades, 26, la primera consulta tarda ~4s).
+6. El campo se vuelve un `SelectConBusqueda` de solo selección con esas opciones.
 
-1. El usuario abre Nueva Solicitud; el formulario ya conoce su Secretaría (`secretariaConfirmada`).
-2. `useProgramasSigef(secretariaConfirmada)` llama a `GET /api/sigef/proyectos?secretaria=<nombre>`.
-3. La API busca en `organo_centralizado` el nodo raíz (`parent_id = null`) cuyo `nombre` coincide (case-insensitive) y lee su `sigef_id_unidad`.
-   - Si es `null` → responde `{ configured: false, proyectos: [] }`. El formulario sigue igual que antes de esta integración.
-   - Si tiene valor → llama a `consultarProyectosSigef(idUnidad)`.
-4. `consultarProyectosSigef` arma el SOAP request `[{"appId": "...", "idUnidad": N}]`, hace el POST con timeout, y parsea la respuesta (ver sección de errores abajo).
-5. La API filtra los proyectos por `idUnidad` exacto, deduplica por clave `proyecto`, y regresa `{ configured: true, proyectos: [{ value, label }] }` con `value`/`label` en formato `"010001 - Nombre del proyecto"`.
-6. El campo se vuelve un `SelectConBusqueda` de solo selección (no captura libre) con esas opciones.
+## Archivos
 
-## Manejo de errores (los 3 casos, corregidos)
+- **`lib/sigef-client.ts`** — cliente SOAP con 3 operaciones (`consultarProyectosSigef`, `consultarDependenciasSigef`, `consultarUnidadesSigef`) más `consultarProyectosPorDependencia` (la que arma la unión). Decodifica entidades XML (`&quot;`, `&amp;`, etc.) antes de parsear — el servicio real las usa, no manda comillas crudas como se asumió al inicio. Timeout vía `AbortSignal.timeout` (`SIGEF_TIMEOUT_MS`, default 10s).
+- **`app/api/sigef/proyectos/route.ts`** — `GET ?secretaria=<nombre>`, resuelve `sigef_id_dependencia`, llama al cliente, cachea 10 min.
+- **`prisma/schema.prisma`** + migraciones — `organo_centralizado.sigef_id_dependencia` (nullable). Originalmente se llamó `sigef_id_unidad` y guardaba un idUnidad; se renombró (migración `20260817130000_sigef_id_unidad_to_dependencia`) al descubrir que el diseño de "una sola unidad representa a toda la Secretaría" no era correcto.
+- **`app/api/catalogo/centralizada/[id]/route.ts`** — `PATCH` acepta `sigef_id_dependencia`.
+- **`components/pages/nueva-solicitud-page.tsx`** — hook `useProgramasSigef`, campo "Programa o Proyecto" en `FormularioPrestacion` y `FormularioNombramiento` con aviso visible si SIGeF falla.
+- **`.env`** / **`.env.example`** — `SIGEF_WS_URL`, `SIGEF_APP_ID`, `SIGEF_TIMEOUT_MS`.
 
-`parseProyectosReturn` en `lib/sigef-client.ts` distingue 3 casos con manejo independiente (no comparten un mismo `catch`, que era el bug original):
+## Mapeo actual (backfill automático, 2026-08-17)
 
-- **JSON exterior mal formado** (el WS a veces no escapa las comillas internas del campo `message`) → se recorta el arreglo de proyectos con una expresión regular.
-- **`error != 0`** (error de negocio de SIGeF, JSON exterior válido) → se propaga el mensaje real, ej. `"SIGeF respondió error=3: [CODIGO:3] Unidad no autorizada"`.
-- **`error === 0` pero `message` no es JSON de proyectos válido** → error de formato distinto a los otros dos, con su propio mensaje.
-
-Ese mensaje viaja intacto: `consultarProyectosSigef` lo lanza → la API route lo devuelve como `{ error }` con status `502` → el hook lo lee del body (antes se descartaba sin leerlo) y lo expone en `sigef.error` → se muestra en pantalla junto al campo.
-
-**Timeout:** `consultarProyectosSigef` pasa `signal: AbortSignal.timeout(SIGEF_TIMEOUT_MS ?? 10000)` al `fetch`. Si SIGeF no responde a tiempo, rechaza con `"SIGeF no respondió en Nms (timeout)"` en vez de colgar la request indefinidamente.
-
-## Pruebas realizadas
-
-Todas con `fetch` **mockeado** (nunca se llamó al WS real):
-
-1. Respuesta exitosa con el ejemplo real (comillas escapadas) → parsea correctamente.
-2. Mismo caso con comillas sin escapar → parsea vía el fallback regex.
-3. `error: 3` de negocio → propaga `"SIGeF respondió error=3: [CODIGO:3] Unidad no autorizada"` hasta el frontend, verificado paso a paso (API route → hook → UI).
-4. Timeout (servicio no responde) → rechaza a los ~1s (con `SIGEF_TIMEOUT_MS` bajado para la prueba) con mensaje claro, en vez de colgarse.
-
-## Pendientes
-
-1. **Mapeo completo Secretaría → `idUnidad`.** Solo se confirmó `idUnidad: 530` (Jefatura de la Oficina de la Gubernatura del Estado). Falta que el equipo de SIGeF entregue el resto. Mientras tanto, cualquier Secretaría sin `sigef_id_unidad` configurado sigue funcionando con el catálogo interno/captura manual — es el comportamiento esperado, no un error.
-2. **Prueba contra el ambiente real.** Nadie ha confirmado que el servidor donde corre el backend de Next.js tenga alcance de red hacia `192.168.114.116:8080` (la IP es de red interna; si el backend corre en otro servidor al que se usó para probar con SoapUI, puede que no tenga acceso). Falta:
-   - `curl` o prueba de conectividad desde el servidor real.
-   - Probar con `idUnidad: 530` real y confirmar que el select se llena en el formulario de verdad.
-   - Forzar un `idUnidad` que dé error, para confirmar que el aviso aparece en pantalla.
-3. **Variables de entorno en staging/producción.** `SIGEF_WS_URL`, `SIGEF_APP_ID` (y opcionalmente `SIGEF_TIMEOUT_MS`) deben configurarse en el ambiente de destino — hoy solo están documentadas en `.env.example`, no confirmadas como cargadas fuera de local.
-4. **URL de QA.** El WS todavía vive en el ambiente que compartió el proveedor; en cuanto confirmen la URL de QA, actualizar `SIGEF_WS_URL`.
-5. **(Fuera de alcance, no bloqueante)** No existe una pantalla de administración para cargar `sigef_id_unidad` por Secretaría — se configura vía `PATCH /api/catalogo/centralizada/:id { sigef_id_unidad }`. Si se necesita una UI para esto, es trabajo adicional no incluido.
-
-## Cómo configurar una nueva Secretaría
+Se hizo matching por nombre entre las Secretarías de `organo_centralizado` y el catálogo `dependencias` de SIGeF (24 dependencias). Resultado: **16 de 17** quedaron configuradas automáticamente (todas menos "Prueba", que no es una secretaría real). Se puede reconfigurar cualquiera vía:
 
 ```
 PATCH /api/catalogo/centralizada/:id
-Body: { "sigef_id_unidad": 530 }
+Body: { "sigef_id_dependencia": <idDependencia de SIGeF> }
 ```
 
-Donde `:id` es el UUID del nodo raíz (`parent_id = null`) de esa Secretaría en `organo_centralizado`.
+## Pruebas realizadas contra el servicio real (no mockeadas)
+
+1. `proyectos(530)` → 4 proyectos reales de "Jefatura de la Oficina de la Gubernatura del Estado".
+2. `dependencias()` → 24 dependencias reales.
+3. `unidades(idDependencia=37)` → 26 unidades reales, cada una con su `idUnidad`.
+4. Unión completa para una Secretaría de 26 unidades → 50 proyectos únicos en ~4s.
+5. **Caída real del servicio** (confirmada con `ping` exitoso + `curl` con "Connection refused" en el puerto 8080): el timeout y el aviso en pantalla funcionaron como se diseñó — confirmado con captura de pantalla real del formulario mostrando *"No se pudo cargar el catálogo de SIGeF, usando catálogo local. (No se pudo conectar con SIGeF: fetch failed)"*.
+
+## Pendientes
+
+1. **Disponibilidad del servicio.** El WS de SIGeF no corre en un servidor desplegado de forma estable — corre desde la máquina del proveedor (confirmado: compartieron la URL como `http://localhost:8080/...` en su propio chat) y se cae con frecuencia. Sin esto arriba, el formulario cae al catálogo local — funciona, pero no muestra datos reales de SIGeF.
+2. **URL de QA.** En cuanto la confirmen, actualizar `SIGEF_WS_URL`.
+3. **Variables de entorno en staging/producción.** `SIGEF_WS_URL`, `SIGEF_APP_ID`, `SIGEF_TIMEOUT_MS` deben configurarse ahí — hoy solo están confirmadas en local.
+4. **"Secretaría Anticorrupción y Buen Gobierno"** quedó mapeada a la dependencia de SIGeF "Secretaría de la Contraloría / Secretaría Anticorrupción y Buen Gobierno" (coincidencia parcial de nombre, no exacta) — vale la pena que alguien confirme que es la correcta.
+5. **(Fuera de alcance)** No hay pantalla de administración para editar `sigef_id_dependencia` — se hace vía `PATCH /api/catalogo/centralizada/:id`.

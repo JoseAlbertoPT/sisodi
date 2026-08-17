@@ -40,6 +40,7 @@ interface PdfOverrides {
   vigenciaInicio?: string
   vigenciaFin?: string
   numeroPrestadores?: number
+  programaProyecto?: string
 }
 
 export async function buildDictamenPrestacionBuffer(
@@ -80,7 +81,7 @@ export async function buildDictamenPrestacionBuffer(
       unidadAdministrativa: sol.unidad_administrativa ?? "",
       regimenContratacion: sol.regimen ?? "",
       tipoServicios: applyTextRules(sol.tipo_actividades ?? ""),
-      claveNombrePrograma: applyTextRules(sol.programa_proyecto ?? ""),
+      claveNombrePrograma: applyTextRules(overrides.programaProyecto ?? sol.programa_proyecto ?? ""),
       objetoContratacion: applyTextRules(sol.objeto ?? ""),
       importeBruto: formatImporte(sol.importe_bruto),
       tipoPagoLabel: (sol.tipo_importe ?? "").replace(/_/g, " ") || undefined,
@@ -107,7 +108,7 @@ export async function buildDictamenPrestacionBuffer(
       unidadAdministrativa: cj.unidad_administrativa ?? "",
       regimenContratacion: cj.regimen_contratacion ?? "",
       tipoServicios: applyTextRules(cj.tipo_actividad ?? ""),
-      claveNombrePrograma: applyTextRules(cj.programa_proyecto ?? ""),
+      claveNombrePrograma: applyTextRules(overrides.programaProyecto ?? cj.programa_proyecto ?? ""),
       objetoContratacion: applyTextRules(cj.objeto ?? ""),
       importeBruto: formatImporte(cj.importe_bruto),
       tipoPagoLabel: (cj.tipo_pago ?? "").replace(/_/g, " ") || undefined,
@@ -174,6 +175,7 @@ export async function GET(req: NextRequest) {
   const vf = searchParams.get("vigenciaFin");    if (vf) overrides.vigenciaFin    = vf;
   const np = searchParams.get("numeroPrestadores") ?? searchParams.get("numeroPersonas");
   if (np) overrides.numeroPrestadores = Number(np);
+  const pp = searchParams.get("programaProyecto"); if (pp) overrides.programaProyecto = pp;
   return buildPDFResponse(solicitudId, overrides, catalogoId);
 }
 
@@ -186,5 +188,6 @@ export async function POST(req: NextRequest) {
   if (body?.vigenciaFin)    overrides.vigenciaFin    = String(body.vigenciaFin);
   const np = body?.numeroPrestadores ?? body?.numeroPersonas;
   if (np) overrides.numeroPrestadores = Number(np);
+  if (body?.programaProyecto) overrides.programaProyecto = String(body.programaProyecto);
   return buildPDFResponse(solicitudId, overrides, catalogoId);
 }

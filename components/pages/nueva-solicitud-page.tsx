@@ -19,7 +19,7 @@ import {
 
   Upload, ArrowLeft, ArrowRight, Plus, Trash2,
   FileText, ClipboardList, Save, SendHorizonal, AlertCircle,
-  ShieldAlert, CheckCircle2, Clock, Lock, X, Search, Loader2,
+  ShieldAlert, CheckCircle2, Clock, Lock, X, Loader2,
   Edit3, RotateCcw, Info, AlertTriangle,
 
 } from "lucide-react"
@@ -33,6 +33,8 @@ import type { HistoricoRow } from "@/lib/parse-excel-historico"
 import { RANGOS_TABULADOR, esMostrarEnFormulario } from "@/lib/tabulador"
 import { filtrarSecretarias, getUAsForSecretaria, getClaveForUA } from "@/lib/ua-claves-catalog"
 import { fetchCentralizadaTree, type OrganoCentralizadoNode } from "@/lib/catalogo-api"
+import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
+import { useProgramasSigef } from "@/hooks/use-programas-sigef"
 
 export type FormularioData = {
   secretaria:            string
@@ -1193,92 +1195,6 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
     </Card>
   )
 }
-function SelectConBusqueda({
-  opciones, value, onValueChange, placeholder, disabled = false, className = "",
-}: {
-  opciones: { value: string; label: string }[]
-  value: string
-  onValueChange: (v: string) => void
-  placeholder: string
-  disabled?: boolean
-  className?: string
-}) {
-  const [busqueda, setBusqueda] = useState("")
-  const [open, setOpen] = useState(false)
-  const palabras = busqueda.trim().toLowerCase().split(/\s+/).filter(Boolean)
-  const filtradas = useMemo(() => {
-    if (!palabras.length) return opciones
-    return opciones.filter((o) => {
-      const etiqueta = norm(o.label)
-      return palabras.every((p) => etiqueta.includes(norm(p)))
-    })
-  }, [opciones, busqueda])
-  const selectedLabel = opciones.find((o) => o.value === value)?.label
-  return (
-    <Select
-      value={value}
-      onValueChange={(v) => { onValueChange(v); setOpen(false) }}
-      disabled={disabled}
-      open={open}
-      onOpenChange={(o) => { setOpen(o); if (!o) setBusqueda("") }}
-    >
-      <SelectTrigger
-        className={`w-full rounded-[12px]
-          data-[state=open]:bg-white
-          ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${className}`}
-      >
-        <span className="block truncate text-sm pr-1">
-          {selectedLabel ?? <span className="text-muted-foreground">{placeholder}</span>}
-        </span>
-      </SelectTrigger>
-      <SelectContent className="rounded-[12px] border-[#E5E7EB] shadow-lg p-1.5">
-
-        <div className="sticky top-0 z-10 bg-white pb-1.5 px-0.5">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sem-border-high)]" />
-            <Input
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar..."
-              className="h-9 rounded-xl border border-border bg-white shadow-sm text-sm font-light text-foreground placeholder:text-[var(--sem-border-high)] pl-9 pr-8 focus:border-[#2D3B2D]"
-              onKeyDown={(e) => e.stopPropagation()}
-              autoFocus
-            />
-            {busqueda && (
-              <button
-                onClick={() => setBusqueda("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--sem-border-high)] hover:text-foreground"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-          {busqueda && (
-            <p className="text-[10px] text-[#9CA3AF] mt-1 pl-3">
-              {filtradas.length} resultado{filtradas.length !== 1 ? "s" : ""}
-            </p>
-          )}
-        </div>
-
-        <div className="max-h-52 overflow-y-auto">
-          {filtradas.length === 0
-            ? <div className="px-3 py-3 text-xs text-muted-foreground text-center">Sin resultados para "{busqueda}"</div>
-            : filtradas.map((o) => (
-              <SelectItem
-                key={o.value}
-                value={o.value}
-                className="rounded-[8px] focus:bg-[#f0ede6] focus:text-[#773357] data-[state=checked]:bg-[#f0ede6] data-[state=checked]:text-[#773357]"
-              >
-                {o.label}
-              </SelectItem>
-            ))
-          }
-        </div>
-      </SelectContent>
-    </Select>
-  )
-}
-
 function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; onDismiss: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1429,51 +1345,6 @@ function getNumeroUA(secretaria: string, unidad: string): string {
   const uas = getUAsForSecretaria(secretaria)
   const idx = uas.findIndex((ua) => ua === unidad)
   return idx >= 0 ? String(idx + 1) : unidad
-}
-
-/**
- * Consulta "Programa o Proyecto" contra SIGeF filtrado por Secretaría. Mientras
- * la Secretaría no tenga un idUnidad de SIGeF configurado (`configured: false`),
- * el formulario debe seguir usando el catálogo/captura actual — no es un error.
- */
-function useProgramasSigef(secretaria: string): {
-  proyectos: { value: string; label: string }[]
-  cargando: boolean
-  configured: boolean
-  error: string | null
-} {
-  const [proyectos, setProyectos] = useState<{ value: string; label: string }[]>([])
-  const [cargando, setCargando] = useState(false)
-  const [configured, setConfigured] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!secretaria) { setProyectos([]); setConfigured(false); setError(null); return }
-    const controller = new AbortController()
-    setCargando(true)
-    setError(null)
-    fetch(`/api/sigef/proyectos?secretaria=${encodeURIComponent(secretaria)}`, { signal: controller.signal })
-      .then(async (r) => {
-        const data = await r.json().catch(() => null)
-        if (!r.ok) throw new Error(data?.error ?? `SIGeF respondió HTTP ${r.status}`)
-        return data
-      })
-      .then((d) => {
-        if (controller.signal.aborted) return
-        setConfigured(!!d?.configured)
-        setProyectos(d?.proyectos ?? [])
-      })
-      .catch((e) => {
-        if (e?.name === "AbortError") return
-        setConfigured(false)
-        setProyectos([])
-        setError(e instanceof Error ? e.message : "No se pudo consultar SIGeF")
-      })
-      .finally(() => { if (!controller.signal.aborted) setCargando(false) })
-    return () => controller.abort()
-  }, [secretaria])
-
-  return { proyectos, cargando, configured, error }
 }
 
 function FormularioPrestacion({

@@ -30,7 +30,7 @@ export const MENUS: MenuRow[] = [
   { id: 11, nombre: "CONFIGURACIÓN",     key: null,                icono: null,              ruta: null,                orden: 3, parent_id: null },
   { id: 12, nombre: "Calendario",        key: "calendario",        icono: "CalendarDays",    ruta: "/calendario",        orden: 1, parent_id: 11 },
   { id: 13, nombre: "Usuarios",          key: "usuarios",          icono: "Users",           ruta: "/usuarios",          orden: 2, parent_id: 11 },
-  { id: 14, nombre: "Entidades",         key: "entidades",         icono: "Building2",       ruta: "/entidades",         orden: 3, parent_id: 11 },
+  { id: 14, nombre: "Unidades Administrativas", key: "entidades",  icono: "Building2",       ruta: "/entidades",         orden: 3, parent_id: 11 },
 ]
 
 const safeDelete = async (label: string, fn: () => Promise<unknown>) => {

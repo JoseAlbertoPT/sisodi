@@ -50,10 +50,10 @@ export async function PATCH(
     if (body.tipo !== undefined) data.tipo = body.tipo || null
     if (body.ua_clave_administrativa !== undefined) data.ua_clave_administrativa = body.ua_clave_administrativa?.trim() || null
     if (body.clave_reporte_plazas !== undefined) data.clave_reporte_plazas = body.clave_reporte_plazas?.trim() || null
-    if (body.sigef_id_unidad !== undefined) {
-      const n = body.sigef_id_unidad === null || body.sigef_id_unidad === "" ? null : Number(body.sigef_id_unidad)
-      if (n !== null && !Number.isInteger(n)) return err("sigef_id_unidad debe ser un entero")
-      data.sigef_id_unidad = n
+    if (body.sigef_id_dependencia !== undefined) {
+      const n = body.sigef_id_dependencia === null || body.sigef_id_dependencia === "" ? null : Number(body.sigef_id_dependencia)
+      if (n !== null && !Number.isInteger(n)) return err("sigef_id_dependencia debe ser un entero")
+      data.sigef_id_dependencia = n
     }
 
     const updated = await prisma.organo_centralizado.update({ where: { id }, data })
