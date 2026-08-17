@@ -1440,28 +1440,40 @@ function useProgramasSigef(secretaria: string): {
   proyectos: { value: string; label: string }[]
   cargando: boolean
   configured: boolean
+  error: string | null
 } {
   const [proyectos, setProyectos] = useState<{ value: string; label: string }[]>([])
   const [cargando, setCargando] = useState(false)
   const [configured, setConfigured] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!secretaria) { setProyectos([]); setConfigured(false); return }
+    if (!secretaria) { setProyectos([]); setConfigured(false); setError(null); return }
     const controller = new AbortController()
     setCargando(true)
+    setError(null)
     fetch(`/api/sigef/proyectos?secretaria=${encodeURIComponent(secretaria)}`, { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : { configured: false, proyectos: [] }))
+      .then(async (r) => {
+        const data = await r.json().catch(() => null)
+        if (!r.ok) throw new Error(data?.error ?? `SIGeF respondió HTTP ${r.status}`)
+        return data
+      })
       .then((d) => {
         if (controller.signal.aborted) return
-        setConfigured(!!d.configured)
-        setProyectos(d.proyectos ?? [])
+        setConfigured(!!d?.configured)
+        setProyectos(d?.proyectos ?? [])
       })
-      .catch((e) => { if (e?.name !== "AbortError") setConfigured(false) })
+      .catch((e) => {
+        if (e?.name === "AbortError") return
+        setConfigured(false)
+        setProyectos([])
+        setError(e instanceof Error ? e.message : "No se pudo consultar SIGeF")
+      })
       .finally(() => { if (!controller.signal.aborted) setCargando(false) })
     return () => controller.abort()
   }, [secretaria])
 
-  return { proyectos, cargando, configured }
+  return { proyectos, cargando, configured, error }
 }
 
 function FormularioPrestacion({
@@ -1913,6 +1925,12 @@ function FormularioPrestacion({
                   maxLength={200}
                   disabled={!esRenovacion && !camposDependientesHabilitados}
                 />
+              )}
+              {!bloqueadoPorRenovacion && sigef.error && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  No se pudo cargar el catálogo de SIGeF, usando catálogo local. ({sigef.error})
+                </p>
               )}
             </div>
 
@@ -2662,6 +2680,12 @@ function FormularioNombramiento({
                     <img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />Puede Obtenerse desde el Oficio de Suficiencia Presupuestal.
                   </p>
                 </>
+              )}
+              {!bloqueadoPorRenovacion && sigef.error && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  No se pudo cargar el catálogo de SIGeF, usando catálogo local. ({sigef.error})
+                </p>
               )}
             </div>
 

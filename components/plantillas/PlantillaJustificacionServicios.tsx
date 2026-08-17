@@ -10,6 +10,7 @@ import {
 import path from "path";
 import fs from "fs";
 import React from "react";
+import { toRoman } from "@/lib/roman-list";
 
 // Mismo glifo de viñeta que la Carta Descriptiva (PlantillaCartaDescriptivaServicios):
 // Helvetica no tiene glifo para ❖ (U+2756), así que se registra esta fuente.
@@ -134,7 +135,7 @@ const s = StyleSheet.create({
     marginTop: -12,
     marginLeft: -18,
     marginRight: -18,
-    marginBottom: 36,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: "#000",
   },
@@ -183,14 +184,14 @@ const s = StyleSheet.create({
   pageBox: { flex: 1, paddingHorizontal: 4, paddingTop: 10, justifyContent: "flex-start" },
   claveText: { fontSize: 8, textAlign: "center" },
 
-  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 26 },
+  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10 },
   centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 12 },
-  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 8, marginTop: 10 },
+  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 4, marginTop: 10 },
 
-  row: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
+  row: { flexDirection: "row", marginBottom: 8, alignItems: "flex-end" },
   bold: { fontFamily: "Helvetica-Bold" },
-  numLabel: { width: 15, fontFamily: "Helvetica-Bold", fontSize: 9 },
-  marginLabel: { fontFamily: "Helvetica-Bold", marginRight: 5, fontSize: 9 },
+  numLabel: { width: 15, fontFamily: "Helvetica", fontSize: 9 },
+  marginLabel: { fontFamily: "Helvetica", marginRight: 5, fontSize: 9 },
   valueText: {
     flex: 1,
     borderBottomWidth: 1,
@@ -266,9 +267,9 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
 
-  listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10, marginTop: 2 },
-  listNum: { width: 15, fontFamily: "Helvetica-Bold" },
-  listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.5 },
+  listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10 },
+  listNum: { width: 24, fontFamily: "Helvetica" },
+  listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.4 },
   bulletItemContainer: { flexDirection: "row", marginBottom: 1, paddingLeft: 20 },
   bulletSign: { width: 15, fontSize: 7, fontFamily: "NotoSymbols" },
 
@@ -409,7 +410,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <Text style={s.centeredTitle}>JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</Text>
 
-        <Text style={s.sectionTitle}>I.    DATOS GENERALES:</Text>
+        <Text style={s.sectionTitle}>1    DATOS GENERALES:</Text>
 
         <View style={s.row}>
           <Text style={s.numLabel}>1.</Text>
@@ -484,47 +485,47 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         </View>
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>I.1.    OBJETO DE LA CONTRATACIÓN:</Text>
-          <Text style={{ textAlign: "justify", lineHeight: 1.5, marginBottom: 8, marginTop: 4 }}>{data.objetoContratacion}</Text>
+          <Text style={s.sectionTitle}>1.1    OBJETO DE LA CONTRATACIÓN:</Text>
+          <Text style={{ textAlign: "justify", lineHeight: 1.4, marginBottom: 8 }}>{data.objetoContratacion}</Text>
         </View>
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>I.2.    ACTIVIDADES A REALIZAR POR EL PRESTADOR DE SERVICIOS:</Text>
+          <Text style={s.sectionTitle}>1.2    ACTIVIDADES A REALIZAR POR EL PRESTADOR DE SERVICIOS:</Text>
           {data.actividades?.slice(0, 1).map((act, index) => (
             <View key={`act-${index}`} style={s.listItemContainer}>
-              <Text style={s.listNum}>{index + 1}.</Text>
+              <Text style={s.listNum}>{toRoman(index + 1)}.</Text>
               <Text style={s.listTextWrap}>{act}</Text>
             </View>
           ))}
         </View>
         {data.actividades?.slice(1).map((act, index) => (
           <View key={`act-${index + 1}`} style={s.listItemContainer} wrap={false}>
-            <Text style={s.listNum}>{index + 2}.</Text>
+            <Text style={s.listNum}>{toRoman(index + 2)}.</Text>
             <Text style={s.listTextWrap}>{act}</Text>
           </View>
         ))}
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>I.3.    RESPONSABILIDADES A CUMPLIR POR EL PRESTADOR DE SERVICIOS:</Text>
+          <Text style={s.sectionTitle}>1.3    RESPONSABILIDADES A CUMPLIR POR EL PRESTADOR DE SERVICIOS:</Text>
           {data.responsabilidades?.slice(0, 1).map((resp, index) => (
             <View key={`resp-${index}`} style={s.listItemContainer}>
-              <Text style={s.listNum}>{index + 1}.</Text>
+              <Text style={s.listNum}>{toRoman(index + 1)}.</Text>
               <Text style={s.listTextWrap}>{resp}</Text>
             </View>
           ))}
         </View>
         {data.responsabilidades?.slice(1).map((resp, index) => (
           <View key={`resp-${index + 1}`} style={s.listItemContainer} wrap={false}>
-            <Text style={s.listNum}>{index + 2}.</Text>
+            <Text style={s.listNum}>{toRoman(index + 2)}.</Text>
             <Text style={s.listTextWrap}>{resp}</Text>
           </View>
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.sectionTitle, marginTop: 10 }}>II.  PERFIL A CUBRIR POR EL PRESTADOR DE SERVICIOS:</Text>
+          <Text style={s.sectionTitle}>2  PERFIL A CUBRIR POR EL PRESTADOR DE SERVICIOS:</Text>
           <Text style={{ marginBottom: 4, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia)</Text>
 
-          <Text style={{ ...s.bold, marginBottom: 4 }}>II. 1.  ESCOLARIDAD MÍNIMA:</Text>
+          <Text style={{ ...s.bold, marginBottom: 4 }}>2.1  ESCOLARIDAD MÍNIMA:</Text>
           {data.perfil?.escolaridadMinima?.slice(0, 1).map((esc, i) => (
             <View key={`esc-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -540,8 +541,8 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>II. 2.  COMPETENCIAS LABORALES REQUERIDAS:</Text>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 2 }}>II. 2.1.  Administrativas:</Text>
+          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.2  COMPETENCIAS LABORALES REQUERIDAS:</Text>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.1  Administrativas:</Text>
           {data.perfil?.competenciasAdministrativas?.slice(0, 1).map((comp, i) => (
             <View key={`ca-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -557,7 +558,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 5, marginBottom: 2 }}>II. 2.2.  Técnicas:</Text>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.2  Técnicas:</Text>
           {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
             <View key={`ct-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -573,7 +574,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 5, marginBottom: 2 }}>II. 2.3.  Sociales:</Text>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.3  Sociales:</Text>
           {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
             <View key={`cs-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -589,7 +590,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 5, marginBottom: 2 }}>II. 2.4.  Valores:</Text>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.4  Valores:</Text>
           {data.perfil?.valores?.slice(0, 1).map((val, i) => (
             <View key={`val-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -605,7 +606,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 2 }}>II.3.  ÁREAS DE EXPERIENCIA:</Text>
+          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.3  ÁREAS DE EXPERIENCIA:</Text>
           {data.perfil?.areasExperiencia?.slice(0, 1).map((area, i) => (
             <View key={`ae-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -719,22 +720,30 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         </View>
 
         <View style={s.dictBox} wrap={false}>
-          <View style={s.dictBoxRow1}>
-            <View style={s.dictBoxLeft}>
-              <Text style={{ fontSize: 9 }}>Fecha de dictaminación:</Text>
+          <View style={data.formato === "en_linea" ? { ...s.dictBoxRow1, height: 60, justifyContent: "center" } : s.dictBoxRow1}>
+            <View
+              style={
+                data.formato === "en_linea"
+                  ? { ...s.dictBoxLeft, width: "30%", borderRightWidth: 0, padding: 4, justifyContent: "center", alignItems: "center" }
+                  : s.dictBoxLeft
+              }
+            >
+              <Text style={{ fontSize: 9, textAlign: "center" }}>Fecha de dictaminación:</Text>
               {data.fechaDictaminacion && (
-                <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginTop: 8 }}>
+                <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginTop: 4, textAlign: "center" }}>
                   {data.fechaDictaminacion}
                 </Text>
               )}
             </View>
-            <View style={{ ...s.dictBoxRight, justifyContent: "center", alignItems: "center" }}>
-              <Text style={{ fontSize: 9, marginBottom: 5 }}>Estatus:</Text>
-              <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                <Text style={{ fontSize: 9, marginBottom: 5 }}>(Sello Dictamen)</Text>
+            {data.formato !== "en_linea" && (
+              <View style={{ ...s.dictBoxRight, justifyContent: "center", alignItems: "center" }}>
+                <Text style={{ fontSize: 9, marginBottom: 5 }}>Estatus:</Text>
+                <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                  <Text style={{ fontSize: 9, marginBottom: 5 }}>(Sello Dictamen)</Text>
+                </View>
+                <Text style={{ fontSize: 7, textAlign: "justify", width: "100%" }}>El presente Dictamen/Opinión se podrá seguir utilizando para las siguientes contrataciones bajo las mismas condiciones técnicas y funcionales.</Text>
               </View>
-              <Text style={{ fontSize: 7, textAlign: "justify", width: "100%" }}>El presente Dictamen/Opinión se podrá seguir utilizando para las siguientes contrataciones bajo las mismas condiciones técnicas y funcionales.</Text>
-            </View>
+            )}
           </View>
           <View style={s.dictBoxRow2}>
             <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginBottom: 4 }}>Nota:</Text>

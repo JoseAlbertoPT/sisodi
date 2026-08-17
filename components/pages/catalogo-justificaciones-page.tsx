@@ -1219,7 +1219,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Folio de Dictamen</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa / Proyecto</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Régimen</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semib old text-muted-foreground">Vigencia</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
                 <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">Movimientos</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Estado</th>
@@ -1588,8 +1588,6 @@ export function CatalogoJustificacionesPage() {
   const isAdmin = user?.rol === "Administrador"
   const [consultaCount, setConsultaCount] = useState<number | null>(null)
   const [adminCount, setAdminCount] = useState<number | null>(null)
-  // Precarga el conteo de Administración para que el badge aparezca aunque
-  // la pestaña no se haya abierto (usa el total real, no la lista cargada).
   useEffect(() => {
     if (!isAdmin || !user?.id) return
     const params = new URLSearchParams({ page: "1", limit: "1", userId: user.id })
