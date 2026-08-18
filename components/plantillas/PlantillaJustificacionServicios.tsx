@@ -17,7 +17,6 @@ Font.register({
   src: path.join(process.cwd(), "public/fonts/NotoSansSymbols2-Regular.ttf"),
 });
 
-// Palabras que se mantienen en minúscula (salvo cuando son la primera palabra).
 const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
   "en", "a", "al", "con", "por", "para",
@@ -182,11 +181,11 @@ const s = StyleSheet.create({
   pageBox: { flex: 1, paddingHorizontal: 4, paddingTop: 10, justifyContent: "flex-start" },
   claveText: { fontSize: 8, textAlign: "center" },
 
-  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10 },
+  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10, marginRight: -63 },
   centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 12 },
   sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 4, marginTop: 10 },
 
-  row: { flexDirection: "row", marginBottom: 8, alignItems: "flex-end" },
+  row: { flexDirection: "row", marginBottom: 16, alignItems: "flex-end" },
   bold: { fontFamily: "Helvetica-Bold" },
   numLabel: { width: 15, fontFamily: "Helvetica", fontSize: 9 },
   marginLabel: { fontFamily: "Helvetica", marginRight: 5, fontSize: 9 },
@@ -194,7 +193,6 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 9,
     fontFamily: "Helvetica",
-    paddingBottom: 2,
   },
 
   checkboxRect: {
@@ -523,42 +521,40 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </Text>
         </View>
 
+        <Text style={{ fontSize: 8, textAlign: "justify", lineHeight: 1.4, marginBottom: 10 }}>
+          Nota: La presente Justificación de Prestación de Servicios es una referencia para la contratación de personas y deberá atender a criterios no discriminatorios.
+        </Text>
+
         <Text style={s.centeredTitle}>1.  JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</Text>
 
         <Text style={s.sectionTitle}>1.1    DATOS GENERALES DE LA PRESTACIÓN DE SERVICIOS:</Text>
 
-        <View style={{ ...s.row, alignItems: "center" }}>
-          <Text style={s.numLabel}>1.</Text>
+        <View style={s.row}>
           <Text style={s.marginLabel}>Régimen de Contratación:</Text>
-          <Text>{isHonorarios ? "Honorarios" : isAsimilados ? "Honorarios Asimilados a Salarios" : ""}</Text>
+          <Text style={s.valueText}>{isHonorarios ? "Honorarios" : isAsimilados ? "Honorarios Asimilados a Salarios" : ""}</Text>
         </View>
 
         <View style={s.row}>
-          <Text style={s.numLabel}>2.</Text>
           <Text style={s.marginLabel}>Tipo de servicios:</Text>
           <Text style={s.valueText}>{data.tipoActividades || ""}</Text>
         </View>
 
         <View style={s.row}>
-          <Text style={s.numLabel}>3.</Text>
           <Text style={s.marginLabel}>Secretaría/Subsecretaría/Dependencia/Organismo Auxiliar:</Text>
           <Text style={s.valueText}>{toTitleCaseES(data.secretaria)}</Text>
         </View>
 
         <View style={s.row}>
-          <Text style={s.numLabel}>4.</Text>
           <Text style={s.marginLabel}>Unidad Responsable de Gasto:</Text>
           <Text style={s.valueText}>{toTitleCaseES(data.unidadResponsable)}</Text>
         </View>
 
-        <View style={{ ...s.row, marginTop: 5 }}>
-          <Text style={s.numLabel}>5.</Text>
+        <View style={s.row}>
           <Text style={s.marginLabel}>Importe bruto:</Text>
           <Text style={s.valueText}>{data.importeBruto}</Text>
         </View>
 
         <View style={s.row}>
-          <Text style={s.numLabel}>6.</Text>
           <Text style={s.marginLabel}>Programa o Proyecto:</Text>
           <Text style={s.valueText}>{data.programaProyecto}</Text>
         </View>

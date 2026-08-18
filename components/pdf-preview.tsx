@@ -24,6 +24,7 @@ export function PdfPreview({ fileUrl, label, refreshing }: PdfPreviewProps) {
   const [numPages, setNumPages] = useState(0)
   const [pageWidth, setPageWidth] = useState(0)
   const [docReady, setDocReady] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     const el = containerRef.current
@@ -41,6 +42,7 @@ export function PdfPreview({ fileUrl, label, refreshing }: PdfPreviewProps) {
   useEffect(() => {
     setDocReady(false)
     setNumPages(0)
+    setLoadError(null)
   }, [fileUrl])
 
   return (
@@ -55,12 +57,12 @@ export function PdfPreview({ fileUrl, label, refreshing }: PdfPreviewProps) {
             setNumPages(n)
             setDocReady(true)
           }}
+          onLoadError={(err) => {
+            console.error("[PdfPreview] onLoadError", err)
+            setLoadError(err?.message || "No se pudo cargar el PDF")
+          }}
           loading={null}
-          error={
-            <div className="flex items-center justify-center h-full p-4 text-sm text-destructive">
-              No se pudo cargar el PDF
-            </div>
-          }
+          error={null}
           className="flex flex-col items-center gap-3 py-3"
         >
           {Array.from({ length: numPages }, (_, i) => (
@@ -77,7 +79,13 @@ export function PdfPreview({ fileUrl, label, refreshing }: PdfPreviewProps) {
         </Document>
       )}
 
-      {(!fileUrl || !docReady) && (
+      {loadError && (
+        <div className="absolute inset-0 flex items-center justify-center h-full p-4 text-sm text-destructive text-center bg-muted">
+          No se pudo cargar el PDF: {loadError}
+        </div>
+      )}
+
+      {!loadError && (!fileUrl || !docReady) && (
         <div className="absolute inset-0 flex items-center justify-center gap-2 text-muted-foreground bg-muted">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span className="text-sm">{label ?? "Cargando vista previa…"}</span>
