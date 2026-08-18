@@ -41,12 +41,20 @@ function toTitleCaseES(input: string): string {
   });
 }
 
+// El folio que se muestra en el encabezado del Dictamen va sin las siglas de
+// secretaría que sí lleva `clave` (p.ej. "SI/27/06/2026" -> "27/06/2026").
+function folioSinSiglas(folio: string | null | undefined): string {
+  if (!folio) return "";
+  return folio.replace(/^[^\d/]+\/+/, "");
+}
+
 export interface JustificacionData {
   tipoAdministracion: 'centralizada' | 'paraestatal';
   formato: 'fisico' | 'en_linea';
   secretaria: string;
   unidadAdministrativa: string;
   unidadResponsable: string;
+  oficioSolicitud?: string;
   regimenContratacion: string;
   numeroPrestadores: number;
   programaProyecto: string;
@@ -297,51 +305,151 @@ const s = StyleSheet.create({
     lineHeight: 1.3,
   },
 
-  dictTitle: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 10,
-    textAlign: "center",
-    marginBottom: 15,
-    marginTop: 5,
-  },
-  dictP: {
+  // Estilos de la página de Dictamen/Opinión: replican 1:1 la plantilla del
+  // Dictamen Técnico Funcional del Catálogo (PlantillaDictamenPrestacionServicios),
+  // para que ambos documentos se vean idénticos.
+  pdcPage: {
+    paddingTop: 30,
+    paddingBottom: 90,
+    paddingHorizontal: 40,
+    fontFamily: "Helvetica",
     fontSize: 9,
-    textAlign: "justify",
-    lineHeight: 1.4,
-    marginBottom: 20,
+    color: "#000",
+    position: "relative",
   },
-  dictRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  dictBox: {
+  pdcPageFrame: {
+    position: "absolute",
+    top: 18,
+    left: 22,
+    right: 22,
+    bottom: 75,
     borderWidth: 1,
     borderColor: "#000",
-    marginBottom: 20,
   },
-  dictBoxRow1: {
+  pdcHeaderTable: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#000",
-    height: 120,
+    marginTop: -12,
+    marginLeft: -18,
+    marginRight: -18,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: "#000",
   },
-  dictBoxLeft: {
-    width: "35%",
-    padding: 8,
+  pdcHeaderCol1: {
+    width: "22%",
+    padding: 5,
+    justifyContent: "center",
+    alignItems: "center",
     borderRightWidth: 1,
     borderRightColor: "#000",
   },
-  dictBoxRight: {
-    width: "65%",
+  pdcLogo: { width: 100, height: "auto" },
+  pdcHeaderCol2: {
+    width: "53%",
     padding: 8,
-    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRightWidth: 1,
+    borderRightColor: "#000",
   },
-  dictBoxRow2: {
-    padding: 8,
-    height: 150,
+  pdcHeaderTitle: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 10,
+    textAlign: "center",
+    lineHeight: 1.3,
   },
+  pdcHeaderCol3: { width: "25%", flexDirection: "column" },
+  pdcFolioBox: {
+    padding: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    minHeight: 34,
+  },
+  pdcFolioText: { fontSize: 8, textAlign: "left" },
+  pdcPageBox: { padding: 4, justifyContent: "center", minHeight: 16 },
+  pdcPageText: { fontSize: 8, textAlign: "left" },
+
+  pdcFechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 12 },
+  pdcFechaText: { fontSize: 9 },
+
+  pdcFieldRow: { flexDirection: "row", marginBottom: 6, alignItems: "flex-end" },
+  pdcFieldLabel: { width: "30%", fontSize: 9, fontFamily: "Helvetica" },
+  pdcFieldLabelBox: {
+    width: "30%",
+    fontSize: 9,
+    fontFamily: "Helvetica",
+    borderWidth: 1,
+    borderColor: "#000",
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+  },
+  pdcFieldValue: {
+    flex: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    fontSize: 9,
+    paddingBottom: 1,
+    paddingHorizontal: 2,
+    minHeight: 12,
+  },
+  pdcFieldValueMulti: {
+    flex: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    fontSize: 9,
+    paddingBottom: 2,
+    paddingHorizontal: 2,
+    lineHeight: 1.4,
+  },
+
+  pdcRegimenRow: { flexDirection: "row", marginBottom: 10, alignItems: "center" },
+  pdcRegimenLabel: {
+    width: "30%",
+    fontSize: 9,
+    fontFamily: "Helvetica",
+    borderWidth: 1,
+    borderColor: "#000",
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    marginRight: 6,
+  },
+  pdcRegimenBoxes: { flexDirection: "row", alignItems: "center", flex: 1 },
+  pdcCheckLabel: { fontSize: 9, marginRight: 20 },
+
+  pdcFundamentoText: { fontSize: 9, textAlign: "justify", lineHeight: 1.4, marginTop: 10, marginBottom: 12 },
+
+  pdcImporteSubText: { fontSize: 8, fontStyle: "italic", marginTop: 2, marginBottom: 6, marginLeft: "30%", color: "#333" },
+
+  pdcVigenciaRow: { flexDirection: "row", marginBottom: 10, alignItems: "flex-end" },
+  pdcVigCellColumn: { alignItems: "center", marginRight: 4 },
+  pdcVigCellLabel: { fontSize: 7, marginBottom: 2 },
+  pdcVigCellBorder: {
+    borderWidth: 1,
+    borderColor: "#000",
+    width: 26,
+    height: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pdcVigCellValue: { fontSize: 8 },
+
+  pdcNotaWrapper: { marginTop: 12, marginBottom: 6 },
+  pdcNotaTitle: { fontFamily: "Helvetica-Bold", fontSize: 9, marginBottom: 2 },
+  pdcNotaText: { fontSize: 8, textAlign: "justify", lineHeight: 1.4 },
+
+  pdcFooterTable: {
+    position: "absolute",
+    bottom: 22,
+    left: 22,
+    right: 22,
+    flexDirection: "row",
+    backgroundColor: "#fff",
+  },
+  pdcFooterLeft: { width: "60%", padding: 6 },
+  pdcFooterRight: { width: "40%", padding: 6 },
+  pdcFooterLine: { fontSize: 8, marginBottom: 2 },
+  pdcFooterLabelBold: { fontFamily: "Helvetica-Bold" },
+
   firmasDictWrapper: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -371,6 +479,11 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
   const inD = parseDateParts(data.vigenciaInicio);
   const finD = parseDateParts(data.vigenciaTermino);
+  const folioPlano = folioSinSiglas(data.clave);
+  const tituloFormatoDictamen =
+    data.tipoAdministracion === "centralizada"
+      ? "Dictamen Técnico Funcional de Justificación de Prestación de Servicios"
+      : "Opinión Técnica Funcional de Justificación de Prestación de Servicios";
 
   return (
     <Document>
@@ -387,7 +500,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
           <View style={s.headerCol2}>
             <Text style={s.headerTitle}>JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</Text>
-            <Text style={s.headerSubtitle}>(HONORARIOS Y HONORARIOS ASIMILADOS A SALARIOS)</Text>
+            <Text style={s.headerSubtitle}>SECRETARÍAS, DEPENDENCIAS Y ORGANISMOS AUXILIARES</Text>
           </View>
           <View style={s.headerCol3}>
             <View style={s.claveBox}>
@@ -402,15 +515,15 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
 
         <View style={s.fechaRow}>
-          <Text style={s.bold}>Fecha de elaboración de la Justificación: </Text>
+          <Text style={s.bold}>Fecha : </Text>
           <Text style={{ borderBottomWidth: 1, minWidth: 150, textAlign: "center" }}>
             {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}
           </Text>
         </View>
 
-        <Text style={s.centeredTitle}>JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</Text>
+        <Text style={s.centeredTitle}>1.  JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</Text>
 
-        <Text style={s.sectionTitle}>1    DATOS GENERALES:</Text>
+        <Text style={s.sectionTitle}>1.1    DATOS GENERALES DE LA PRESTACIÓN DE SERVICIOS:</Text>
 
         <View style={s.row}>
           <Text style={s.numLabel}>1.</Text>
@@ -485,12 +598,12 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         </View>
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>1.1    OBJETO DE LA CONTRATACIÓN:</Text>
+          <Text style={s.sectionTitle}>1.2    OBJETO DE LA CONTRATACIÓN:</Text>
           <Text style={{ textAlign: "justify", lineHeight: 1.4, marginBottom: 8 }}>{data.objetoContratacion}</Text>
         </View>
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>1.2    ACTIVIDADES A REALIZAR POR EL PRESTADOR DE SERVICIOS:</Text>
+          <Text style={s.sectionTitle}>1.3    ACTIVIDADES DEL PRESTADOR DE SERVICIOS:</Text>
           {data.actividades?.slice(0, 1).map((act, index) => (
             <View key={`act-${index}`} style={s.listItemContainer}>
               <Text style={s.listNum}>{toRoman(index + 1)}.</Text>
@@ -506,7 +619,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>1.3    RESPONSABILIDADES A CUMPLIR POR EL PRESTADOR DE SERVICIOS:</Text>
+          <Text style={s.sectionTitle}>1.4    RESPONSABILIDADES DEL PRESTADOR DE SERVICIOS:</Text>
           {data.responsabilidades?.slice(0, 1).map((resp, index) => (
             <View key={`resp-${index}`} style={s.listItemContainer}>
               <Text style={s.listNum}>{toRoman(index + 1)}.</Text>
@@ -523,7 +636,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <View wrap={false}>
           <Text style={s.sectionTitle}>2  PERFIL A CUBRIR POR EL PRESTADOR DE SERVICIOS:</Text>
-          <Text style={{ marginBottom: 4, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia)</Text>
+          <Text style={{ marginBottom: 4, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia, necesarios para la contratación)</Text>
 
           <Text style={{ ...s.bold, marginBottom: 4 }}>2.1  ESCOLARIDAD MÍNIMA:</Text>
           {data.perfil?.escolaridadMinima?.slice(0, 1).map((esc, i) => (
@@ -541,8 +654,8 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.2  COMPETENCIAS LABORALES REQUERIDAS:</Text>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.1  Administrativas:</Text>
+          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.2  COMPETENCIAS DEL PRESTADOR DE SERVICIOS:</Text>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.1  Competencias Administrativas:</Text>
           {data.perfil?.competenciasAdministrativas?.slice(0, 1).map((comp, i) => (
             <View key={`ca-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -558,7 +671,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.2  Técnicas:</Text>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.2  Competencias Técnicas:</Text>
           {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
             <View key={`ct-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -574,7 +687,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.3  Sociales:</Text>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.3  Competencias Sociales:</Text>
           {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
             <View key={`cs-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -590,7 +703,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.4  Valores:</Text>
+          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.4  valores:</Text>
           {data.perfil?.valores?.slice(0, 1).map((val, i) => (
             <View key={`val-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -606,7 +719,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.3  ÁREAS DE EXPERIENCIA:</Text>
+          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.3  ÁREAS DE EXPERIENCIA DEL PRESTADOR DE SERVICIOS:</Text>
           {data.perfil?.areasExperiencia?.slice(0, 1).map((area, i) => (
             <View key={`ae-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -666,95 +779,122 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
       </Page>
 
-      <Page size="LETTER" style={s.page} wrap>
-        <View style={s.pageFrame} fixed />
+      <Page size="LETTER" style={s.pdcPage} wrap>
+        <View style={s.pdcPageFrame} fixed />
 
         <View style={s.watermarkContainer} fixed>
           <Image src={MARCA_MORELOS} style={s.watermarkImage} />
         </View>
 
-        <View style={s.headerTable} fixed>
-          <View style={s.headerCol1}>
-            <Image src={LOGO_FINANZAS} style={s.logo} />
+        <View style={s.pdcHeaderTable} fixed>
+          <View style={s.pdcHeaderCol1}>
+            <Image src={LOGO_FINANZAS} style={s.pdcLogo} />
           </View>
-          <View style={s.headerCol2}>
-            <Text style={s.headerTitle}>JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</Text>
-            <Text style={s.headerSubtitle}>(HONORARIOS Y HONORARIOS ASIMILADOS A SALARIOS)</Text>
+          <View style={s.pdcHeaderCol2}>
+            <Text style={s.pdcHeaderTitle}>{tituloFormatoDictamen.toUpperCase()}</Text>
           </View>
-          <View style={s.headerCol3}>
-            <View style={s.claveBox}>
-              <Text style={s.claveText}>{data.clave || "Clave"}</Text>
+          <View style={s.pdcHeaderCol3}>
+            <View style={s.pdcFolioBox}>
+              <Text style={s.pdcFolioText}>Folio: {folioPlano || ""}</Text>
             </View>
-            <View style={s.pageBox}>
-              <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />
+            <View style={s.pdcPageBox}>
+              <Text
+                style={s.pdcPageText}
+                render={({ pageNumber, totalPages }) => `Pág.: ${pageNumber} de ${totalPages}`}
+              />
             </View>
           </View>
         </View>
 
-        <View wrap={false}>
-        {data.tipoAdministracion === "centralizada" ? (
-          <>
-            <Text style={s.dictTitle}>DICTAMINACIÓN TÉCNICA FUNCIONAL DE PRESTACIÓN DE SERVICIOS{"\n"}(ÁREA EXCLUSIVA PARA LA DIRECCIÓN GENERAL DE DESARROLLO ORGANIZACIONAL)</Text>
-            <Text style={s.dictP}>
-              Con fundamento en lo dispuesto por los artículos 1, 9, fracción III y 24, fracción XL, de la Ley Orgánica de la Administración Pública para el Estado Libre y Soberano de Morelos, en relación con los numerales 1, 5, fracción XIV, 7, 10, fracción XVII y 23, fracción III, del Reglamento Interior de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal y demás disposiciones jurídicas y administrativas aplicables y una vez realizado el análisis técnico funcional se determina que la Justificación de Prestación de Servicios Profesionales, relativa a la(s) contratación(es) que se menciona(n), cumple con la metodología y los requisitos establecidos por la Dirección General de Desarrollo Organizacional de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal, por lo que se emite el Dictamen Técnico Funcional de Justificación de Prestación de Servicios Profesionales:
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text style={s.dictTitle}>OPINIÓN FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS PROFESIONALES</Text>
-            <Text style={s.dictP}>
-              Con fundamento en lo dispuesto por los artículos 1, 9, fracción III, 24, fracción XL y 46, de la Ley Orgánica de la Administración Pública para el Estado Libre y Soberano de Morelos, en relación con los numerales 1, 5, fracción XIV, 7, 10, fracción XVII y 23, fracciones IV y VI, del Reglamento Interior de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal y demás disposiciones jurídicas y administrativas aplicables y una vez realizado el análisis técnico funcional se determina que la Justificación de Prestación de Servicios Profesionales, relativa a la(s) contratación(es) que se menciona(n), cumple con la metodología y los requisitos establecidos por la Dirección General de Desarrollo Organizacional de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal, por lo que se emite la Opinión Funcional de Justificación de Prestación de Servicios Profesionales:
-            </Text>
-          </>
-        )}
+        <View style={s.pdcFechaRow}>
+          <Text style={s.pdcFechaText}>Fecha: {data.fechaDictaminacion || ""}</Text>
+        </View>
 
-        <View style={s.dictRow}>
-          <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>Dictamen Técnico Funcional: </Text>
-          <View style={s.checkboxRect}>
-            {data.tipoAdministracion === "centralizada" && <Text style={s.checkText}>X</Text>}
-          </View>
-          <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginLeft: 30 }}>Opinión Técnica Funcional: </Text>
-          <View style={s.checkboxRect}>
-            {data.tipoAdministracion === "paraestatal" && <Text style={s.checkText}>X</Text>}
+        <View style={s.pdcFieldRow}>
+          <Text style={s.pdcFieldLabelBox}>Secretaría/Dependencia:</Text>
+          <Text style={s.pdcFieldValue}>{toTitleCaseES(data.secretaria)}</Text>
+        </View>
+
+        <View style={s.pdcFieldRow}>
+          <Text style={s.pdcFieldLabelBox}>Unidad Responsable del Gasto:</Text>
+          <Text style={s.pdcFieldValue}>{toTitleCaseES(data.unidadResponsable)}</Text>
+        </View>
+
+        <View style={s.pdcFieldRow}>
+          <Text style={s.pdcFieldLabelBox}>Unidad Administrativa:</Text>
+          <Text style={s.pdcFieldValue}>{toTitleCaseES(data.unidadAdministrativa)}</Text>
+        </View>
+
+        <View style={s.pdcRegimenRow}>
+          <Text style={s.pdcRegimenLabel}>Régimen de Contratación:</Text>
+          <View style={s.pdcRegimenBoxes}>
+            <Text style={s.pdcCheckLabel}>Honorarios</Text>
+            <View style={s.checkboxRect}>{isHonorarios && <Text style={s.checkText}>X</Text>}</View>
+            <Text style={{ ...s.pdcCheckLabel, marginLeft: 10 }}>Honorarios Asimilados a Salarios</Text>
+            <View style={s.checkboxRect}>{isAsimilados && <Text style={s.checkText}>X</Text>}</View>
           </View>
         </View>
 
-        <View style={s.dictBox} wrap={false}>
-          <View style={data.formato === "en_linea" ? { ...s.dictBoxRow1, height: 60, justifyContent: "center" } : s.dictBoxRow1}>
-            <View
-              style={
-                data.formato === "en_linea"
-                  ? { ...s.dictBoxLeft, width: "30%", borderRightWidth: 0, padding: 4, justifyContent: "center", alignItems: "center" }
-                  : s.dictBoxLeft
-              }
-            >
-              <Text style={{ fontSize: 9, textAlign: "center" }}>Fecha de dictaminación:</Text>
-              {data.fechaDictaminacion && (
-                <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginTop: 4, textAlign: "center" }}>
-                  {data.fechaDictaminacion}
-                </Text>
-              )}
-            </View>
-            {data.formato !== "en_linea" && (
-              <View style={{ ...s.dictBoxRight, justifyContent: "center", alignItems: "center" }}>
-                <Text style={{ fontSize: 9, marginBottom: 5 }}>Estatus:</Text>
-                <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                  <Text style={{ fontSize: 9, marginBottom: 5 }}>(Sello Dictamen)</Text>
-                </View>
-                <Text style={{ fontSize: 7, textAlign: "justify", width: "100%" }}>El presente Dictamen/Opinión se podrá seguir utilizando para las siguientes contrataciones bajo las mismas condiciones técnicas y funcionales.</Text>
-              </View>
-            )}
+        <Text style={s.pdcFundamentoText}>
+          {data.tipoAdministracion === "centralizada"
+            ? "Con fundamento en lo dispuesto por los artículos 1, 9, fracción III y 24, fracción XL, de la Ley Orgánica de la Administración Pública para el Estado Libre y Soberano de Morelos, en relación con los numerales 1, 5, fracción XIV, 7, 10, fracción XVII y 23, fracción III, del Reglamento Interior de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal y demás disposiciones jurídicas y administrativas aplicables y una vez realizado el análisis técnico funcional se determina que la Justificación de Prestación de Servicios, relativa a la(s) contratación(es) que se menciona(n), cumple con la metodología y los requisitos establecidos por la Dirección General de Desarrollo Organizacional de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal, por lo que se emite el Dictamen Técnico Funcional de Justificación de Prestación de Servicios:"
+            : "Con fundamento en lo dispuesto por los artículos 1, 9, fracción III, 24, fracción XL y 46, de la Ley Orgánica de la Administración Pública para el Estado Libre y Soberano de Morelos, en relación con los numerales 1, 5, fracción XIV, 7, 10, fracción XVII y 23, fracciones IV y VI, del Reglamento Interior de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal y demás disposiciones jurídicas y administrativas aplicables y una vez realizado el análisis técnico funcional se determina que la Justificación de Prestación de Servicios, relativa a la(s) contratación(es) que se menciona(n), cumple con la metodología y los requisitos establecidos por la Dirección General de Desarrollo Organizacional de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal, por lo que se emite la Opinión Técnica Funcional de Justificación de Prestación de Servicios:"}
+        </Text>
+
+        <View style={s.pdcFieldRow}>
+          <Text style={s.pdcFieldLabel}>Tipo de servicios:</Text>
+          <Text style={s.pdcFieldValue}>{data.tipoActividades}</Text>
+        </View>
+
+        <View style={s.pdcFieldRow}>
+          <Text style={s.pdcFieldLabel}>Clave y nombre del programa{"\n"}o proyecto:</Text>
+          <Text style={s.pdcFieldValueMulti}>{data.programaProyecto}</Text>
+        </View>
+
+        <View style={s.pdcFieldRow}>
+          <Text style={s.pdcFieldLabel}>Objeto de la contratación:</Text>
+          <Text style={s.pdcFieldValueMulti}>{data.objetoContratacion}</Text>
+        </View>
+
+        <View style={s.pdcFieldRow}>
+          <Text style={s.pdcFieldLabel}>Importe bruto:</Text>
+          <Text style={s.pdcFieldValue}>{data.importeBruto} (mensual)</Text>
+        </View>
+        <Text style={s.pdcImporteSubText}>
+          (El pago se realizará como lo determine la Unidad Administrativa sin exceder el monto total autorizado)
+        </Text>
+
+        <View style={s.pdcFieldRow}>
+          <Text style={s.pdcFieldLabel}>Justificación:</Text>
+          <Text style={s.pdcFieldValue}>{data.clave || ""}</Text>
+        </View>
+
+        <View style={s.pdcFieldRow}>
+          <Text style={s.pdcFieldLabel}>Número de Prestadores de{"\n"}Servicios:</Text>
+          <Text style={s.pdcFieldValue}>{data.numeroPrestadores}</Text>
+        </View>
+
+        <View style={s.pdcVigenciaRow}>
+          <Text style={s.pdcFieldLabel}>Vigencia del Dictamen:</Text>
+          <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+            <View style={s.pdcVigCellColumn}><Text style={s.pdcVigCellLabel}>Día</Text><View style={s.pdcVigCellBorder}><Text style={s.pdcVigCellValue}>{inD.d}</Text></View></View>
+            <View style={s.pdcVigCellColumn}><Text style={s.pdcVigCellLabel}>Mes</Text><View style={s.pdcVigCellBorder}><Text style={s.pdcVigCellValue}>{inD.m}</Text></View></View>
+            <View style={s.pdcVigCellColumn}><Text style={s.pdcVigCellLabel}>Año</Text><View style={s.pdcVigCellBorder}><Text style={s.pdcVigCellValue}>{inD.y}</Text></View></View>
+            <Text style={{ marginHorizontal: 8, paddingBottom: 2, fontSize: 9 }}>al</Text>
+            <View style={s.pdcVigCellColumn}><Text style={s.pdcVigCellLabel}>Día</Text><View style={s.pdcVigCellBorder}><Text style={s.pdcVigCellValue}>{finD.d}</Text></View></View>
+            <View style={s.pdcVigCellColumn}><Text style={s.pdcVigCellLabel}>Mes</Text><View style={s.pdcVigCellBorder}><Text style={s.pdcVigCellValue}>{finD.m}</Text></View></View>
+            <View style={s.pdcVigCellColumn}><Text style={s.pdcVigCellLabel}>Año</Text><View style={s.pdcVigCellBorder}><Text style={s.pdcVigCellValue}>{finD.y}</Text></View></View>
           </View>
-          <View style={s.dictBoxRow2}>
-            <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginBottom: 4 }}>Nota:</Text>
-            <Text style={{ fontSize: 8, textAlign: "justify", lineHeight: 1.4 }}>
-              {data.notaDictamen ?? NOTA_DICTAMEN_DEFAULT}
-            </Text>
-          </View>
+        </View>
+
+        <View style={s.pdcNotaWrapper} wrap={false}>
+          <Text style={s.pdcNotaText}>
+            Nota: {data.notaDictamen ?? NOTA_DICTAMEN_DEFAULT}
+          </Text>
         </View>
 
         {!data.ocultarFirmas ? (
-          <View wrap={false} style={{ marginTop: 25 }}>
+          <View wrap={false} style={{ marginTop: 20 }}>
             {data.formato === 'en_linea' ? (
               <View style={{ marginBottom: 15, alignItems: 'center' }}>
                 <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
@@ -799,8 +939,28 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
             </View>
           </View>
         ) : null}
-        </View>
 
+        <View style={s.pdcFooterTable} fixed>
+          <View style={s.pdcFooterLeft}>
+            <Text style={s.pdcFooterLine}>
+              <Text style={s.pdcFooterLabelBold}>Formato:</Text> {tituloFormatoDictamen}
+            </Text>
+            <Text style={s.pdcFooterLine}>
+              <Text style={s.pdcFooterLabelBold}>Clave:</Text> DGDO-DDPP-PR01-FO11
+            </Text>
+            <Text style={s.pdcFooterLine}>
+              <Text style={s.pdcFooterLabelBold}>Anexo:</Text> 14
+            </Text>
+          </View>
+          <View style={s.pdcFooterRight}>
+            <Text style={s.pdcFooterLine}>
+              <Text style={s.pdcFooterLabelBold}>Referencia:</Text> DGDO-DDPP-PR01
+            </Text>
+            <Text style={s.pdcFooterLine}>
+              <Text style={s.pdcFooterLabelBold}>Revisión:</Text> 2
+            </Text>
+          </View>
+        </View>
       </Page>
     </Document>
   );
