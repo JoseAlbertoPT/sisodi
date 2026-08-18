@@ -192,8 +192,6 @@ const s = StyleSheet.create({
   marginLabel: { fontFamily: "Helvetica", marginRight: 5, fontSize: 9 },
   valueText: {
     flex: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: "#000",
     fontSize: 9,
     fontFamily: "Helvetica",
     paddingBottom: 2,
@@ -520,7 +518,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <View style={s.fechaRow}>
           <Text style={s.bold}>Fecha : </Text>
-          <Text style={{ borderBottomWidth: 1, minWidth: 150, textAlign: "center" }}>
+          <Text style={{ minWidth: 150, textAlign: "center" }}>
             {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}
           </Text>
         </View>
@@ -532,10 +530,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         <View style={{ ...s.row, alignItems: "center" }}>
           <Text style={s.numLabel}>1.</Text>
           <Text style={s.marginLabel}>Régimen de Contratación:</Text>
-          <View style={s.checkboxRect}>{isHonorarios && <Text style={s.checkText}>X</Text>}</View>
-          <Text style={{ marginRight: 20 }}>Honorarios</Text>
-          <View style={s.checkboxRect}>{isAsimilados && <Text style={s.checkText}>X</Text>}</View>
-          <Text>Honorarios Asimilados a Salarios</Text>
+          <Text>{isHonorarios ? "Honorarios" : isAsimilados ? "Honorarios Asimilados a Salarios" : ""}</Text>
         </View>
 
         <View style={s.row}>
