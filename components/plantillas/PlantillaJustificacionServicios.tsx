@@ -305,9 +305,6 @@ const s = StyleSheet.create({
     lineHeight: 1.3,
   },
 
-  // Estilos de la página de Dictamen/Opinión: replican 1:1 la plantilla del
-  // Dictamen Técnico Funcional del Catálogo (PlantillaDictamenPrestacionServicios),
-  // para que ambos documentos se vean idénticos.
   pdcPage: {
     paddingTop: 30,
     paddingBottom: 90,
