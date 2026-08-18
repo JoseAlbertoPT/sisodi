@@ -488,9 +488,9 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                           <DropdownMenuItem onClick={() => openSol(rec)}>
                             <Send className="h-4 w-4" /> Reutilizar
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openCan(rec)}>
+                          {/* <DropdownMenuItem onClick={() => openCan(rec)}>
                             <Ban className="h-4 w-4" /> Cancelación
-                          </DropdownMenuItem>
+                          </DropdownMenuItem> */}
                         </DropdownMenuContent>
                       </DropdownMenu>
                       </div>
@@ -556,9 +556,9 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                           <DropdownMenuItem onClick={() => openSol(rec)}>
                             <Send className="h-4 w-4" /> Reutilizar
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openCan(rec)}>
+                          {/* <DropdownMenuItem onClick={() => openCan(rec)}>
                             <Ban className="h-4 w-4" /> Cancelación
-                          </DropdownMenuItem>
+                          </DropdownMenuItem> */}
                         </DropdownMenuContent>
                       </DropdownMenu>
                       </div>
