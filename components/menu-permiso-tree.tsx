@@ -64,7 +64,7 @@ export function MenuPermisoTree({
   onMenuToggle,
   level,
   menuActions,
-  onCatalogoAccesoClick,
+  onCatalogoAccionChange,
   rolUsuario,
 }: {
   nodes: MenuNode[]
@@ -72,7 +72,7 @@ export function MenuPermisoTree({
   onMenuToggle: (menuId: string, checked: boolean, key: string | null) => void
   level: number
   menuActions?: Record<string, string[]>
-  onCatalogoAccesoClick?: (menuId: string) => void
+  onCatalogoAccionChange?: (menuId: string, incluirAdmin: boolean) => void
   rolUsuario?: string
 }) {
   const menuIdSet = new Set(menuIds)
@@ -132,12 +132,11 @@ export function MenuPermisoTree({
               <CollapsibleContent>
                 <div className="border-t border-border">
                   <div className="flex items-center gap-2 px-4 py-2 bg-muted/20 border-b border-border/50">
-                    <span className="text-[11px] text-muted-foreground mr-1">Acciones rápidas:</span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-2 text-[11px] text-primary hover:text-primary"
+                      className="h-6 px-2 text-[11px] text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                       onClick={() => toggleAllInSection(node, true, onMenuToggle)}
                     >
                       <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -147,7 +146,7 @@ export function MenuPermisoTree({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-2 text-[11px] text-muted-foreground hover:text-destructive"
+                      className="h-6 px-2 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => toggleAllInSection(node, false, onMenuToggle)}
                     >
                       <XCircle className="h-3 w-3 mr-1" />
@@ -166,7 +165,7 @@ export function MenuPermisoTree({
                             onMenuToggle={onMenuToggle}
                             depth={0}
                             menuActions={menuActions}
-                            onCatalogoAccesoClick={onCatalogoAccesoClick}
+                            onCatalogoAccionChange={onCatalogoAccionChange}
                             rolUsuario={rolUsuario}
                           />
                         ))}
@@ -187,7 +186,7 @@ export function MenuPermisoTree({
               onMenuToggle={onMenuToggle}
               depth={level}
               menuActions={menuActions}
-              onCatalogoAccesoClick={onCatalogoAccesoClick}
+              onCatalogoAccionChange={onCatalogoAccionChange}
               rolUsuario={rolUsuario}
             />
           </div>
@@ -203,7 +202,7 @@ function MenuPermisoRow({
   onMenuToggle,
   depth,
   menuActions,
-  onCatalogoAccesoClick,
+  onCatalogoAccionChange,
   rolUsuario,
 }: {
   node: MenuNode
@@ -211,7 +210,7 @@ function MenuPermisoRow({
   onMenuToggle: (menuId: string, checked: boolean, key: string | null) => void
   depth: number
   menuActions?: Record<string, string[]>
-  onCatalogoAccesoClick?: (menuId: string) => void
+  onCatalogoAccionChange?: (menuId: string, incluirAdmin: boolean) => void
   rolUsuario?: string
 }) {
   const menuIdSet = new Set(menuIds)
@@ -244,14 +243,33 @@ function MenuPermisoRow({
         >
           {node.label}
         </label>
-        {esCatalogo && isChecked && onCatalogoAccesoClick && (
-          <button
-            type="button"
-            onClick={() => onCatalogoAccesoClick(node.id)}
-            className="text-[11px] text-muted-foreground hover:text-primary underline-offset-2 hover:underline shrink-0"
-          >
-            {incluyeAdministracion ? "Consulta y Administración" : "Solo Consulta"} · Cambiar
-          </button>
+        {esCatalogo && isChecked && onCatalogoAccionChange && (
+          <div className="flex items-center gap-3 shrink-0" role="group" aria-label="Nivel de acceso a Catálogo">
+            <button
+              type="button"
+              className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md transition-colors ${
+                !incluyeAdministracion ? "text-content-high font-medium" : "text-muted-foreground hover:text-content-high"
+              }`}
+              onClick={() => onCatalogoAccionChange(node.id, false)}
+            >
+              {!incluyeAdministracion && (
+                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "9999px", backgroundColor: "#10b981", flexShrink: 0 }} />
+              )}
+              Consulta
+            </button>
+            <button
+              type="button"
+              className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md transition-colors ${
+                incluyeAdministracion ? "text-content-high font-medium" : "text-muted-foreground hover:text-content-high"
+              }`}
+              onClick={() => onCatalogoAccionChange(node.id, true)}
+            >
+              {incluyeAdministracion && (
+                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "9999px", backgroundColor: "#10b981", flexShrink: 0 }} />
+              )}
+              Administración
+            </button>
+          </div>
         )}
       </div>
 
@@ -265,7 +283,7 @@ function MenuPermisoRow({
               onMenuToggle={onMenuToggle}
               depth={depth + 1}
               menuActions={menuActions}
-              onCatalogoAccesoClick={onCatalogoAccesoClick}
+              onCatalogoAccionChange={onCatalogoAccionChange}
               rolUsuario={rolUsuario}
             />
           ))}

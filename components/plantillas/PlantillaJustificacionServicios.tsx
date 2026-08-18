@@ -12,8 +12,6 @@ import fs from "fs";
 import React from "react";
 import { toRoman } from "@/lib/roman-list";
 
-// Mismo glifo de viñeta que la Carta Descriptiva (PlantillaCartaDescriptivaServicios):
-// Helvetica no tiene glifo para ❖ (U+2756), así que se registra esta fuente.
 Font.register({
   family: "NotoSymbols",
   src: path.join(process.cwd(), "public/fonts/NotoSansSymbols2-Regular.ttf"),
@@ -25,9 +23,6 @@ const PALABRAS_MENORES = new Set([
   "en", "a", "al", "con", "por", "para",
 ]);
 
-// Convierte un texto (normalmente en MAYÚSCULAS) a formato tipo título en español.
-// Ej.: ÓRGANO DESCONCENTRADO DENOMINADO "HÁBITAT MORELOS"
-//   -> Órgano Desconcentrado Denominado "Hábitat Morelos"
 function toTitleCaseES(input: string): string {
   if (!input) return input;
   let wordIndex = 0;
@@ -41,8 +36,6 @@ function toTitleCaseES(input: string): string {
   });
 }
 
-// El folio que se muestra en el encabezado del Dictamen va sin las siglas de
-// secretaría que sí lleva `clave` (p.ej. "SI/27/06/2026" -> "27/06/2026").
 function folioSinSiglas(folio: string | null | undefined): string {
   if (!folio) return "";
   return folio.replace(/^[^\d/]+\/+/, "");
@@ -92,9 +85,6 @@ export interface JustificacionData {
   notaDictamen?: string;
 }
 
-// Debe coincidir con NOTA_DICTAMEN_DEFAULT en lib/configuracion-texto.ts;
-// se duplica aquí (en vez de importarla) para no acoplar esta plantilla,
-// que solo debe depender de @react-pdf/renderer, al cliente de Prisma.
 const NOTA_DICTAMEN_DEFAULT =
   "Esta Dirección General únicamente dictamina sobre la funcionalidad de las actividades conforme con la metodología establecida y queda fuera de sus atribuciones la distribución y ejecución de los recursos para el pago de las contrataciones, en las cuales se deberá observar lo dispuesto por el Artículo Quinto del Presupuesto de Egresos del Gobierno del Estado de Morelos para el ejercicio fiscal 2026 y demás normatividad aplicable.";
 
@@ -449,13 +439,30 @@ const s = StyleSheet.create({
 
   firmasDictWrapper: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 10,
+    alignItems: "stretch",
     width: "100%",
+    borderWidth: 1,
+    borderColor: "#000",
   },
   firmaDictBox: {
-    width: "30%",
+    flex: 1,
+    minHeight: 125,
     alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 12,
+    paddingBottom: 8,
+    paddingHorizontal: 6,
+    borderRightWidth: 1,
+    borderRightColor: "#000",
+  },
+  firmaDictBoxLast: {
+    flex: 1,
+    minHeight: 125,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 12,
+    paddingBottom: 8,
+    paddingHorizontal: 6,
   },
 });
 
@@ -522,33 +529,8 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <Text style={s.sectionTitle}>1.1    DATOS GENERALES DE LA PRESTACIÓN DE SERVICIOS:</Text>
 
-        <View style={s.row}>
-          <Text style={s.numLabel}>1.</Text>
-          <Text style={s.marginLabel}>Secretaría/Subsecretaría/Dependencia/Organismo Auxiliar:</Text>
-          <Text style={s.valueText}>{toTitleCaseES(data.secretaria)}</Text>
-        </View>
-
-        <View style={s.row}>
-          <Text style={s.numLabel}>2.</Text>
-          <Text style={s.marginLabel}>Unidad Administrativa de Adscripción:</Text>
-          <Text style={{ fontSize: 7, marginRight: 5 }}>(área donde se prestará el servicio)</Text>
-          <Text style={s.valueText}>{toTitleCaseES(data.unidadAdministrativa)}</Text>
-        </View>
-
-        <View style={s.row}>
-          <Text style={s.numLabel}>3.</Text>
-          <Text style={s.marginLabel}>Unidad Responsable del Gasto:</Text>
-          <Text style={s.valueText}>{toTitleCaseES(data.unidadResponsable)}</Text>
-        </View>
-
-        <View style={s.row}>
-          <Text style={s.numLabel}>4.</Text>
-          <Text style={s.marginLabel}>Programa o Proyecto:</Text>
-          <Text style={s.valueText}>{data.programaProyecto}</Text>
-        </View>
-
         <View style={{ ...s.row, alignItems: "center" }}>
-          <Text style={s.numLabel}>5.</Text>
+          <Text style={s.numLabel}>1.</Text>
           <Text style={s.marginLabel}>Régimen de Contratación:</Text>
           <View style={s.checkboxRect}>{isHonorarios && <Text style={s.checkText}>X</Text>}</View>
           <Text style={{ marginRight: 20 }}>Honorarios</Text>
@@ -557,19 +539,51 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         </View>
 
         <View style={s.row}>
-          <Text style={s.numLabel}>6.</Text>
-          <Text style={s.marginLabel}>Tipo de Actividades:</Text>
+          <Text style={s.numLabel}>2.</Text>
+          <Text style={s.marginLabel}>Tipo de servicios:</Text>
           <Text style={s.valueText}>{data.tipoActividades || ""}</Text>
         </View>
 
         <View style={s.row}>
+          <Text style={s.numLabel}>3.</Text>
+          <Text style={s.marginLabel}>Secretaría/Subsecretaría/Dependencia/Organismo Auxiliar:</Text>
+          <Text style={s.valueText}>{toTitleCaseES(data.secretaria)}</Text>
+        </View>
+
+        <View style={s.row}>
+          <Text style={s.numLabel}>4.</Text>
+          <Text style={s.marginLabel}>Unidad Responsable de Gasto:</Text>
+          <Text style={s.valueText}>{toTitleCaseES(data.unidadResponsable)}</Text>
+        </View>
+
+        <View style={{ ...s.row, marginTop: 5 }}>
+          <Text style={s.numLabel}>5.</Text>
+          <Text style={s.marginLabel}>Importe bruto:</Text>
+          <Text style={s.valueText}>{data.importeBruto}</Text>
+        </View>
+
+        <View style={s.row}>
+          <Text style={s.numLabel}>6.</Text>
+          <Text style={s.marginLabel}>Programa o Proyecto:</Text>
+          <Text style={s.valueText}>{data.programaProyecto}</Text>
+        </View>
+
+        {/* Ocultos a pedido del usuario (no eliminar, solo comentado):
+        <View style={s.row}>
           <Text style={s.numLabel}>7.</Text>
+          <Text style={s.marginLabel}>Unidad Administrativa de Adscripción:</Text>
+          <Text style={{ fontSize: 7, marginRight: 5 }}>(área donde se prestará el servicio)</Text>
+          <Text style={s.valueText}>{toTitleCaseES(data.unidadAdministrativa)}</Text>
+        </View>
+
+        <View style={s.row}>
+          <Text style={s.numLabel}>8.</Text>
           <Text style={s.marginLabel}>Número de Prestadores de Servicios:</Text>
           <Text style={s.valueText}>{data.numeroPrestadores}</Text>
         </View>
 
         <View style={{ ...s.row, alignItems: "flex-end", marginTop: 5 }}>
-          <Text style={s.numLabel}>8.</Text>
+          <Text style={s.numLabel}>9.</Text>
           <Text style={s.marginLabel}>Vigencia (inicio-término):</Text>
           <View style={s.vigenciaBoxWrap}>
             <View style={s.vigCellColumn}><Text style={s.vigCellLabel}>Día</Text><View style={s.vigCellBorder}><Text>{inD.d}</Text></View></View>
@@ -583,16 +597,11 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         </View>
 
         <View style={{ ...s.row, marginTop: 5 }}>
-          <Text style={s.numLabel}>9.</Text>
-          <Text style={s.marginLabel}>Importe Bruto:</Text>
-          <Text style={s.valueText}>{data.importeBruto}</Text>
-        </View>
-
-        <View style={{ ...s.row, marginTop: 5 }}>
           <Text style={s.numLabel}>10.</Text>
           <Text style={s.marginLabel}>Tipo de Pago:</Text>
           <Text style={s.valueText}>{data.tipoPago}</Text>
         </View>
+        */}
 
         <View wrap={false}>
           <Text style={s.sectionTitle}>1.2    OBJETO DE LA CONTRATACIÓN:</Text>
@@ -905,33 +914,39 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
             <View style={s.firmasDictWrapper} wrap={false}>
               <View style={s.firmaDictBox}>
                 <Text style={s.firmaLabel}>Revisó</Text>
-                <Text style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</Text>
-                <View style={s.firmaLine}></View>
-                <Text style={s.firmaDesc}>
-                  {data.firmaDictRevisoNombre && data.firmaDictRevisoCargo
-                    ? data.firmaDictRevisoCargo
-                    : "Nombre y cargo de la Persona responsable de la revisión de la Justificación"}
-                </Text>
+                <View style={{ width: "100%", alignItems: "center" }}>
+                  <View style={s.firmaLine}></View>
+                  <Text style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</Text>
+                  <Text style={s.firmaDesc}>
+                    {data.firmaDictRevisoNombre && data.firmaDictRevisoCargo
+                      ? data.firmaDictRevisoCargo
+                      : "Nombre y cargo de la Persona responsable de la revisión de la Justificación"}
+                  </Text>
+                </View>
               </View>
               <View style={s.firmaDictBox}>
                 <Text style={s.firmaLabel}>Verificó</Text>
-                <Text style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</Text>
-                <View style={s.firmaLine}></View>
-                <Text style={s.firmaDesc}>
-                  {data.firmaDictVerificoNombre && data.firmaDictVerificoCargo
-                    ? data.firmaDictVerificoCargo
-                    : "Nombre y cargo de la Persona Titular de la Dirección de Análisis Normativo y Funcional"}
-                </Text>
+                <View style={{ width: "100%", alignItems: "center" }}>
+                  <View style={s.firmaLine}></View>
+                  <Text style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</Text>
+                  <Text style={s.firmaDesc}>
+                    {data.firmaDictVerificoNombre && data.firmaDictVerificoCargo
+                      ? data.firmaDictVerificoCargo
+                      : "Nombre y cargo de la Persona Titular de la Dirección de Análisis Normativo y Funcional"}
+                  </Text>
+                </View>
               </View>
-              <View style={s.firmaDictBox}>
+              <View style={s.firmaDictBoxLast}>
                 <Text style={s.firmaLabel}>Emitió</Text>
-                <Text style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</Text>
-                <View style={s.firmaLine}></View>
-                <Text style={s.firmaDesc}>
-                  {data.firmaDictEmitioNombre && data.firmaDictEmitioCargo
-                    ? data.firmaDictEmitioCargo
-                    : "Nombre y cargo de la Persona Titular de la Dirección General de Desarrollo Organizacional"}
-                </Text>
+                <View style={{ width: "100%", alignItems: "center" }}>
+                  <View style={s.firmaLine}></View>
+                  <Text style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</Text>
+                  <Text style={s.firmaDesc}>
+                    {data.firmaDictEmitioNombre && data.firmaDictEmitioCargo
+                      ? data.firmaDictEmitioCargo
+                      : "Nombre y cargo de la Persona Titular de la Dirección General de Desarrollo Organizacional"}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
