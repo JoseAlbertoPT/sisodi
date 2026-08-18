@@ -32,7 +32,10 @@ import {
   fetchMenusTree, fetchMyMenus, fetchPermisosUser, updatePermisosUser,
   type MenuNode, type PermisosUser,
 } from "@/lib/permisos-api"
-import { MenuPermisoTree } from "@/components/menu-permiso-tree"
+import {
+  MenuPermisoTree, CATALOGO_MENU_KEY, CATALOGO_ACCION_ADMINISTRACION, CATALOGO_ACCION_CONSULTA,
+  catalogoIncluyeAdministracion,
+} from "@/components/menu-permiso-tree"
 import {
 
   fetchCentralizadaTree,
@@ -519,6 +522,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const [permTree, setPermTree] = useState<MenuNode[] | null>(null)
   const [permTreeLoading, setPermTreeLoading] = useState(false)
   const [selectedPermisos, setSelectedPermisos] = useState<PermisosUser>({ menuIds: [], menuActions: {} })
+  const [catalogoModalMenuId, setCatalogoModalMenuId] = useState<string | null>(null)
   const [tree, setTree] = useState<OrganoCentralizadoNode[]>([])
   const [treeLoading, setTreeLoading] = useState(true)
   const [tipoAdmin, setTipoAdmin] = useState<"centralizada" | "paraestatal">(tipoAdminFijo)
@@ -1017,19 +1021,42 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                   <MenuPermisoTree
                     nodes={permTree}
                     menuIds={selectedPermisos.menuIds}
-                    onMenuToggle={(menuId, checked) =>
+                    onMenuToggle={(menuId, checked, key) => {
                       setSelectedPermisos((prev) => {
-                        const set = new Set(prev.menuIds)
-                        if (checked) set.add(menuId); else set.delete(menuId)
-                        return { ...prev, menuIds: Array.from(set) }
+                        const next: PermisosUser = { ...prev, menuIds: toggleMenuId(prev.menuIds, menuId, checked) }
+                        if (key === CATALOGO_MENU_KEY && !checked) {
+                          next.menuActions = clearCatalogoAccion(prev.menuActions, menuId)
+                        }
+                        return next
                       })
-                    }
+                      if (checked && key === CATALOGO_MENU_KEY) setCatalogoModalMenuId(menuId)
+                    }}
                     level={0}
+                    menuActions={selectedPermisos.menuActions}
+                    onCatalogoAccesoClick={setCatalogoModalMenuId}
+                    rolUsuario={form.rol}
                   />
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground py-4 text-center">No hay menús disponibles.</p>
               )}
+              <CatalogoAccesoModal
+                open={catalogoModalMenuId != null}
+                incluyeAdmin={
+                  catalogoModalMenuId != null
+                    ? catalogoIncluyeAdministracion(selectedPermisos.menuActions[catalogoModalMenuId], form.rol)
+                    : false
+                }
+                onChoose={(incluirAdmin) => {
+                  if (!catalogoModalMenuId) return
+                  setSelectedPermisos((prev) => ({
+                    ...prev,
+                    menuActions: setCatalogoAccion(prev.menuActions, catalogoModalMenuId, incluirAdmin),
+                  }))
+                  setCatalogoModalMenuId(null)
+                }}
+                onClose={() => setCatalogoModalMenuId(null)}
+              />
             </div>
           )}
         </div>
@@ -1514,11 +1541,96 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
   )
 }
 
+function sameMenuActions(a: Record<string, string[]>, b: Record<string, string[]>): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+  for (const key of keys) {
+    const av = [...(a[key] ?? [])].sort()
+    const bv = [...(b[key] ?? [])].sort()
+    if (av.length !== bv.length || av.some((v, i) => v !== bv[i])) return false
+  }
+  return true
+}
+
 function samePermisos(a: PermisosUser, b: PermisosUser): boolean {
   if (a.menuIds.length !== b.menuIds.length) return false
   const setA = new Set(a.menuIds)
   for (const id of b.menuIds) if (!setA.has(id)) return false
-  return true
+  return sameMenuActions(a.menuActions, b.menuActions)
+}
+
+function toggleMenuId(ids: string[], menuId: string, checked: boolean): string[] {
+  const set = new Set(ids)
+  if (checked) set.add(menuId); else set.delete(menuId)
+  return Array.from(set)
+}
+
+function setCatalogoAccion(
+  actions: Record<string, string[]>,
+  menuId: string,
+  incluirAdmin: boolean
+): Record<string, string[]> {
+  return { ...actions, [menuId]: [incluirAdmin ? CATALOGO_ACCION_ADMINISTRACION : CATALOGO_ACCION_CONSULTA] }
+}
+
+function clearCatalogoAccion(actions: Record<string, string[]>, menuId: string): Record<string, string[]> {
+  return { ...actions, [menuId]: [] }
+}
+
+function CatalogoAccesoModal({
+  open,
+  incluyeAdmin,
+  onChoose,
+  onClose,
+}: {
+  open: boolean
+  incluyeAdmin: boolean
+  onChoose: (incluirAdmin: boolean) => void
+  onClose: () => void
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <AlertDialogContent size="sm" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <AlertDialogHeader>
+          <ShieldCheck className="size-7 text-content-high" strokeWidth={1.75} />
+          <AlertDialogTitle className="text-[18px]">Acceso a Catálogo</AlertDialogTitle>
+        </AlertDialogHeader>
+        <div className="px-6 pt-2 flex flex-col gap-2">
+          <AlertDialogDescription>
+            ¿Qué podrá ver este usuario en el módulo de Catálogo?
+          </AlertDialogDescription>
+          <div className="flex flex-col gap-2 mt-2">
+            <button
+              type="button"
+              onClick={() => onChoose(false)}
+              className={`text-left rounded-lg border px-4 py-3 text-sm transition-colors ${
+                !incluyeAdmin
+                  ? "border-primary bg-primary/5 text-card-foreground"
+                  : "border-border hover:bg-muted/40 text-muted-foreground"
+              }`}
+            >
+              <span className="font-medium block">Solo Consulta</span>
+              <span className="text-xs">Puede buscar y reutilizar justificaciones dictaminadas.</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChoose(true)}
+              className={`text-left rounded-lg border px-4 py-3 text-sm transition-colors ${
+                incluyeAdmin
+                  ? "border-primary bg-primary/5 text-card-foreground"
+                  : "border-border hover:bg-muted/40 text-muted-foreground"
+              }`}
+            >
+              <span className="font-medium block">Consulta y Administración</span>
+              <span className="text-xs">Además puede activar/desactivar registros e importar archivos.</span>
+            </button>
+          </div>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>Cerrar</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
 }
 
 type PermisoModalProps = {
@@ -1534,6 +1646,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   const [permisosSaveLoading, setPermisosSaveLoading] = useState(false)
   const [permisosSaveError, setPermisosSaveError] = useState<string | null>(null)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const [catalogoModalMenuId, setCatalogoModalMenuId] = useState<string | null>(null)
   const { habilitarPermiso, revocarPermiso, getPermisosUsuario } = useAutorizaciones()
   const { honorarios: calHon, asimilados: calAs, nombramiento: calNom } = useCalendario()
   const { user: currentUser } = useAuth()
@@ -1580,15 +1693,26 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     return () => { cancelled = true }
   }, [usuario.id])
 
-  const handleMenuToggle = useCallback((menuId: string, checked: boolean) => {
+  const handleMenuToggle = useCallback((menuId: string, checked: boolean, key: string | null) => {
     setPermisos((prev) => {
       if (!prev) return prev
-      const set = new Set(prev.menuIds)
-      if (checked) set.add(menuId)
-      else set.delete(menuId)
-      return { ...prev, menuIds: Array.from(set) }
+      const next: PermisosUser = { ...prev, menuIds: toggleMenuId(prev.menuIds, menuId, checked) }
+      if (key === CATALOGO_MENU_KEY && !checked) {
+        next.menuActions = clearCatalogoAccion(prev.menuActions, menuId)
+      }
+      return next
     })
+    if (checked && key === CATALOGO_MENU_KEY) setCatalogoModalMenuId(menuId)
   }, [])
+
+  const handleCatalogoAccesoChoose = useCallback((incluirAdmin: boolean) => {
+    if (!catalogoModalMenuId) return
+    setPermisos((prev) => {
+      if (!prev) return prev
+      return { ...prev, menuActions: setCatalogoAccion(prev.menuActions, catalogoModalMenuId, incluirAdmin) }
+    })
+    setCatalogoModalMenuId(null)
+  }, [catalogoModalMenuId])
 
   const handleSavePermisos = useCallback(async () => {
     if (permisos == null) return
@@ -1662,6 +1786,16 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    <CatalogoAccesoModal
+      open={catalogoModalMenuId != null}
+      incluyeAdmin={
+        catalogoModalMenuId != null
+          ? catalogoIncluyeAdministracion(permisos?.menuActions[catalogoModalMenuId], usuario.rol)
+          : false
+      }
+      onChoose={handleCatalogoAccesoChoose}
+      onClose={() => setCatalogoModalMenuId(null)}
+    />
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) requestClose() }}
@@ -1713,6 +1847,9 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
                     menuIds={permisos.menuIds}
                     onMenuToggle={handleMenuToggle}
                     level={0}
+                    menuActions={permisos.menuActions}
+                    onCatalogoAccesoClick={setCatalogoModalMenuId}
+                    rolUsuario={usuario.rol}
                   />
                 </div>
               )}

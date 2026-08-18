@@ -71,6 +71,7 @@ export async function buildCartaDescriptivaBuffer(
   solicitudId: string | null,
   claveOverride: string | null,
   catalogoId?: string | null,
+  fechaOverride?: Date | null,
 ) {
   const sol = solicitudId
     ? await prisma.solicitud.findUnique({
@@ -104,7 +105,7 @@ export async function buildCartaDescriptivaBuffer(
     const esHistoricoImportado = sol.historial_solicitud.length > 0;
     const folio = sol.folio_dictamen ?? sol.folio_recepcion ?? String(sol.id);
     source = {
-      fecha: formatFechaLarga(sol.fecha_creacion ?? sol.fecha_envio),
+      fecha: formatFechaLarga(fechaOverride ?? sol.fecha_creacion ?? sol.fecha_envio),
       objeto: sol.objeto,
       actividades: sol.actividades ?? [],
       responsabilidades: sol.responsabilidades ?? [],
@@ -122,7 +123,7 @@ export async function buildCartaDescriptivaBuffer(
     if (!cj) return null;
     const folio = cj.folio_dictamen ?? cj.folio_recepcion ?? String(cj.id);
     source = {
-      fecha: formatFechaLarga(cj.fecha_emision ?? cj.creado_en),
+      fecha: formatFechaLarga(fechaOverride ?? cj.creado_en),
       objeto: cj.objeto,
       actividades: cj.actividades ?? [],
       responsabilidades: cj.responsabilidades ?? [],

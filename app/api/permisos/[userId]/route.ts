@@ -27,9 +27,13 @@ export async function GET(
 
   if (userMenus.length > 0) {
     // User has explicit permissions — return them
+    const menuActions: Record<string, string[]> = {}
+    for (const um of userMenus) {
+      if (um.acciones.length > 0) menuActions[String(um.menu_id)] = um.acciones
+    }
     return NextResponse.json({
       menuIds: userMenus.map((um) => String(um.menu_id)),
-      menuActions: {},
+      menuActions,
     } satisfies PermisosUser)
   }
 
@@ -66,17 +70,28 @@ export async function PUT(
   const menuIds = body.menuIds
     .map((id) => parseInt(id, 10))
     .filter((id) => !isNaN(id))
+  const menuActions = body.menuActions ?? {}
 
   // Replace the user's complete permission list
   await prisma.usuario_menu.deleteMany({ where: { usuario_id: userId } })
   if (menuIds.length > 0) {
     await prisma.usuario_menu.createMany({
-      data: menuIds.map((menuId) => ({ usuario_id: userId, menu_id: menuId })),
+      data: menuIds.map((menuId) => ({
+        usuario_id: userId,
+        menu_id: menuId,
+        acciones: menuActions[String(menuId)] ?? [],
+      })),
     })
+  }
+
+  const savedMenuActions: Record<string, string[]> = {}
+  for (const menuId of menuIds) {
+    const acciones = menuActions[String(menuId)] ?? []
+    if (acciones.length > 0) savedMenuActions[String(menuId)] = acciones
   }
 
   return NextResponse.json({
     menuIds: menuIds.map(String),
-    menuActions: {},
+    menuActions: savedMenuActions,
   } satisfies PermisosUser)
 }

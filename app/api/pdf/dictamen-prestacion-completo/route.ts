@@ -58,7 +58,7 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
   let dictamenResult, cartaResult;
   try {
     dictamenResult = await buildDictamenPrestacionBuffer(solicitudId, overrides, catalogoId);
-    cartaResult = await buildCartaDescriptivaBuffer(solicitudId, clave || null, catalogoId);
+    cartaResult = await buildCartaDescriptivaBuffer(solicitudId, clave || null, catalogoId, new Date());
   } catch (e) {
     console.error("[pdf/dictamen-prestacion-completo] Error generando buffers:", e);
     return NextResponse.json(

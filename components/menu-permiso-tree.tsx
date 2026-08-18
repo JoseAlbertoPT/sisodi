@@ -7,6 +7,22 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, CheckCircle2, XCircle } from "lucide-react"
 import type { MenuNode } from "@/lib/permisos-api"
 
+export const CATALOGO_MENU_KEY = "catalogo-justificaciones"
+export const CATALOGO_ACCION_ADMINISTRACION = "administracion"
+// Override explícito para NEGAR Administración a un usuario cuyo rol la tendría por defecto.
+export const CATALOGO_ACCION_CONSULTA = "consulta"
+// Debe reflejar lib/api-guard.ts:ROLES_ADMIN_CATALOGO — duplicado porque ese módulo importa
+// Prisma y no puede usarse desde un componente cliente.
+const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Validador", "Revisor"]
+
+/** Un override explícito (guardado desde Permisos) siempre gana sobre el acceso por rol. */
+export function catalogoIncluyeAdministracion(acciones: string[] | undefined, rolUsuario: string | undefined): boolean {
+  const list = acciones ?? []
+  if (list.includes(CATALOGO_ACCION_ADMINISTRACION)) return true
+  if (list.includes(CATALOGO_ACCION_CONSULTA)) return false
+  return rolUsuario ? ROLES_ADMIN_CATALOGO.includes(rolUsuario) : false
+}
+
 export function countActiveChildren(nodes: MenuNode[], menuIdSet: Set<string>): { active: number; total: number } {
   let active = 0
   let total = 0
@@ -32,9 +48,9 @@ export function countActiveChildren(nodes: MenuNode[], menuIdSet: Set<string>): 
 export function toggleAllInSection(
   node: MenuNode,
   checked: boolean,
-  onMenuToggle: (menuId: string, checked: boolean) => void,
+  onMenuToggle: (menuId: string, checked: boolean, key: string | null) => void,
 ) {
-  onMenuToggle(node.id, checked)
+  onMenuToggle(node.id, checked, node.key)
   if (node.children) {
     for (const child of node.children) {
       toggleAllInSection(child, checked, onMenuToggle)
@@ -47,11 +63,17 @@ export function MenuPermisoTree({
   menuIds,
   onMenuToggle,
   level,
+  menuActions,
+  onCatalogoAccesoClick,
+  rolUsuario,
 }: {
   nodes: MenuNode[]
   menuIds: string[]
-  onMenuToggle: (menuId: string, checked: boolean) => void
+  onMenuToggle: (menuId: string, checked: boolean, key: string | null) => void
   level: number
+  menuActions?: Record<string, string[]>
+  onCatalogoAccesoClick?: (menuId: string) => void
+  rolUsuario?: string
 }) {
   const menuIdSet = new Set(menuIds)
   const isTopLevel = level === 0
@@ -88,7 +110,7 @@ export function MenuPermisoTree({
                           toggleAllInSection(node, false, onMenuToggle)
                         } else {
                           // Encender: solo habilita la sección, los hijos se activan manualmente
-                          onMenuToggle(node.id, true)
+                          onMenuToggle(node.id, true, node.key)
                         }
                       }}
                       onClick={(e) => e.stopPropagation()}
@@ -143,6 +165,9 @@ export function MenuPermisoTree({
                             menuIds={menuIds}
                             onMenuToggle={onMenuToggle}
                             depth={0}
+                            menuActions={menuActions}
+                            onCatalogoAccesoClick={onCatalogoAccesoClick}
+                            rolUsuario={rolUsuario}
                           />
                         ))}
                       </div>
@@ -161,6 +186,9 @@ export function MenuPermisoTree({
               menuIds={menuIds}
               onMenuToggle={onMenuToggle}
               depth={level}
+              menuActions={menuActions}
+              onCatalogoAccesoClick={onCatalogoAccesoClick}
+              rolUsuario={rolUsuario}
             />
           </div>
         )
@@ -174,15 +202,23 @@ function MenuPermisoRow({
   menuIds,
   onMenuToggle,
   depth,
+  menuActions,
+  onCatalogoAccesoClick,
+  rolUsuario,
 }: {
   node: MenuNode
   menuIds: string[]
-  onMenuToggle: (menuId: string, checked: boolean) => void
+  onMenuToggle: (menuId: string, checked: boolean, key: string | null) => void
   depth: number
+  menuActions?: Record<string, string[]>
+  onCatalogoAccesoClick?: (menuId: string) => void
+  rolUsuario?: string
 }) {
   const menuIdSet = new Set(menuIds)
   const isChecked = menuIdSet.has(node.id)
   const hasChildren = node.children && node.children.length > 0
+  const esCatalogo = node.key === CATALOGO_MENU_KEY
+  const incluyeAdministracion = catalogoIncluyeAdministracion(menuActions?.[node.id], rolUsuario)
 
   return (
     <div
@@ -199,7 +235,7 @@ function MenuPermisoRow({
         <Switch
           id={`menu-${node.id}`}
           checked={isChecked}
-          onCheckedChange={(c) => onMenuToggle(node.id, c)}
+          onCheckedChange={(c) => onMenuToggle(node.id, c, node.key)}
           className="shrink-0"
         />
         <label
@@ -208,6 +244,15 @@ function MenuPermisoRow({
         >
           {node.label}
         </label>
+        {esCatalogo && isChecked && onCatalogoAccesoClick && (
+          <button
+            type="button"
+            onClick={() => onCatalogoAccesoClick(node.id)}
+            className="text-[11px] text-muted-foreground hover:text-primary underline-offset-2 hover:underline shrink-0"
+          >
+            {incluyeAdministracion ? "Consulta y Administración" : "Solo Consulta"} · Cambiar
+          </button>
+        )}
       </div>
 
       {hasChildren && (
@@ -219,6 +264,9 @@ function MenuPermisoRow({
               menuIds={menuIds}
               onMenuToggle={onMenuToggle}
               depth={depth + 1}
+              menuActions={menuActions}
+              onCatalogoAccesoClick={onCatalogoAccesoClick}
+              rolUsuario={rolUsuario}
             />
           ))}
         </div>

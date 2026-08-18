@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { requireRol } from "@/lib/api-guard"
+import { requireCatalogoAdmin } from "@/lib/api-guard"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
 export async function PATCH(
@@ -12,7 +12,7 @@ export async function PATCH(
     const body  = await req.json()
     const { activo, userId } = body
 
-    const guardError = await requireRol(userId ?? null, ["Administrador"])
+    const guardError = await requireCatalogoAdmin(userId ?? null)
     if (guardError) return guardError
 
     if (typeof activo !== "boolean") {

@@ -30,7 +30,6 @@ import {
   AlertCircle,
   MoreHorizontal,
   Ban,
-  FolderKanban,
   Power,
   PowerOff,
   Inbox,
@@ -197,6 +196,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [solVigFin,    setSolVigFin]        = useState<Date | undefined>(undefined)
   const [solPersonas, setSolPersonas]       = useState("")
   const [solPrestadores, setSolPrestadores] = useState("")
+  const [solPrograma, setSolPrograma]       = useState("")
   const [solLoading, setSolLoading]   = useState(false)
   const [solError, setSolError]       = useState<string | null>(null)
   const [canRec, setCanRec]           = useState<CatalogoRecord | null>(null)
@@ -205,12 +205,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [canVigFin,    setCanVigFin]    = useState<Date | undefined>(undefined)
   const [canLoading, setCanLoading]   = useState(false)
   const [canError, setCanError]       = useState<string | null>(null)
-  const [proyRec, setProyRec]         = useState<CatalogoRecord | null>(null)
-  const [showProy, setShowProy]       = useState(false)
-  const [nuevoPrograma, setNuevoPrograma] = useState("")
-  const [progLoading, setProgLoading] = useState(false)
-  const [progError, setProgError]     = useState<string | null>(null)
-  const progSigef = useProgramasSigef(proyRec ? entidadNombre(proyRec) : "")
+  const progSigef = useProgramasSigef(solRec ? entidadNombre(solRec) : "")
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -284,6 +279,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     setSolVigFin(undefined)
     setSolPersonas("")
     setSolPrestadores("")
+    setSolPrograma(rec.programa_proyecto || "")
     setSolError(null)
     setShowSol(true)
   }
@@ -305,6 +301,10 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       const vf = dateToIso(solVigFin!)
       const npNum = isParaestatal(solRec) ? (solPersonas ? Number(solPersonas) : null) : null
       const nprNum = !isParaestatal(solRec) ? (solPrestadores ? Number(solPrestadores) : null) : null
+      const programaCambio =
+        solPrograma.trim() !== "" && solPrograma.trim() !== (solRec.programa_proyecto ?? "").trim()
+          ? solPrograma.trim()
+          : null
       await fetch("/api/catalogo-justificaciones/solicitar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -314,6 +314,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           nueva_vigencia: `${vi} / ${vf}`,
           nuevo_numero_personas: npNum,
           nuevos_numero_prestadores: nprNum,
+          programa_anterior: programaCambio ? solRec.programa_proyecto : null,
+          nuevo_programa_proyecto: programaCambio,
         }),
       })
       const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
@@ -324,6 +326,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       if (solRec.solicitud.id) params.set("id", String(solRec.solicitud.id))
       else params.set("catalogoId", String(solRec.id))
       if (np) params.set("numeroPersonas", np)
+      if (programaCambio) params.set("programaProyecto", programaCambio)
       const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo?${params}`)
       if (!pdfRes.ok) throw new Error("Error al generar el PDF")
       const blob = await pdfRes.blob()
@@ -386,50 +389,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       setCanError(e instanceof Error ? e.message : "Error al generar el PDF")
     } finally {
       setCanLoading(false)
-    }
-  }
-  const openProy = (rec: CatalogoRecord) => {
-    setProyRec(rec)
-    setNuevoPrograma("")
-    setProgError(null)
-    setShowProy(true)
-  }
-  const handleGuardarPrograma = async () => {
-    if (!proyRec || !user) return
-    if (!nuevoPrograma.trim()) { setProgError("Selecciona el nuevo Programa o Proyecto"); return }
-    setProgLoading(true)
-    setProgError(null)
-    try {
-      await fetch("/api/catalogo-justificaciones/solicitar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          catalogo_justificacion_id: proyRec.id,
-          usuario_id: user.id,
-          nueva_vigencia: proyRec.vigencia || "—",
-          tipo: "programa",
-          programa_anterior: proyRec.programa_proyecto,
-          nuevo_programa_proyecto: nuevoPrograma,
-        }),
-      })
-      const params = new URLSearchParams({ programaProyecto: nuevoPrograma })
-      if (proyRec.solicitud.id) params.set("id", String(proyRec.solicitud.id))
-      else params.set("catalogoId", String(proyRec.id))
-      const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo?${params}`)
-      if (!pdfRes.ok) throw new Error("Error al generar el PDF")
-      const blob = await pdfRes.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `Programa_${proyRec.solicitud.folio_dictamen ?? proyRec.solicitud.folio_recepcion ?? proyRec.id}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-      setShowProy(false)
-      void fetchData()
-    } catch (e) {
-      setProgError(e instanceof Error ? e.message : "Error al generar el PDF")
-    } finally {
-      setProgLoading(false)
     }
   }
   const isParaestatal = (rec: CatalogoRecord) => {
@@ -532,9 +491,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                           <DropdownMenuItem onClick={() => openCan(rec)}>
                             <Ban className="h-4 w-4" /> Cancelación
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openProy(rec)}>
-                            <FolderKanban className="h-4 w-4" /> Programa
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                       </div>
@@ -602,9 +558,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openCan(rec)}>
                             <Ban className="h-4 w-4" /> Cancelación
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openProy(rec)}>
-                            <FolderKanban className="h-4 w-4" /> Programa
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -679,7 +632,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
             <DialogTitle className="ds-title-md text-content-high">
-              Generar dictamen
+              Generar Dictamen Técnico Funcional
             </DialogTitle>
           </div>
           {solRec && (
@@ -687,8 +640,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
               <div className="flex flex-col gap-4 px-6 py-5">
                 <p className="text-xs text-[var(--sem-content-low)]">
                   {isParaestatal(solRec)
-                    ? "Ajusta la vigencia y el número de personas. Se descargará el PDF del dictamen sin firmas."
-                    : "Ajusta la vigencia y el número de prestadores de servicio. Se descargará el PDF del dictamen sin firmas."}
+                    ? "Ajusta la vigencia, el número de personas y, si aplica, el Programa o Proyecto. Se descargará el PDF del dictamen sin firmas."
+                    : "Ajusta la vigencia, el número de prestadores de servicio y, si aplica, el Programa o Proyecto. Se descargará el PDF del dictamen sin firmas."}
                 </p>
                 <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
                   <p className="font-semibold text-[#1F2937]">{entidadNombre(solRec)}</p>
@@ -723,6 +676,38 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                       />
                     </div>
                   </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-content-high">Programa / Proyecto</span>
+                  {progSigef.configured && progSigef.proyectos.length > 0 ? (
+                    <SelectConBusqueda
+                      opciones={progSigef.proyectos}
+                      value={solPrograma}
+                      onValueChange={setSolPrograma}
+                      placeholder={progSigef.cargando ? "Cargando programas de SIGeF…" : "Seleccione programa"}
+                      disabled={progSigef.cargando || solLoading}
+                    />
+                  ) : progSigef.cargando ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Cargando programas de SIGeF…</span>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-content-high px-3 py-2 rounded-xl border border-border bg-bg-base">
+                        {toTitleCaseES(fmt(solRec.programa_proyecto))}
+                      </p>
+                      <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-3 py-2">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+                        <span className="text-xs text-destructive">
+                          {progSigef.error
+                            ? `No se pudo cargar el catálogo de SIGeF. (${progSigef.error}) Se mantendrá el Programa/Proyecto actual.`
+                            : "No hay programas o proyectos de SIGeF disponibles para esta Secretaría. Se mantendrá el Programa/Proyecto actual."}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -874,86 +859,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 >
                   {canLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {canLoading ? "Generando…" : "Generar cancelación"}
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-      <Dialog open={showProy} onOpenChange={(v) => { setShowProy(v); if (!v) setProgError(null) }}>
-        <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
-          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
-            <DialogTitle className="ds-title-md text-content-high">
-              Programa
-            </DialogTitle>
-          </div>
-          {proyRec && (
-            <>
-              <div className="flex flex-col gap-4 px-6 py-5">
-                <div className="rounded-lg px-4 py-3 text-xs space-y-1 bg-[var(--sem-support-disabled-low)] border border-[var(--sem-border-md)]">
-                  <p className="font-semibold text-[#1F2937]">{entidadNombre(proyRec)}</p>
-                  <p className="text-[var(--sem-content-low)]">
-                    Folio de dictamen:{" "}
-                    <span className="font-medium text-[#1F2937]">{fmt(folioSinSiglas(proyRec.solicitud.folio_dictamen))}</span>
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Programa / Proyecto actual</span>
-                  <p className="text-sm font-medium text-content-high">{toTitleCaseES(fmt(proyRec.programa_proyecto))}</p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">Régimen de contratación</span>
-                  <p className="text-sm text-content-high">{fmtCapitalize(proyRec.regimen_contratacion)}</p>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium text-content-high">Nuevo Programa o Proyecto</span>
-                  {progSigef.configured && progSigef.proyectos.length > 0 ? (
-                    <SelectConBusqueda
-                      opciones={progSigef.proyectos}
-                      value={nuevoPrograma}
-                      onValueChange={setNuevoPrograma}
-                      placeholder={progSigef.cargando ? "Cargando programas de SIGeF…" : "Seleccione programa"}
-                      disabled={progSigef.cargando}
-                    />
-                  ) : progSigef.cargando ? (
-                    <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Cargando programas de SIGeF…</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-3 py-2">
-                      <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
-                      <span className="text-xs text-destructive">
-                        {progSigef.error
-                          ? `No se pudo cargar el catálogo de SIGeF. (${progSigef.error})`
-                          : "No existen programas o proyectos disponibles para la Secretaría seleccionada."}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {progError && (
-                  <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-3 py-2">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
-                    <span className="text-xs text-destructive">{progError}</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
-                <Button
-                  variant="default"
-                  className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
-                  onClick={() => setShowProy(false)}
-                  disabled={progLoading}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="default"
-                  className="rounded-full h-10 px-6 font-normal"
-                  onClick={handleGuardarPrograma}
-                  disabled={progLoading || !nuevoPrograma.trim() || !progSigef.configured || progSigef.proyectos.length === 0}
-                >
-                  {progLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
                 </Button>
               </div>
             </>
@@ -1187,7 +1092,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           toTitleCaseES(entidadNombre(rec)),
           fmt(folioSinSiglas(rec.solicitud.folio_dictamen)),
           sol.nueva_vigencia,
-          sol.tipo === "cancelacion" || sol.tipo === "programa" ? "—" : prestadoresDe(sol),
+          sol.tipo === "cancelacion" ? "—" : (prestadoresDe(sol) || "—"),
           fmtFecha(sol.creado_en),
           toTitleCaseES(fmt(rec.programa_proyecto)),
           fmtCapitalize(rec.regimen_contratacion),
@@ -1474,10 +1379,10 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                             </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">{sol.nueva_vigencia}</td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
-                              {esCancelacion(sol) || esPrograma(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—")}
+                              {esCancelacion(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—")}
                             </td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left" title={esPrograma(sol) ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto ?? "—"}` : ""}>
-                              {esPrograma(sol) ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto ?? "—"}` : "—"}
+                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left" title={sol.nuevo_programa_proyecto ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto}` : ""}>
+                              {sol.nuevo_programa_proyecto ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto}` : "—"}
                             </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
                               {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
@@ -1680,23 +1585,35 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
 }
 export function CatalogoJustificacionesPage() {
   const { user } = useAuth()
-  const isAdmin = user?.rol === "Administrador"
+  // Valor optimista del login mientras se resuelve el chequeo en vivo (evita parpadeo para el
+  // caso común). El chequeo en vivo es la fuente de verdad real: así un cambio de permiso hecho
+  // por un Administrador se refleja sin que el usuario afectado tenga que volver a iniciar sesión.
+  const [canAdministrar, setCanAdministrar] = useState(user?.catalogoAdministracion === true)
   const [consultaCount, setConsultaCount] = useState<number | null>(null)
   const [adminCount, setAdminCount] = useState<number | null>(null)
+
   useEffect(() => {
-    if (!isAdmin || !user?.id) return
+    if (!user?.id) { setCanAdministrar(false); return }
+    fetch(`/api/catalogo-justificaciones/puede-administrar?userId=${user.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setCanAdministrar(d.puede === true) })
+      .catch(() => {})
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!canAdministrar || !user?.id) return
     const params = new URLSearchParams({ page: "1", limit: "1", userId: user.id })
     fetch(`/api/catalogo-justificaciones/admin?${params}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d) setAdminCount(d.total) })
       .catch(() => {})
-  }, [isAdmin, user?.id])
+  }, [canAdministrar, user?.id])
   return (
     <PageLayout
-      title="Catálogo "
+      title="Catálogo para Dictaminaciones Técnico Funcionales para la Prestación de Servicios Profesionales de la Administracion Pública Centralizada del Poder Ejecutivo Estatal "
       description="Consulta y reutilización de justificaciones dictaminadas previamente."
     >
-      {isAdmin ? (
+      {canAdministrar ? (
         <Tabs defaultValue="consulta" className="w-full gap-3">
           <TabsList>
             <TabsTrigger value="consulta" className="gap-1.5">

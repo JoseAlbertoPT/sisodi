@@ -16,6 +16,7 @@ interface User {
   claveReportePlazas: string | null
   mustChangePassword: boolean
   tipoAdministracion: "centralizada" | "paraestatal"
+  catalogoAdministracion: boolean
 }
 
 interface AuthContextType {

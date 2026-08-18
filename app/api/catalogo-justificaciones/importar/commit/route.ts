@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { requireRol } from "@/lib/api-guard"
+import { requireCatalogoAdmin } from "@/lib/api-guard"
 import {
   leerWorkbookDesdeBuffer,
   cargarContexto,
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
     const userId = formData.get("userId") as string | null
-    const guardError = await requireRol(userId, ["Administrador"])
+    const guardError = await requireCatalogoAdmin(userId)
     if (guardError) return guardError
 
     const file = formData.get("file") as File | null

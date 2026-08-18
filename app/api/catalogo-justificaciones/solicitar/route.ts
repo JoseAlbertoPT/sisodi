@@ -28,15 +28,11 @@ export async function POST(req: NextRequest) {
     }
 
     // La cancelación no captura número de prestadores/personas, solo vigencia.
-    // "programa" solo captura el cambio de Programa/Proyecto; la vigencia se
-    // manda igual a la actual (no cambia), solo para satisfacer el campo requerido.
-    const tipoNormalizado = tipo === "cancelacion" ? "cancelacion" : tipo === "programa" ? "programa" : "reutilizacion"
+    // La reutilización puede incluir, opcionalmente, un cambio de
+    // Programa/Proyecto en la misma solicitud (antes era una acción "Programa"
+    // separada; ahora ambas se capturan juntas).
+    const tipoNormalizado = tipo === "cancelacion" ? "cancelacion" : "reutilizacion"
     const esCancelacion = tipoNormalizado === "cancelacion"
-    const esPrograma = tipoNormalizado === "programa"
-
-    if (esPrograma && !nuevo_programa_proyecto?.trim()) {
-      return NextResponse.json({ error: "Falta el nuevo Programa o Proyecto" }, { status: 400 })
-    }
 
     const catalogo = await prisma.catalogo_justificacion.findUnique({
       where: { id: Number(catalogo_justificacion_id) },
@@ -45,7 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Registro de catálogo no encontrado" }, { status: 404 })
     }
 
-    if (!esCancelacion && !esPrograma && nuevos_numero_prestadores) {
+    if (!esCancelacion && nuevos_numero_prestadores) {
       const maxPrestadores = maxPrestadoresPermitido(catalogo.secretaria_txt_snapshot ?? catalogo.secretaria)
       if (Number(nuevos_numero_prestadores) > maxPrestadores) {
         return NextResponse.json(
@@ -60,11 +56,11 @@ export async function POST(req: NextRequest) {
         catalogo_justificacion_id: Number(catalogo_justificacion_id),
         usuario_id: String(usuario_id),
         nueva_vigencia: String(nueva_vigencia).trim(),
-        nuevo_numero_personas: esCancelacion || esPrograma || !nuevo_numero_personas ? null : Number(nuevo_numero_personas),
-        nuevos_numero_prestadores: esCancelacion || esPrograma || !nuevos_numero_prestadores ? null : Number(nuevos_numero_prestadores),
+        nuevo_numero_personas: esCancelacion || !nuevo_numero_personas ? null : Number(nuevo_numero_personas),
+        nuevos_numero_prestadores: esCancelacion || !nuevos_numero_prestadores ? null : Number(nuevos_numero_prestadores),
         tipo: tipoNormalizado,
-        programa_anterior: esPrograma ? String(programa_anterior ?? "").trim() || null : null,
-        nuevo_programa_proyecto: esPrograma ? String(nuevo_programa_proyecto).trim() : null,
+        programa_anterior: esCancelacion || !nuevo_programa_proyecto ? null : (String(programa_anterior ?? "").trim() || null),
+        nuevo_programa_proyecto: esCancelacion || !nuevo_programa_proyecto ? null : String(nuevo_programa_proyecto).trim(),
       },
     })
 

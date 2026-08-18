@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { requireRol } from "@/lib/api-guard"
+import { requireCatalogoAdmin } from "@/lib/api-guard"
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const userId = searchParams.get("userId")
-    const guardError = await requireRol(userId, ["Administrador"])
+    const guardError = await requireCatalogoAdmin(userId)
     if (guardError) return guardError
 
     // El catálogo se acota al ámbito del usuario: centralizado (registros sin
