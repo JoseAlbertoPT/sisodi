@@ -16,6 +16,9 @@ services:
       - EFIRMA_PORTAL_URL=${EFIRMA_PORTAL_URL}
       - EFIRMA_PROJECT_TOKEN=${EFIRMA_PROJECT_TOKEN}
       - EFIRMA_BYPASS=${EFIRMA_BYPASS:-false}
+      - SIGEF_WS_URL=${SIGEF_WS_URL}
+      - SIGEF_APP_ID=${SIGEF_APP_ID}
+      - SIGEF_TIMEOUT_MS=${SIGEF_TIMEOUT_MS:-10000}
     volumes:
       - uploads_data:/app/public/uploads
     depends_on:
