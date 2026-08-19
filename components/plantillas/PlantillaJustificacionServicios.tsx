@@ -82,6 +82,12 @@ export interface JustificacionData {
   ocultarFirmas?: boolean;
   clave?: string;
   notaDictamen?: string;
+  // La página del Dictamen/Opinión Técnica Funcional solo tiene sentido una vez
+  // que ese dictamen realmente existe (solicitud.dictamen emitido). Antes de eso
+  // (Mis Solicitudes, Validación UEFA, Revisión, Validación) la descarga de
+  // "Justificación" debe traer solo la página 1. Por defecto true para no romper
+  // llamadores existentes (firma, catálogo histórico) que sí siempre la esperan.
+  incluirPaginaDictamen?: boolean;
 }
 
 const NOTA_DICTAMEN_DEFAULT =
@@ -772,6 +778,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
       </Page>
 
+      {(data.incluirPaginaDictamen ?? true) && (
       <Page size="LETTER" style={s.pdcPage} wrap>
         <View style={s.pdcPageFrame} fixed />
 
@@ -961,6 +968,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         </View>
       </Page>
+      )}
     </Document>
   );
 }

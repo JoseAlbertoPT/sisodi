@@ -266,13 +266,7 @@ function detectarClaves(
   return resultado
 }
 function getFallback(secretaria: string): DatosSecretaria | null {
-  if (DATOS_FALLBACK[secretaria]) return DATOS_FALLBACK[secretaria]
-  const key = Object.keys(DATOS_FALLBACK).find(
-    (k) =>
-      k.toLowerCase().includes(secretaria.toLowerCase()) ||
-      secretaria.toLowerCase().includes(k.toLowerCase().split(" ")[1] ?? "___")
-  )
-  return key ? DATOS_FALLBACK[key] : null
+  return DATOS_FALLBACK[secretaria] ?? null
 }
 function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecretaria | null {
   if (!secretaria) return null
@@ -1772,13 +1766,21 @@ function FormularioPrestacion({
                 <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                   <span className="text-sm text-muted-foreground">{programaSeleccionado || "—"}</span>
                 </div>
+              ) : sigef.cargando ? (
+                <SelectConBusqueda
+                  opciones={[]}
+                  value={programaSeleccionado}
+                  onValueChange={handleProgramaChange}
+                  placeholder="Cargando programas de SIGeF…"
+                  disabled
+                />
               ) : sigef.configured ? (
                 <SelectConBusqueda
                   opciones={sigef.proyectos}
                   value={programaSeleccionado}
                   onValueChange={handleProgramaChange}
-                  placeholder={sigef.cargando ? "Cargando programas de SIGeF…" : "Seleccione programa"}
-                  disabled={!camposDependientesHabilitados || sigef.cargando}
+                  placeholder="Seleccione programa"
+                  disabled={!camposDependientesHabilitados}
                 />
               ) : programas.length > 0 ? (
                 <SelectConBusqueda
@@ -1971,7 +1973,7 @@ function FormularioPrestacion({
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2">
-              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
+              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal <span className="text-destructive">*</span></Label>
               <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} />
             </div>
           </div>
@@ -2738,7 +2740,7 @@ function FormularioNombramiento({
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2">
-              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal</Label>
+              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal <span className="text-destructive">*</span></Label>
               <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} />
             </div>
           </div>
@@ -3192,8 +3194,9 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
   )
 }
 
-function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSolicitud): string[] {
+function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSolicitud, tieneOficio: boolean): string[] {
   const faltantes: string[] = []
+  if (!tieneOficio) faltantes.push("Oficio de Suficiencia Presupuestal")
   const check = (val: string | string[] | undefined, label: string) => {
     if (Array.isArray(val)) {
       if (val.length === 0 || val.every((v) => !v.trim())) faltantes.push(label)
@@ -3775,7 +3778,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         const effectiveFormData = editSolicitud?.formData
           ? { ...editSolicitud.formData, ...formData }
           : formData
-        const faltantes = validarCamposCompletos(effectiveFormData, tipo)
+        const tieneOficio = archivosAdjuntos.length > 0 || (editSolicitud?.adjuntos?.length ?? 0) > 0
+        const faltantes = validarCamposCompletos(effectiveFormData, tipo, tieneOficio)
         if (faltantes.length > 0) {
           setErrorBorrador(`Campos obligatorios incompletos: ${faltantes.join(", ")}`)
           setGuardandoBorrador(false)
@@ -3832,7 +3836,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       }
       setBorradorGuardado(true)
     } catch { setErrorBorrador("Error de conexión.") } finally { setGuardandoBorrador(false) }
-  }, [user, tipo, regimenPeriodo, esRenovacion, folioSeleccionado, formData, editSolicitud])
+  }, [user, tipo, regimenPeriodo, esRenovacion, folioSeleccionado, formData, editSolicitud, archivosAdjuntos])
 
   const handleEnviarAValidacion = useCallback(
     async (periodoStillValid: boolean, hasPermiso: boolean, isEditingBorrador: boolean) => {
@@ -4389,7 +4393,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             const effectiveFormDataForValidation = editSolicitud?.formData
               ? { ...editSolicitud.formData, ...formData }
               : formData
-            const camposFaltantes = esRenovacion !== "si" ? validarCamposCompletos(effectiveFormDataForValidation, tipo) : []
+            const tieneOficio = archivosAdjuntos.length > 0 || (editSolicitud?.adjuntos?.length ?? 0) > 0
+            const camposFaltantes = esRenovacion !== "si" ? validarCamposCompletos(effectiveFormDataForValidation, tipo, tieneOficio) : []
             const camposOk = camposFaltantes.length === 0
             const canSend = (periodoStillValid || hasPermiso || isEditingBorrador) && !enviando && !guardandoBorrador && vigenciaOk && camposOk
 

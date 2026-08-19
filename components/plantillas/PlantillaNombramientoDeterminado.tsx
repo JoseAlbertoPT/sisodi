@@ -99,6 +99,10 @@ export interface JustificacionNombramientoData {
   ocultarFirmas?: boolean;
   clave?: string;
   notaDictamen?: string;
+  // Ver PlantillaJustificacionServicios: la página de Opinión/Dictamen solo debe
+  // salir cuando ese dictamen ya existe. Default true para no romper llamadores
+  // existentes (firma, catálogo histórico) que sí siempre la esperan.
+  incluirPaginaDictamen?: boolean;
 }
 
 // Debe coincidir con NOTA_DICTAMEN_DEFAULT en lib/configuracion-texto.ts;
@@ -870,6 +874,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
       </Page>
 
+      {(data.incluirPaginaDictamen ?? true) && (
       <Page size="LETTER" style={s.page}>
         <View style={s.pageFrame} fixed />
         <View style={s.watermarkContainer} fixed>
@@ -983,6 +988,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         ) : null}
 
       </Page>
+      )}
     </Document>
   );
 }

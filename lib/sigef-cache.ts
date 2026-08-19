@@ -1,0 +1,90 @@
+import { prisma } from "@/lib/prisma"
+import { consultarProyectosPorDependencia, type SigefProyecto } from "@/lib/sigef-client"
+import { normalizeText } from "@/lib/utils"
+import { MANUAL_OVERRIDES } from "@/lib/importar-catalogo-excel"
+
+// Cachea el resultado por idDependencia: consultar todas las unidades de una
+// Secretaría implica varias llamadas SOAP en paralelo (una por unidad) — para
+// la dependencia con más unidades observada (26) esto tarda ~4s reales. El
+// catálogo de proyectos no cambia con frecuencia, así que se sirve
+// stale-while-revalidate: si el caché expiró, se regresa el dato viejo de
+// inmediato y se refresca en segundo plano para la siguiente consulta — el
+// usuario solo espera esos ~4s si nadie los precalentó antes (ver
+// `warmAllKnownDependencias`, llamado una vez al arrancar el servidor desde
+// instrumentation.ts) o si el TTL ya venció.
+export const CACHE_TTL_MS = 12 * 60 * 60 * 1000
+const cache = new Map<string, { at: number; proyectos: SigefProyecto[] }>()
+const refrescando = new Set<string>()
+
+function refrescarEnSegundoPlano(idDependencia: string) {
+  if (refrescando.has(idDependencia)) return
+  refrescando.add(idDependencia)
+  consultarProyectosPorDependencia(idDependencia)
+    .then((proyectos) => cache.set(idDependencia, { at: Date.now(), proyectos }))
+    .catch((e) => console.error("[sigef cache refresh]", idDependencia, e))
+    .finally(() => refrescando.delete(idDependencia))
+}
+
+export async function getProyectosCached(idDependencia: string): Promise<SigefProyecto[]> {
+  const cached = cache.get(idDependencia)
+  if (cached) {
+    if (Date.now() - cached.at >= CACHE_TTL_MS) refrescarEnSegundoPlano(idDependencia)
+    return cached.proyectos
+  }
+  const proyectos = await consultarProyectosPorDependencia(idDependencia)
+  cache.set(idDependencia, { at: Date.now(), proyectos })
+  return proyectos
+}
+
+// Los registros históricos/importados no siempre guardan la Secretaría con el
+// nombre canónico (mayúsculas sin acentos, o variantes como "GOBERNATURA" en
+// vez de "GUBERNATURA" — mismo typo que ya tenía que resolver el importador
+// del catálogo). Se normaliza acentos/mayúsculas y se reutiliza el mismo mapa
+// de variantes conocidas (MANUAL_OVERRIDES) para no tener dos catálogos de
+// alias que se puedan desincronizar.
+const overridesNormalizados = new Map(
+  Object.entries(MANUAL_OVERRIDES).map(([raw, canonico]) => [normalizeText(raw), canonico]),
+)
+
+export async function resolverIdDependencia(secretariaRaw: string): Promise<number | null> {
+  const nodos = await prisma.organo_centralizado.findMany({
+    where: { parent_id: null, sigef_id_dependencia: { not: null } },
+    select: { nombre: true, sigef_id_dependencia: true },
+  })
+  const porNombre = new Map(nodos.map((n) => [normalizeText(n.nombre), n.sigef_id_dependencia as number]))
+
+  const normInput = normalizeText(secretariaRaw)
+  const directo = porNombre.get(normInput)
+  if (directo != null) return directo
+
+  const canonico = overridesNormalizados.get(normInput)
+  if (canonico) {
+    const viaOverride = porNombre.get(normalizeText(canonico))
+    if (viaOverride != null) return viaOverride
+  }
+
+  return null
+}
+
+// Precalienta el caché de todas las Secretarías con idDependencia de SIGeF
+// configurado. Se llama una sola vez al arrancar el servidor (instrumentation.ts)
+// para que ningún usuario sea quien pague los ~4s de la primera consulta del
+// día — para entonces el servidor ya lleva unos segundos vivo y nadie ha
+// abierto el formulario todavía. Va en paralelo y no bloquea el arranque.
+export async function warmAllKnownDependencias(): Promise<void> {
+  try {
+    const nodos = await prisma.organo_centralizado.findMany({
+      where: { parent_id: null, sigef_id_dependencia: { not: null } },
+      select: { sigef_id_dependencia: true },
+    })
+    await Promise.allSettled(
+      nodos
+        .map((n) => String(n.sigef_id_dependencia))
+        .map((id) =>
+          getProyectosCached(id).catch((e) => console.error("[sigef warmup]", id, e)),
+        ),
+    )
+  } catch (e) {
+    console.error("[sigef warmup] no se pudo precalentar el caché", e)
+  }
+}

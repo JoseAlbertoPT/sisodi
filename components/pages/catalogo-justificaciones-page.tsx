@@ -1078,7 +1078,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0
 
     const rows: (string | number)[][] = [
-      ["#", "Tipo", "Usuario", "Entidad", "Folio de Dictamen", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Creación", "Programa / Proyecto", "Régimen", "Total de movimientos"],
+      ["#", "Usuario", "Entidad", "Folio de Dictamen", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Creación", "Programa / Proyecto", "Régimen", "Total de movimientos"],
     ]
     let i = 0
     records.forEach((rec) => {
@@ -1087,7 +1087,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
         i++
         rows.push([
           i,
-          sol.tipo === "cancelacion" ? "Cancelación" : sol.tipo === "programa" ? "Programa" : "Reutilización",
           sol.usuario.nombre,
           toTitleCaseES(entidadNombre(rec)),
           fmt(folioSinSiglas(rec.solicitud.folio_dictamen)),
@@ -1319,8 +1318,8 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
               {viewRec && viewRec.catalogo_solicitudes.length > 0 && (
                 <span className="text-sm font-normal text-muted-foreground shrink-0">
                   Reutilizaciones: {viewRec.catalogo_solicitudes.filter((s) => !esCancelacion(s) && !esPrograma(s)).length}
-                  {" · "}Cancelaciones: {viewRec.catalogo_solicitudes.filter(esCancelacion).length}
-                  {" · "}Programa: {viewRec.catalogo_solicitudes.filter(esPrograma).length}
+                  {/* {" · "}Cancelaciones: {viewRec.catalogo_solicitudes.filter(esCancelacion).length}
+                  {" · "}Programa: {viewRec.catalogo_solicitudes.filter(esPrograma).length} */}
                 </span>
               )}
             </div>
@@ -1340,40 +1339,40 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                   <div className="overflow-x-auto">
                     <table className="w-full table-fixed text-sm">
                       <colgroup>
-                        <col className="w-[13%]" />
+                        {/* <col className="w-[13%]" /> */}
                         <col className="w-[17%]" />
                         <col className="w-[13%]" />
                         <col className="w-[12%]" />
-                        <col className="w-[27%]" />
+                        {/* <col className="w-[27%]" /> */}
                         <col className="w-[18%]" />
                       </colgroup>
                       <thead>
                         <tr className="bg-muted/30 border-b border-border">
-                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Tipo</th>
+                          {/* <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Tipo</th> */}
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Num. Prestadores</th>
-                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa (anterior → nuevo)</th>
+                          {/* <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa (anterior → nuevo)</th> */}
                           <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
                           <tr className="empty-row">
-                            <td colSpan={6}>
+                            <td colSpan={4}>
                               <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
                           </tr>
                         )}
                         {reutilizacionesVisibles.map((sol) => (
                           <tr key={sol.id} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
-                            <td className="px-4 py-3 text-left">
+                            {/* <td className="px-4 py-3 text-left">
                               {esCancelacion(sol)
                                 ? <StatusBadge label="Cancelación" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
                                 : esPrograma(sol)
                                 ? <StatusBadge label="Programa" color={C_AMARILLO} bgColor={C_AMARILLO_BG} />
                                 : <StatusBadge label="Reutilización" color={C_AZUL_REVISION} bgColor={C_AZUL_REVISION_BG} />}
-                            </td>
+                            </td> */}
                             <td className="px-4 py-3 text-xs font-medium text-card-foreground truncate text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
                               {sol.usuario.nombre}
                             </td>
@@ -1381,9 +1380,9 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
                               {esCancelacion(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—")}
                             </td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left" title={sol.nuevo_programa_proyecto ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto}` : ""}>
+                            {/* <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left" title={sol.nuevo_programa_proyecto ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto}` : ""}>
                               {sol.nuevo_programa_proyecto ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto}` : "—"}
-                            </td>
+                            </td> */}
                             <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
                               {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
                             </td>

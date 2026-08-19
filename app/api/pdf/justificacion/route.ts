@@ -261,6 +261,7 @@ export async function buildJustificacionBuffer(
       where: { id: Number(solicitudId) },
       include: {
         dictamen: true,
+        estado: true,
         usuario: { select: { organo_centralizado: { select: { id: true } } } },
         historial_solicitud: {
           where: { comentario: { contains: MARCA_HISTORICO_IMPORTADO } },
@@ -270,6 +271,25 @@ export async function buildJustificacionBuffer(
       },
     });
     const esHistoricoImportado = (sol?.historial_solicitud.length ?? 0) > 0;
+    // La página de Dictamen/Opinión Técnica Funcional solo debe incluirse a
+    // partir de que Emisión (filtro 3) ya lo aprobó. El registro `dictamen`
+    // NO sirve como señal: se crea desde antes, al asignar folio en Revisión
+    // (filtro 1, ver <FolioDictamenCard>/"asignarFolio" en revision-do-page.tsx
+    // y app/api/filtro/route.ts), mucho antes de que Emisión lo vea siquiera.
+    // La señal correcta es el estado de la solicitud: al aprobar en Emisión
+    // (app/api/filtro/route.ts, accion "aprobar" con filtro===3) pasa a
+    // "Pendiente Firma Dictamen" (autógrafa, para descargar y firmar fuera del
+    // sistema) o "Pendiente Firma Justificacion" (electrónica, arranca el
+    // proceso de firma electrónica); y termina en "Emitido" una vez firmado.
+    const ESTADOS_CON_DICTAMEN_APROBADO = new Set([
+      "pendiente firma dictamen",
+      "pendiente firma justificacion",
+      "pendiente firma emisor",
+      "emitido",
+    ]);
+    const tieneDictamen = ESTADOS_CON_DICTAMEN_APROBADO.has(
+      (sol?.estado?.nombre ?? "").toLowerCase(),
+    );
 
     const fechaDict =
       sol?.dictamen?.fecha_emision ?? (sol as any)?.fecha_emision ?? null;
@@ -364,6 +384,7 @@ export async function buildJustificacionBuffer(
         ocultarFirmas: sinFirmas,
         clave: claveParaPdf(sol.secretaria, sol.folio_dictamen, esHistoricoImportado),
         notaDictamen,
+        incluirPaginaDictamen: tieneDictamen,
       };
 
       pdfElement = React.createElement(
@@ -425,6 +446,7 @@ export async function buildJustificacionBuffer(
         ocultarFirmas: sinFirmas,
         clave: claveParaPdf(sol.secretaria, sol.folio_dictamen, esHistoricoImportado),
         notaDictamen,
+        incluirPaginaDictamen: tieneDictamen,
       };
 
       pdfElement = React.createElement(
