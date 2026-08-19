@@ -2047,7 +2047,7 @@ function FormularioPrestacion({
             }}
             readonly={bloqueadoPorRenovacion}
             nivelTabulador={nivelTabulador}
-            max={10}
+            max={7}
             forbiddenTexts={forbiddenTextsPS.actividades}
           />
         </CardContent>
@@ -2070,7 +2070,7 @@ function FormularioPrestacion({
             readonly={bloqueadoPorRenovacion}
             minRequired={actividades.length}
             matchCountLabel
-            max={10}
+            max={7}
             forbiddenTexts={forbiddenTextsPS.responsabilidades}
           />
 
@@ -2811,7 +2811,7 @@ function FormularioNombramiento({
             }}
             readonly={bloqueadoPorRenovacion}
             nivelTabulador={nivelTabulador}
-            max={10}
+            max={7}
             forbiddenTexts={forbiddenTextsNom.funciones}
           />
         </CardContent>
@@ -2833,7 +2833,7 @@ function FormularioNombramiento({
             readonly={bloqueadoPorRenovacion}
             minRequired={funciones.length}
             matchCountLabel
-            max={10}
+            max={7}
             forbiddenTexts={forbiddenTextsNom.responsabilidades}
           />
           <div className="flex flex-col items-start gap-1.5">
