@@ -227,7 +227,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
   const records = q.trim()
     ? (() => {
-        const words = norm(q).split(/\s+/).filter(Boolean)
+        const qNorm = norm(q).replace(/\s+/g, " ").trim()
         return allRecords.filter((r) => {
           const haystack = norm([
             r.programa_proyecto,
@@ -240,8 +240,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
             r.solicitud.folio_dictamen,
             r.solicitud.secretaria_txt_snapshot,
             r.solicitud.secretaria,
-          ].join(" "))
-          return words.every((w) => haystack.includes(w))
+          ].join(" ")).replace(/\s+/g, " ")
+          return haystack.includes(qNorm)
         })
       })()
     : allRecords
@@ -1133,8 +1133,8 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     if (secretariaFilter !== "todas") {
       list = list.filter((r) => secretariaDe(r) === secretariaFilter)
     }
-    const words = norm(q).split(/\s+/).filter(Boolean)
-    if (words.length) {
+    const qNorm = norm(q).replace(/\s+/g, " ").trim()
+    if (qNorm) {
       list = list.filter((r) => {
         const haystack = norm([
           r.programa_proyecto,
@@ -1147,8 +1147,8 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           r.solicitud.folio_dictamen,
           r.solicitud.secretaria_txt_snapshot,
           r.solicitud.secretaria,
-        ].join(" "))
-        return words.every((w) => haystack.includes(w))
+        ].join(" ")).replace(/\s+/g, " ")
+        return haystack.includes(qNorm)
       })
     }
     return list
@@ -1309,20 +1309,30 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       </div>
       <TablePagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       <Dialog open={showReutilizaciones} onOpenChange={setShowReutilizaciones}>
-        <DialogContent className="w-[90vw] max-w-5xl sm:max-w-5xl bg-white p-0 gap-0 overflow-hidden [&>button]:top-2">
+        <DialogContent className="w-[90vw] max-w-6xl sm:max-w-6xl bg-white p-0 gap-0 overflow-hidden [&>button]:top-2">
           <DialogHeader className="px-5 py-4 border-b border-[var(--sem-border-md)]">
             <div className="flex items-center justify-between gap-3 pr-10">
               <DialogTitle className="ds-title-md text-content-high">
-                Movimientos{viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
+                Reutilizaciones {viewRec && viewRec.catalogo_solicitudes.length > 0 ? ` (${viewRec.catalogo_solicitudes.length})` : ""}
               </DialogTitle>
               {viewRec && viewRec.catalogo_solicitudes.length > 0 && (
                 <span className="text-sm font-normal text-muted-foreground shrink-0">
-                  Reutilizaciones: {viewRec.catalogo_solicitudes.filter((s) => !esCancelacion(s) && !esPrograma(s)).length}
+                  Prestadores de Servicio: {viewRec.catalogo_solicitudes.reduce(
+                    (sum, s) => sum + (esCancelacion(s) ? 0 : (s.nuevo_numero_personas ?? s.nuevos_numero_prestadores ?? 0)),
+                    0,
+                  )}
                   {/* {" · "}Cancelaciones: {viewRec.catalogo_solicitudes.filter(esCancelacion).length}
                   {" · "}Programa: {viewRec.catalogo_solicitudes.filter(esPrograma).length} */}
                 </span>
               )}
             </div>
+            {viewRec && (
+              <div className="mt-2 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                <span className="font-medium text-content-high">{toTitleCaseES(entidadNombre(viewRec))}</span>
+                <span>{fmt(viewRec.programa_proyecto)}</span>
+                <span>Vigencia actual: {fmt(viewRec.vigencia)}</span>
+              </div>
+            )}
           </DialogHeader>
           <div className="max-h-[80vh] overflow-y-auto p-4">
             {viewRec && viewRec.catalogo_solicitudes.length > 0 ? (
@@ -1340,26 +1350,26 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                     <table className="w-full table-fixed text-sm">
                       <colgroup>
                         {/* <col className="w-[13%]" /> */}
-                        <col className="w-[17%]" />
-                        <col className="w-[13%]" />
-                        <col className="w-[12%]" />
-                        {/* <col className="w-[27%]" /> */}
                         <col className="w-[18%]" />
+                        <col className="w-[18%]" />
+                        <col className="w-[13%]" />
+                        <col className="w-[31%]" />
+                        <col className="w-[20%]" />
                       </colgroup>
                       <thead>
                         <tr className="bg-muted/30 border-b border-border">
                           {/* <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Tipo</th> */}
-                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
-                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
-                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Num. Prestadores</th>
-                          {/* <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa (anterior → nuevo)</th> */}
-                          <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Creado</th>
+                          <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
+                          <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
+                          <th className="px-4 py-2.5 pr-10 text-left text-xs font-semibold text-muted-foreground">Num. Prestadores</th>
+                          <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Programa o Proyecto</th>
+                          <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Creado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
                           <tr className="empty-row">
-                            <td colSpan={4}>
+                            <td colSpan={5}>
                               <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
                           </tr>
@@ -1373,17 +1383,17 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                                 ? <StatusBadge label="Programa" color={C_AMARILLO} bgColor={C_AMARILLO_BG} />
                                 : <StatusBadge label="Reutilización" color={C_AZUL_REVISION} bgColor={C_AZUL_REVISION_BG} />}
                             </td> */}
-                            <td className="px-4 py-3 text-xs font-medium text-card-foreground truncate text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
+                            <td className="px-4 py-3 pr-6 text-xs font-medium text-card-foreground text-left" title={`${sol.usuario.nombre} (${sol.usuario.rfc})`}>
                               {sol.usuario.nombre}
                             </td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">{sol.nueva_vigencia}</td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
+                            <td className="px-4 py-3 pr-6 text-xs text-muted-foreground text-left whitespace-nowrap">{sol.nueva_vigencia}</td>
+                            <td className="px-4 py-3 pr-6 text-xs text-muted-foreground truncate text-left">
                               {esCancelacion(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—")}
                             </td>
-                            {/* <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left" title={sol.nuevo_programa_proyecto ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto}` : ""}>
-                              {sol.nuevo_programa_proyecto ? `${sol.programa_anterior ?? "—"} → ${sol.nuevo_programa_proyecto}` : "—"}
-                            </td> */}
-                            <td className="px-4 py-3 text-xs text-muted-foreground truncate text-left">
+                            <td className="px-4 py-3 pr-6 text-xs text-muted-foreground break-words text-left">
+                              {sol.nuevo_programa_proyecto ?? viewRec?.programa_proyecto ?? "—"}
+                            </td>
+                            <td className="px-4 py-3 pr-6 text-xs text-muted-foreground truncate text-left">
                               {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
                             </td>
                           </tr>

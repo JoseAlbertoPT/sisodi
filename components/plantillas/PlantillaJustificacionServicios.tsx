@@ -191,7 +191,7 @@ const s = StyleSheet.create({
   centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 12 },
   sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 4, marginTop: 10 },
 
-  row: { flexDirection: "row", marginBottom: 8, alignItems: "flex-end" },
+  row: { flexDirection: "row", marginBottom: 8, alignItems: "flex-end", marginLeft: 32 },
   bold: { fontFamily: "Helvetica-Bold" },
   numLabel: { width: 15, fontFamily: "Helvetica", fontSize: 9 },
   marginLabel: { fontFamily: "Helvetica", marginRight: 5, fontSize: 9 },
@@ -268,9 +268,9 @@ const s = StyleSheet.create({
   },
 
   listTextWrap: { flex: 1, fontSize: 9, textAlign: "justify", lineHeight: 1.4 },
-  romanItem: { marginLeft: 10, marginBottom: 6 },
+  romanItem: { marginLeft: 32, marginBottom: 6 },
   romanText: { fontSize: 9, textAlign: "justify", lineHeight: 1.4 },
-  bulletItemContainer: { flexDirection: "row", marginBottom: 3, paddingLeft: 20 },
+  bulletItemContainer: { flexDirection: "row", marginBottom: 3, paddingLeft: 72 },
   bulletSign: { width: 15, fontSize: 7, fontFamily: "NotoSymbols" },
 
   firmasWrapper: {
@@ -602,7 +602,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <View wrap={false}>
           <Text style={s.sectionTitle}>1.2    OBJETO DE LA CONTRATACIÓN:</Text>
-          <Text style={{ textAlign: "justify", lineHeight: 1.4, marginBottom: 8 }}>{data.objetoContratacion}</Text>
+          <Text style={{ textAlign: "justify", lineHeight: 1.4, marginBottom: 8, marginLeft: 32 }}>{data.objetoContratacion}</Text>
         </View>
 
         <View wrap={false}>
@@ -654,7 +654,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <View wrap={false}>
           <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.2  COMPETENCIAS DEL PRESTADOR DE SERVICIOS:</Text>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.1  Competencias Administrativas:</Text>
+          <Text style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.1  Competencias Administrativas:</Text>
           {data.perfil?.competenciasAdministrativas?.slice(0, 1).map((comp, i) => (
             <View key={`ca-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -670,7 +670,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.2  Competencias Técnicas:</Text>
+          <Text style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.2  Competencias Técnicas:</Text>
           {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
             <View key={`ct-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -686,7 +686,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.3  Competencias Sociales:</Text>
+          <Text style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.3  Competencias Sociales:</Text>
           {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
             <View key={`cs-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -702,7 +702,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 15, marginTop: 6, marginBottom: 4 }}>2.2.4  valores:</Text>
+          <Text style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.4  valores:</Text>
           {data.perfil?.valores?.slice(0, 1).map((val, i) => (
             <View key={`val-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
