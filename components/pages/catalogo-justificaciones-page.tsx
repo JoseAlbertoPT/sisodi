@@ -1071,41 +1071,58 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     }
   }
 
-  const buildReporteWorkbook = (records: AdminRecord[]) => {
-    const fmtFecha = (v: string | null | undefined) =>
-      v ? new Date(v).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"
-    const prestadoresDe = (sol: AdminRecord["catalogo_solicitudes"][0]) =>
-      sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? 0
+  const reporteRows = (records: AdminRecord[]): (string | number)[][] => [
+    ["Secretaría / Dependencia", "Folio de Dictamen", "Programa / Proyecto", "Régimen", "Vigencia", "Creado", "Movimientos", "Estado"],
+    ...records.map((rec) => [
+      toTitleCaseES(entidadNombre(rec).split(" > ")[0]),
+      fmt(folioSinSiglas(rec.solicitud.folio_dictamen)),
+      toTitleCaseES(fmt(rec.programa_proyecto)),
+      fmtCapitalize(rec.regimen_contratacion),
+      fmt(rec.vigencia),
+      new Date(rec.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
+      rec._count.catalogo_solicitudes,
+      rec.activo ? "Activo" : "Inactivo",
+    ]),
+  ]
 
-    const rows: (string | number)[][] = [
-      ["#", "Usuario", "Entidad", "Folio de Dictamen", "Nueva Vigencia", "N° Personas / Prestadores", "Fecha de Creación", "Programa / Proyecto", "Régimen", "Total de movimientos"],
-    ]
-    let i = 0
-    records.forEach((rec) => {
-      const sols = rec.catalogo_solicitudes ?? []
-      sols.forEach((sol) => {
-        i++
-        rows.push([
-          i,
-          sol.usuario.nombre,
-          toTitleCaseES(entidadNombre(rec)),
-          fmt(folioSinSiglas(rec.solicitud.folio_dictamen)),
-          sol.nueva_vigencia,
-          sol.tipo === "cancelacion" ? "—" : (prestadoresDe(sol) || "—"),
-          fmtFecha(sol.creado_en),
-          toTitleCaseES(fmt(rec.programa_proyecto)),
-          fmtCapitalize(rec.regimen_contratacion),
-          sols.length,
-        ])
-      })
-    })
+  // Detalle de las reutilizaciones (catalogo_solicitudes) de un solo registro,
+  // con las mismas columnas que el modal "Ver reutilizaciones" en pantalla.
+  const reutilizacionRows = (rec: AdminRecord): (string | number)[][] => [
+    ["Usuario", "Vigencia", "Num. Prestadores", "Programa o Proyecto", "Creado"],
+    ...rec.catalogo_solicitudes.map((sol) => [
+      sol.usuario.nombre,
+      sol.nueva_vigencia,
+      esCancelacion(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—"),
+      sol.nuevo_programa_proyecto ?? rec.programa_proyecto ?? "—",
+      new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
+    ]),
+  ]
 
+  const addSheetFromRows = (wb: XLSX.WorkBook, rows: (string | number)[][], nombreHoja: string) => {
     const ws = XLSX.utils.aoa_to_sheet(rows)
     ws["!cols"] = rows[0].map((_, c) =>
       ({ wch: Math.min(50, Math.max(12, ...rows.map((r) => String(r[c] ?? "").length))) }),
     )
+    XLSX.utils.book_append_sheet(wb, ws, nombreHoja)
+  }
+
+  // Excel no permite \ / ? * [ ] : en el nombre de hoja, ni más de 31 caracteres,
+  // ni nombres repetidos — de ahí la sanitización y el desempate.
+  const sheetNameUnico = (base: string, usados: Set<string>) => {
+    const limpio = (base.replace(/[\\/?*[\]:]/g, "-").trim() || "Hoja").slice(0, 31)
+    let candidato = limpio
+    let n = 2
+    while (usados.has(candidato.toLowerCase())) {
+      const suf = ` (${n++})`
+      candidato = limpio.slice(0, 31 - suf.length) + suf
+    }
+    usados.add(candidato.toLowerCase())
+    return candidato
+  }
+
+  const buildReporteWorkbook = (records: AdminRecord[]) => {
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Movimientos")
+    addSheetFromRows(wb, reporteRows(records), "Catálogo")
     return wb
   }
 
@@ -1116,10 +1133,29 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   }
 
   const handleReporteGeneral = () => {
-    const wb = buildReporteWorkbook(filtered)
+    const conMovimientos = filtered.filter((rec) => rec.catalogo_solicitudes.length > 0)
+    const sinMovimientos = filtered.filter((rec) => rec.catalogo_solicitudes.length === 0)
+    const wb = XLSX.utils.book_new()
+    addSheetFromRows(wb, reporteRows(sinMovimientos), "General")
+
+    const usados = new Set<string>(["general"])
+    conMovimientos.forEach((rec) => {
+      const folio = folioSinSiglas(rec.solicitud.folio_dictamen) ?? String(rec.id)
+      const nombreHoja = sheetNameUnico(folio, usados)
+      addSheetFromRows(wb, reutilizacionRows(rec), nombreHoja)
+    })
+
     const fecha = new Date().toISOString().slice(0, 10)
     XLSX.writeFile(wb, `reporte-general-catalogo-${fecha}.xlsx`, { bookType: "xlsx", type: "binary" })
   }
+
+  // Comentado junto con su DropdownMenuItem — ver nota más abajo, en el menú.
+  // const handleReporteReutilizaciones = () => {
+  //   const reutilizadas = filtered.filter((rec) => rec.catalogo_solicitudes.length > 0)
+  //   const wb = buildReporteWorkbook(reutilizadas)
+  //   const fecha = new Date().toISOString().slice(0, 10)
+  //   XLSX.writeFile(wb, `reporte-reutilizaciones-catalogo-${fecha}.xlsx`, { bookType: "xlsx", type: "binary" })
+  // }
 
   const norm = (s: string | null | undefined) =>
     (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
@@ -1178,15 +1214,33 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
             ))}
           </SelectContent>
         </Select>
-        <Button
-          variant="default"
-          className="gap-1.5 shrink-0"
-          onClick={handleReporteGeneral}
-          disabled={filtered.length === 0}
-        >
-          <FileSpreadsheet className="h-4 w-4" />
-          Reporte general
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="default"
+              className="gap-1.5 shrink-0"
+              disabled={filtered.length === 0}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Reporte general
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={handleReporteGeneral}>
+              <FileSpreadsheet className="h-4 w-4" /> General
+            </DropdownMenuItem>
+            {/* Comentado a pedido: el reporte "General" ya separa por hojas
+                (General + una por registro con movimientos), así que esta
+                opción quedó redundante. Se deja el handler por si se reactiva.
+            <DropdownMenuItem
+              onClick={handleReporteReutilizaciones}
+              disabled={!filtered.some((rec) => rec.catalogo_solicitudes.length > 0)}
+            >
+              <FileSpreadsheet className="h-4 w-4" /> Reporte Reutilizaciones
+            </DropdownMenuItem>
+            */}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant="default"
           className="gap-1.5 shrink-0"
