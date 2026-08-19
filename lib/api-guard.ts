@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-export const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Validador", "Revisor"]
+export const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador", "Revisor"]
 
 export async function requireRol(userId: string | null, rolesPermitidos: string[]): Promise<NextResponse | null> {
   if (!userId) {

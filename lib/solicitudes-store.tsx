@@ -9,8 +9,8 @@ export const ESTADOS = [
   "En Revision Revisor",
   "Observado por Revisor",
   "Pendiente Firma Justificacion",
-  "En Validacion Final",
-  "Observado por Validacion Final",
+  "En Verificacion Final",
+  "Observado por Verificacion Final",
   "En Revision Emisor",
   "Observado por Emisor",
   "Pendiente Firma Dictamen",
@@ -50,11 +50,11 @@ export function getEstadoVariant(estado: Estado) {
     case "Observado por Validacion":
       return { bg: "bg-[var(--color-core-mora-20)]/10", text: "text-[var(--color-core-mora-20)]" }
     case "En Revision Revisor":
-    case "En Validacion Final":
+    case "En Verificacion Final":
     case "En Revision Emisor":
       return { bg: "bg-secondary/10", text: "text-secondary" }
     case "Observado por Revisor":
-    case "Observado por Validacion Final":
+    case "Observado por Verificacion Final":
     case "Observado por Emisor":
       return { bg: "bg-[var(--color-core-mora-20)]/10", text: "text-[var(--color-core-mora-20)]" }
     case "Pendiente Firma Justificacion":
@@ -281,7 +281,7 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "centralizada",
       secretaria: "Sec. de Educacion",
       unidadAdministrativa: "Dir. Gral. de Profesionalizacion",
-      estado: "En Validacion Final",
+      estado: "En Verificacion Final",
       fechaCreacion: "2026-02-08",
       fechaRecepcionDO: "2026-02-10",
       slaRestante: 6,
@@ -291,7 +291,7 @@ function createSeedData(): Solicitud[] {
         { fecha: "2026-02-08 14:00", usuario: "Maria Lopez", accion: "Enviada a validacion UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
         { fecha: "2026-02-09 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
         { fecha: "2026-02-10 09:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-002 asignado", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
-        { fecha: "2026-02-13 15:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
+        { fecha: "2026-02-13 15:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Verificacion Final" },
       ],
       observaciones: [],
       observacionesPorSeccion: [],
@@ -352,7 +352,7 @@ function createSeedData(): Solicitud[] {
         { fecha: "2026-02-05 11:00", usuario: "Carlos Garcia", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
         { fecha: "2026-02-06 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
         { fecha: "2026-02-07 08:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-003", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
-        { fecha: "2026-02-10 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
+        { fecha: "2026-02-10 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Verificacion Final" },
         { fecha: "2026-02-14 11:00", usuario: "Revisor Filtro 2", accion: "Aprobada en Filtro 2", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "En Revision Emisor" },
       ],
       observaciones: [],
@@ -533,7 +533,7 @@ function createSeedData(): Solicitud[] {
         { fecha: "2026-02-01 14:00", usuario: "Luis Torres", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
         { fecha: "2026-02-02 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
         { fecha: "2026-02-03 08:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-006", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
-        { fecha: "2026-02-05 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
+        { fecha: "2026-02-05 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Verificacion Final" },
         { fecha: "2026-02-10 10:00", usuario: "Revisor Filtro 2", accion: "Aprobada en Filtro 2", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "En Revision Emisor" },
         { fecha: "2026-02-14 16:00", usuario: "Director General", accion: "Aprobada en Filtro 3 (DG)", estadoAnterior: "En revision DO Filtro 3", estadoNuevo: "Pendiente Firma Dictamen" },
       ],
@@ -594,7 +594,7 @@ function createSeedData(): Solicitud[] {
         { fecha: "2026-01-28 11:00", usuario: "Patricia Ruiz", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
         { fecha: "2026-01-29 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
         { fecha: "2026-01-30 08:00", usuario: "DO Recepcion", accion: "Recibida en DO", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
-        { fecha: "2026-02-03 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
+        { fecha: "2026-02-03 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Verificacion Final" },
         { fecha: "2026-02-06 10:00", usuario: "Revisor Filtro 2", accion: "Aprobada", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "En Revision Emisor" },
         { fecha: "2026-02-10 15:00", usuario: "Director General", accion: "Aprobada en DG", estadoAnterior: "En revision DO Filtro 3", estadoNuevo: "Pendiente Firma Dictamen" },
         { fecha: "2026-02-12 10:00", usuario: "Sistema", accion: "Dictamen emitido", estadoAnterior: "Aprobado", estadoNuevo: "Emitido" },
@@ -826,7 +826,7 @@ function createSeedData(): Solicitud[] {
       tipoAdministracion: "paraestatal",
       secretaria: "Sec. de Gobierno",
       unidadAdministrativa: "Dir. Gral. de Administracion y Finanzas",
-      estado: "Observado por Validacion Final",
+      estado: "Observado por Verificacion Final",
       fechaCreacion: "2026-02-03",
       fechaRecepcionDO: "2026-02-05",
       slaRestante: 1,
@@ -836,8 +836,8 @@ function createSeedData(): Solicitud[] {
         { fecha: "2026-02-03 14:00", usuario: "Diego Ramirez", accion: "Enviada a UEFA", estadoAnterior: "Borrador", estadoNuevo: "En Validacion Justificaciones" },
         { fecha: "2026-02-04 10:00", usuario: "UEFA Validador", accion: "Validacion aprobada", estadoAnterior: "Enviado a Validacion (UEFA)", estadoNuevo: "En Revision Revisor" },
         { fecha: "2026-02-05 08:00", usuario: "DO Recepcion", accion: "Recibida en DO - Folio FE-008", estadoAnterior: "Enviado a DO (Recepcion)", estadoNuevo: "En Revision Revisor" },
-        { fecha: "2026-02-07 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Validacion Final" },
-        { fecha: "2026-02-14 11:00", usuario: "Revisor Filtro 2", accion: "Observada - Importe excede tabulador autorizado", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "Observado por Validacion Final" },
+        { fecha: "2026-02-07 14:00", usuario: "Revisor Filtro 1", accion: "Aprobada en Filtro 1", estadoAnterior: "En revision DO Filtro 1", estadoNuevo: "En Verificacion Final" },
+        { fecha: "2026-02-14 11:00", usuario: "Revisor Filtro 2", accion: "Observada - Importe excede tabulador autorizado", estadoAnterior: "En revision DO Filtro 2", estadoNuevo: "Observado por Verificacion Final" },
       ],
       observaciones: ["Importe excede tabulador autorizado para el nivel indicado"],
       observacionesPorSeccion: [

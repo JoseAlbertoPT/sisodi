@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Solo el rol Capturista se restringe a su propia secretaría. Administrador,
-    // Emisor, Validador, Revisor y UEFA ven todos los dictámenes emitidos.
+    // Emisor, Verificador, Revisor y UEFA ven todos los dictámenes emitidos.
     // Se compara por el nombre de la secretaría de nivel superior (antes del " > ")
     // porque el snapshot id/texto de cada solicitud varía según si se creó como
     // centralizada o paraestatal, pero la columna plana `secretaria` siempre trae

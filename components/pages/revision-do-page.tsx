@@ -149,7 +149,7 @@ interface RevisionDOPageProps {
 
 function getEstadoSiguienteTrasSave(estado: string): string | undefined {
   const n = estado.toLowerCase()
-  if (n.includes("observado por validacion final")) return "En Validacion Final"
+  if (n.includes("observado por verificacion final")) return "En Verificacion Final"
   if (n.includes("observado por emisor"))           return "En Revision Emisor"
   if (n.includes("observado por do") || n.includes("devuelta por do")) return "Pendiente DO"
   return undefined
@@ -1435,10 +1435,17 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     filtro === 3 ? sinObservacion
     : filtro === 2 ? (sinObservacion && hasFolioDictamen)
     : canApproveChecklist
-  const checklistYaRealizado = filtro === 1 && (
-    (solicitud?.estado ?? "").toLowerCase().includes("observado por validacion final") ||
-    (solicitud?.estado ?? "").toLowerCase() === "observado por revisor"
-  )
+  // Además de su uso original (checklist de Filtro 1 ya completado en una vuelta
+  // anterior), esta bandera también marca cuándo le "toca turno" a un filtro por
+  // recibir el rechazo de un filtro posterior en la cadena (p. ej. Verificador
+  // recibiendo "Observado por Emisor"), a diferencia de su propio marcador de
+  // observado (que NO debe reabrir turno — ver nota en enTurno).
+  const checklistYaRealizado =
+    (filtro === 1 && (
+      (solicitud?.estado ?? "").toLowerCase().includes("observado por verificacion final") ||
+      (solicitud?.estado ?? "").toLowerCase() === "observado por revisor"
+    )) ||
+    (filtro === 2 && (solicitud?.estado ?? "").toLowerCase() === "observado por emisor")
   const isEnTabObservadas = (() => {
     const n = (solicitud?.estado ?? "").toLowerCase()
     return n.includes("observad") || n.includes("devuelta")
@@ -1615,9 +1622,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     solicitud?.estado?.toLowerCase() === "aceptado por revisor" ||
     solicitud?.estado?.toLowerCase() === "aprobado por revisor"
   )
-  const estadoEnRevisionEtapa = filtro === 1 ? "en revision revisor" : filtro === 2 ? "en validacion final" : "en revision emisor"
+  const estadoEnRevisionEtapa = filtro === 1 ? "en revision revisor" : filtro === 2 ? "en verificacion final" : "en revision emisor"
+  // isEnTabObservadas NO debe habilitar "enTurno": es cierto para cualquier estado
+  // "observado/devuelta", incluido el que deja este mismo filtro al observar (p. ej.
+  // "Observado por Verificacion Final"), y eso reabría Aprobar/Observar sobre una
+  // solicitud que ya salió de esta bandeja. checklistYaRealizado ya cubre el caso
+  // legítimo de Filtro 1 recibiendo una solicitud rechazada por un filtro posterior.
   const enTurno = (solicitud?.estado ?? "").toLowerCase() === estadoEnRevisionEtapa
-    || isEnTabObservadas || isAceptadoPorRevisor || checklistYaRealizado
+    || isAceptadoPorRevisor || checklistYaRealizado
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const ocultarRevisionTrasAprobar = isAprobado
   useEffect(() => {

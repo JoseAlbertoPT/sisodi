@@ -23,7 +23,7 @@ export const MENUS: MenuRow[] = [
 
   { id: 6,  nombre: "GESTIÓN DGDO",      key: null,                icono: null,              ruta: null,                orden: 2, parent_id: null },
   { id: 7,  nombre: "Revision",          key: "bandeja-filtro1",   icono: "Filter",          ruta: "/bandeja-filtro1",   orden: 1, parent_id: 6 },
-  { id: 8,  nombre: "Validacion",        key: "bandeja-filtro2",   icono: "Filter",          ruta: "/bandeja-filtro2",   orden: 2, parent_id: 6 },
+  { id: 8,  nombre: "Verificacion",      key: "bandeja-filtro2",   icono: "Filter",          ruta: "/bandeja-filtro2",   orden: 2, parent_id: 6 },
   { id: 9,  nombre: "Emision",           key: "bandeja-filtro3",   icono: "Filter",          ruta: "/bandeja-filtro3",   orden: 3, parent_id: 6 },
   { id: 10, nombre: "Dictámenes",        key: "dictamenes",        icono: "ShieldCheck",     ruta: "/dictamenes",        orden: 4, parent_id: 6 },
 
@@ -74,7 +74,7 @@ export async function seedMenus(prisma: PrismaClient) {
     "Capturista":    [1, 3, 4, 6, 10, 15],
     "Emisor":        [1, 2, 6, 9, 10, 15],
     "Revisor":       [6, 7, 10, 15],
-    "Validador":     [1, 2, 6, 8, 10, 15],
+    "Verificador":   [1, 2, 6, 8, 10, 15],
     "UEFA":          [1, 5, 6, 10, 15],
     "Enlace DGRH":   [1, 5, 6, 10, 15],
     "Consulta":      [2, 15],

@@ -13,7 +13,7 @@ export const CATALOGO_ACCION_ADMINISTRACION = "administracion"
 export const CATALOGO_ACCION_CONSULTA = "consulta"
 // Debe reflejar lib/api-guard.ts:ROLES_ADMIN_CATALOGO — duplicado porque ese módulo importa
 // Prisma y no puede usarse desde un componente cliente.
-const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Validador", "Revisor"]
+const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador", "Revisor"]
 
 /** Un override explícito (guardado desde Permisos) siempre gana sobre el acceso por rol. */
 export function catalogoIncluyeAdministracion(acciones: string[] | undefined, rolUsuario: string | undefined): boolean {

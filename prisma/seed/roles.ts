@@ -4,7 +4,7 @@ import { isMain, runStandalone } from "./_runner"
 export const ROLES = [
   "Administrador",
   "Emisor",
-  "Validador",
+  "Verificador",
   "Revisor",
   "Capturista",
   "UEFA",

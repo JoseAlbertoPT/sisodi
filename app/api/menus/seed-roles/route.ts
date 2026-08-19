@@ -3,14 +3,14 @@ import { prisma } from "@/lib/prisma"
 
 // IDs reales en DB: 1=Tablero, 2=JUSTIFICACIONES(header), 3=Nueva solicitud,
 // 4=Mis solicitudes, 5=Validación UEFA, 6=GESTIÓN DGDO(header),
-// 7=Revision, 8=Validacion, 9=Emision, 10=Dictámenes,
+// 7=Revision, 8=Verificacion, 9=Emision, 10=Dictámenes,
 // 15=CONFIGURACIÓN(header), 11=Calendario, 12=Usuarios, 13=Catálogo
 const ROL_MENUS: Record<string, number[]> = {
   "Administrador": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15],
   "Capturista":    [2, 3, 4, 6, 10],      // Nueva solicitud, Mis solicitudes, Dictámenes
   "Emisor":        [1, 6, 9, 10],         // Tablero, Emisión, Dictámenes
   "Revisor":       [6, 7, 10],            // Revisión, Dictámenes
-  "Validador":     [1, 6, 8, 10],         // Tablero, Validación, Dictámenes
+  "Verificador":   [1, 6, 8, 10],         // Tablero, Validación, Dictámenes
   "UEFA":          [2, 5, 6, 10],         // Validación UEFA, Dictámenes
   "Enlace DGRH":   [2, 5, 6, 10],         // Validación UEFA, Dictámenes
   "Consulta":      [1],

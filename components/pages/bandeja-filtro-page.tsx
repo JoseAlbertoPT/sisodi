@@ -79,12 +79,12 @@ interface FiltroSolicitud {
 type TabKey = "nuevas" | "correcciones" | "revision" | "observadas" | "pendientes_asignacion" | "en_validacion" | "pendientes_firma" | "todas" | "solicitudes"
 const FILTRO_LABELS: Record<number, string> = {
   1: "Revisor",
-  2: "Validación Final",
+  2: "Verificación Final",
   3: "Emisor",
 }
 const FILTRO_STAGE_LABELS: Record<number, string> = {
   1: "Revision",
-  2: "Validacion DGDO",
+  2: "Verificacion DGDO",
   3: "Emision",
 }
 const MESES = [
@@ -146,27 +146,27 @@ function formatEscolaridad(raw: string | null | undefined): string {
 }
 function getEstadoEnRevision(filtro: number) {
   if (filtro === 1) return "En Revision Revisor"
-  if (filtro === 2) return "En Validacion Final"
+  if (filtro === 2) return "En Verificacion Final"
   return "En Revision Emisor"
 }
 function getEstadoObservado(filtro: number) {
   if (filtro === 1) return "Observado por Revisor"
-  if (filtro === 2) return "Observado por Validacion DGDO"
+  if (filtro === 2) return "Observado por Verificacion DGDO"
   return "Observado por Emisor"
 }
 function classifyDO(s: FiltroSolicitud): TabKey {
   const n = s.estado.toLowerCase()
   if (n === "pendiente do" || n.includes("en revision revisor")) return "pendientes_asignacion"
-  if (n === "pendiente firma dictamen" || n === "pendiente firma validacion") return "pendientes_firma"
+  if (n === "pendiente firma dictamen" || n === "pendiente firma verificacion") return "pendientes_firma"
   if (n.includes("observado por emisor")) return "en_validacion"
   if (
-    n.includes("observado por validacion final") ||
+    n.includes("observado por verificacion final") ||
     n.includes("observado por do")     || n.includes("devuelta por do") ||
     n.includes("observado do filtro")
   ) return "observadas"
   if (
-    n === "aceptado por revisor"     || n === "aprobado por revisor" ||
-    n.includes("en validacionfinal") || n.includes("en validacion final")
+    n === "aceptado por revisor"        || n === "aprobado por revisor" ||
+    n.includes("en verificacionfinal")  || n.includes("en verificacion final")
   ) return "en_validacion"
   return "todas"
 }
@@ -175,8 +175,8 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   const estadoEnRevision = getEstadoEnRevision(filtro)
   const estadoObservado  = getEstadoObservado(filtro)
   const estadoNorm       = s.estado.toLowerCase()
-  if (filtro === 3 && estadoNorm === "observado por validacion final") return "todas"
-  if (filtro === 1 && estadoNorm === "observado por validacion final") return "revision"
+  if (filtro === 3 && estadoNorm === "observado por verificacion final") return "todas"
+  if (filtro === 1 && estadoNorm === "observado por verificacion final") return "revision"
   if (estadoNorm === estadoObservado.toLowerCase()) return "observadas"
   if (filtro === 1) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion" || estadoNorm === "pendiente firma revision") return "pendientes_firma"
@@ -196,7 +196,7 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
       "aceptado por revisor",
       "aprobado por revisor",
       "pendiente firma justificacion",
-      "en validacion final",
+      "en verificacion final",
     ])
     if (preEmisor.has(estadoNorm)) return "nuevas"
   }
@@ -789,7 +789,7 @@ function rawToEditPayload(solicitud: FiltroSolicitud): EditSolicitudPayload {
   const fmt = (d: any) => { if (!d) return ""; const dt = new Date(d); return isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10) }
   function getEstadoSig(estado: string): string | undefined {
     const n = estado.toLowerCase()
-    if (n.includes("observado por validacion final")) return "En Validacion Final"
+    if (n.includes("observado por verificacion final")) return "En Verificacion Final"
     if (n.includes("observado por emisor"))           return "En Revision Emisor"
     if (n.includes("observado por do") || n.includes("devuelta por do")) return "Pendiente DO"
     return undefined
@@ -885,11 +885,17 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
       .toLowerCase().includes("en revision revisor")
   )
   const labelAprobar =
-    filtro === 1 ? "Aprobar → Validación"
+    filtro === 1 ? "Aprobar → Verificación"
     : filtro === 2 ? (yaEstuvoEnRevisor ? "Aprobar → Emisor" : "Aprobar → Revisor")
     : solicitud.estado.toLowerCase().includes("pendiente firma dictamen")
       ? "Firmar Dictamen → Emitir"
       : "Aprobar → Firma Justificación"
+  // Filtro 2: una vez observada, la solicitud sale de la bandeja del Verificador
+  // (vuelve a Revisor/DO) y sigue apareciendo aquí solo para consulta en "Observadas".
+  // Aprobar/Observar ya no aplican ahí, aunque el usuario reabra el detalle.
+  const puedeAccionar = filtro === 2
+    ? solicitud.estado.toLowerCase() === "en verificacion final"
+    : true
   const folioFormateado = formatearFolio(solicitud.folioRecepcion)
   const historial: HistorialEntryData[] =
     (raw?.historial_solicitud ?? []).map((h: any) => ({
@@ -1041,7 +1047,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               if (filtro === 2 && !yaEstuvoEnRevisor) setShowAprobarAsignarModal(true)
               else setShowAprobarModal(true)
             }}
-            disabled={guardando}
+            disabled={guardando || !puedeAccionar}
             className="gap-1.5"
             size="sm"
             variant="primary"
@@ -1053,7 +1059,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             variant="default"
             size="sm"
             onClick={() => setShowObservarModal(true)}
-            disabled={guardando}
+            disabled={guardando || !puedeAccionar}
           >
             Observar
           </Button>
@@ -1135,7 +1141,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 {observacionesFiltro.map((obs, i) => (
                   <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                      <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Verificacion Final/i, "Verificacion DGDO")}</span>
                       <span className="text-[10px] text-muted-foreground">{obs.fecha}{obs.usuario && ` — ${obs.usuario}`}</span>
                     </div>
                     <p className="text-xs text-card-foreground leading-relaxed whitespace-pre-line">{obs.comentario}</p>
@@ -1589,11 +1595,11 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       <ConfirmToast key={actionToast.key} variant={actionToast.variant} title={actionToast.title} description={actionToast.description} />
     )}
     <PageLayout
-      title={filtro === 1 ? "Bandeja en revisión" : filtro === 2 ? "Bandeja en validación" : "Bandeja en emisión"}
+      title={filtro === 1 ? "Bandeja en revisión" : filtro === 2 ? "Bandeja en verificación" : "Bandeja en emisión"}
       description={filtro === 1
         ? "Revisa y analiza las solicitudes asignadas, realizando el primer filtro de revisión y observaciones."
         : filtro === 2
-        ? "Valida y asigna las solicitudes, realizando el segundo filtro de revisión y observaciones."
+        ? "Verifica y asigna las solicitudes, realizando el segundo filtro de revisión y observaciones."
         : "Gestiona la emisión de las solicitudes, realizando la dictaminación final y la generación de dictámenes u opiniones técnicas."}
     >
 
@@ -1692,7 +1698,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                               ? <StatusBadge label="En firma" color={config.badgeStyle.color as string} bgColor={config.badgeStyle.backgroundColor as string} />
                               : <StatusBadge label={config.label} color={config.badgeStyle.color as string} bgColor={config.badgeStyle.backgroundColor as string} />
                             }
-                            {((filtro === 1 && sol.estado.toLowerCase() === "observado por validacion final") ||
+                            {((filtro === 1 && sol.estado.toLowerCase() === "observado por verificacion final") ||
                               (filtro === 2 && sol.estado.toLowerCase().includes("observado por emisor"))) && (
                               <StatusBadge label="Observado" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
                             )}

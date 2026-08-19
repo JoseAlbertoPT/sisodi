@@ -80,8 +80,8 @@ export interface UsuariosInternosResueltos {
 
 /**
  * Identifica quiénes aprobaron en cada bandeja consultando historial_solicitud.
- * - Revisor (Filtro 1): quien transicionó a "En Validacion Final"
- * - Validador (Filtro 2): quien transicionó a "En Revision Emisor"
+ * - Revisor (Filtro 1): quien transicionó a "En Verificacion Final"
+ * - Verificador (Filtro 2): quien transicionó a "En Revision Emisor"
  * - Emisor (Filtro 3): quien transicionó a "Pendiente Firma Dictamen" o "Emitido"
  *
  * UEFA no se resuelve aquí a propósito: el bloque UEFA no queda atado a la
@@ -103,7 +103,7 @@ export async function resolverUsuariosInternos(solicitudId: number): Promise<Usu
     return nombres.some(x => norm(x) === norm(n))
   }
 
-  const revisorEntry   = historial.find(h => matchNombre(h, ["En Validacion Final"]))
+  const revisorEntry   = historial.find(h => matchNombre(h, ["En Verificacion Final"]))
   const validadorEntry = historial.find(h => matchNombre(h, ["En Revision Emisor"]))
   const emisorEntry    = historial.find(h => matchNombre(h, ["Pendiente Firma Dictamen", "Pendiente Firma Justificacion", "Emitido"]))
 

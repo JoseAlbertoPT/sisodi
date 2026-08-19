@@ -33,7 +33,7 @@ const FLUJO_ETAPAS: { key: string; label: string; short: string }[] = [
   { key: "captura",   label: "Captura",    short: "CAP" },
   { key: "uefa",      label: "UEFA",       short: "UEFA" },
   { key: "revisor",   label: "Revisor",    short: "REV" },
-  { key: "validador", label: "Validador",  short: "VAL" },
+  { key: "validador", label: "Verificador", short: "VER" },
   { key: "emisor",    label: "Emisor",     short: "EMI" },
   { key: "firmado",   label: "Firma",      short: "FIR" },
   { key: "emitido",   label: "Emitido",    short: "OK" },
@@ -46,8 +46,8 @@ export const ESTADOS_VISIBLES_EMISION = new Set<string>([
   "aceptado por revisor",
   "aprobado por revisor",
   "pendiente firma justificacion",
-  "en validacion final",
-  "observado por validacion final",
+  "en verificacion final",
+  "observado por verificacion final",
 ])
 
 function labelEstado(estado: string): string {

@@ -67,7 +67,7 @@ function mapEtapa(estado: string): string {
   if (n.includes("validacion justificaciones") || n.includes("observado por validacion") && !n.includes("final")) return "uefa"
   if (n.includes("pendiente do") || n.includes("en revision revisor") || n.includes("observado por revisor") ||
       n.includes("aceptado por revisor") || n.includes("aprobado por revisor")) return "revisor"
-  if (n.includes("en validacion final") || n.includes("observado por validacion final")) return "validador"
+  if (n.includes("en verificacion final") || n.includes("observado por verificacion final")) return "validador"
   if (n.includes("en revision emisor") || n.includes("observado por emisor")) return "emisor"
   if (n.includes("pendiente firma dictamen") || n.includes("pendiente firma justificacion")) return "firmado"
   if (n.includes("emitido")) return "emitido"
@@ -93,7 +93,7 @@ function etapaLabel(etapa: string): string {
     case "captura":   return "Captura"
     case "uefa":      return "Validación UEFA"
     case "revisor":   return "Revisor (Filtro 1)"
-    case "validador": return "Validador (Filtro 2)"
+    case "validador": return "Verificador (Filtro 2)"
     case "emisor":    return "Emisor (Filtro 3)"
     case "firmado":   return "Proceso de firma"
     case "emitido":   return "Dictamen emitido"

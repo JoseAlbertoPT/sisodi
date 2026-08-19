@@ -148,17 +148,17 @@ function getEvento(
       tipo:  "normal",
     }
 
-  // ── Validación DGDO ──────────────────────────────────────────────────────
-  if (n === "en validacion final")
+  // ── Verificación DGDO ──────────────────────────────────────────────────────
+  if (n === "en verificacion final")
     return {
-      label: "Recibida en Validación DGDO",
-      desc:  "recibida por el DGDO para validación",
+      label: "Recibida en Verificación DGDO",
+      desc:  "recibida por el DGDO para verificación",
       tipo:  "normal",
     }
 
-  if (n === "observado por validacion final" || n === "observado do filtro 2")
+  if (n === "observado por verificacion final" || n === "observado do filtro 2")
     return {
-      label: "Devuelta por Validación DGDO",
+      label: "Devuelta por Verificador",
       desc:  "devuelta con observaciones para corrección",
       tipo:  "observacion",
     }
@@ -193,10 +193,10 @@ function getEvento(
       tipo:  "normal",
     }
 
-  if (n === "pendiente firma validacion")
+  if (n === "pendiente firma verificacion")
     return {
-      label: "En espera de firma — Validación",
-      desc:  "pendiente de firma de validación",
+      label: "En espera de firma — Verificación",
+      desc:  "pendiente de firma de verificación",
       tipo:  "normal",
     }
   // ── Emisión final ─────────────────────────────────────────────────────────
@@ -232,8 +232,8 @@ function getEvento(
 function renombrarEstado(s: string | null | undefined): string {
   if (!s) return ""
   const lower = s.toLowerCase().trim()
-  if (lower === "en validacion final")         return "Validación DGDO"
-  if (lower === "observado por validacion final") return "Observado por Validación DGDO"
+  if (lower === "en verificacion final")         return "Verificación DGDO"
+  if (lower === "observado por verificacion final") return "Observado por Verificación DGDO"
   return s
 }
 

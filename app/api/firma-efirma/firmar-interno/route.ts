@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
       const estadoPorBandejaPendiente: Record<string, string> = {
         uefa:       "Pendiente Firma Justificacion",
         revision:   "Pendiente Firma Revision",
-        validacion: "Pendiente Firma Validacion",
+        validacion: "Pendiente Firma Verificacion",
         emision:    "Pendiente Firma Emisor",
       }
       const siguientePendiente = firmante.firma_proceso.firmantes

@@ -85,8 +85,8 @@ export async function GET(req: NextRequest) {
         "Observado DO Filtro 3",
         "Observado por Emisor",
         "Observada por Emisor",
-        "Observado por Validacion Final",
-        "Observada por Validacion Final",
+        "Observado por Verificacion Final",
+        "Observada por Verificacion Final",
       ],
       "En proceso DGDO": [
         "Pendiente DO",
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
         "Aprobado por Revisor",
         "En Revision Emisor",
         "Pendiente Firma Dictamen",
-        "En Validacion Final",
+        "En Verificacion Final",
         "En revision DO Filtro 1",
         "En revision DO Filtro 2",
         "En revision DO Filtro 3",
@@ -324,7 +324,7 @@ export async function GET(req: NextRequest) {
         n === "aceptado por revisor"           ||
         n.includes("en revision emisor")       ||
         n.includes("pendiente firma dictamen") ||
-        n.includes("en validacion final")      ||
+        n.includes("en verificacion final")    ||
         n.includes("en revision do")           ||
         n === "en proceso do"                  ||
         n === "aprobado"

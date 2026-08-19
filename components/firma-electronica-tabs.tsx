@@ -276,7 +276,7 @@ export function FirmaElectronicaTabs({
       <div className="flex flex-col items-start gap-3 w-full text-left">
         <p className="text-sm text-muted-foreground max-w-sm ml-16">
           Se creará el proceso con todos los firmantes requeridos según el tipo de justificación.
-          Los firmantes internos (UEFA, Revisor, Validador, Emisor) se identifican automáticamente a partir del historial de aprobaciones.
+          Los firmantes internos (UEFA, Revisor, Verificador, Emisor) se identifican automáticamente a partir del historial de aprobaciones.
         </p>
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex w-full justify-end gap-2">

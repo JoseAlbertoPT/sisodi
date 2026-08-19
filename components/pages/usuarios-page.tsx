@@ -52,7 +52,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { FilterTabs } from "@/components/ui/filter-tabs"
 
-const ROLES = ["Emisor", "Validador", "Revisor", "Capturista", "UEFA", "Administrador"]
+const ROLES = ["Emisor", "Verificador", "Revisor", "Capturista", "UEFA", "Administrador"]
 
 type Usuario = {
   id: string

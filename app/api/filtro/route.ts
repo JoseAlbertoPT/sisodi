@@ -14,13 +14,13 @@ const INICIALES_MES: Record<number, string> = {
 
 function estadoEnRevision(filtro: number) {
   if (filtro === 1) return "En Revision Revisor"
-  if (filtro === 2) return "En Validacion Final"
+  if (filtro === 2) return "En Verificacion Final"
   return "En Revision Emisor"
 }
 
 function estadoObservado(filtro: number) {
   if (filtro === 1) return "Observado por Revisor"
-  if (filtro === 2) return "Observado por Validacion Final"
+  if (filtro === 2) return "Observado por Verificacion Final"
   return "Observado por Emisor"
 }
 
@@ -87,14 +87,14 @@ export async function GET(req: NextRequest) {
         "Aprobado por Revisor",
         "Pendiente Firma Justificacion",
         "Pendiente Firma Revision",
-        "Pendiente Firma Validacion",
-        "En Validacion Final",
-        "Observado por Validacion Final",
+        "Pendiente Firma Verificacion",
+        "En Verificacion Final",
+        "Observado por Verificacion Final",
       ] : []),
       ...(filtro === 1 ? [
         "Aceptado por Revisor",
         "Observado por Revisor",
-        "Observado por Validacion Final",
+        "Observado por Verificacion Final",
         "Pendiente Firma Revision",
       ] : []),
       ...(filtro === 2 ? [
@@ -103,8 +103,8 @@ export async function GET(req: NextRequest) {
         "En Revision Revisor",
         "Observado por Emisor",
         "Observado por DO",
-        "Observado por Validacion Final",
-        "Pendiente Firma Validacion",
+        "Observado por Verificacion Final",
+        "Pendiente Firma Verificacion",
       ] : []),
     ]
 
@@ -255,7 +255,7 @@ export async function GET(req: NextRequest) {
         if (!lastObservedEstado) return null
         const n = lastObservedEstado.toLowerCase()
         if (n.includes("revisor")) return 1
-        if (n.includes("validacion final")) return 2
+        if (n.includes("verificacion final")) return 2
         if (n.includes("emisor")) return 3
         const m = lastObservedEstado.match(/filtro\s+(\d)/i)
         return m ? parseInt(m[1], 10) : null
@@ -282,7 +282,7 @@ export async function GET(req: NextRequest) {
         for (let i = historial.length - 1; i >= 0; i--) {
           const n = (historial[i].estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
           if (filtro === 1 && n === "en revision revisor")  return i
-          if (filtro === 2 && n === "en validacion final")  return i
+          if (filtro === 2 && n === "en verificacion final")  return i
           if (filtro === 3 && n === "en revision emisor")   return i
         }
         return -1
@@ -291,7 +291,7 @@ export async function GET(req: NextRequest) {
         for (let i = historial.length - 1; i >= 0; i--) {
           const n = (historial[i].estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
           if (filtro === 1 && (n.includes("observado por revisor") || n.includes("aceptado por revisor") || n.includes("aprobado por revisor"))) return i
-          if (filtro === 2 && (n.includes("observado por validacion final") || n.includes("en revision emisor"))) return i
+          if (filtro === 2 && (n.includes("observado por verificacion final") || n.includes("en revision emisor"))) return i
           if (filtro === 3 && (n.includes("observado por emisor") || n.includes("pendiente firma dictamen"))) return i
         }
         return -1
@@ -307,7 +307,7 @@ export async function GET(req: NextRequest) {
         const n = nombre.toLowerCase()
         if (!n.includes("observad")) return false
         if (filtro === 1) return n.includes("revisor") || n.includes("filtro 1")
-        if (filtro === 2) return n.includes("validacion final") || n.includes("filtro 2")
+        if (filtro === 2) return n.includes("verificacion final") || n.includes("filtro 2")
         if (filtro === 3) return n.includes("emisor") || n.includes("filtro 3")
         return false
       })
@@ -671,6 +671,22 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json(
         { ok: false, error: "Solicitud no encontrada" },
         { status: 404 }
+      )
+    }
+
+    // Filtro 2 solo puede aprobar/observar mientras la solicitud sigue en su
+    // bandeja activa: recién llegada ("En Verificacion Final") o devuelta por
+    // Emisión para su revisión ("Observado por Emisor"). Sin esto, una pestaña
+    // vieja o "Observadas" (que muestra el historial para seguimiento) puede
+    // reenviar la acción sobre una solicitud que ya avanzó o que está parada
+    // en su propio marcador de observada ("Observado por Verificacion Final"),
+    // duplicando transiciones de estado.
+    const estadoActualFiltro2 = solicitud.estado.nombre.toLowerCase()
+    const estadosActivosFiltro2 = [estadoEnRevision(2).toLowerCase(), "observado por emisor"]
+    if (filtro === 2 && !estadosActivosFiltro2.includes(estadoActualFiltro2)) {
+      return NextResponse.json(
+        { ok: false, error: `La solicitud ya no está en Verificación (estado actual: "${solicitud.estado.nombre}"). Actualiza la bandeja.` },
+        { status: 409 }
       )
     }
 

@@ -163,14 +163,14 @@ function getTabForEstado(estado: string): UefaTab {
   if (n.includes("observado por")) return "Observadas/Devueltas"
   if (n === "emitido") return "Emitidas"
 
-  if (n.includes("observado por validacion final")) return "Observadas/Devueltas"
+  if (n.includes("observado por verificacion final")) return "Observadas/Devueltas"
   if (
     n.includes("pendiente firma revision") ||
-    n.includes("pendiente firma validacion") ||
+    n.includes("pendiente firma verificacion") ||
     n.includes("pendiente firma dictamen") ||
     n.includes("pendiente firma emisor") ||
     n.includes("en revision") ||
-    n.includes("en validacion final") ||
+    n.includes("en verificacion final") ||
     n.includes("pendiente do") ||
     n.includes("aceptado por revisor") ||
     n.includes("aprobado por revisor") ||
@@ -221,7 +221,7 @@ function resolverFolioDictamen(item: any): string | null {
 function getDevolucionLabel(estado: string): string {
   const n = norm(estado)
   if (n.includes("emisor"))           return "Emisión DGDO"
-  if (n.includes("validacion final")) return "Validación Final DGDO"
+  if (n.includes("verificacion final")) return "Verificación Final DGDO"
   if (n.includes("revisor"))          return "Revisión DGDO"
   if (n.includes("validacion"))       return "Validacion UEFA"
   return "DGDO"

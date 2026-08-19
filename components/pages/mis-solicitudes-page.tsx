@@ -77,10 +77,10 @@ type UrgEstado =
   | "Observado por Emisor"
   | "Pendiente Firma Dictamen"
   | "Pendiente Firma Revision"
-  | "Pendiente Firma Validacion"
+  | "Pendiente Firma Verificacion"
   | "Pendiente Firma Emisor"
-  | "En Validacion Final"
-  | "Observado por Validacion Final"
+  | "En Verificacion Final"
+  | "Observado por Verificacion Final"
   | "En revision DO Filtro 1"
   | "En revision DO Filtro 2"
   | "En revision DO Filtro 3"
@@ -229,7 +229,7 @@ function getTab(estado: UrgEstado): UrgTab {
     n.includes("observado por revisor") || n.includes("observado por do") ||
     n.includes("devuelta por do") || n.includes("observado do filtro")
   ) return "Observadas / Devueltas"
-  if (n.includes("en revision") || n.includes("en validacion final") ||
+  if (n.includes("en revision") || n.includes("en verificacion final") ||
       n === "pendiente do" || n.includes("pendiente firma") ||
       n === "aprobado por revisor" || n === "aceptado por revisor" || n === "en proceso do" || n === "aprobado")
     return "En proceso DGDO"
@@ -242,7 +242,7 @@ function getTab(estado: UrgEstado): UrgTab {
 function getObservador(estado: UrgEstado): string | null {
   const n = (estado ?? "").toLowerCase()
   if (n.includes("observada por uefa") || n.includes("observado por uefa")) return "Validacion UEFA"
-  if (n.includes("observado por validacion final")) return "Validacion DGDO"
+  if (n.includes("observado por verificacion final")) return "Verificacion DGDO"
   if (n.includes("observado por validacion")) return "Validacion UEFA"
   if (n.includes("observado por revisor")) return "Revision DGDO"
   if (n.includes("observado por do") || n.includes("observado do filtro") || n.includes("devuelta por do")) return "DO"
@@ -344,8 +344,8 @@ function mapApiItem(item: any): UrgSolicitud {
     "En Revision Revisor", "Aceptado por Revisor", "Aprobado por Revisor", "Observado por Revisor",
     "Observado por DO",
     "En Revision Emisor", "Observado por Emisor",
-    "Pendiente Firma Dictamen", "Pendiente Firma Revision", "Pendiente Firma Validacion", "Pendiente Firma Emisor",
-    "En Validacion Final", "Observado por Validacion Final",
+    "Pendiente Firma Dictamen", "Pendiente Firma Revision", "Pendiente Firma Verificacion", "Pendiente Firma Emisor",
+    "En Verificacion Final", "Observado por Verificacion Final",
     "En revision DO Filtro 1", "En revision DO Filtro 2", "En revision DO Filtro 3",
     "Observado DO Filtro 1", "Observado DO Filtro 2", "Observado DO Filtro 3",
     "Devuelta por DO",
@@ -1412,7 +1412,7 @@ function DetalleView({
                       {(() => {
                         const obs = getObservador(sol.estado)
                         if (!obs) return "Observaciones"
-                        const tipo = obs === "Validacion UEFA" || obs === "Validacion DGDO" ? "Observación" : "Devolución"
+                        const tipo = obs === "Validacion UEFA" || obs === "Verificacion DGDO" ? "Observación" : "Devolución"
                         return `${tipo} — ${obs}`
                       })()}
                     </span>
@@ -1434,7 +1434,7 @@ function DetalleView({
                       {sol.todasObservaciones.map((obs, i) => (
                         <div key={i} className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Validacion Final/i, "Validacion DGDO")}</span>
+                            <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Verificacion Final/i, "Verificacion DGDO")}</span>
                             <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
                           </div>
                           <DevolucionObs comentario={obs.comentario} />
