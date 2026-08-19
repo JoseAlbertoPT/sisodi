@@ -185,7 +185,7 @@ const s = StyleSheet.create({
   centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 12 },
   sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 4, marginTop: 10 },
 
-  row: { flexDirection: "row", marginBottom: 16, alignItems: "flex-end" },
+  row: { flexDirection: "row", marginBottom: 8, alignItems: "flex-end" },
   bold: { fontFamily: "Helvetica-Bold" },
   numLabel: { width: 15, fontFamily: "Helvetica", fontSize: 9 },
   marginLabel: { fontFamily: "Helvetica", marginRight: 5, fontSize: 9 },
@@ -261,10 +261,10 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
 
-  listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10 },
-  listNum: { width: 24, fontFamily: "Helvetica" },
-  listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.4 },
-  bulletItemContainer: { flexDirection: "row", marginBottom: 1, paddingLeft: 20 },
+  listTextWrap: { flex: 1, fontSize: 9, textAlign: "justify", lineHeight: 1.4 },
+  romanItem: { marginLeft: 10, marginBottom: 6 },
+  romanText: { fontSize: 9, textAlign: "justify", lineHeight: 1.4 },
+  bulletItemContainer: { flexDirection: "row", marginBottom: 3, paddingLeft: 20 },
   bulletSign: { width: 15, fontSize: 7, fontFamily: "NotoSymbols" },
 
   firmasWrapper: {
@@ -602,32 +602,28 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         <View wrap={false}>
           <Text style={s.sectionTitle}>1.3    ACTIVIDADES DEL PRESTADOR DE SERVICIOS:</Text>
           {data.actividades?.slice(0, 1).map((act, index) => (
-            <View key={`act-${index}`} style={s.listItemContainer}>
-              <Text style={s.listNum}>{toRoman(index + 1)}.</Text>
-              <Text style={s.listTextWrap}>{act}</Text>
+            <View key={`act-${index}`} style={s.romanItem}>
+              <Text style={s.romanText}>{toRoman(index + 1)}. {act}</Text>
             </View>
           ))}
         </View>
         {data.actividades?.slice(1).map((act, index) => (
-          <View key={`act-${index + 1}`} style={s.listItemContainer} wrap={false}>
-            <Text style={s.listNum}>{toRoman(index + 2)}.</Text>
-            <Text style={s.listTextWrap}>{act}</Text>
+          <View key={`act-${index + 1}`} style={s.romanItem} wrap={false}>
+            <Text style={s.romanText}>{toRoman(index + 2)}. {act}</Text>
           </View>
         ))}
 
         <View wrap={false}>
           <Text style={s.sectionTitle}>1.4    RESPONSABILIDADES DEL PRESTADOR DE SERVICIOS:</Text>
           {data.responsabilidades?.slice(0, 1).map((resp, index) => (
-            <View key={`resp-${index}`} style={s.listItemContainer}>
-              <Text style={s.listNum}>{toRoman(index + 1)}.</Text>
-              <Text style={s.listTextWrap}>{resp}</Text>
+            <View key={`resp-${index}`} style={s.romanItem}>
+              <Text style={s.romanText}>{toRoman(index + 1)}. {resp}</Text>
             </View>
           ))}
         </View>
         {data.responsabilidades?.slice(1).map((resp, index) => (
-          <View key={`resp-${index + 1}`} style={s.listItemContainer} wrap={false}>
-            <Text style={s.listNum}>{toRoman(index + 2)}.</Text>
-            <Text style={s.listTextWrap}>{resp}</Text>
+          <View key={`resp-${index + 1}`} style={s.romanItem} wrap={false}>
+            <Text style={s.romanText}>{toRoman(index + 2)}. {resp}</Text>
           </View>
         ))}
 
