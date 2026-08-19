@@ -1085,17 +1085,23 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     ]),
   ]
 
-  // Detalle de las reutilizaciones (catalogo_solicitudes) de un solo registro,
-  // con las mismas columnas que el modal "Ver reutilizaciones" en pantalla.
-  const reutilizacionRows = (rec: AdminRecord): (string | number)[][] => [
-    ["Usuario", "Vigencia", "Num. Prestadores", "Programa o Proyecto", "Creado"],
-    ...rec.catalogo_solicitudes.map((sol) => [
-      sol.usuario.nombre,
-      sol.nueva_vigencia,
-      esCancelacion(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—"),
-      sol.nuevo_programa_proyecto ?? rec.programa_proyecto ?? "—",
-      new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
-    ]),
+  // Detalle de las reutilizaciones (catalogo_solicitudes) de todos los registros
+  // con movimiento, en una sola hoja, con el Folio como primera columna para
+  // poder filtrar por él (ver !autofilter en addSheetFromRows).
+  const reutilizacionRows = (records: AdminRecord[]): (string | number)[][] => [
+    ["Folio de Dictamen", "Secretaría / Dependencia", "Programa / Proyecto", "Usuario", "Vigencia", "Num. Prestadores", "Programa o Proyecto (movimiento)", "Creado"],
+    ...records.flatMap((rec) =>
+      rec.catalogo_solicitudes.map((sol) => [
+        fmt(folioSinSiglas(rec.solicitud.folio_dictamen)),
+        toTitleCaseES(entidadNombre(rec).split(" > ")[0]),
+        toTitleCaseES(fmt(rec.programa_proyecto)),
+        sol.usuario.nombre,
+        sol.nueva_vigencia,
+        esCancelacion(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—"),
+        sol.nuevo_programa_proyecto ?? rec.programa_proyecto ?? "—",
+        new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
+      ]),
+    ),
   ]
 
   const addSheetFromRows = (wb: XLSX.WorkBook, rows: (string | number)[][], nombreHoja: string) => {
@@ -1103,21 +1109,9 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     ws["!cols"] = rows[0].map((_, c) =>
       ({ wch: Math.min(50, Math.max(12, ...rows.map((r) => String(r[c] ?? "").length))) }),
     )
+    // Activa los desplegables de filtro de Excel en el encabezado (p. ej. filtrar por Folio).
+    ws["!autofilter"] = { ref: ws["!ref"]! }
     XLSX.utils.book_append_sheet(wb, ws, nombreHoja)
-  }
-
-  // Excel no permite \ / ? * [ ] : en el nombre de hoja, ni más de 31 caracteres,
-  // ni nombres repetidos — de ahí la sanitización y el desempate.
-  const sheetNameUnico = (base: string, usados: Set<string>) => {
-    const limpio = (base.replace(/[\\/?*[\]:]/g, "-").trim() || "Hoja").slice(0, 31)
-    let candidato = limpio
-    let n = 2
-    while (usados.has(candidato.toLowerCase())) {
-      const suf = ` (${n++})`
-      candidato = limpio.slice(0, 31 - suf.length) + suf
-    }
-    usados.add(candidato.toLowerCase())
-    return candidato
   }
 
   const buildReporteWorkbook = (records: AdminRecord[]) => {
@@ -1137,13 +1131,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     const sinMovimientos = filtered.filter((rec) => rec.catalogo_solicitudes.length === 0)
     const wb = XLSX.utils.book_new()
     addSheetFromRows(wb, reporteRows(sinMovimientos), "General")
-
-    const usados = new Set<string>(["general"])
-    conMovimientos.forEach((rec) => {
-      const folio = folioSinSiglas(rec.solicitud.folio_dictamen) ?? String(rec.id)
-      const nombreHoja = sheetNameUnico(folio, usados)
-      addSheetFromRows(wb, reutilizacionRows(rec), nombreHoja)
-    })
+    addSheetFromRows(wb, reutilizacionRows(conMovimientos), "Con Movimientos")
 
     const fecha = new Date().toISOString().slice(0, 10)
     XLSX.writeFile(wb, `reporte-general-catalogo-${fecha}.xlsx`, { bookType: "xlsx", type: "binary" })
@@ -1214,33 +1202,25 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
             ))}
           </SelectContent>
         </Select>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="default"
-              className="gap-1.5 shrink-0"
-              disabled={filtered.length === 0}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              Reporte general
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={handleReporteGeneral}>
-              <FileSpreadsheet className="h-4 w-4" /> General
-            </DropdownMenuItem>
-            {/* Comentado a pedido: el reporte "General" ya separa por hojas
-                (General + una por registro con movimientos), así que esta
-                opción quedó redundante. Se deja el handler por si se reactiva.
-            <DropdownMenuItem
-              onClick={handleReporteReutilizaciones}
-              disabled={!filtered.some((rec) => rec.catalogo_solicitudes.length > 0)}
-            >
-              <FileSpreadsheet className="h-4 w-4" /> Reporte Reutilizaciones
-            </DropdownMenuItem>
-            */}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant="default"
+          className="gap-1.5 shrink-0"
+          onClick={handleReporteGeneral}
+          disabled={filtered.length === 0}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          Reporte general
+        </Button>
+        {/* Comentado a pedido: el reporte "General" ya separa por hojas
+            (General + Con Movimientos), así que esta opción de menú quedó
+            redundante. Se deja el handler por si se reactiva.
+        <DropdownMenuItem
+          onClick={handleReporteReutilizaciones}
+          disabled={!filtered.some((rec) => rec.catalogo_solicitudes.length > 0)}
+        >
+          <FileSpreadsheet className="h-4 w-4" /> Reporte Reutilizaciones
+        </DropdownMenuItem>
+        */}
         <Button
           variant="default"
           className="gap-1.5 shrink-0"
