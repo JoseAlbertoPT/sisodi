@@ -202,7 +202,7 @@ export function ObservacionesPanel({
             {todasObservaciones.map((obs, i) => (
               <div key={i} className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Verificacion Final/i, "Verificacion DGDO")}</span>
+                  <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Verificacion Final/i, "Verificación DGDO")}</span>
                   <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
                 </div>
                 <DevolucionObs comentario={obs.comentario} />

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { puedeAdministrarCatalogo } from "@/lib/api-guard"
+import { puedeAdministrarCatalogo, puedeConsultarCatalogo } from "@/lib/api-guard"
 import bcrypt from "bcryptjs"
 import nodemailer from "nodemailer"
 
@@ -92,7 +92,10 @@ export async function POST(req: NextRequest) {
       const valida = await bcrypt.compare(password, usuario.password_hash)
       if (!valida) return err("Credenciales incorrectas", 401)
 
-      const catalogoAdministracion = await puedeAdministrarCatalogo(usuario.id)
+      const [catalogoAdministracion, catalogoConsulta] = await Promise.all([
+        puedeAdministrarCatalogo(usuario.id),
+        puedeConsultarCatalogo(usuario.id),
+      ])
 
       return NextResponse.json({
         id:                  usuario.id,
@@ -108,6 +111,7 @@ export async function POST(req: NextRequest) {
         mustChangePassword:  usuario.must_change_password ?? false,
         tipoAdministracion:  usuario.organo_centralizado ? "centralizada" : "paraestatal",
         catalogoAdministracion,
+        catalogoConsulta,
       })
     }
     if (action === "change-password") {

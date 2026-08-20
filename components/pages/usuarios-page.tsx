@@ -1,4 +1,4 @@
-"use client"
+ "use client"
 
 import { normalizeText } from "@/lib/utils"
 import { useState, useEffect, useMemo, useCallback } from "react"
@@ -559,14 +559,14 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
   const validateStep = (s: number) => {
     const e: Record<string, string> = {}
     if (s === 1) {
-      if (!form.nombre.trim()) e.nombre = "El Nombre es requerido"
-      if (!form.correo.trim()) e.correo = "El Correo es requerido"
+      if (!form.nombre.trim()) e.nombre = "El nombre es requerido"
+      if (!form.correo.trim()) e.correo = "El correo es requerido"
       else if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = "Correo inválido"
       if (!form.rfc.trim()) e.rfc = "El RFC es requerido"
-      else if (!validarRFC(form.rfc)) e.rfc = "RFC Inválido (ej. ABCD850101XYZ)"
+      else if (!validarRFC(form.rfc)) e.rfc = "RFC inválido (ej. ABCD850101XYZ)"
     }
     if (s === 2) {
-      if (!form.password.trim()) e.password = "La Contraseña es requerida"
+      if (!form.password.trim()) e.password = "La contraseña es requerida"
       else if (form.password.length < 8) e.password = "Mínimo 8 caracteres"
       if (!form.rol) e.rol = "Seleccione un rol"
     }
@@ -1030,10 +1030,10 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     }}
                     level={0}
                     menuActions={selectedPermisos.menuActions}
-                    onCatalogoAccionChange={(menuId, incluirAdmin) => {
+                    onCatalogoAccionChange={(menuId, accion, checked) => {
                       setSelectedPermisos((prev) => ({
                         ...prev,
-                        menuActions: setCatalogoAccion(prev.menuActions, menuId, incluirAdmin),
+                        menuActions: setCatalogoAccion(prev.menuActions, menuId, accion, checked),
                       }))
                     }}
                     rolUsuario={form.rol}
@@ -1552,9 +1552,13 @@ function toggleMenuId(ids: string[], menuId: string, checked: boolean): string[]
 function setCatalogoAccion(
   actions: Record<string, string[]>,
   menuId: string,
-  incluirAdmin: boolean
+  accion: "consulta" | "administracion",
+  checked: boolean,
 ): Record<string, string[]> {
-  return { ...actions, [menuId]: [incluirAdmin ? CATALOGO_ACCION_ADMINISTRACION : CATALOGO_ACCION_CONSULTA] }
+  const valor = accion === "administracion" ? CATALOGO_ACCION_ADMINISTRACION : CATALOGO_ACCION_CONSULTA
+  const current = new Set(actions[menuId] ?? [])
+  if (checked) current.add(valor); else current.delete(valor)
+  return { ...actions, [menuId]: Array.from(current) }
 }
 
 function clearCatalogoAccion(actions: Record<string, string[]>, menuId: string): Record<string, string[]> {
@@ -1631,10 +1635,10 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     })
   }, [])
 
-  const handleCatalogoAccionChange = useCallback((menuId: string, incluirAdmin: boolean) => {
+  const handleCatalogoAccionChange = useCallback((menuId: string, accion: "consulta" | "administracion", checked: boolean) => {
     setPermisos((prev) => {
       if (!prev) return prev
-      return { ...prev, menuActions: setCatalogoAccion(prev.menuActions, menuId, incluirAdmin) }
+      return { ...prev, menuActions: setCatalogoAccion(prev.menuActions, menuId, accion, checked) }
     })
   }, [])
 
@@ -1654,7 +1658,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
       setInitialPermisos(updated)
       onClose()
     } catch (e) {
-      setPermisosSaveError(e instanceof Error ? e.message : "Error al Guardar ")
+      setPermisosSaveError(e instanceof Error ? e.message : "Error al guardar")
     } finally {
       setPermisosSaveLoading(false)
     }
@@ -2052,7 +2056,7 @@ export function UsuariosPage() {
                   <th>Correo</th>
                   <th>RFC</th>
                   <th>Rol</th>
-                  <th className="whitespace-nowrap">Administracion</th>
+                  <th className="whitespace-nowrap">Administración</th>
                   <th>Secretaría</th>
                   <th>Estatus</th>
                   <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Acciones</th>

@@ -17,7 +17,7 @@ const { toggle } = useSidebar()
         <button
           type="button"
           onClick={toggle}
-          aria-label="Alternar sidebar"
+          aria-label="Alternar menú"
           className="flex-shrink-0 text-content-low hover:text-content-high transition-colors"
         >
           <PanelLeft className="h-5 w-5" />

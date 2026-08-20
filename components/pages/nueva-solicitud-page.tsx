@@ -2,6 +2,7 @@
 
 import { normalizeText, applyTextRules } from "@/lib/utils"
 import { useState, useCallback, useMemo, useEffect, useRef } from "react"
+import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -390,12 +391,14 @@ function OficioUpload({
   existingFiles?: { id: number; nombre_archivo: string; ruta: string }[]
 }) {
   const [archivos, setArchivos] = useState<File[]>([])
-  const VALID_EXTS = ["pdf","doc","docx","xls","xlsx","ppt","pptx","png","jpg","jpeg","gif","webp","zip","rar","txt","odt","ods"]
+  const [error, setError] = useState<string | null>(null)
+  const VALID_EXTS = ["pdf"]
   const handleFilesChange = (files: File[]) => {
     const filtered = files.filter((f) => {
       const ext = f.name.split(".").pop()?.toLowerCase() ?? ""
       return VALID_EXTS.includes(ext)
     })
+    setError(filtered.length < files.length ? "Solo se aceptan archivos PDF." : null)
     setArchivos(filtered)
     onFilesChange?.(filtered)
   }
@@ -412,10 +415,12 @@ function OficioUpload({
       )}
 
       <FileDropZone
-        hint="PDF, DOC, XLSX, PPT, imágenes, ZIP · máx. 10 MB · 1 archivo"
+        hint="PDF · máx. 10 MB · 1 archivo"
+        accept=".pdf,application/pdf"
         files={archivos}
         onFilesChange={handleFilesChange}
         multiple={false}
+        error={error}
       />
     </div>
   )
@@ -1097,96 +1102,59 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
     return []
   }, [busqueda, rangosActivos])
 
+  const placeholder = busqueda.trim() === ""
+    ? "Ingrese el importe para ver coincidencias"
+    : coincidencias.length === 0
+      ? "Sin coincidencias en el tabulador"
+      : "Seleccione el nivel"
+
   return (
-    <Card className="shadow-sm border-secondary/30 border-2">
-      <CardHeader className="px-4 pt-3 pb-1">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-          <ClipboardList className="h-4 w-4 text-secondary" />Equivalencia al Tabulador
-          {readonly && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 px-4 pb-3 pt-2">
-        {readonly ? (
-          <div className="flex items-center gap-3 rounded-lg border-2 border-secondary/20 bg-secondary/5 px-3 py-2">
-            <span className="text-sm font-semibold text-card-foreground">
-              {(() => {
-                let nivel = coincidencias[0]?.nivel || nivelCategoria || ""
-                if (!nivel && normalizedImporte) {
-                  const val = parseMoney(normalizedImporte)
-                  const match = RANGOS_TABULADOR.find((r) => val >= r.min && val <= r.max)
-                  nivel = match?.nivel ?? ""
-                }
-                if (!nivel && !normalizedImporte) {
-                  return <span className="text-muted-foreground font-normal">—</span>
-                }
-                return (
-                  <>
-                    {nivel && <span className="text-secondary">{nivel}</span>}
-                    {nivel && normalizedImporte && <span className="mx-1 text-muted-foreground">—</span>}
-                    {normalizedImporte && <span>{normalizedImporte}</span>}
-                  </>
-                )
-              })()}
-            </span>
-          </div>
-        ) : (
-          <>
-            {!seleccionado && coincidencias.length > 1 && (
-              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
-                <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4 shrink-0 mt-0.5" />
-                <span className="text-sm font-medium text-[#374151]">
-                  Hay varias coincidencias — seleccione el nivel que corresponda.
-                </span>
-              </div>
-            )}
-            {seleccionado && (
-              <div className="flex items-center justify-center gap-2 rounded-xl bg-[#d2fad2] px-4 py-3">
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1c7d29]">
-                  <span className="text-[12px] font-bold text-white leading-none">i</span>
-                </div>
-                <span className="text-sm font-light text-[#1c7d29]">
-                  Nivel seleccionado: {seleccionado.nivel}
-                  {seleccionado.categoria ? ` — categoría ${seleccionado.categoria}` : ""}
-                </span>
-              </div>
-            )}
-            {busqueda.trim() === "" ? (
-              <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
-                  <span className="text-[12px] font-bold text-white leading-none">i</span>
-                </div>
-                <span className="text-sm font-light text-[#3266cb]">Ingrese el importe para ver coincidencias</span>
-              </div>
-            ) : coincidencias.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-[8px] border-l-4 border-l-[#EF4444] bg-[#FFF5F5] px-4 py-3">
-                <AlertCircle className="h-4 w-4 text-[#DC2626] shrink-0 mt-0.5" />
-                <span className="text-sm text-[#DC2626]">Sin coincidencias en el tabulador.</span>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {coincidencias.map((c) => {
-                  const isSelected = seleccionado?.nivel === c.nivel && seleccionado?.categoria === c.categoria
-                  return (
-                    <div
-                      key={`${c.nivel}-${c.categoria}`}
-                      onClick={() => setSeleccionado(isSelected ? null : { nivel: c.nivel, categoria: c.categoria })}
-                      className={`flex items-center gap-3 rounded-lg border-2 px-3 py-2 cursor-pointer transition-colors
-                        ${isSelected ? "border-secondary bg-secondary/15" : "border-secondary/20 bg-secondary/5 hover:border-secondary/50"}`}
-                         >
-                        <span className="text-sm font-semibold text-card-foreground shrink-0">
-                        {c.nivel} : {formatMXN(c.min)} - {formatMXN(c.max)}
-                        </span>
-                        <span className="text-xs text-muted-foreground truncate">{c.puesto}</span>
-                        {isSelected && <CheckCircle2 className="h-4 w-4 text-secondary ml-auto shrink-0" />}
-                        </div>
-                  )
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-sm font-medium flex items-center gap-1.5">
+        Equivalencia al Tabulador
+        {readonly && <Lock className="h-3 w-3 text-muted-foreground" />}
+      </Label>
+      {readonly ? (
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
+          <span className="text-sm text-muted-foreground">
+            {(() => {
+              let nivel = coincidencias[0]?.nivel || nivelCategoria || ""
+              if (!nivel && normalizedImporte) {
+                const val = parseMoney(normalizedImporte)
+                const match = RANGOS_TABULADOR.find((r) => val >= r.min && val <= r.max)
+                nivel = match?.nivel ?? ""
+              }
+              if (!nivel && !normalizedImporte) return "—"
+              return (
+                <>
+                  {nivel && <span className="text-secondary">{nivel}</span>}
+                  {nivel && normalizedImporte && <span className="mx-1">—</span>}
+                  {normalizedImporte && <span>{normalizedImporte}</span>}
+                </>
+              )
+            })()}
+          </span>
+        </div>
+      ) : (
+        <Select
+          value={seleccionado ? `${seleccionado.nivel}__${seleccionado.categoria}` : undefined}
+          onValueChange={(val) => {
+            const match = coincidencias.find((c) => `${c.nivel}__${c.categoria}` === val)
+            if (match) setSeleccionado({ nivel: match.nivel, categoria: match.categoria })
+          }}
+          disabled={coincidencias.length === 0}
+        >
+          <SelectTrigger className="w-full"><SelectValue placeholder={placeholder} /></SelectTrigger>
+          <SelectContent>
+            {coincidencias.map((c) => (
+              <SelectItem key={`${c.nivel}-${c.categoria}`} value={`${c.nivel}__${c.categoria}`}>
+                {c.nivel} : {formatMXN(c.min)} - {formatMXN(c.max)}{c.categoria ? ` — categoría ${c.categoria}` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
   )
 }
 function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; onDismiss: () => void }) {
@@ -1250,11 +1218,11 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
 }
 function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
   const filas: { elemento: string; ejemplo: string }[] = [
-    { elemento: "Verbo Infonitivo",                    ejemplo: "Revisar" },
+    { elemento: "Verbo Infinitivo",                    ejemplo: "Revisar" },
     { elemento: "Actividad – ¿Qué hace?",               ejemplo: "Que las descripciones y perfiles de puesto cumplan con las actividades, responsabilidades y requisitos solicitados" },
     { elemento: "¿Cómo lo hace? / ¿En qué se basa?",   ejemplo: "Realizar el análisis para su elaboración y/o actualización, en apego al procedimiento y metodología establecida por la Dirección General de Desarrollo Organizacional" },
-    { elemento: "Con la Finalidad de  / ¿Para qué lo hace?",       ejemplo: "Con la finalidad de que el puesto documentado cumpla con la funcionalidad requerida" },
-    { elemento: "Alcance /¿Dónde aplica sus funciones?",             ejemplo: "De las plazas que integran la Administración Pública del Gobierno del Estado" },
+    { elemento: "Con la Finalidad de / ¿Para qué lo hace?",       ejemplo: "Con la finalidad de que el puesto documentado cumpla con la funcionalidad requerida" },
+    { elemento: "Alcance / ¿Dónde aplica sus funciones?",             ejemplo: "De las plazas que integran la Administración Pública del Gobierno del Estado" },
   ]
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1657,7 +1625,7 @@ function FormularioPrestacion({
         <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
           <Lock className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Renovación — Datos  Precargados  y Bloqueados </span>
+            <span className="text-sm font-semibold text-card-foreground">Renovación — Datos Precargados y Bloqueados</span>
             <span className="text-xs text-muted-foreground">
               Todos los campos se han cargado del folio anterior. Solo puede modificar la <strong>Vigencia</strong>, el <strong>Oficio de Suficiencia</strong> y el <strong>Número de Prestadores de Servicios</strong>.
             </span>
@@ -1759,7 +1727,7 @@ function FormularioPrestacion({
             </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
-                Programas o Proyectos.
+                Programas o Proyectos
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -1914,6 +1882,16 @@ function FormularioPrestacion({
               </div>
             </div>
 
+            <TabuladorNiveles
+              nivelCategoria={datosRenovacion?.nivelCategoria}
+              importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeBruto}
+              readonly={bloqueadoPorRenovacion}
+              onSeleccionadoChange={(nivel, categoria) => { setNivelTabulador(nivel); setCategoriaTabulador(categoria) }}
+              secretaria={secretariaConfirmada || secretariaInput}
+              initialNivel={nivelTabulador || undefined}
+              initialCategoria={categoriaTabulador || undefined}
+            />
+
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
@@ -1979,17 +1957,6 @@ function FormularioPrestacion({
           </div>
         </CardContent>
       </Card>
-
-
-      <TabuladorNiveles
-        nivelCategoria={datosRenovacion?.nivelCategoria}
-        importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeBruto}
-        readonly={bloqueadoPorRenovacion}
-        onSeleccionadoChange={(nivel, categoria) => { setNivelTabulador(nivel); setCategoriaTabulador(categoria) }}
-        secretaria={secretariaConfirmada || secretariaInput}
-        initialNivel={nivelTabulador || undefined}
-        initialCategoria={categoriaTabulador || undefined}
-      />
 
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
@@ -2089,7 +2056,7 @@ function FormularioPrestacion({
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
           <p className="text-xs text-muted-foreground italic">
-            SE REFIERE A LA ESCOLARIDAD, COMPETENCIAS Y EXPERIENCIA.
+            Se refiere a la escolaridad, competencias y experiencia.
           </p>
         </CardHeader>
         <CardContent className="grid gap-x-6 gap-y-5 px-4 pb-4 pt-0 md:grid-cols-2">
@@ -2420,7 +2387,7 @@ function FormularioNombramiento({
         <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
           <Lock className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold text-card-foreground">Renovación — Datos  Precargados y Bloqueados</span>
+            <span className="text-sm font-semibold text-card-foreground">Renovación — Datos Precargados y Bloqueados</span>
             <span className="text-xs text-muted-foreground">
               La mayoría de campos vienen precargados del folio anterior. Solo puede modificar <strong>vigencia, oficio de suficiencia, número de prestadores de servicios, marco normativo, condiciones y riesgos</strong>.
             </span>
@@ -2550,7 +2517,7 @@ function FormularioNombramiento({
                     disabled={!camposDependientesHabilitados}
                   />
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />Puede Obtenerse desde el Oficio de Suficiencia Presupuestal.
+                    <img src="/iconos2/Icon.svg" alt="" className="h-3 w-3 shrink-0" />Puede obtenerse desde el Oficio de Suficiencia Presupuestal.
                   </p>
                 </>
               )}
@@ -2571,7 +2538,7 @@ function FormularioNombramiento({
               <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
                 <span className="text-sm text-muted-foreground">
                   {regimenPeriodo === "honorarios"    ? "Honorarios"
-                  : regimenPeriodo === "asimilados"   ? "Honorarios asimilados a Salarios"
+                  : regimenPeriodo === "asimilados"   ? "Honorarios Asimilados a Salarios"
                   : regimenPeriodo === "nombramiento" ? "Nombramiento por Tiempo Determinado"
                   : regimenPeriodo || "—"}
                 </span>
@@ -2689,6 +2656,16 @@ function FormularioNombramiento({
               </div>
             </div>
 
+            <TabuladorNiveles
+              nivelCategoria={datosRenovacion?.nivelCategoria}
+              importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeNeto}
+              readonly={bloqueadoPorRenovacion}
+              onSeleccionadoChange={(nivel, categoria) => { setNivelTabulador(nivel); setCategoriaTabulador(categoria) }}
+              secretaria={secretariaConfirmada || secretariaInput}
+              initialNivel={nivelTabulador || undefined}
+              initialCategoria={categoriaTabulador || undefined}
+            />
+
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
@@ -2746,15 +2723,6 @@ function FormularioNombramiento({
           </div>
         </CardContent>
       </Card>
-      <TabuladorNiveles
-        nivelCategoria={datosRenovacion?.nivelCategoria}
-        importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeNeto}
-        readonly={bloqueadoPorRenovacion}
-        onSeleccionadoChange={(nivel, categoria) => { setNivelTabulador(nivel); setCategoriaTabulador(categoria) }}
-        secretaria={secretariaConfirmada || secretariaInput}
-        initialNivel={nivelTabulador || undefined}
-        initialCategoria={categoriaTabulador || undefined}
-      />
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
@@ -2838,7 +2806,7 @@ function FormularioNombramiento({
           />
           <div className="flex flex-col items-start gap-1.5">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#4b5563]">
-              <Info className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas
+              <Info className="h-3.5 w-3.5" />Las responsabilidades deberán ser congruentes con las actividades registradas.
             </span>
           </div>
         </CardContent>
@@ -3022,7 +2990,7 @@ function FormularioNombramiento({
             {bloqueadoPorRenovacion && <Lock className="h-4 w-4 text-muted-foreground" />}
           </CardTitle>
           <p className="text-xs text-muted-foreground italic">
-            SE REFIERE A LA ESCOLARIDAD, COMPETENCIAS Y EXPERIENCIA.
+            Se refiere a la escolaridad, competencias y experiencia.
           </p>
         </CardHeader>
         <CardContent className="grid gap-x-6 gap-y-5 px-4 pb-4 pt-0 md:grid-cols-2">
@@ -3491,9 +3459,9 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
   const [calAsimilados,    setCalAsimilados]    = useState<PeriodoCap1000[]>([])
   const [calNombramiento,  setCalNombramiento]  = useState<PeriodoCap1000[]>([])
   const [calCargando,      setCalCargando]      = useState(true)
-  useEffect(() => {
+  const fetchCalendario = useCallback(() => {
     const year = new Date().getFullYear()
-    fetch(`/api/calendario?ejercicio=${year}`)
+    return fetch(`/api/calendario?ejercicio=${year}`)
       .then((r) => r.json())
       .then((data) => {
         setCalHonorarios(data.honorarios ?? [])
@@ -3503,6 +3471,11 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       .catch(() => {})
       .finally(() => setCalCargando(false))
   }, [])
+  useEffect(() => { void fetchCalendario() }, [fetchCalendario])
+  // Si un administrador cambia una fecha límite en Calendario mientras esta
+  // página ya está abierta, el mes/quincena disponibles se actualizan solos
+  // (sin esto, solo se veía el cambio recargando la página).
+  useRealtime(["calendario"], fetchCalendario)
 
   const [catalogoTree, setCatalogoTree] = useState<OrganoCentralizadoNode[]>([])
   useEffect(() => {
@@ -3995,7 +3968,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
                     <SelectContent className="vino-force">
                       <SelectItem value="honorarios">Honorarios</SelectItem>
-                      <SelectItem value="asimilados">Honorarios asimilados a Salarios</SelectItem>
+                      <SelectItem value="asimilados">Honorarios Asimilados a Salarios</SelectItem>
                       <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado</SelectItem>
                     </SelectContent>
                   </Select>
@@ -4033,11 +4006,11 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                 <div className={`rounded-lg border-2 p-4 flex flex-col gap-3 ${periodoInfo.enTiempo ? "border-secondary/30 bg-secondary/5" : "border-destructive/40 bg-destructive/5"}`}>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">Fecha límite de recepción de solicitudes de dictamen/opiniones técnicas funcionales (DGDO) </span>
+                      <span className="text-xs text-muted-foreground">Fecha límite de recepción de solicitudes de dictamen/opiniones técnicas funcionales (DGDO)</span>
                       <span className="text-sm font-semibold text-card-foreground">{periodoInfo.row.limiteDO}</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH) </span>
+                      <span className="text-xs text-muted-foreground">Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)</span>
                       <span className="text-sm font-semibold text-card-foreground">{periodoInfo.row.limiteDGRH}</span>
                     </div>
                   </div>
@@ -4058,8 +4031,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                       <div className="flex items-start gap-2 w-full">
                         <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold text-destructive">Período vencido — No se puede Registrar</span>
-                          <span className="text-xs text-muted-foreground">La Fecha  límite DO ({periodoInfo.row.limiteDO}) ya Expiro .</span>
+                          <span className="text-sm font-semibold text-destructive">Período vencido — No se puede registrar</span>
+                          <span className="text-xs text-muted-foreground">La fecha límite DO ({periodoInfo.row.limiteDO}) ya expiró.</span>
                         </div>
                       </div>
                     )}

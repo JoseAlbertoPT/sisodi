@@ -9,18 +9,28 @@ import type { MenuNode } from "@/lib/permisos-api"
 
 export const CATALOGO_MENU_KEY = "catalogo-justificaciones"
 export const CATALOGO_ACCION_ADMINISTRACION = "administracion"
-// Override explícito para NEGAR Administración a un usuario cuyo rol la tendría por defecto.
 export const CATALOGO_ACCION_CONSULTA = "consulta"
 // Debe reflejar lib/api-guard.ts:ROLES_ADMIN_CATALOGO — duplicado porque ese módulo importa
 // Prisma y no puede usarse desde un componente cliente.
 const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador", "Revisor"]
 
-/** Un override explícito (guardado desde Permisos) siempre gana sobre el acceso por rol. */
+/**
+ * Consulta y Administración de Catálogo son independientes entre sí (ver
+ * lib/api-guard.ts:puedeAdministrarCatalogo/puedeConsultarCatalogo). Sin
+ * override explícito para este usuario, se usa el default por rol
+ * (Administración) o siempre-permitido (Consulta). Con override explícito
+ * (acciones no vacío), es autoritativo para ambas: solo se ve lo marcado.
+ */
 export function catalogoIncluyeAdministracion(acciones: string[] | undefined, rolUsuario: string | undefined): boolean {
   const list = acciones ?? []
-  if (list.includes(CATALOGO_ACCION_ADMINISTRACION)) return true
-  if (list.includes(CATALOGO_ACCION_CONSULTA)) return false
+  if (list.length > 0) return list.includes(CATALOGO_ACCION_ADMINISTRACION)
   return rolUsuario ? ROLES_ADMIN_CATALOGO.includes(rolUsuario) : false
+}
+
+export function catalogoIncluyeConsulta(acciones: string[] | undefined): boolean {
+  const list = acciones ?? []
+  if (list.length > 0) return list.includes(CATALOGO_ACCION_CONSULTA)
+  return true
 }
 
 export function countActiveChildren(nodes: MenuNode[], menuIdSet: Set<string>): { active: number; total: number } {
@@ -72,7 +82,7 @@ export function MenuPermisoTree({
   onMenuToggle: (menuId: string, checked: boolean, key: string | null) => void
   level: number
   menuActions?: Record<string, string[]>
-  onCatalogoAccionChange?: (menuId: string, incluirAdmin: boolean) => void
+  onCatalogoAccionChange?: (menuId: string, accion: "consulta" | "administracion", checked: boolean) => void
   rolUsuario?: string
 }) {
   const menuIdSet = new Set(menuIds)
@@ -210,7 +220,7 @@ function MenuPermisoRow({
   onMenuToggle: (menuId: string, checked: boolean, key: string | null) => void
   depth: number
   menuActions?: Record<string, string[]>
-  onCatalogoAccionChange?: (menuId: string, incluirAdmin: boolean) => void
+  onCatalogoAccionChange?: (menuId: string, accion: "consulta" | "administracion", checked: boolean) => void
   rolUsuario?: string
 }) {
   const menuIdSet = new Set(menuIds)
@@ -218,6 +228,7 @@ function MenuPermisoRow({
   const hasChildren = node.children && node.children.length > 0
   const esCatalogo = node.key === CATALOGO_MENU_KEY
   const incluyeAdministracion = catalogoIncluyeAdministracion(menuActions?.[node.id], rolUsuario)
+  const incluyeConsulta = catalogoIncluyeConsulta(menuActions?.[node.id])
 
   return (
     <div
@@ -247,22 +258,26 @@ function MenuPermisoRow({
           <div className="flex items-center gap-3 shrink-0" role="group" aria-label="Nivel de acceso a Catálogo">
             <button
               type="button"
+              role="checkbox"
+              aria-checked={incluyeConsulta}
               className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md transition-colors ${
-                !incluyeAdministracion ? "text-content-high font-medium" : "text-muted-foreground hover:text-content-high"
+                incluyeConsulta ? "text-content-high font-medium" : "text-muted-foreground hover:text-content-high"
               }`}
-              onClick={() => onCatalogoAccionChange(node.id, false)}
+              onClick={() => onCatalogoAccionChange(node.id, "consulta", !incluyeConsulta)}
             >
-              {!incluyeAdministracion && (
+              {incluyeConsulta && (
                 <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "9999px", backgroundColor: "#10b981", flexShrink: 0 }} />
               )}
               Consulta
             </button>
             <button
               type="button"
+              role="checkbox"
+              aria-checked={incluyeAdministracion}
               className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md transition-colors ${
                 incluyeAdministracion ? "text-content-high font-medium" : "text-muted-foreground hover:text-content-high"
               }`}
-              onClick={() => onCatalogoAccionChange(node.id, true)}
+              onClick={() => onCatalogoAccionChange(node.id, "administracion", !incluyeAdministracion)}
             >
               {incluyeAdministracion && (
                 <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "9999px", backgroundColor: "#10b981", flexShrink: 0 }} />

@@ -17,6 +17,7 @@ interface User {
   mustChangePassword: boolean
   tipoAdministracion: "centralizada" | "paraestatal"
   catalogoAdministracion: boolean
+  catalogoConsulta: boolean
 }
 
 interface AuthContextType {

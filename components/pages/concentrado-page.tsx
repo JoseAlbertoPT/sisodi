@@ -17,7 +17,7 @@ import {
 
 const concentradoData = [
   { secretaria: "Sec. de Finanzas", total: 32, emitidas: 25, proceso: 5, rechazadas: 2 },
-  { secretaria: "Sec. de Educacion", total: 28, emitidas: 20, proceso: 6, rechazadas: 2 },
+  { secretaria: "Sec. de Educación", total: 28, emitidas: 20, proceso: 6, rechazadas: 2 },
   { secretaria: "Sec. de Salud", total: 25, emitidas: 18, proceso: 4, rechazadas: 3 },
   { secretaria: "Sec. de Gobierno", total: 22, emitidas: 16, proceso: 5, rechazadas: 1 },
   { secretaria: "Sec. de Obras", total: 20, emitidas: 12, proceso: 6, rechazadas: 2 },
@@ -38,7 +38,7 @@ export function ConcentradoPage() {
         <div>
           <h2 className="ds-title-md text-content-high">Concentrado General</h2>
           <p className="text-sm text-muted-foreground">
-            Vista consolidada de solicitudes por secretaria
+            Vista consolidada de solicitudes por secretaría
           </p>
         </div>
         <Button variant="outline" className="gap-2">
@@ -50,7 +50,7 @@ export function ConcentradoPage() {
       <div className="flex flex-wrap items-center gap-3">
         <Select defaultValue="2026">
           <SelectTrigger className="w-32 bg-card">
-            <SelectValue placeholder="Ano" />
+            <SelectValue placeholder="Año" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="2026">2026</SelectItem>
@@ -74,7 +74,7 @@ export function ConcentradoPage() {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
             <BarChart3 className="h-4 w-4 text-secondary" />
-            Solicitudes por Secretaria
+            Solicitudes por Secretaría
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -106,7 +106,7 @@ export function ConcentradoPage() {
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-card-foreground">
-            Detalle por Secretaria
+            Detalle por Secretaría
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -114,7 +114,7 @@ export function ConcentradoPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-bg-base text-content-high">
-                  <th className="px-4 py-3 text-left font-semibold">Secretaria</th>
+                  <th className="px-4 py-3 text-left font-semibold">Secretaría</th>
                   <th className="px-4 py-3 text-right font-semibold">Total</th>
                   <th className="px-4 py-3 text-right font-semibold">Emitidas</th>
                   <th className="px-4 py-3 text-right font-semibold">En Proceso</th>

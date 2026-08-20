@@ -24,9 +24,15 @@ export const CATALOGO_ACCION_ADMINISTRACION = "administracion"
 export const CATALOGO_ACCION_CONSULTA = "consulta"
 
 /**
- * Un permiso explícito por-usuario (guardado desde el modal de Permisos) siempre gana sobre el
- * acceso por rol: "administracion" lo otorga, "consulta" lo niega aunque el rol esté en
- * ROLES_ADMIN_CATALOGO. Sin override explícito, se usa el acceso por rol.
+ * Consulta y Administración de Catálogo se otorgan de forma independiente
+ * (checkboxes separados en el modal de Permisos, ver menu-permiso-tree.tsx):
+ * - Sin override explícito para este usuario (acciones = []): se usa el
+ *   default — Administración según ROLES_ADMIN_CATALOGO, Consulta para
+ *   cualquiera (comportamiento histórico).
+ * - Con override explícito (acciones no vacío): es autoritativo para AMBAS
+ *   pestañas — solo se ve lo que esté marcado, aunque el rol normalmente
+ *   diera acceso a la otra. Por eso "acciones.length > 0" corta el fallback
+ *   al rol en los dos casos de abajo.
  */
 export async function puedeAdministrarCatalogo(userId: string | null): Promise<boolean> {
   if (!userId) return false
@@ -42,9 +48,25 @@ export async function puedeAdministrarCatalogo(userId: string | null): Promise<b
   })
   if (!usuario) return false
   const acciones = usuario.usuario_menu[0]?.acciones ?? []
-  if (acciones.includes(CATALOGO_ACCION_ADMINISTRACION)) return true
-  if (acciones.includes(CATALOGO_ACCION_CONSULTA)) return false
+  if (acciones.length > 0) return acciones.includes(CATALOGO_ACCION_ADMINISTRACION)
   return ROLES_ADMIN_CATALOGO.includes(usuario.rol.nombre)
+}
+
+export async function puedeConsultarCatalogo(userId: string | null): Promise<boolean> {
+  if (!userId) return false
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: userId },
+    select: {
+      usuario_menu: {
+        where: { menu: { key: CATALOGO_MENU_KEY } },
+        select: { acciones: true },
+      },
+    },
+  })
+  if (!usuario) return false
+  const acciones = usuario.usuario_menu[0]?.acciones ?? []
+  if (acciones.length > 0) return acciones.includes(CATALOGO_ACCION_CONSULTA)
+  return true
 }
 
 export async function requireCatalogoAdmin(userId: string | null): Promise<NextResponse | null> {
@@ -52,6 +74,16 @@ export async function requireCatalogoAdmin(userId: string | null): Promise<NextR
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
   if (!(await puedeAdministrarCatalogo(userId))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+  }
+  return null
+}
+
+export async function requireCatalogoConsulta(userId: string | null): Promise<NextResponse | null> {
+  if (!userId) {
+    return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+  }
+  if (!(await puedeConsultarCatalogo(userId))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 })
   }
   return null

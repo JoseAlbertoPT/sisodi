@@ -116,7 +116,7 @@ export function FirmaAutografaPanel({
       <Card className="border-border py-4 gap-3">
         <CardHeader className="px-5 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Download className="h-4 w-4 text-secondary" /> Paso 1 — Descargar Justificacion
+            <Download className="h-4 w-4 text-secondary" /> Paso 1 — Descargar Justificación
           </CardTitle>
         </CardHeader>
         <CardContent className="px-5 pb-1 pt-0">

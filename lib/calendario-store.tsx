@@ -15,6 +15,7 @@ import {
   type PeriodoCap1000,
 } from "@/lib/calendario-api"
 import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
+import { useRealtime } from "@/hooks/use-realtime"
 
 export type RegimenPeriodo = "honorarios" | "asimilados" | "nombramiento"
 
@@ -74,6 +75,10 @@ export function CalendarioProvider({ children }: { children: ReactNode }) {
   const refetch = useCallback(async () => {
     await load()
   }, [load])
+
+  // Refleja en vivo un cambio guardado desde Calendario (por este u otro
+  // usuario) sin que haga falta recargar la página.
+  useRealtime(["calendario"], refetch)
 
   const setEjercicio = useCallback((year: number) => {
     setEjercicioState(year)

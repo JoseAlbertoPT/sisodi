@@ -84,12 +84,20 @@ export async function PATCH(
       data.must_change_password = true
     }
 
-    // Detectar si la secretaría realmente cambia (para forzar cierre de sesión después)
+    // Detectar qué cambia realmente (para forzar cierre de sesión después). Estos son
+    // campos que ya quedaron "congelados" en el snapshot de login (lib/auth-context.tsx)
+    // o que afectan la identidad/alcance de la cuenta — sin recargar la sesión completa
+    // el usuario seguiría viendo datos viejos hasta que cierre sesión por su cuenta.
     const secretariaIdCambia =
       secretariaId !== undefined && secretariaId !== usuarioActual.secretaria_id
     const secretariaTextoCambia =
       secretariaTexto !== undefined && secretariaTexto !== usuarioActual.secretaria_texto
     const rolCambia = rolNombre !== undefined && rol_id !== usuarioActual.rol_id
+    const areaCambia = areaNombre !== undefined && area_id !== usuarioActual.area_id
+    const nombreCambia = nombre !== undefined && nombre.trim() !== usuarioActual.nombre
+    const rfcNuevo = rfc !== undefined ? (rfc ? rfc.trim().toUpperCase() : null) : undefined
+    const rfcCambia = rfcNuevo !== undefined && rfcNuevo !== usuarioActual.rfc
+    const passwordCambia = !!password
 
     // Conservar permisos de menú: si al editar cambia el contexto del usuario
     // (secretaría, tipo de administración o rol) y el usuario aún NO tiene permisos
@@ -168,8 +176,9 @@ export async function PATCH(
       })
     }
 
-    // Si la secretaría cambió, forzar cierre de sesión al usuario afectado
-    if (secretariaIdCambia || secretariaTextoCambia) {
+    // Rol, contraseña, RFC, nombre, secretaría o dirección cambiados: forzar cierre de
+    // sesión al usuario afectado para que su próximo login recargue el snapshot completo.
+    if (secretariaIdCambia || secretariaTextoCambia || rolCambia || areaCambia || nombreCambia || rfcCambia || passwordCambia) {
       broadcastForceLogout([id])
     }
 

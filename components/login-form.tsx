@@ -340,7 +340,7 @@ function ModalCambioContrasena({
         <div className="flex flex-col gap-5 px-10 py-6">
             <div className="rounded-2xl bg-white/10 px-4 py-3">
               <p className="text-xs text-white/60 leading-relaxed">
-                Por seguridad . Debe establecer una nueva contraseña personal.
+                Por seguridad, debe establecer una nueva contraseña personal.
               </p>
             </div>
             <div className="relative">

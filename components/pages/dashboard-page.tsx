@@ -562,11 +562,11 @@ function GraficaPrestadores({
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             <BarrasPrestadoresPorTipo
-              title="Secretarías de  Administración Centralizada"
+              title="Secretarías / Dependencias de la Administración Pública Centralizada"
               items={centralizadas}
             />
             <BarrasPrestadoresPorTipo
-              title="Secretarías de  Administración Paraestatal"
+              title="Organismos Auxiliares de la Administración Pública Estatal"
               items={paraestatales}
             />
           </div>
@@ -590,8 +590,8 @@ function GraficaSolicitudesTipo({
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-card-foreground">Solicitudes por Administración</CardTitle>
-        <p className="text-xs text-muted-foreground">Distribución de solicitudes por tipo de administración</p>
+        <CardTitle className="text-sm text-card-foreground">Solicitudes por Tipo de Administración</CardTitle>
+        <p className="text-xs text-muted-foreground">Distribución de solicitudes por tipo de Administración</p>
       </CardHeader>
       <CardContent>
         <DonutSimple items={items} subLabel="solicitudes" />
@@ -684,9 +684,9 @@ function generarIndicadores(data: DashboardData, periodo: string): XLSX.WorkBook
   const rows = [
     ["Indicador", "Valor"],
     ["Total de solicitudes recibidas",                          data.totalRecibidas],
-    ["Justificaciones por Honorarios",                          data.honorarios],
-    ["Justificaciones por Honorarios asimilados a salarios",    data.asimilados],
-    ["Justificaciones por Nombramiento por tiempo determinado", data.nombramiento],
+    ["Justificaciones por honorarios",                          data.honorarios],
+    ["Justificaciones por honorarios asimilados a salarios",    data.asimilados],
+    ["Justificaciones por nombramiento por tiempo determinado", data.nombramiento],
     ["Justificaciones emitidas",                                data.emitidas],
     ["Número total de prestadores de servicio",                 data.prestadores],
     ["Justificaciones en proceso",                              data.enProceso],
@@ -750,9 +750,9 @@ function generarReporteCompleto(data: DashboardData, periodo: string): XLSX.Work
   XLSX.utils.book_append_sheet(wb, makeSheet([
     ["Indicador", "Valor"],
     ["Total de solicitudes recibidas",                          data.totalRecibidas],
-    ["Justificaciones por Honorarios",                          data.honorarios],
-    ["Justificaciones por Honorarios asimilados a salarios",    data.asimilados],
-    ["Justificaciones por Nombramiento por tiempo determinado", data.nombramiento],
+    ["Justificaciones por honorarios",                          data.honorarios],
+    ["Justificaciones por honorarios asimilados a salarios",    data.asimilados],
+    ["Justificaciones por nombramiento por tiempo determinado", data.nombramiento],
     ["Justificaciones emitidas",                                data.emitidas],
     ["Número total de prestadores de servicio",                 data.prestadores],
     ["Justificaciones en proceso",                              data.enProceso],
@@ -794,14 +794,14 @@ function generarReporteCompleto(data: DashboardData, periodo: string): XLSX.Work
 const REPORTES = [
   {
     id:          "completo",
-    titulo:      "Reporte completo",
+    titulo:      "Reporte Completo",
     descripcion: "Todos los indicadores y gráficas en un solo archivo (7 hojas)",
     generar:     generarReporteCompleto,
     archivo:     (p: string) => `reporte-completo-${p}.xlsx`,
   },
   {
     id:          "indicadores",
-    titulo:      "Indicadores generales",
+    titulo:      "Indicadores Generales",
     descripcion: "Resumen de los 7 KPIs del tablero",
     generar:     generarIndicadores,
     archivo:     (p: string) => `indicadores-${p}.xlsx`,
@@ -858,12 +858,12 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
   useEffect(() => { fetchData() }, [fetchData])
   useRealtime(["dashboard"], fetchData)
   const kpis = [
-    { label: "Total de solicitudes Recibidas",                           value: data?.totalRecibidas ?? 0, icon: FileText,    color: C_VERDE_OSCURO },
-    { label: "Justificaciones por Honorarios",                           value: data?.honorarios    ?? 0, icon: Briefcase,   color: C_OLIVA       },
-    { label: "Justificaciones por Honorarios asimilados a salarios",     value: data?.asimilados    ?? 0, icon: FileQuestion,color: C_DORADO      },
-    { label: "Justificaciones por Nombramiento por tiempo determinado",  value: data?.nombramiento  ?? 0, icon: UserCheck,   color: C_VERDE_MEDIO },
-    { label: "Justificaciones Emitidas",                                 value: data?.emitidas      ?? 0, icon: FileOutput,  color: C_AMBAR       },
-    { label: "Número total de Prestadores de Servicio",                  value: data?.prestadores   ?? 0, icon: Users,       color: C_BURDEOS     },
+    { label: "Total de Solicitudes Recibidas",                           value: data?.totalRecibidas ?? 0, icon: FileText,    color: C_VERDE_OSCURO },
+    { label: "Justificaciones de Prestación de Servicios Profesionales por Honorarios",                           value: data?.honorarios    ?? 0, icon: Briefcase,   color: C_OLIVA       },
+    { label: "Justificaciones de Prestación de Servicios por Honorarios Asimilados a Salarios",     value: data?.asimilados    ?? 0, icon: FileQuestion,color: C_DORADO      },
+    { label: "Justificaciones para Nombramiento por Tiempo Determinado",  value: data?.nombramiento  ?? 0, icon: UserCheck,   color: C_VERDE_MEDIO },
+    { label: "Dictaminaciones Emitidas",                                 value: data?.emitidas      ?? 0, icon: FileOutput,  color: C_AMBAR       },
+    { label: "Total de Prestadores de Servicio",                  value: data?.prestadores   ?? 0, icon: Users,       color: C_BURDEOS     },
     { label: "Justificaciones en Proceso",                               value: data?.enProceso     ?? 0, icon: Clock,       color: C_GRIS_VERDE  },
   ]
   const { emisionesCentralizada, emisionesParaestatal } = (() => {
@@ -897,7 +897,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
     <div className="flex flex-col h-full min-h-screen bg-bg-base">
     <PageHeader
       title="Tablero Informativo"
-      subtitle={`Indicadores y Gráficas del Sistema · Periodo  ${anio}${mes !== "Todos" ? ` — ${mesFiltroLabel}` : ""}`}
+      subtitle={`Indicadores y Gráficas del Sistema · Periodo ${anio}${mes !== "todos" ? ` — ${mesFiltroLabel}` : ""}`}
     />
       <div className="p-8 flex flex-col flex-1 gap-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -1019,28 +1019,28 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
             />
               <div className="grid gap-4 lg:grid-cols-2">
                 <GraficaBarrasVertical
-                  title="Administración Centralizada"
-                  subtitle="Solicitudes recibidas por secretaría"
+                  title="Administración Pública Centralizada"
+                  subtitle="Solicitudes recibidas por Secretaría/Dependencia"
                   data={data?.porSecretariaCentralizada ?? []}
-                  emptyMsg="Sin solicitudes centralizadas en el periodo."
+                  emptyMsg="Sin solicitudes en el periodo seleccionado."
                 />
                 <GraficaBarrasVertical
-                  title="Administración Paraestatal"
-                  subtitle="Solicitudes recibidas por secretaría"
+                  title="Administración Pública Paraestatal"
+                  subtitle="Solicitudes recibidas por Organismos Auxiliares"
                   data={data?.porSecretariaParaestatal ?? []}
-                  emptyMsg="Sin solicitudes paraestatales en el periodo."
+                  emptyMsg="Sin solicitudes en el periodo seleccionado."
                 />
               </div>
 
 
             <div className="grid gap-4 lg:grid-cols-2">
               <GraficaEmisiones
-                title="Administración Centralizada — Dictámenes"
+                title="Administración Pública Centralizada — Dictámenes Técnicos Funcionales"
                 data={emisionesCentralizada}
                 barKey="dictamenes"
               />
               <GraficaEmisiones
-                title="Administración Paraestatal — Opiniones"
+                title="Administración Pública Paraestatal — Opiniones Técnicas Funcionales"
                 data={emisionesParaestatal}
                 barKey="opiniones"
               />

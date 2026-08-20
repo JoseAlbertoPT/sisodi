@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
 
 interface PermisosUser {
   menuIds: string[]
@@ -89,6 +90,10 @@ export async function PUT(
     const acciones = menuActions[String(menuId)] ?? []
     if (acciones.length > 0) savedMenuActions[String(menuId)] = acciones
   }
+
+  // Para que el usuario afectado vea sus apartados habilitados/deshabilitados
+  // al instante, sin recargar la página.
+  broadcastUpdate(["permisos"])
 
   return NextResponse.json({
     menuIds: menuIds.map(String),

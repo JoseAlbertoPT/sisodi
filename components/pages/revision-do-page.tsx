@@ -160,7 +160,7 @@ function rawToEditPayload(sol: SolicitudDetalle): EditSolicitudPayload {
   const regimenRaw = (raw?.regimen ?? sol.regimen ?? "").toLowerCase()
   const regimen: EditSolicitudPayload["regimen"] =
     regimenRaw.includes("asimilado") ? "asimilados" :
-    regimenRaw.includes("nombramiento") || regimenRaw.includes("tiempo determi  nado") ? "nombramiento" :
+    regimenRaw.includes("nombramiento") || regimenRaw.includes("tiempo determinado") ? "nombramiento" :
     regimenRaw.includes("honorario") ? "honorarios" : "honorarios"
   const tipo: EditSolicitudPayload["tipo"] =
     (raw?.tipo_solicitud ?? sol.tipo ?? "").toLowerCase().includes("nombramiento") ? "nombramiento" : "prestacion"
@@ -208,39 +208,39 @@ const CHECKLIST_16: ChecklistItem[] = [
   { key: "c1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
   { key: "c2",  num: 2,  label: "Unidad Responsable del Gasto" },
   { key: "c3",  num: 3,  label: "Programa o Proyecto" },
-  { key: "c4",  num: 4,  label: "Régimen de contratación correcto" },
-  { key: "c5",  num: 5,  label: "Tipo de actividad especificado" },
-  { key: "c6",  num: 6,  label: "Número de prestadores de servicio" },
-  { key: "c7",  num: 7,  label: "Vigencia correcta (inicio y término)" },
-  { key: "c8",  num: 8,  label: "Importe bruto conforme al tabulador vigente" },
-  { key: "c9",  num: 9,  label: "Ordenamientos legales y administrativos citados" },
-  { key: "c10", num: 10, label: "Oficio de suficiencia presupuestal adjunto" },
+  { key: "c4",  num: 4,  label: "Régimen de Contratación Correcto" },
+  { key: "c5",  num: 5,  label: "Tipo de Actividad Especificado" },
+  { key: "c6",  num: 6,  label: "Número de Prestadores de Servicio" },
+  { key: "c7",  num: 7,  label: "Vigencia Correcta (Inicio y Término)" },
+  { key: "c8",  num: 8,  label: "Importe Bruto Conforme al Tabulador Vigente" },
+  { key: "c9",  num: 9,  label: "Ordenamientos Legales y Administrativos Citados" },
+  { key: "c10", num: 10, label: "Oficio de Suficiencia Presupuestal Adjunto" },
 ]
 const CHECKLIST_NOMBRAMIENTO: ChecklistItem[] = [
   { key: "n1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
   { key: "n2",  num: 2,  label: "Unidad Responsable del Gasto" },
   { key: "n3",  num: 3,  label: "Programa o Proyecto" },
-  { key: "n4",  num: 4,  label: "Régimen de contratación correcto" },
-  { key: "n5",  num: 5,  label: "Denominación del nombramiento" },
-  { key: "n6",  num: 6,  label: "Equivalencia de acuerdo al Tabulador de Sueldos del Poder Ejecutivo Estatal, vigente (Nivel/Categoría)" },
-  { key: "n7",  num: 7,  label: "Tipo de actividad especificado" },
-  { key: "n8",  num: 8,  label: "Número de personas a contratar" },
-  { key: "n9",  num: 9,  label: "Vigencia correcta (inicio y término)" },
-  { key: "n10", num: 10, label: "Importe neto mensual (conforme al tabulador vigente)" },
-  { key: "n11", num: 11, label: "Ordenamientos legales y administrativos citados" },
-  { key: "n12", num: 12, label: "Oficio de suficiencia presupuestal adjunto" },
+  { key: "n4",  num: 4,  label: "Régimen de Contratación Correcto" },
+  { key: "n5",  num: 5,  label: "Denominación del Nombramiento" },
+  { key: "n6",  num: 6,  label: "Equivalencia de Acuerdo al Tabulador de Sueldos del Poder Ejecutivo Estatal, Vigente (Nivel/Categoría)" },
+  { key: "n7",  num: 7,  label: "Tipo de Actividad Especificado" },
+  { key: "n8",  num: 8,  label: "Número de Personas a Contratar" },
+  { key: "n9",  num: 9,  label: "Vigencia Correcta (Inicio y Término)" },
+  { key: "n10", num: 10, label: "Importe Neto Mensual (Conforme al Tabulador Vigente)" },
+  { key: "n11", num: 11, label: "Ordenamientos Legales y Administrativos Citados" },
+  { key: "n12", num: 12, label: "Oficio de Suficiencia Presupuestal Adjunto" },
 ]
 const CHECKLIST_HONORARIOS: ChecklistItem[] = [
   { key: "h1",  num: 1,  label: "Unidad Administrativa de Adscripción" },
   { key: "h2",  num: 2,  label: "Unidad Responsable del Gasto" },
   { key: "h3",  num: 3,  label: "Programa o Proyecto" },
-  { key: "h4",  num: 4,  label: "Régimen de contratación correcto" },
-  { key: "h5",  num: 5,  label: "Tipo de actividad especificado" },
-  { key: "h6",  num: 6,  label: "Número de prestadores de servicio" },
-  { key: "h7",  num: 7,  label: "Vigencia correcta (inicio y término)" },
-  { key: "h8",  num: 8,  label: "Importe bruto conforme al tabulador vigente" },
-  { key: "h9",  num: 9,  label: "Ordenamientos legales y administrativos citados" },
-  { key: "h10", num: 10, label: "Oficio de suficiencia presupuestal adjunto" },
+  { key: "h4",  num: 4,  label: "Régimen de Contratación Correcto" },
+  { key: "h5",  num: 5,  label: "Tipo de Actividad Especificado" },
+  { key: "h6",  num: 6,  label: "Número de Prestadores de Servicio" },
+  { key: "h7",  num: 7,  label: "Vigencia Correcta (Inicio y Término)" },
+  { key: "h8",  num: 8,  label: "Importe Bruto Conforme al Tabulador Vigente" },
+  { key: "h9",  num: 9,  label: "Ordenamientos Legales y Administrativos Citados" },
+  { key: "h10", num: 10, label: "Oficio de Suficiencia Presupuestal Adjunto" },
 ]
 function getChecklistItems(filtro: 1 | 2 | 3, tipo?: string | null): ChecklistItem[] {
   const t = (tipo ?? "").toLowerCase()
@@ -274,7 +274,7 @@ function slaDesdeApiRestante(valor: number | null | undefined): number | null {
 
 function formatRegimen(raw: string | null | undefined): string {
   const r = (raw ?? "").toLowerCase().trim()
-  if (r.includes("asimilado"))  return "Honorarios Asimilados  a Salarios"
+  if (r.includes("asimilado"))  return "Honorarios Asimilados a Salarios"
   if (r.includes("honorario"))  return "Honorarios"
   if (r.includes("nombramiento") || r.includes("tiempo Determinado")) return "Nombramiento por Tiempo Determinado"
   return raw || "—"
@@ -1531,7 +1531,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       return
     }
     if (!checklistStats.hasNo && !observacionGeneral.trim()) {
-      setObservacionError("Escribe una observación general o marca al menos un item del checklist como 'No'.")
+      setObservacionError("Escribe una observación general o marca al menos un ítem del checklist como 'No'.")
       return
     }
     setObservacionError("")
@@ -1829,7 +1829,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           <Button variant="default" size="sm" className="gap-1.5"
             onClick={() => setShowDescargarConfirm(true)}
           >
-            Descagar Justificacion
+            Descargar Justificación
           </Button>
           {onEditSolicitud && enTurno && (
             <Button variant="default" size="sm" className="gap-1.5"

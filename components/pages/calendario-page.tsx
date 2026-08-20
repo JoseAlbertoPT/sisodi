@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   Loader2, Check, X,
-  CalendarPlus, ChevronDown,
+  CalendarPlus, ChevronDown, AlertCircle,
 } from "lucide-react"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { PageLayout } from "@/components/page-layout"
 import { useCalendario } from "@/lib/calendario-store"
 import { updateCalendario, buildEmptyCalendario, mesNumero, mesDeQuincena, type CalendarioResponse } from "@/lib/calendario-api"
@@ -200,10 +201,43 @@ export function CalendarioPage() {
   })
   const [showNewYearInput, setShowNewYearInput] = useState(false)
   const [newYearValue, setNewYearValue] = useState("")
+  const [showEditNota, setShowEditNota] = useState(false)
+  const [notaValue, setNotaValue]       = useState("")
+  const [notaLoading, setNotaLoading]   = useState(false)
+  const [notaSaving, setNotaSaving]     = useState(false)
+  const [notaError, setNotaError]       = useState<string | null>(null)
+  const abrirEditNota = () => {
+    setShowEditNota(true)
+    setNotaError(null)
+    setNotaLoading(true)
+    fetch("/api/configuracion/nota-dictamen")
+      .then((res) => res.json())
+      .then((json) => { if (json.ok) setNotaValue(json.valor) })
+      .catch(() => setNotaError("No se pudo cargar la nota"))
+      .finally(() => setNotaLoading(false))
+  }
+  const guardarNota = async () => {
+    setNotaSaving(true)
+    setNotaError(null)
+    try {
+      const res = await fetch("/api/configuracion/nota-dictamen", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ valor: notaValue }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) throw new Error(json.error || "Error al guardar la nota")
+      setShowEditNota(false)
+    } catch (e) {
+      setNotaError(e instanceof Error ? e.message : "Error al guardar la nota")
+    } finally {
+      setNotaSaving(false)
+    }
+  }
   const handleAddYear = () => {
     const year = parseInt(newYearValue, 10)
     if (!year || year < 2020 || year > 2099) {
-      toast({ variant: "destructive", title: "Año inválido", description: "Ingrese un año entre 2020 y 3000." })
+      toast({ variant: "destructive", title: "Año inválido", description: "Ingrese un año entre 2020 y 2099." })
       return
     }
     if (availableYears.includes(year)) {
@@ -236,9 +270,10 @@ export function CalendarioPage() {
     nombramiento: displayData.nombramiento.filter((r) => r.limiteDO && !r.limiteDO.startsWith("/")).length,
   }
   return (
+    <>
     <PageLayout
       title="Calendario de Recepción"
-      description={`Periodo de aceptación y fechas límite para la recepción de solicitudes - Ejercicio ${ejercicio}`}
+      description={`Periodo de aceptación y fechas límite para la recepción de solicitudes — Ejercicio ${ejercicio}`}
       >
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -304,6 +339,12 @@ export function CalendarioPage() {
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => setShowNewYearInput(false)}><X className="h-3 w-3" /></Button>
               </div>
             )}
+            {!editing && <div className="h-5 w-px bg-border" />}
+            {!editing && (
+              <Button size="sm" variant="default" className="gap-1.5 text-xs h-9" onClick={abrirEditNota}>
+                Editar nota
+              </Button>
+            )}
           </div>
         </div>
 
@@ -358,7 +399,7 @@ export function CalendarioPage() {
                     <tr className="bg-bg-base text-content-high">
                       <th className="px-5 py-3 text-left font-semibold align-middle w-1/5">Mes de aplicación</th>
                       <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
-                        Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)
+                        Fecha límite de recepción de solicitudes de dictamen/opiniones técnicas funcionales (DGDO)
                       </th>
                       <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
                         Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)
@@ -410,9 +451,9 @@ export function CalendarioPage() {
 
                   <thead>
                     <tr className="bg-bg-base text-content-high">
-                      <th className="px-5 py-3 text-left font-semibold align-middle w-1/5">Quincena de Aplicacion</th>
+                      <th className="px-5 py-3 text-left font-semibold align-middle w-1/5">Quincena de aplicación</th>
                       <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
-                        Fecha límite de recepción de solicitudes de dictámen/opiniónes técnicas funcionales (DGDO)
+                        Fecha límite de recepción de solicitudes de dictamen/opiniones técnicas funcionales (DGDO)
                       </th>
                       <th className="px-5 py-3 text-center font-semibold align-middle w-2/5 leading-snug text-balance">
                         Fecha límite de recepción de solicitudes de alta de contrataciones (DGRH)
@@ -462,7 +503,7 @@ export function CalendarioPage() {
               <span className="text-xs font-bold text-black leading-relaxed">
                 Información de referencia. Los cambios están sujetos a validación administrativa.
                 {!editing && !isEmpty && (
-                  <> — {filledCount.honorarios} meses, {filledCount.asimilados} quincenas asimilados, {filledCount.nombramiento} quincenas nombramiento configurados.</>
+                  <> — {filledCount.honorarios} meses, {filledCount.asimilados} quincenas asimiladas, {filledCount.nombramiento} quincenas de nombramiento configuradas.</>
                 )}
               </span>
             </div>
@@ -470,5 +511,56 @@ export function CalendarioPage() {
         )}
       </div>
     </PageLayout>
+    <Dialog open={showEditNota} onOpenChange={setShowEditNota}>
+      <DialogContent className="max-w-xl bg-white p-0 gap-0 overflow-hidden">
+        <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
+          <DialogTitle className="ds-title-md text-content-high">
+            Editar nota
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Este texto se imprime en la nota del Dictamen Técnico Funcional y de la Justificación de Prestación de Servicios. Al guardar, se actualiza en ambos documentos.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 px-6 py-5">
+          {notaLoading ? (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-8">
+              <Loader2 className="h-4 w-4 animate-spin" />Cargando…
+            </div>
+          ) : (
+            <textarea
+              value={notaValue}
+              onChange={(e) => setNotaValue(e.target.value)}
+              rows={8}
+              className="w-full rounded-lg border border-[var(--sem-border-md)] px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-[#2D3B2D]"
+            />
+          )}
+          {notaError && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <AlertCircle className="h-3.5 w-3.5" />{notaError}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
+          <Button
+            variant="default"
+            className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+            onClick={() => setShowEditNota(false)}
+            disabled={notaSaving}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="vino"
+            className="rounded-full h-10 px-6 font-normal shadow-sm gap-1.5"
+            onClick={guardarNota}
+            disabled={notaSaving || notaLoading}
+          >
+            {notaSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {notaSaving ? "Guardando…" : "Guardar"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

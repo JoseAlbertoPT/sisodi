@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { requireCatalogoConsulta } from "@/lib/api-guard"
 
 function parseDate(val: string | null | undefined): Date | null {
   if (!val) return null
@@ -19,6 +20,9 @@ export async function POST(req: NextRequest) {
     if (!catalogo_solicitud_id || !admin_usuario_id) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
+
+    const guardError = await requireCatalogoConsulta(String(admin_usuario_id))
+    if (guardError) return guardError
 
     const id = Number(catalogo_solicitud_id)
 

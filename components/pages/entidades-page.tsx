@@ -196,8 +196,8 @@ export function EntidadesPage() {
       title="Unidades Administrativas"
       description={
         esParaestatal
-          ? "Gestión de estructuras organizacionales de la administración ."
-          : "Gestión de estructuras organizacionales de la administración ."
+          ? "Gestión de estructuras organizacionales de la administración pública paraestatal."
+          : "Gestión de estructuras organizacionales de la administración pública centralizada."
       }
     >
       <Tabs defaultValue={defaultTab} className="w-full">

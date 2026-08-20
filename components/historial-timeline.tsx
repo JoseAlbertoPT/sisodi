@@ -55,10 +55,10 @@ function getEvento(
 
 
   if (n === "modificada" || parseDiff(comentario) !== null)
-    return { label: "Solicitud modificada", desc: "", tipo: "edicion" }
+    return { label: "Solicitud Modificada", desc: "", tipo: "edicion" }
 
   if (n === "en captura" || n === "borrador")
-    return { label: "Solicitud creada", desc: "registrada en el sistema", tipo: "captura" }
+    return { label: "Solicitud Creada", desc: "registrada en el sistema", tipo: "captura" }
 
   if (n === "en validacion justificaciones" || n === "enviada a validacion") {
     if (!a || a === "en captura" || a === "borrador")
@@ -85,7 +85,7 @@ function getEvento(
   if (n === "enviada a validacion (uefa)" || n === "enviada a validacion uefa")
     return {
       label: "Enviada a Validación UEFA",
-      desc:  "Enviada al área de Validación UEFA",
+      desc:  "enviada al área de Validación UEFA",
       tipo:  "normal",
     }
 
@@ -100,7 +100,7 @@ function getEvento(
   if (n === "pendiente do" || n === "enviado a do (recepcion)")
     return {
       label: "Recibida en DGDO",
-      desc:  "Ingresó al DGDO ",
+      desc:  "ingresó al DGDO",
       tipo:  "normal",
     }
 
@@ -114,7 +114,7 @@ function getEvento(
       }
     return {
       label: "Asignada al Revisor",
-      desc:  "asignada al Revisor para su revision",
+      desc:  "asignada al revisor para su revisión",
       tipo:  "normal",
     }
   }
@@ -129,7 +129,7 @@ function getEvento(
   if (n === "aceptado por revisor")
     return {
       label: "Aceptada por Revisor",
-      desc:  "aceptada  por el revisor  para continuar el proceso",
+      desc:  "aceptada por el revisor para continuar el proceso",
       tipo:  "normal",
     }
 

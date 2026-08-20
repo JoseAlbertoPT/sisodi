@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { requireCatalogoConsulta } from "@/lib/api-guard"
 
 // Límite máximo al reutilizar un registro: Seguridad Pública permite hasta
 // 100 prestadores; el resto de las secretarías, hasta 50.
@@ -26,6 +27,9 @@ export async function POST(req: NextRequest) {
     if (!catalogo_justificacion_id || !usuario_id || !nueva_vigencia?.trim()) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
+
+    const guardError = await requireCatalogoConsulta(String(usuario_id))
+    if (guardError) return guardError
 
     // La cancelación no captura número de prestadores/personas, solo vigencia.
     // La reutilización puede incluir, opcionalmente, un cambio de

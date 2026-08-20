@@ -52,7 +52,7 @@ export function FirmaModal({
             {esElectronica ? <Shield className="h-5 w-5 text-primary" /> : <FileSignature className="h-5 w-5 text-secondary" />}
             {esElectronica && !procesoIniciado ? (
               <span>
-                Iniciar proceso de Firmar Dictamen
+                Iniciar proceso de firma del dictamen
               </span>
             ) : (
               <span>

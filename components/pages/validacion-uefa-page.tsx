@@ -223,7 +223,7 @@ function getDevolucionLabel(estado: string): string {
   if (n.includes("emisor"))           return "Emisión DGDO"
   if (n.includes("verificacion final")) return "Verificación Final DGDO"
   if (n.includes("revisor"))          return "Revisión DGDO"
-  if (n.includes("validacion"))       return "Validacion UEFA"
+  if (n.includes("validacion"))       return "Validación UEFA"
   return "DGDO"
 }
 function calcReingresoCount(historialSolicitud: any[]): number {
@@ -1219,7 +1219,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, g
               <ObservacionesPanel
                 title={
                   isObservada
-                    ? "Observación de Validacion UEFA"
+                    ? "Observación de Validación UEFA"
                     : isDevuelta
                       ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
                       : "Observaciones"
@@ -1307,7 +1307,7 @@ export function ValidacionUefaPage() {
           solicitudId: id,
           nuevoEstado: "Pendiente DO",
           usuarioId:   (user as any)?.id ?? "",
-          comentario:  "Aprobada por Validacion de Justificaciones → Pendiente de asignación en DO",
+          comentario:  "Aprobada por Validación de Justificaciones → Pendiente de asignación en DO",
         }),
       })
       const json = await res.json()
@@ -1317,7 +1317,7 @@ export function ValidacionUefaPage() {
         estado: "Pendiente DO",
         historial: [...s.historial, {
           fecha:          new Date().toISOString(),
-          usuario:        (user as any)?.nombre ?? "Validacion",
+          usuario:        (user as any)?.nombre ?? "Validación",
           estadoAnterior: s.estado,
           estadoNuevo:    "Pendiente DO",
         }],
@@ -1351,11 +1351,11 @@ export function ValidacionUefaPage() {
         ...s,
         estado: "Observado por Validacion",
         observacionesUefa: obs,
-        observadoPor:      (user as any)?.nombre ?? "Validacion",
+        observadoPor:      (user as any)?.nombre ?? "Validación",
         fechaObservacion:  formatFechaHora(new Date().toISOString()),
         historial: [...s.historial, {
           fecha:          new Date().toISOString(),
-          usuario:        (user as any)?.nombre ?? "Validacion",
+          usuario:        (user as any)?.nombre ?? "Validación",
           estadoAnterior: s.estado,
           estadoNuevo:    "Observado por Validacion",
         }],

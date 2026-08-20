@@ -184,6 +184,12 @@ interface PdfOverrides {
   vigenciaInicio?: string
   vigenciaFin?: string
   numeroPersonas?: number
+  // Número consecutivo de reutilización (1, 2, 3…) que se pega al folio de
+  // dictamen en el Dictamen Técnico Funcional de Justificación de Prestación
+  // de Servicios cuando el PDF se genera desde "Procesar" en el catálogo de
+  // reutilizaciones — así cada reutilización queda identificada como
+  // "06/08/2026-1", "06/08/2026-2", etc.
+  reutilizacionNumero?: number
 }
 
 async function buildJustificacionBufferDesdeCatalogo(
@@ -303,6 +309,25 @@ export async function buildJustificacionBuffer(
 
     if (!sol) {
       return null;
+    }
+
+    // Si esta solicitud nació de una reutilización del catálogo (creada por
+    // /api/catalogo-justificaciones/procesar), calcula su posición cronológica
+    // (1ª, 2ª, 3ª…) entre todas las reutilizaciones del mismo registro del
+    // catálogo, para pegarla al folio de dictamen en el PDF más abajo. Se
+    // calcula aquí, a partir de la solicitud, para que aplique sin importar
+    // desde qué pantalla se genere el PDF (no solo cuando se pide con
+    // catalogoSolicitudId explícito).
+    if (overrides.reutilizacionNumero === undefined) {
+      const catSolLink = await prisma.catalogo_solicitud.findFirst({
+        where: { solicitud_nueva_id: Number(solicitudId) },
+        select: { id: true, catalogo_justificacion_id: true },
+      });
+      if (catSolLink) {
+        overrides.reutilizacionNumero = await prisma.catalogo_solicitud.count({
+          where: { catalogo_justificacion_id: catSolLink.catalogo_justificacion_id, id: { lte: catSolLink.id } },
+        });
+      }
     }
 
     if (!sinFirmas) {
@@ -444,7 +469,11 @@ export async function buildJustificacionBuffer(
         firmaDictEmitioCargo: firmas.firmaDictEmitioCargo,
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
-        clave: claveParaPdf(sol.secretaria, sol.folio_dictamen, esHistoricoImportado),
+        clave: claveParaPdf(
+          sol.secretaria,
+          overrides.reutilizacionNumero ? `${sol.folio_dictamen}-${overrides.reutilizacionNumero}` : sol.folio_dictamen,
+          esHistoricoImportado,
+        ),
         notaDictamen,
         incluirPaginaDictamen: tieneDictamen,
       };
@@ -598,5 +627,6 @@ export async function GET(req: NextRequest) {
   const vf = searchParams.get("vigenciaFin");    if (vf) overrides.vigenciaFin    = vf
   const np = searchParams.get("numeroPersonas"); if (np) overrides.numeroPersonas = Number(np)
   const sinFirmas = searchParams.get("sinFirmas") === "true"
+
   return generatePDFResponse(solicitudId, firmas, firmanteId, overrides, sinFirmas, catalogoId);
 }

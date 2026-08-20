@@ -435,7 +435,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
             <table className="w-full">
               <thead>
                 <tr>
-                  {["Folio de Dictamen", "Programa / Proyecto", "Tipo de actividad", "Régimen", "Tipo de pago", "Importe bruto", "Acciones"].map((h) => (
+                  {["Folio de Dictamen", "Programa / Proyecto", "Tipo de Actividad", "Régimen", "Tipo de Pago", "Importe Bruto", "Acciones"].map((h) => (
                     <th key={h} className={h === "Acciones" ? "text-center" : ""}>{h}</th>
                   ))}
                 </tr>
@@ -503,7 +503,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
             <table className="w-full">
               <thead>
                 <tr>
-                  {["Folio de Dictamen", "Programa / Proyecto", "Denominación", "Puesto jefe inmediato", "Tipo de actividad", "Personas", "Importe neto", "Tipo de pago", "Acciones"].map((h) => (
+                  {["Folio de Dictamen", "Programa / Proyecto", "Denominación", "Puesto Jefe Inmediato", "Tipo de Actividad", "Personas", "Importe Neto", "Tipo de Pago", "Acciones"].map((h) => (
                     <th key={h} className={h === "Acciones" ? "text-center" : ""}>{h}</th>
                   ))}
                 </tr>
@@ -885,39 +885,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   const [showReutilizaciones, setShowReutilizaciones] = useState(false)
   const [reutilizacionesPage, setReutilizacionesPage] = useState(1)
   const [reutilizacionesQuery, setReutilizacionesQuery] = useState("")
-  const [showEditNota, setShowEditNota] = useState(false)
-  const [notaValue, setNotaValue]       = useState("")
-  const [notaLoading, setNotaLoading]   = useState(false)
-  const [notaSaving, setNotaSaving]     = useState(false)
-  const [notaError, setNotaError]       = useState<string | null>(null)
-  const abrirEditNota = () => {
-    setShowEditNota(true)
-    setNotaError(null)
-    setNotaLoading(true)
-    fetch("/api/configuracion/nota-dictamen")
-      .then((res) => res.json())
-      .then((json) => { if (json.ok) setNotaValue(json.valor) })
-      .catch(() => setNotaError("No se pudo cargar la nota"))
-      .finally(() => setNotaLoading(false))
-  }
-  const guardarNota = async () => {
-    setNotaSaving(true)
-    setNotaError(null)
-    try {
-      const res = await fetch("/api/configuracion/nota-dictamen", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ valor: notaValue }),
-      })
-      const json = await res.json()
-      if (!res.ok || !json.ok) throw new Error(json.error || "Error al guardar la nota")
-      setShowEditNota(false)
-    } catch (e) {
-      setNotaError(e instanceof Error ? e.message : "Error al guardar la nota")
-    } finally {
-      setNotaSaving(false)
-    }
-  }
   const openReutilizaciones = (rec: AdminRecord) => {
     setViewRec(rec)
     setReutilizacionesPage(1)
@@ -1021,6 +988,22 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   useRealtime(["catalogo"], fetchData)
   const [confirmToggle, setConfirmToggle] = useState<AdminRecord | null>(null)
 
+  // Catálogo fijo de las 16 secretarías (organo_centralizado, tipo=SECRETARIA de nivel
+  // raíz), independiente de si ya tienen registros en el catálogo de justificaciones —
+  // antes el filtro se armaba solo con las secretarías que aparecían en allRecords, así
+  // que una sin reutilizaciones todavía simplemente no salía en la lista.
+  const [secretariasCanonicas, setSecretariasCanonicas] = useState<string[]>([])
+  useEffect(() => {
+    fetch("/api/catalogo/centralizada")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((tree: { nombre: string; tipo: string | null }[]) => {
+        setSecretariasCanonicas(
+          tree.filter((n) => n.tipo === "SECRETARIA").map((n) => n.nombre),
+        )
+      })
+      .catch(() => {})
+  }, [])
+
   const handleToggle = async (rec: AdminRecord) => {
     setToggling(rec.id)
     try {
@@ -1085,11 +1068,9 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     ]),
   ]
 
-  // Detalle de las reutilizaciones (catalogo_solicitudes) de todos los registros
-  // con movimiento, en una sola hoja, con el Folio como primera columna para
-  // poder filtrar por él (ver !autofilter en addSheetFromRows).
+
   const reutilizacionRows = (records: AdminRecord[]): (string | number)[][] => [
-    ["Folio de Dictamen", "Secretaría / Dependencia", "Programa / Proyecto", "Usuario", "Vigencia", "Num. Prestadores", "Programa o Proyecto (movimiento)", "Creado"],
+    ["Folio de Dictamen", "Secretaría / Dependencia", "Programa / Proyecto", "Usuario", "Vigencia", "Núm. Prestadores", "Programa o Proyecto (movimiento)", "Creado"],
     ...records.flatMap((rec) =>
       rec.catalogo_solicitudes.map((sol) => [
         fmt(folioSinSiglas(rec.solicitud.folio_dictamen)),
@@ -1148,14 +1129,24 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   const norm = (s: string | null | undefined) =>
     (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
   const secretariaDe = (rec: AdminRecord) => entidadNombre(rec).split(">")[0].trim()
+  // Clave normalizada (sin acentos/mayúsculas) para que el filtro no distinga variantes
+  // del mismo nombre (el texto crudo de secretaria/secretaria_txt_snapshot no siempre
+  // viene consistente, p. ej. "SECRETARIA DE CULTURA" vs "Secretaría de Cultura").
+  const secretariaClave = (rec: AdminRecord) => norm(secretariaDe(rec)).replace(/\s+/g, " ")
+  // Lista fija de las 16 secretarías (organo_centralizado raíz), no derivada de
+  // allRecords — así siempre salen las 16, incluida una que todavía no tenga
+  // reutilizaciones en el catálogo. Se respeta el orden que ya trae la API
+  // (mismo `orden` que se edita en Unidades Administrativas), sin reordenar
+  // alfabéticamente — así, si cambian el orden en UA, se refleja aquí también.
   const secretarias = useMemo(
-    () => [...new Set(allRecords.map(secretariaDe))].filter(Boolean).sort((a, b) => a.localeCompare(b, "es")),
-    [allRecords],
+    () => secretariasCanonicas
+      .map((nombre) => [norm(nombre).replace(/\s+/g, " "), nombre] as const),
+    [secretariasCanonicas],
   )
   const filtered = useMemo(() => {
     let list = allRecords
     if (secretariaFilter !== "todas") {
-      list = list.filter((r) => secretariaDe(r) === secretariaFilter)
+      list = list.filter((r) => secretariaClave(r) === secretariaFilter)
     }
     const qNorm = norm(q).replace(/\s+/g, " ").trim()
     if (qNorm) {
@@ -1196,9 +1187,9 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
             <SelectValue placeholder="Todas las secretarías" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todas">Todas las secretarías ({allRecords.length})</SelectItem>
-            {secretarias.map((sec) => (
-              <SelectItem key={sec} value={sec}>{toTitleCaseES(sec)}</SelectItem>
+            <SelectItem value="todas">Todas las secretarías</SelectItem>
+            {secretarias.map(([clave, nombre]) => (
+              <SelectItem key={clave} value={clave}>{nombre}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -1221,13 +1212,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <FileSpreadsheet className="h-4 w-4" /> Reporte Reutilizaciones
         </DropdownMenuItem>
         */}
-        <Button
-          variant="default"
-          className="gap-1.5 shrink-0"
-          onClick={abrirEditNota}
-        >
-          Editar nota
-        </Button>
       </div>
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3 mb-4">
@@ -1395,7 +1379,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                           {/* <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Tipo</th> */}
                           <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
                           <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
-                          <th className="px-4 py-2.5 pr-10 text-left text-xs font-semibold text-muted-foreground">Num. Prestadores</th>
+                          <th className="px-4 py-2.5 pr-10 text-left text-xs font-semibold text-muted-foreground">Núm. Prestadores</th>
                           <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Programa o Proyecto</th>
                           <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Creado</th>
                         </tr>
@@ -1573,56 +1557,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           </div>
         </DialogContent>
       </Dialog>
-      <Dialog open={showEditNota} onOpenChange={setShowEditNota}>
-        <DialogContent className="max-w-xl bg-white p-0 gap-0 overflow-hidden">
-          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
-            <DialogTitle className="ds-title-md text-content-high">
-              Editar nota
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              Este texto se imprime en la nota del Dictamen Técnico Funcional y de la Justificación de Prestación de Servicios. Al guardar, se actualiza en ambos documentos.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 px-6 py-5">
-            {notaLoading ? (
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-8">
-                <Loader2 className="h-4 w-4 animate-spin" />Cargando…
-              </div>
-            ) : (
-              <textarea
-                value={notaValue}
-                onChange={(e) => setNotaValue(e.target.value)}
-                rows={8}
-                className="w-full rounded-lg border border-[var(--sem-border-md)] px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-[#2D3B2D]"
-              />
-            )}
-            {notaError && (
-              <p className="text-xs text-destructive flex items-center gap-1">
-                <AlertCircle className="h-3.5 w-3.5" />{notaError}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
-            <Button
-              variant="default"
-              className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
-              onClick={() => setShowEditNota(false)}
-              disabled={notaSaving}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="vino"
-              className="rounded-full h-10 px-6 font-normal shadow-sm gap-1.5"
-              onClick={guardarNota}
-              disabled={notaSaving || notaLoading}
-            >
-              {notaSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {notaSaving ? "Guardando…" : "Guardar"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
@@ -1632,14 +1566,21 @@ export function CatalogoJustificacionesPage() {
   // caso común). El chequeo en vivo es la fuente de verdad real: así un cambio de permiso hecho
   // por un Administrador se refleja sin que el usuario afectado tenga que volver a iniciar sesión.
   const [canAdministrar, setCanAdministrar] = useState(user?.catalogoAdministracion === true)
+  // Optimista con default true (como era el comportamiento histórico) mientras se resuelve
+  // el chequeo en vivo, salvo que el snapshot de login ya diga explícitamente que no.
+  const [canConsultar, setCanConsultar] = useState(user?.catalogoConsulta !== false)
   const [consultaCount, setConsultaCount] = useState<number | null>(null)
   const [adminCount, setAdminCount] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!user?.id) { setCanAdministrar(false); return }
+    if (!user?.id) { setCanAdministrar(false); setCanConsultar(false); return }
     fetch(`/api/catalogo-justificaciones/puede-administrar?userId=${user.id}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d) setCanAdministrar(d.puede === true) })
+      .then((d) => {
+        if (!d) return
+        setCanAdministrar(d.puede === true)
+        setCanConsultar(d.puedeConsultar === true)
+      })
       .catch(() => {})
   }, [user?.id])
 
@@ -1653,10 +1594,10 @@ export function CatalogoJustificacionesPage() {
   }, [canAdministrar, user?.id])
   return (
     <PageLayout
-      title="Catálogo para Dictaminaciones Técnico Funcionales para la Prestación de Servicios Profesionales de la Administracion Pública Centralizada del Poder Ejecutivo Estatal "
+      title="Catálogo para Dictaminaciones Técnicas Funcionales para la Prestación de Servicios Profesionales de la Administración Pública Centralizada del Poder Ejecutivo Estatal"
       description="Consulta y reutilización de justificaciones dictaminadas previamente."
     >
-      {canAdministrar ? (
+      {canAdministrar && canConsultar ? (
         <Tabs defaultValue="consulta" className="w-full gap-3">
           <TabsList>
             <TabsTrigger value="consulta" className="gap-1.5">
@@ -1677,8 +1618,17 @@ export function CatalogoJustificacionesPage() {
             <AdministracionTab onCountChange={setAdminCount} />
           </TabsContent>
         </Tabs>
-      ) : (
+      ) : canAdministrar ? (
+        <AdministracionTab onCountChange={setAdminCount} />
+      ) : canConsultar ? (
         <ConsultaTab />
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+          <p className="text-sm font-medium text-card-foreground">Sin acceso al Catálogo</p>
+          <p className="text-xs text-muted-foreground max-w-sm">
+            No tienes permiso de Consulta ni de Administración para esta sección. Solicita acceso a un administrador.
+          </p>
+        </div>
       )}
     </PageLayout>
   )

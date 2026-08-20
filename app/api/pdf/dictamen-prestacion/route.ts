@@ -66,6 +66,24 @@ export async function buildDictamenPrestacionBuffer(
   let folio: string;
   const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
 
+  // Cada vez que se reutiliza un registro del catálogo, este endpoint se llama
+  // justo después de /api/catalogo-justificaciones/solicitar (que ya insertó
+  // la fila de esta reutilización) — así que contar cuántas reutilizaciones
+  // tiene ya el registro del catálogo da directamente el consecutivo de ÉSTA
+  // ("06/08/2026-1", "-2", … "-30"). Sin esto, todas las reutilizaciones del
+  // mismo folio salían idénticas y no había forma de distinguirlas.
+  const catalogoJustificacionId = catalogoId
+    ? Number(catalogoId)
+    : solicitudId
+      ? (await prisma.catalogo_justificacion.findUnique({
+          where: { solicitud_id: Number(solicitudId) },
+          select: { id: true },
+        }))?.id ?? null
+      : null;
+  const reutilizacionNumero = catalogoJustificacionId
+    ? await prisma.catalogo_solicitud.count({ where: { catalogo_justificacion_id: catalogoJustificacionId } })
+    : 0;
+
   if (sol) {
     const esHistoricoImportado = sol.historial_solicitud.length > 0;
     folio =
@@ -73,6 +91,7 @@ export async function buildDictamenPrestacionBuffer(
       sol.folio_dictamen ??
       sol.folio_recepcion ??
       String(sol.id);
+    if (reutilizacionNumero > 0) folio = `${folio}-${reutilizacionNumero}`;
     data = {
       folio: folioSinSiglas(folio),
       fecha: formatFechaLarga(new Date()),
@@ -100,6 +119,7 @@ export async function buildDictamenPrestacionBuffer(
     const cj = await prisma.catalogo_justificacion.findUnique({ where: { id: Number(catalogoId) } });
     if (!cj) return null;
     folio = cj.folio_dictamen ?? cj.folio_recepcion ?? String(cj.id);
+    if (reutilizacionNumero > 0) folio = `${folio}-${reutilizacionNumero}`;
     data = {
       folio: folioSinSiglas(folio),
       fecha: formatFechaLarga(new Date()),

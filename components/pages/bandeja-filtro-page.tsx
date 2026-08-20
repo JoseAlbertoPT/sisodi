@@ -83,9 +83,9 @@ const FILTRO_LABELS: Record<number, string> = {
   3: "Emisor",
 }
 const FILTRO_STAGE_LABELS: Record<number, string> = {
-  1: "Revision",
-  2: "Verificacion DGDO",
-  3: "Emision",
+  1: "Revisión",
+  2: "Verificación DGDO",
+  3: "Emisión",
 }
 const MESES = [
   { value: "01", label: "Enero" }, { value: "02", label: "Febrero" },
@@ -1014,7 +1014,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             size="sm" className="gap-1.5"
             onClick={() => setShowDescargarConfirm(true)}
           >
-            Descagar Justificacion
+            Descargar Justificación
           </Button>
           {!!folioDictamen && solicitud.tipo === "Prestacion de Servicios" && (
             <>
@@ -1141,7 +1141,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 {observacionesFiltro.map((obs, i) => (
                   <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Verificacion Final/i, "Verificacion DGDO")}</span>
+                      <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Verificacion Final/i, "Verificación DGDO")}</span>
                       <span className="text-[10px] text-muted-foreground">{obs.fecha}{obs.usuario && ` — ${obs.usuario}`}</span>
                     </div>
                     <p className="text-xs text-card-foreground leading-relaxed whitespace-pre-line">{obs.comentario}</p>
@@ -1187,7 +1187,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 </div>
                 {solicitud.reingresoCount > 0 && solicitud.lastObservedStage && (
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Última Observacion desde</span>
+                    <span className="text-xs text-muted-foreground">Última Observación desde</span>
                     <span className="text-sm font-medium text-card-foreground">
                       {solicitud.lastObservedDate ?? "—"}
                     </span>
@@ -1670,7 +1670,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                     <th className="px-4 py-3 text-left font-semibold">Secretaría</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Recepción</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Corrección</th>
-                    <th className="px-4 py-3 text-left font-semibold">Ult. Observo</th>
+                    <th className="px-4 py-3 text-left font-semibold">Últ. Observó</th>
                     <th className="px-4 py-3 text-left font-semibold">Plazo máximo de atención</th>
                     {!(filtro === 3 && activeTab === "nuevas") && (
                       <th className="px-4 py-3 font-semibold text-left">Acción</th>

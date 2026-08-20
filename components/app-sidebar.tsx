@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { fetchMyMenus, type MenuNode } from "@/lib/permisos-api"
+import { useRealtime } from "@/hooks/use-realtime"
 import { useState, useEffect, useCallback, useMemo } from "react"
 import {
   LayoutDashboard,
@@ -177,7 +178,11 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
   const [menusError, setMenusError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const [confirmLogout, setConfirmLogout] = useState(false)
- 
+
+  // Si un administrador habilita/deshabilita un apartado desde Permisos, el
+  // menú se refresca solo — sin esto solo se veía recargando la página.
+  useRealtime(["permisos"], () => setRetryCount((n) => n + 1))
+
 
   useEffect(() => {
     if (!user?.rol) return

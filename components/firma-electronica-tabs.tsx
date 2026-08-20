@@ -621,7 +621,7 @@ function FirmanteRow({
             </Button>
           </div>
           {esperandoTurno && (
-            <p className="text-[10px] text-muted-foreground">Este link sólo será válido cuando los anteriores firmen.</p>
+            <p className="text-[10px] text-muted-foreground">Este link solo será válido cuando los anteriores firmen.</p>
           )}
         </div>
       )}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireCatalogoConsulta } from "@/lib/api-guard"
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,6 +10,8 @@ export async function GET(req: NextRequest) {
     const limit  = Math.min(1000, Math.max(1, Number(searchParams.get("limit") ?? "20")))
     const skip   = (page - 1) * limit
     const userId = searchParams.get("userId")
+    const guardError = await requireCatalogoConsulta(userId)
+    if (guardError) return guardError
 
     // Solo se listan registros de la secretaría del usuario que consulta.
     // Se compara por el nombre de la secretaría de nivel superior (antes del " > ")

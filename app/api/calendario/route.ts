@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { broadcastUpdate } from "@/lib/sse-manager"
 
 const MESES_ORDEN = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
@@ -90,6 +91,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const saved = await prisma.calendario.findMany({ where: { ejercicio }, orderBy: { id: "asc" } })
+    broadcastUpdate(["calendario"])
     return NextResponse.json({
       honorarios:   saved.filter((r) => r.regimen === "honorarios")  .map((r) => ({ mes:      r.periodo, ...mapRow(r) })),
       asimilados:   saved.filter((r) => r.regimen === "asimilados")  .map((r) => ({ quincena: r.periodo, ...mapRow(r) })),

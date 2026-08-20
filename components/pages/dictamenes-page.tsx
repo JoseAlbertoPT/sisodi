@@ -486,7 +486,7 @@ export function DictamenesPage() {
 
   return (
     <PageLayout
-      title="Dictámenes y opiniones emitidas"
+      title="Dictámenes y opiniones emitidos"
       description="Consulta el registro de dictámenes y opiniones técnicas emitidos."
     >
       {viewing && (

@@ -241,12 +241,12 @@ function getTab(estado: UrgEstado): UrgTab {
 
 function getObservador(estado: UrgEstado): string | null {
   const n = (estado ?? "").toLowerCase()
-  if (n.includes("observada por uefa") || n.includes("observado por uefa")) return "Validacion UEFA"
-  if (n.includes("observado por verificacion final")) return "Verificacion DGDO"
-  if (n.includes("observado por validacion")) return "Validacion UEFA"
-  if (n.includes("observado por revisor")) return "Revision DGDO"
+  if (n.includes("observada por uefa") || n.includes("observado por uefa")) return "Validación UEFA"
+  if (n.includes("observado por verificacion final")) return "Verificación DGDO"
+  if (n.includes("observado por validacion")) return "Validación UEFA"
+  if (n.includes("observado por revisor")) return "Revisión DGDO"
   if (n.includes("observado por do") || n.includes("observado do filtro") || n.includes("devuelta por do")) return "DO"
-  if (n.includes("observado por emisor")) return "Emision DGDO"
+  if (n.includes("observado por emisor")) return "Emisión DGDO"
   return null
 }
 function getSubEstadoDGDO(estado: UrgEstado): string | null {
@@ -1412,7 +1412,7 @@ function DetalleView({
                       {(() => {
                         const obs = getObservador(sol.estado)
                         if (!obs) return "Observaciones"
-                        const tipo = obs === "Validacion UEFA" || obs === "Verificacion DGDO" ? "Observación" : "Devolución"
+                        const tipo = obs === "Validación UEFA" || obs === "Verificación DGDO" ? "Observación" : "Devolución"
                         return `${tipo} — ${obs}`
                       })()}
                     </span>
@@ -1434,7 +1434,7 @@ function DetalleView({
                       {sol.todasObservaciones.map((obs, i) => (
                         <div key={i} className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Verificacion Final/i, "Verificacion DGDO")}</span>
+                            <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Verificacion Final/i, "Verificación DGDO")}</span>
                             <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
                           </div>
                           <DevolucionObs comentario={obs.comentario} />
@@ -1694,7 +1694,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
                     {getFolioHeader(activeTab)}
                   </th>
                   <th className="px-4 py-3 text-left font-semibold">
-                    Regimen  de Contratación
+                    Régimen de Contratación
                   </th>
                   <th className="px-4 py-3 text-left font-semibold">
                     Fecha de Creación
