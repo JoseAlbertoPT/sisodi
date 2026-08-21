@@ -457,8 +457,6 @@ function OficioUpload({
   )
 }
 
-// Acepta ambos prefijos: "JUST-" (folios creados antes del cambio de prefijo)
-// e "ID-" (folios nuevos), para que el reformateo funcione igual en los dos.
 function formatFolioJustificacion(folio: string): string {
   const m = folio.match(/^(?:JUST|ID)-(\d{4})-(\d+)$/)
   if (!m) return folio
