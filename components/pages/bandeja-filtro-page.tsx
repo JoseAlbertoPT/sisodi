@@ -114,6 +114,12 @@ function formatearFolio(folio: string | null | undefined): string {
   if (match) return `${match[1]}/${match[2].padStart(2, "0")}/${match[3]}`
   return folio
 }
+// Regla 11: mientras no exista folio de recepción (el Revisor aún no aprueba),
+// se usa el folio de justificación tal cual está guardado (ej. "ID-2026-0014")
+// como identificador provisional.
+function folioJustificacionParaMostrar(folio: string | null | undefined): string | null {
+  return folio?.trim() || null
+}
 function parseDateLocal(v: string): Date {
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
     const [y, m, d] = v.split("-").map(Number)
@@ -813,11 +819,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
   // de recepción), el encabezado se identifica con el folio de justificación
   // en vez de un placeholder vacío.
   const folioJustificacionRaw = solicitud._raw?.folio_justificacion as string | null | undefined
-  const folioJustificacionFormateado = (() => {
-    if (!folioJustificacionRaw) return null
-    const m = folioJustificacionRaw.match(/^JUST-(\d{4})-(\d+)$/)
-    return m ? `${parseInt(m[2], 10)}/${m[1]}` : folioJustificacionRaw
-  })()
+  const folioJustificacionFormateado = folioJustificacionParaMostrar(folioJustificacionRaw)
   const historial: HistorialEntryData[] =
     (raw?.historial_solicitud ?? []).map((h: any) => ({
       fecha:          h.fecha ?? "",
@@ -914,7 +916,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="ds-title-md text-content-high">
                 {folioFormateado || (folioJustificacionFormateado
-                  ? <span className="text-muted-foreground font-normal text-base">JUST {folioJustificacionFormateado}</span>
+                  ? <span className="text-muted-foreground font-normal text-base">{folioJustificacionFormateado}</span>
                   : <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>)}
               </h2>
               {estadoBadge(solicitud.estado)}
@@ -1223,6 +1225,16 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
 
   const showToast = (variant: "success" | "error", title: string, description?: string) => {
     setActionToast(prev => ({ key: (prev?.key ?? 0) + 1, variant, title, description }))
+  }
+
+  // Regla 11: en los diálogos de acción (Aprobar, Observar, Asignar Revisor…)
+  // todavía no existe folio de recepción mientras el Revisor no apruebe, así
+  // que se identifica la solicitud con el folio de justificación mientras tanto.
+  const folioParaModal = (id: string | null): string => {
+    const sol = solicitudes.find(s => s.id === id)
+    if (!sol) return ""
+    if (sol.folioRecepcion) return formatearFolio(sol.folioRecepcion)
+    return folioJustificacionParaMostrar(sol._raw?.folio_justificacion as string | null | undefined) ?? "Sin folio"
   }
 
   const [searchTerm,    setSearchTerm]    = useState("")
@@ -1627,10 +1639,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
 
                         <td className="px-4 py-3 font-medium text-card-foreground">
                           <div className="flex flex-col gap-1">
-                            {sol.folioRecepcion
-                              ? <span className="font-mono">{formatearFolio(sol.folioRecepcion)}</span>
-                              : <span className="text-muted-foreground italic text-xs">Sin asignar</span>
-                            }
+                            {(() => {
+                              if (sol.folioRecepcion) return <span className="font-mono">{formatearFolio(sol.folioRecepcion)}</span>
+                              // Regla 11: mientras no exista folio de recepción (el Revisor aún
+                              // no aprueba), se muestra el folio de justificación como provisional.
+                              const folioJust = folioJustificacionParaMostrar(sol._raw?.folio_justificacion as string | null | undefined)
+                              return folioJust
+                                ? <span className="font-mono text-muted-foreground">{folioJust}</span>
+                                : <span className="text-muted-foreground italic text-xs">Sin asignar</span>
+                            })()}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground text-xs max-w-[180px] whitespace-normal break-words">
@@ -1745,14 +1762,14 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
             return "¿Firmar dictamen y emitir?"
           return "¿Aprobar y avanzar al siguiente paso?"
         })()}
-        description={<>La solicitud <strong className="font-semibold">{formatearFolio(solicitudes.find(s => s.id === aprobarTarget)?.folioRecepcion)}</strong> avanzará al siguiente paso del proceso.</>}
+        description={<>La solicitud <strong className="font-semibold">{folioParaModal(aprobarTarget)}</strong> avanzará al siguiente paso del proceso.</>}
         confirmLabel="Sí, confirmar"
       />
       <ObservarModal
         open={!!observarTarget}
         onClose={() => setObservarTarget(null)}
         onConfirm={(obs) => { if (observarTarget) handleObservar(observarTarget, obs) }}
-        folio={formatearFolio(solicitudes.find(s => s.id === observarTarget)?.folioRecepcion)}
+        folio={folioParaModal(observarTarget)}
       />
       <AprobarAsignarModal
         open={!!aprobarAsignarTarget}
@@ -1763,7 +1780,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
             setAprobarAsignarTarget(null)
           }
         }}
-        folio={formatearFolio(solicitudes.find(s => s.id === aprobarAsignarTarget)?.folioRecepcion ?? "")}
+        folio={folioParaModal(aprobarAsignarTarget)}
         guardando={guardando}
        />
       <AsignarRevisorModal
@@ -1772,7 +1789,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         onConfirm={(revisorId) => {
           if (asignarRevisorTarget) handleAsignarRevisor(asignarRevisorTarget, revisorId)
         }}
-        folio={formatearFolio(solicitudes.find(s => s.id === asignarRevisorTarget)?.folioRecepcion ?? "")}
+        folio={folioParaModal(asignarRevisorTarget)}
         guardando={guardando}
       />
     </PageLayout>

@@ -299,7 +299,7 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     id:                   item.id,
     folio:                item.folio_recepcion ?? `SOL-${item.id}`,
     folioJustificacion:   item.folio_justificacion
-      ?? `JUST-${new Date(item.fecha_creacion ?? Date.now()).getFullYear()}-${String(item.id).padStart(4, "0")}`,
+      ?? `ID-${new Date(item.fecha_creacion ?? Date.now()).getFullYear()}-${String(item.id).padStart(4, "0")}`,
     folioDictamen:        folioDictamenRaw,
     modalidadFirma:       (item.modalidad_firma === "electronica" || item.modalidad_firma === "autografa") ? item.modalidad_firma : null,
     numeroDictamen,

@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { DatePickerHabil, dateToIso, isoToDate } from "@/components/ui/date-picker-habil"
+import { addMonths } from "date-fns"
+import { calcularVigenciaMaxima, esInicioSinRangoValido, MENSAJE_INICIO_31_DIC } from "@/lib/vigencia"
 import { InfoTooltip } from "@/components/ui/info-tooltip"
+import { TOOLTIPS } from "@/lib/tooltips-textos"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -139,9 +142,6 @@ function maxPrestadoresPermitido(secretaria: string | null | undefined): number 
   const s = (secretaria ?? "").toLowerCase()
   return s.includes("seguridad p") ? 100 : 50
 }
-// Placeholder: pendiente texto definitivo del área responsable (observación 9).
-const TOOLTIP_VIGENCIA = "La fecha de inicio se calcula a partir del día de la solicitud. La fecha de término puede seleccionarse hasta 6 meses después, sin exceder el 31 de diciembre del año en curso."
-const TOOLTIP_MAX_PRESTADORES = "El número máximo de prestadores de servicio depende de la secretaría seleccionada."
 const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
   "en", "a", "al", "con", "por", "para",
@@ -189,18 +189,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     d.setHours(0, 0, 0, 0)
     return d
   }, [])
-  const addMonths = (d: Date, months: number) => {
-    const r = new Date(d)
-    r.setMonth(r.getMonth() + months)
-    return r
-  }
-  // Regla de vigencia: el término no puede exceder 6 meses desde el inicio
-  // ni el 31 de diciembre del año en que se realiza la solicitud, lo que ocurra primero.
-  const vigenciaFinLimite = (inicio: Date) => {
-    const seisMeses = addMonths(inicio, 6)
-    const finDeAnio = new Date(inicio.getFullYear(), 11, 31)
-    return seisMeses < finDeAnio ? seisMeses : finDeAnio
-  }
   const [solRec, setSolRec]       = useState<CatalogoRecord | null>(null)
   const [showSol, setShowSol]     = useState(false)
   const [solVigInicio, setSolVigInicio]     = useState<Date | undefined>(undefined)
@@ -281,7 +269,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     }
   }, [showView, viewRec])
   useEffect(() => {
-    if (solVigFin && solVigFin > vigenciaFinLimite(solVigInicio ?? todayStart)) setSolVigFin(undefined)
+    if (solVigFin && solVigFin > calcularVigenciaMaxima(solVigInicio ?? todayStart)) setSolVigFin(undefined)
   }, [solVigInicio])
   const openView = (rec: CatalogoRecord) => { setViewRec(rec); setShowView(true) }
   const openSol  = (rec: CatalogoRecord) => {
@@ -297,7 +285,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const handleSolicitar = async () => {
     if (!solRec || !user) return
     if (!solVigInicio || !solVigFin) { setSolError("La vigencia es requerida"); return }
-    if (solVigFin > vigenciaFinLimite(solVigInicio)) { setSolError("La nueva vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso"); return }
+    if (esInicioSinRangoValido(solVigInicio)) { setSolError(MENSAJE_INICIO_31_DIC); return }
+    if (solVigFin > calcularVigenciaMaxima(solVigInicio)) { setSolError("La nueva vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso"); return }
     if (!isParaestatal(solRec) && solPrestadores) {
       const maxPrestadores = maxPrestadoresPermitido(entidadNombre(solRec))
       if (Number(solPrestadores) > maxPrestadores) {
@@ -665,7 +654,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium flex items-center gap-1.5">
                     Nueva vigencia
-                    <InfoTooltip text={TOOLTIP_VIGENCIA} />
+                    <InfoTooltip text={TOOLTIPS.VIGENCIA} />
                   </Label>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
@@ -675,14 +664,20 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                         onChange={(d) => setSolVigInicio(d)}
                         fromDate={todayStart}
                         placeholder="Seleccionar inicio"
+                        className={solVigInicio && esInicioSinRangoValido(solVigInicio) ? "border-destructive" : ""}
                       />
+                      {solVigInicio && esInicioSinRangoValido(solVigInicio) && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3 shrink-0" />{MENSAJE_INICIO_31_DIC}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-xs text-muted-foreground">Término</span>
                       <DatePickerHabil
                         value={solVigFin}
                         fromDate={solVigInicio ?? todayStart}
-                        toDate={vigenciaFinLimite(solVigInicio ?? todayStart)}
+                        toDate={calcularVigenciaMaxima(solVigInicio ?? todayStart)}
                         onChange={(d) => setSolVigFin(d)}
                         placeholder="Seleccionar término"
                       />
@@ -691,7 +686,10 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium text-content-high">Programa / Proyecto</span>
+                  <span className="text-xs font-medium text-content-high flex items-center gap-1.5">
+                    Programa / Proyecto
+                    <InfoTooltip text={TOOLTIPS.PROGRAMA_PROYECTO} />
+                  </span>
                   {progSigef.configured && progSigef.proyectos.length > 0 ? (
                     <SelectConBusqueda
                       opciones={progSigef.proyectos}
@@ -743,7 +741,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                         <span className="font-normal text-muted-foreground">
                           (máx. {maxPrestadoresPermitido(entidadNombre(solRec))})
                         </span>
-                        <InfoTooltip text={TOOLTIP_MAX_PRESTADORES} />
+                        <InfoTooltip text={TOOLTIPS.MAX_PRESTADORES} />
                       </Label>
                       <Input
                         type="number"
@@ -791,6 +789,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     solLoading ||
                     !solVigInicio ||
                     !solVigFin ||
+                    esInicioSinRangoValido(solVigInicio) ||
                     (!isParaestatal(solRec) && Number(solPrestadores || 0) > maxPrestadoresPermitido(entidadNombre(solRec)))
                   }
                 >
@@ -826,7 +825,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium flex items-center gap-1.5">
                     Nueva vigencia
-                    <InfoTooltip text={TOOLTIP_VIGENCIA} />
+                    <InfoTooltip text={TOOLTIPS.VIGENCIA} />
                   </Label>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">

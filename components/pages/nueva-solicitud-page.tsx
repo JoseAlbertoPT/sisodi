@@ -29,7 +29,9 @@ import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { useAuth } from "@/lib/auth-context"
 import { parseDateDMY, isPeriodoVigente, type PeriodoCap3000, type PeriodoCap1000 } from "@/lib/calendario-recepcion-mock"
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
+import { calcularVigenciaMaxima, esInicioSinRangoValido, MENSAJE_INICIO_31_DIC } from "@/lib/vigencia"
 import { InfoTooltip } from "@/components/ui/info-tooltip"
+import { TOOLTIPS } from "@/lib/tooltips-textos"
 import { useHistoricoStore } from "@/lib/historico-store"
 import type { HistoricoRow } from "@/lib/parse-excel-historico"
 import { RANGOS_TABULADOR, esMostrarEnFormulario } from "@/lib/tabulador"
@@ -371,18 +373,12 @@ function todayIso(): string {
 }
 // Regla de vigencia: la fecha de término no puede exceder 6 meses desde el inicio
 // ni el 31 de diciembre del año en que se realiza la solicitud, lo que ocurra primero.
+// Implementación compartida en lib/vigencia.ts (usa date-fns para evitar el bug de
+// desbordamiento de mes de Date.setMonth en fechas de fin de mes).
 function getVigenciaFinLimiteIso(inicioIso: string): string | undefined {
-  if (!inicioIso) return undefined
-  const [y, m, d] = inicioIso.split("-").map(Number)
-  if (!y || !m || !d) return undefined
-  const seisMeses = new Date(y, m - 1, d)
-  seisMeses.setMonth(seisMeses.getMonth() + 6)
-  const finDeAnio = new Date(y, 11, 31)
-  const limite = seisMeses < finDeAnio ? seisMeses : finDeAnio
-  const ly = limite.getFullYear()
-  const lm = String(limite.getMonth() + 1).padStart(2, "0")
-  const ld = String(limite.getDate()).padStart(2, "0")
-  return `${ly}-${lm}-${ld}`
+  const inicio = isoToDate(inicioIso)
+  if (!inicio) return undefined
+  return dateToIso(calcularVigenciaMaxima(inicio))
 }
 function minIsoDate(...fechas: (string | undefined)[]): string | undefined {
   return fechas.filter((f): f is string => !!f).reduce<string | undefined>(
@@ -396,8 +392,6 @@ function maxIsoDate(...fechas: (string | undefined)[]): string | undefined {
     undefined,
   )
 }
-// Placeholder: pendiente texto definitivo del área responsable (observación 9).
-const TOOLTIP_VIGENCIA = "La fecha de inicio se calcula a partir del día de la solicitud. La fecha de término puede seleccionarse hasta 6 meses después, sin exceder el 31 de diciembre del año en curso."
 function dmyToIso(dmy?: string): string {
   if (!dmy || !dmy.includes("/")) return ""
   const [d, m, y] = dmy.split("/")
@@ -463,8 +457,10 @@ function OficioUpload({
   )
 }
 
+// Acepta ambos prefijos: "JUST-" (folios creados antes del cambio de prefijo)
+// e "ID-" (folios nuevos), para que el reformateo funcione igual en los dos.
 function formatFolioJustificacion(folio: string): string {
-  const m = folio.match(/^JUST-(\d{4})-(\d+)$/)
+  const m = folio.match(/^(?:JUST|ID)-(\d{4})-(\d+)$/)
   if (!m) return folio
   return `${parseInt(m[2], 10)}/${m[1]}`
 }
@@ -1149,6 +1145,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
     <div className="flex flex-col gap-1.5">
       <Label className="text-sm font-medium flex items-center gap-1.5">
         Equivalencia al Tabulador
+        <InfoTooltip text={TOOLTIPS.TABULADOR} />
         {readonly && <Lock className="h-3 w-3 text-muted-foreground" />}
       </Label>
       {readonly ? (
@@ -1730,6 +1727,7 @@ function FormularioPrestacion({
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Responsable del Gasto
+                <InfoTooltip text={TOOLTIPS.UNIDAD_RESPONSABLE} />
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -1765,6 +1763,7 @@ function FormularioPrestacion({
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programas o Proyectos
+                <InfoTooltip text={TOOLTIPS.PROGRAMA_PROYECTO} />
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -1932,7 +1931,7 @@ function FormularioPrestacion({
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
-                <InfoTooltip text={TOOLTIP_VIGENCIA} />
+                <InfoTooltip text={TOOLTIPS.VIGENCIA} />
                 {bloqueadoPorRenovacion && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-secondary text-secondary ml-1">
                     Editable
@@ -1945,7 +1944,8 @@ function FormularioPrestacion({
                 const vigMin = maxIsoDate(periodoVigMin || undefined, todayIso())
                 const reglaVigMax = getVigenciaFinLimiteIso(vigenciaInicio)
                 const vigMax = minIsoDate(periodoVigMax || undefined, reglaVigMax)
-                const inicioError = !!vigenciaInicio && !!vigMin && vigenciaInicio < vigMin
+                const inicio31Dic = !!vigenciaInicio && esInicioSinRangoValido(isoToDate(vigenciaInicio)!)
+                const inicioError = !!vigenciaInicio && ((!!vigMin && vigenciaInicio < vigMin) || inicio31Dic)
                 const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
                 return (
                   <div className="grid grid-cols-2 gap-3">
@@ -1962,7 +1962,7 @@ function FormularioPrestacion({
                       />
                       {inicioError && (
                         <p className="text-xs text-destructive flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3 shrink-0" />Fecha anterior al inicio del periodo.
+                          <AlertCircle className="h-3 w-3 shrink-0" />{inicio31Dic ? MENSAJE_INICIO_31_DIC : "Fecha anterior al inicio del periodo."}
                         </p>
                       )}
                     </div>
@@ -2494,6 +2494,7 @@ function FormularioNombramiento({
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Unidad Responsable del Gasto
+                <InfoTooltip text={TOOLTIPS.UNIDAD_RESPONSABLE} />
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -2529,6 +2530,7 @@ function FormularioNombramiento({
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programa o Proyecto
+                <InfoTooltip text={TOOLTIPS.PROGRAMA_PROYECTO} />
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -2707,7 +2709,7 @@ function FormularioNombramiento({
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
-                <InfoTooltip text={TOOLTIP_VIGENCIA} />
+                <InfoTooltip text={TOOLTIPS.VIGENCIA} />
                 {bloqueadoPorRenovacion && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-secondary text-secondary ml-1">Editable</Badge>}
               </Label>
               {(() => {
@@ -2716,7 +2718,8 @@ function FormularioNombramiento({
                 const vigMin = maxIsoDate(periodoVigMin || undefined, todayIso())
                 const reglaVigMax = getVigenciaFinLimiteIso(vigenciaInicio)
                 const vigMax = minIsoDate(periodoVigMax || undefined, reglaVigMax)
-                const inicioError = !!vigenciaInicio && !!vigMin && vigenciaInicio < vigMin
+                const inicio31Dic = !!vigenciaInicio && esInicioSinRangoValido(isoToDate(vigenciaInicio)!)
+                const inicioError = !!vigenciaInicio && ((!!vigMin && vigenciaInicio < vigMin) || inicio31Dic)
                 const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
                 return (
                   <div className="grid grid-cols-2 gap-3">
@@ -2732,7 +2735,7 @@ function FormularioNombramiento({
                         className={inicioError ? "border-destructive" : ""}
                       />
                       {inicioError && (
-                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />Fecha anterior al inicio del periodo.</p>
+                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />{inicio31Dic ? MENSAJE_INICIO_31_DIC : "Fecha anterior al inicio del periodo."}</p>
                       )}
                     </div>
                     <div className="flex flex-col gap-1">
@@ -3383,6 +3386,12 @@ function computeDiff(
       return isNaN(n) ? "" : n.toFixed(2)
     }
     if (key === "tipoActividades") return toActivitySlug(v)
+    // La "Unidad Administrativa" a veces guarda una clave (ej. "1.01.1.0.0.0.0")
+    // en vez de un nombre. El separador de la clave varía entre datos antiguos
+    // (puntos) y el formateo actual del formulario (espacios, ver fmtClave), así
+    // que se ignora la puntuación al comparar para no marcar como "cambio" una
+    // solicitud que solo se volvió a guardar sin que el usuario tocara el campo.
+    if (key === "unidadAdministrativa") return String(v).replace(/[^0-9a-zA-Z]/g, "").toLowerCase()
     if (DIFF_LIST_KEYS.has(key)) return toItems(v, key).sort().join("\n")
     return String(v).trim()
   }
@@ -4393,6 +4402,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             const _periodoMin = dmyToIso(periodoVigenciaRange.min)
             const _periodoMax = dmyToIso(periodoVigenciaRange.max)
             const _reglaFinMax = getVigenciaFinLimiteIso(formData.vigenciaInicio ?? "")
+            const _inicio31DicIso = isoToDate(formData.vigenciaInicio ?? "")
+            const _inicio31Dic = !!_inicio31DicIso && esInicioSinRangoValido(_inicio31DicIso)
             const _inicioOk = !!formData.vigenciaInicio &&
               (!_periodoMin || formData.vigenciaInicio >= _periodoMin) &&
               (!_periodoMax || formData.vigenciaInicio <= _periodoMax)
@@ -4400,9 +4411,9 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               (!_periodoMax || formData.vigenciaFin <= _periodoMax) &&
               (!_reglaFinMax || formData.vigenciaFin <= _reglaFinMax) &&
               (!formData.vigenciaInicio || formData.vigenciaFin >= formData.vigenciaInicio)
-            const vigenciaOk = hasPermiso || isEditingBorrador
+            const vigenciaOk = !_inicio31Dic && (hasPermiso || isEditingBorrador
               ? !!(formData.vigenciaInicio) && !!(formData.vigenciaFin) && (!_reglaFinMax || formData.vigenciaFin <= _reglaFinMax)
-              : _inicioOk && _finOk
+              : _inicioOk && _finOk)
             const effectiveFormDataForValidation = editSolicitud?.formData
               ? { ...editSolicitud.formData, ...formData }
               : formData

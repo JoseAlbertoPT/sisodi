@@ -81,6 +81,12 @@ export interface JustificacionData {
   fechaDictaminacion?: string;
   ocultarFirmas?: boolean;
   clave?: string;
+  // Folio de dictamen "limpio" (sin siglas), para la caja "Folio:" de la página
+  // del Dictamen/Opinión. Puede llevar el consecutivo de reutilización pegado
+  // (ej. "08/08/2026-2") cuando esta justificación nació de una reutilización
+  // del catálogo; a diferencia de `clave`/"Justificación:", que nunca lo lleva.
+  // Si no se manda, se deriva de `clave` quitándole las siglas (compatibilidad).
+  folio?: string;
   notaDictamen?: string;
   // La página del Dictamen/Opinión Técnica Funcional solo tiene sentido una vez
   // que ese dictamen realmente existe (solicitud.dictamen emitido). Antes de eso
@@ -485,7 +491,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
   const inD = parseDateParts(data.vigenciaInicio);
   const finD = parseDateParts(data.vigenciaTermino);
-  const folioPlano = folioSinSiglas(data.clave);
+  const folioPlano = data.folio ?? folioSinSiglas(data.clave);
   const tituloFormatoDictamen =
     data.tipoAdministracion === "centralizada"
       ? "Dictamen Técnico Funcional de Justificación de Prestación de Servicios"

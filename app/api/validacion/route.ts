@@ -186,13 +186,15 @@ export async function PATCH(req: NextRequest) {
     if (esEnvioAValidacion && !solicitud.folio_justificacion) {
       const year = new Date().getFullYear()
       // Folio de justificación GLOBAL (contador único para todo el sistema).
+      // El "tipo" del consecutivo se queda como "JUST-GLOBAL" aunque el
+      // prefijo visible del folio sea "ID-", para no reiniciar el contador.
       const tipoFolio = "JUST-GLOBAL"
       const registro = await prisma.consecutivo_folio.upsert({
         where:  { tipo_mes_anio: { tipo: tipoFolio, mes: 0, anio: year } },
         update: { consecutivo: { increment: 1 } },
         create: { tipo: tipoFolio, mes: 0, anio: year, consecutivo: 1 },
       })
-      folioJustificacionNuevo = `JUST-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
+      folioJustificacionNuevo = `ID-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
     }
 
     const [solicitudActualizada] = await Promise.all([

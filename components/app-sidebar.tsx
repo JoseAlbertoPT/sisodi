@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { fetchMyMenus, type MenuNode } from "@/lib/permisos-api"
 import { useRealtime } from "@/hooks/use-realtime"
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import {
   LayoutDashboard,
   FilePlus,
@@ -174,25 +174,29 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
   const { logout, user } = useAuth()
   const { toggle } = useSidebar()
   const [menuTree, setMenuTree] = useState<MenuNode[] | null>(null)
+  const menuTreeRef = useRef<MenuNode[] | null>(null)
+  useEffect(() => { menuTreeRef.current = menuTree }, [menuTree])
   const [menusLoading, setMenusLoading] = useState(true)
   const [menusError, setMenusError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const [confirmLogout, setConfirmLogout] = useState(false)
 
-  // Si un administrador habilita/deshabilita un apartado desde Permisos, el
-  // menú se refresca solo — sin esto solo se veía recargando la página.
   useRealtime(["permisos"], () => setRetryCount((n) => n + 1))
 
 
   useEffect(() => {
     if (!user?.rol) return
     let cancelled = false
-    setMenusLoading(true)
+    const esCargaInicial = menuTreeRef.current === null
+    if (esCargaInicial) setMenusLoading(true)
     setMenusError(null)
     fetchMyMenus(user.rol, user.id)
-      .then((data) => { if (!cancelled) setMenuTree(data) })
+      .then((data) => {
+        if (cancelled) return
+        if (JSON.stringify(data) !== JSON.stringify(menuTreeRef.current11)) setMenuTree(data)
+      })
       .catch((e) => { if (!cancelled) setMenusError(e instanceof Error ? e.message : "Error al cargar menú") })
-      .finally(() => { if (!cancelled) setMenusLoading(false) })
+      .finally(() => { if (!cancelled && esCargaInicial) setMenusLoading(false) })
     return () => { cancelled = true }
   }, [user?.rol, user?.id, retryCount])
 
@@ -213,7 +217,6 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
   const { allLeaves } = useMemo(() => {
     if (!menuTree) return { allLeaves: [] }
     const leaves = collectLeafNodes(menuTree)
-      // "progreso-firmado" oculto del menú por diseño; la página sigue activa vía INTERNAL_PAGES
       .filter((n) => n.key && n.route !== null && n.key !== "revision-do" && n.key !== "progreso-firmado")
 
     return { allLeaves: leaves }

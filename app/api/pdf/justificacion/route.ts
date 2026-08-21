@@ -471,11 +471,12 @@ export async function buildJustificacionBuffer(
         firmaDictEmitioCargo: firmas.firmaDictEmitioCargo,
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
-        clave: claveParaPdf(
-          sol.secretaria,
-          overrides.reutilizacionNumero && folioDictamenVisible ? `${folioDictamenVisible}-${overrides.reutilizacionNumero}` : folioDictamenVisible,
-          esHistoricoImportado,
-        ),
+        // "Justificación"/"Clave" (siglas + folio) nunca lleva el consecutivo de
+        // reutilización — solo el campo "Folio" de abajo, ver JustificacionData.folio.
+        clave: claveParaPdf(sol.secretaria, folioDictamenVisible, esHistoricoImportado),
+        folio: overrides.reutilizacionNumero && folioDictamenVisible
+          ? `${folioDictamenVisible}-${overrides.reutilizacionNumero}`
+          : (folioDictamenVisible ?? ""),
         notaDictamen,
         incluirPaginaDictamen: tieneDictamen,
       };

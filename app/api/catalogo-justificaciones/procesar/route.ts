@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { requireCatalogoConsulta } from "@/lib/api-guard"
+import { validarVigencia } from "@/lib/vigencia"
 
 function parseDate(val: string | null | undefined): Date | null {
   if (!val) return null
@@ -65,6 +66,12 @@ export async function POST(req: NextRequest) {
     if (!nuevaInicio || !nuevaFin) {
       await prisma.$executeRaw`UPDATE catalogo_solicitud SET procesado = false WHERE id = ${id}`
       return NextResponse.json({ error: "Formato de vigencia inválido" }, { status: 400 })
+    }
+
+    const validacionVigencia = validarVigencia(nuevaInicio, nuevaFin)
+    if (!validacionVigencia.ok) {
+      await prisma.$executeRaw`UPDATE catalogo_solicitud SET procesado = false WHERE id = ${id}`
+      return NextResponse.json({ error: validacionVigencia.error }, { status: 400 })
     }
 
     const [estadoInicial, usuarioCreador] = await Promise.all([
@@ -137,6 +144,8 @@ export async function POST(req: NextRequest) {
     // Folio
     const year = nueva.fecha_creacion?.getFullYear() ?? new Date().getFullYear()
     // Folio de justificación GLOBAL (contador único para todo el sistema).
+    // El "tipo" del consecutivo se queda como "JUST-GLOBAL" aunque el
+    // prefijo visible del folio sea "ID-", para no reiniciar el contador.
     const tipoFolio = "JUST-GLOBAL"
 
     const registro = await prisma.consecutivo_folio.upsert({
@@ -144,7 +153,7 @@ export async function POST(req: NextRequest) {
       update: { consecutivo: { increment: 1 } },
       create: { tipo: tipoFolio, mes: 0, anio: year, consecutivo: 1 },
     })
-    const folioJustificacion = `JUST-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
+    const folioJustificacion = `ID-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
 
     await prisma.solicitud.update({
       where: { id: nueva.id },

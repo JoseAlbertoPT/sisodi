@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { requireCatalogoConsulta } from "@/lib/api-guard"
+import { validarVigencia } from "@/lib/vigencia"
+
+function parseVigenciaRango(nuevaVigencia: string): { inicio: Date; fin: Date } | null {
+  const [inicioStr, finStr] = nuevaVigencia.split("/").map((s) => s.trim())
+  if (!inicioStr || !finStr) return null
+  const inicio = new Date(inicioStr)
+  const fin = new Date(finStr)
+  if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) return null
+  return { inicio, fin }
+}
 
 // Límite máximo al reutilizar un registro: Seguridad Pública permite hasta
 // 100 prestadores; el resto de las secretarías, hasta 50.
@@ -43,6 +53,17 @@ export async function POST(req: NextRequest) {
     })
     if (!catalogo) {
       return NextResponse.json({ error: "Registro de catálogo no encontrado" }, { status: 404 })
+    }
+
+    if (!esCancelacion) {
+      const rango = parseVigenciaRango(String(nueva_vigencia).trim())
+      if (!rango) {
+        return NextResponse.json({ error: "Formato de vigencia inválido" }, { status: 400 })
+      }
+      const validacion = validarVigencia(rango.inicio, rango.fin)
+      if (!validacion.ok) {
+        return NextResponse.json({ error: validacion.error }, { status: 400 })
+      }
     }
 
     if (!esCancelacion && nuevos_numero_prestadores) {

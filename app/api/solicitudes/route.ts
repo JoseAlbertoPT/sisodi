@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { getEstadoId } from "@/lib/estado-cache"
+import { validarVigencia } from "@/lib/vigencia"
 
 function parseDate(v: unknown): Date | null {
   if (!v) return null
@@ -113,13 +114,27 @@ export async function POST(req: NextRequest) {
 
     // Folio de justificación GLOBAL: un solo contador para todo el sistema, de modo que
     // cada solicitud reciba un folio único y nunca se repita entre secretarías.
+    // El "tipo" con el que se guarda el consecutivo en la BD se queda igual
+    // ("JUST-GLOBAL") aunque el prefijo visible del folio ahora sea "ID-": si
+    // se cambiara también el tipo, el contador arrancaría de 1 otra vez.
     const tipoFolioJUST = "JUST-GLOBAL"
+    const PREFIJO_FOLIO_JUSTIFICACION = "ID"
 
     const trunc = (val: string | null | undefined, max: number): string | null =>
         val ? val.substring(0, max) : null
 
     const year       = new Date().getFullYear()
     const esBorrador = estadoNombre === "Borrador"
+    if (!esBorrador && vigencia_inicio && vigencia_fin) {
+      const inicioDate = parseDate(vigencia_inicio)
+      const finDate = parseDate(vigencia_fin)
+      if (inicioDate && finDate) {
+        const validacion = validarVigencia(inicioDate, finDate)
+        if (!validacion.ok) {
+          return NextResponse.json({ ok: false, error: validacion.error }, { status: 400 })
+        }
+      }
+    }
     let folioJustificacion: string | null = null
     if (!esBorrador) {
       if (esExtemporanea) {
@@ -128,7 +143,7 @@ export async function POST(req: NextRequest) {
         })
         const ultimoConsecutivo = registroActual?.consecutivo ?? 1
         const basePadded    = String(ultimoConsecutivo).padStart(4, "0")
-        const baseParaFolio = `JUST-${year}-${basePadded}`
+        const baseParaFolio = `${PREFIJO_FOLIO_JUSTIFICACION}-${year}-${basePadded}`
         const yaExistentes = await prisma.solicitud.findMany({
           where:  { folio_justificacion: { startsWith: `${baseParaFolio}-` } },
           select: { folio_justificacion: true },
@@ -141,7 +156,7 @@ export async function POST(req: NextRequest) {
           update: { consecutivo: { increment: 1 } },
           create: { tipo: tipoFolioJUST, mes: 0, anio: year, consecutivo: 1 },
         })
-        folioJustificacion = `JUST-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
+        folioJustificacion = `${PREFIJO_FOLIO_JUSTIFICACION}-${year}-${String(registro.consecutivo ?? 1).padStart(4, "0")}`
       }
     }
 
@@ -300,6 +315,12 @@ export async function PATCH(req: NextRequest) {
       data.vigencia_inicio = parseDate(campos.vigencia_inicio)
     if (campos.vigencia_fin !== undefined)
       data.vigencia_fin = parseDate(campos.vigencia_fin)
+    if (data.vigencia_inicio && data.vigencia_fin) {
+      const validacion = validarVigencia(data.vigencia_inicio, data.vigencia_fin)
+      if (!validacion.ok) {
+        return NextResponse.json({ ok: false, error: validacion.error }, { status: 400 })
+      }
+    }
     if (campos.periodoMes !== undefined && campos.periodoAnio !== undefined) {
       const pid = await resolverPeriodoId(undefined, Number(campos.periodoMes), Number(campos.periodoAnio))
       if (pid) data.periodo_id = pid

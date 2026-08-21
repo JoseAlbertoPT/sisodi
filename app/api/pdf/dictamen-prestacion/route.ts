@@ -74,23 +74,31 @@ export async function buildDictamenPrestacionBuffer(
   let folio: string;
   const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
 
-  // Cada vez que se reutiliza un registro del catálogo, este endpoint se llama
-  // justo después de /api/catalogo-justificaciones/solicitar (que ya insertó
-  // la fila de esta reutilización) — así que contar cuántas reutilizaciones
-  // tiene ya el registro del catálogo da directamente el consecutivo de ÉSTA
-  // ("06/08/2026-1", "-2", … "-30"). Sin esto, todas las reutilizaciones del
-  // mismo folio salían idénticas y no había forma de distinguirlas.
-  const catalogoJustificacionId = catalogoId
-    ? Number(catalogoId)
-    : solicitudId
-      ? (await prisma.catalogo_justificacion.findUnique({
-          where: { solicitud_id: Number(solicitudId) },
-          select: { id: true },
-        }))?.id ?? null
-      : null;
+  // Cada vez que se reutiliza (o cancela) un registro del catálogo, este
+  // endpoint se llama justo después de /api/catalogo-justificaciones/solicitar
+  // (que ya insertó la fila de esa acción) con la vigencia como override —
+  // así que contar cuántas filas tiene ya el registro del catálogo da
+  // directamente el consecutivo de ÉSTA ("06/08/2026-1", "-2", … "-30"). Solo
+  // se aplica cuando venimos de esa acción (hay override de vigencia): una
+  // descarga normal no debe cargar el consecutivo de reutilizaciones pasadas.
+  // El sufijo va SOLO en el campo "Folio" de arriba del documento — la
+  // "Justificación" (siglas + folio de dictamen) siempre se arma con el folio
+  // limpio, sin el consecutivo de reutilización.
+  const esGeneracionDesdeCatalogo = !!(overrides.vigenciaInicio || overrides.vigenciaFin);
+  const catalogoJustificacionId = esGeneracionDesdeCatalogo
+    ? (catalogoId
+        ? Number(catalogoId)
+        : solicitudId
+          ? (await prisma.catalogo_justificacion.findUnique({
+              where: { solicitud_id: Number(solicitudId) },
+              select: { id: true },
+            }))?.id ?? null
+          : null)
+    : null;
   const reutilizacionNumero = catalogoJustificacionId
     ? await prisma.catalogo_solicitud.count({ where: { catalogo_justificacion_id: catalogoJustificacionId } })
     : 0;
+  const conSufijo = (f: string): string => (reutilizacionNumero > 0 ? `${f}-${reutilizacionNumero}` : f);
 
   if (sol) {
     const esHistoricoImportado = sol.historial_solicitud.length > 0;
@@ -99,9 +107,8 @@ export async function buildDictamenPrestacionBuffer(
       sol.folio_dictamen ??
       sol.folio_recepcion ??
       String(sol.id);
-    if (reutilizacionNumero > 0) folio = `${folio}-${reutilizacionNumero}`;
     data = {
-      folio: folioSinSiglas(folio),
+      folio: folioSinSiglas(conSufijo(folio)),
       fecha: formatFechaLarga(new Date()),
       secretariaDependencia: sol.secretaria ?? "",
       unidadResponsableGasto: sol.unidad_responsable ?? "",
@@ -127,9 +134,8 @@ export async function buildDictamenPrestacionBuffer(
     const cj = await prisma.catalogo_justificacion.findUnique({ where: { id: Number(catalogoId) } });
     if (!cj) return null;
     folio = cj.folio_dictamen ?? cj.folio_recepcion ?? String(cj.id);
-    if (reutilizacionNumero > 0) folio = `${folio}-${reutilizacionNumero}`;
     data = {
-      folio: folioSinSiglas(folio),
+      folio: folioSinSiglas(conSufijo(folio)),
       fecha: formatFechaLarga(new Date()),
       secretariaDependencia: cj.secretaria ?? "",
       unidadResponsableGasto: cj.unidad_responsable ?? "",
@@ -163,7 +169,7 @@ export async function buildDictamenPrestacionBuffer(
   );
   const buffer = await streamToBuffer(stream as unknown as NodeJS.ReadableStream);
 
-  const filename = `Dictamen_${folio.replace(/\//g, "-")}.pdf`;
+  const filename = `Dictamen_${conSufijo(folio).replace(/\//g, "-")}.pdf`;
 
   return { buffer, sol, folio, filename };
 }
