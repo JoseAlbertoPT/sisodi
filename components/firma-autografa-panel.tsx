@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, Upload, Loader2, AlertCircle, X, CheckCircle2 } from "lucide-react"
-import { FileDropZone, FileTypeIcon } from "@/components/ui/file-drop-zone"
+import { Download, Upload, Loader2, AlertCircle } from "lucide-react"
+import { FileDropZone, UploadedFileRow } from "@/components/ui/file-drop-zone"
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 
 interface FirmaProceso {
@@ -144,23 +144,12 @@ export function FirmaAutografaPanel({
           ) : (
             <>
               {archivoSubido ? (
-                <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
-                    <FileTypeIcon name={firma?.archivo_firmado?.split("/").pop() ?? "archivo.pdf"} size="sm" />
-                  </div>
-                  <span className="flex-1 truncate text-sm font-medium text-gray-800 leading-snug">{firma?.archivo_firmado?.split("/").pop()}</span>
-                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs font-medium text-[#773357] hover:underline shrink-0">Ver</a>
-                  <button
-                    type="button"
-                    onClick={handleClear}
-                    disabled={clearing}
-                    aria-label="Quitar archivo"
-                    className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors disabled:opacity-40"
-                  >
-                    {clearing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                  </button>
-                </div>
+                <UploadedFileRow
+                  nombre={firma?.archivo_firmado?.split("/").pop() ?? "archivo.pdf"}
+                  ruta={firma?.archivo_firmado ?? undefined}
+                  onRemove={handleClear}
+                  removing={clearing}
+                />
               ) : (
                 <FileDropZone
                   accept="application/pdf"
@@ -183,13 +172,13 @@ export function FirmaAutografaPanel({
 
       {!hideEnviar && (
         <>
-          <div className="flex justify-end gap-2 px-6 py-4 border-t border-[#E5E7EB]">
+          <div className="flex justify-end gap-2 px-6 py-4 border-t border-border">
             {onCancelar && (
               <Button
                 type="button"
+                variant="default"
                 onClick={onCancelar}
                 disabled={guardandoFinal}
-                className="rounded-full border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-700"
               >
                 Cancelar
               </Button>
@@ -198,7 +187,7 @@ export function FirmaAutografaPanel({
               onClick={() => setShowEnviarConfirm(true)}
               disabled={!archivoSubido || guardandoFinal}
               variant="primary"
-              className="gap-1.5 px-5 py-2"
+              className="gap-1.5"
             >
               {guardandoFinal ? "Enviando..." : "Enviar a Emisor"}
             </Button>

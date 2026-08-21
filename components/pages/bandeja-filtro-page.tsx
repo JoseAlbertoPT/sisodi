@@ -49,6 +49,7 @@ import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { generateDictamenPrestacionPDF } from "@/lib/generate-dictamen-prestacion-pdf"
 import { generateCartaDescriptivaPDF } from "@/lib/generate-carta-descriptiva-pdf"
 import { claveParaPdf } from "@/lib/clave-dictamen"
+import { puedeMostrarFolioDictamen } from "@/lib/firma-visibilidad"
 import { useRealtime } from "@/hooks/use-realtime"
 
 interface FiltroSolicitud {
@@ -670,41 +671,15 @@ const MESES_DICT = [
   { value: "09", label: "SEPTIEMBRE(09)" }, { value: "10", label: "OCTUBRE(10)" },
   { value: "11", label: "NOVIEMBRE(11)" }, { value: "12", label: "DICIEMBRE(12)" },
 ]
+// Regla 12: el folio de dictamen ya no se puede asignar desde el panel del
+// Revisor (filtro 1) — se asigna del lado del servidor cuando Emisión aprueba
+// el dictamen y elige la modalidad de firma (ver app/api/filtro/route.ts).
+// Esta tarjeta queda solo informativa/de solo lectura.
 function FolioDictamenCard({
   folioDictamen,
-  onAsignar,
 }: {
   folioDictamen: string | null
-  onAsignar: (folio: string) => Promise<void>
 }) {
-  const today = new Date()
-  const [mes,         setMes]         = useState(String(today.getMonth() + 1).padStart(2, "0"))
-  const [anio,        setAnio]        = useState(String(today.getFullYear()))
-  const [consecutivo, setConsecutivo] = useState("1")
-  const [cargando,    setCargando]    = useState(false)
-  const [guardando,   setGuardando]   = useState(false)
-
-  useEffect(() => {
-    const mesNum  = parseInt(mes,  10)
-    const anioNum = parseInt(anio, 10)
-    if (!mesNum || !anioNum || anioNum < 2020) return
-    setCargando(true)
-    fetch(`/api/folio-dictamen/siguiente?mes=${mesNum}&anio=${anioNum}`)
-      .then(r => r.json())
-      .then(json => { if (json.ok) setConsecutivo(String(json.siguiente)) })
-      .catch(() => {})
-      .finally(() => setCargando(false))
-  }, [mes, anio])
-
-  const folioPreview = `${String(consecutivo).padStart(2, "0")}/${mes}/${anio}`
-
-  const handleAsignar = async () => {
-    if (!consecutivo || !mes || !anio) return
-    setGuardando(true)
-    await onAsignar(folioPreview)
-    setGuardando(false)
-  }
-
   if (folioDictamen) {
     return (
       <Card className="shadow-sm border-secondary/30 border-2 bg-secondary/[0.03]">
@@ -721,59 +696,11 @@ function FolioDictamenCard({
 
   return (
     <Card className="shadow-sm border-border">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-          <Stamp className="h-4 w-4 text-secondary" />Asignar Folio de Dictamen
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Selecciona mes y año — el consecutivo se calcula automáticamente.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Mes</Label>
-            <Select value={mes} onValueChange={setMes}>
-              <SelectTrigger className="bg-background font-mono">
-                <SelectValue placeholder="Mes" />
-              </SelectTrigger>
-              <SelectContent>
-                {MESES_DICT.map(m => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Año</Label>
-            <Input
-              value={anio}
-              onChange={e => setAnio(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="2026"
-              className="bg-background font-mono"
-              maxLength={4}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Consecutivo</Label>
-            <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3 font-mono text-sm text-card-foreground">
-              {cargando ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : consecutivo}
-            </div>
-          </div>
-        </div>
-        <div className="rounded-md bg-muted/50 px-3 py-2 flex items-center gap-2">
-          {cargando && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-          <span className="text-xs text-muted-foreground">Folio de dictamen: </span>
-          <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview}</span>
-        </div>
-        <Button
-          onClick={handleAsignar}
-          disabled={guardando || cargando || !consecutivo || !mes || !anio}
-          className="w-full gap-2"
-           >
-          {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
-          Asignar Folio de Dictamen
-        </Button>
+      <CardContent className="flex items-center gap-3 p-4">
+        <Stamp className="h-5 w-5 text-muted-foreground shrink-0" />
+        <p className="text-xs text-muted-foreground">
+          El folio de dictamen se asignará cuando el área de Emisión apruebe el dictamen y seleccione la modalidad de firma.
+        </p>
       </CardContent>
     </Card>
   )
@@ -865,21 +792,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
   const [descargandoCartaDescriptiva,   setDescargandoCartaDescriptiva]   = useState(false)
 
   const raw = solicitud._raw
-  const handleAsignarFolioDictamen = async (folio: string) => {
-    const res  = await fetch("/api/filtro", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        solicitudId: Number(solicitud.id),
-        accion: "asignarFolio",
-        usuarioId: (user as any)?.id ?? "",
-        folioDictamen: folio,
-      }),
-    })
-    const json = await res.json()
-    if (esSesionInvalida(json)) { forzarReLogin(json.error); return }
-    if (json.ok) setFolioDictamen(folio)
-  }
   const yaEstuvoEnRevisor = (solicitud._raw?.historial_solicitud ?? []).some(
     (h: any) => (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "")
       .toLowerCase().includes("en revision revisor")
@@ -897,6 +809,15 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
     ? solicitud.estado.toLowerCase() === "en verificacion final"
     : true
   const folioFormateado = formatearFolio(solicitud.folioRecepcion)
+  // Regla 11: mientras el Revisor no apruebe (y por lo tanto no exista folio
+  // de recepción), el encabezado se identifica con el folio de justificación
+  // en vez de un placeholder vacío.
+  const folioJustificacionRaw = solicitud._raw?.folio_justificacion as string | null | undefined
+  const folioJustificacionFormateado = (() => {
+    if (!folioJustificacionRaw) return null
+    const m = folioJustificacionRaw.match(/^JUST-(\d{4})-(\d+)$/)
+    return m ? `${parseInt(m[2], 10)}/${m[1]}` : folioJustificacionRaw
+  })()
   const historial: HistorialEntryData[] =
     (raw?.historial_solicitud ?? []).map((h: any) => ({
       fecha:          h.fecha ?? "",
@@ -992,10 +913,12 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="ds-title-md text-content-high">
-                {folioFormateado || <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>}
+                {folioFormateado || (folioJustificacionFormateado
+                  ? <span className="text-muted-foreground font-normal text-base">JUST {folioJustificacionFormateado}</span>
+                  : <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>)}
               </h2>
               {estadoBadge(solicitud.estado)}
-              {folioDictamen && (
+              {folioDictamen && puedeMostrarFolioDictamen(solicitud.estado) && (
                 <Badge className="bg-secondary/15 text-secondary border-0 text-xs gap-1">
                   <Stamp className="h-3 w-3" />Dict. {folioDictamen}
                 </Badge>
@@ -1016,7 +939,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           >
             Descargar Justificación
           </Button>
-          {!!folioDictamen && solicitud.tipo === "Prestacion de Servicios" && (
+          {!!folioDictamen && puedeMostrarFolioDictamen(solicitud.estado) && solicitud.tipo === "Prestacion de Servicios" && (
             <>
               <Button variant="default" size="sm" className="gap-1.5"
                 disabled={descargandoDictamenPrestacion}
@@ -1198,10 +1121,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           )}
 
           {filtro === 1 && activePanel === "revision" && (
-            <FolioDictamenCard
-              folioDictamen={folioDictamen}
-              onAsignar={handleAsignarFolioDictamen}
-            />
+            <FolioDictamenCard folioDictamen={folioDictamen} />
           )}
 
           {activePanel === "historial" && (

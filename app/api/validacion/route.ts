@@ -176,43 +176,12 @@ export async function PATCH(req: NextRequest) {
       nuevoEstado.toLowerCase().includes("en validacion justificaciones") ||
       nuevoEstado.toLowerCase().includes("enviada a validacion")
 
-    const esEnvioDGDO = nuevoEstado.toLowerCase() === "pendiente do"
+    // Regla 11: el folio de recepción NO se asigna aquí. UEFA solo manda la
+    // solicitud a DGDO ("Pendiente DO") — el folio de recepción se asigna
+    // hasta que el Revisor (filtro 1) la aprueba y la envía a Verificación
+    // (ver app/api/filtro/route.ts, accion "aprobar" con filtro === 1).
 
-    
-    
-    
-    let folioRecepcionNuevo: string | undefined
-    if (esEnvioDGDO && !solicitud.folio_recepcion) {
-      const MONTH_CODES = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
-      const now     = new Date()
-      const mesNum  = now.getMonth() + 1
-      const anioNum = now.getFullYear()
-      const mesCode = MONTH_CODES[now.getMonth()]
 
-      if (solicitud.es_extemporanea) {
-        
-        const regFrec = await prisma.consecutivo_folio.findUnique({
-          where: { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
-        })
-        const ultimoFrec = regFrec?.consecutivo ?? 0
-        
-        const regExt = await prisma.consecutivo_folio.upsert({
-          where:  { tipo_mes_anio: { tipo: "FREC_EXT", mes: mesNum, anio: anioNum } },
-          update: { consecutivo: { increment: 1 } },
-          create: { tipo: "FREC_EXT", mes: mesNum, anio: anioNum, consecutivo: 1 },
-        })
-        folioRecepcionNuevo = `${mesCode}-${String(ultimoFrec).padStart(3, "0")}-${regExt.consecutivo}`
-      } else {
-        const registro = await prisma.consecutivo_folio.upsert({
-          where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
-          update: { consecutivo: { increment: 1 } },
-          create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: 1 },
-        })
-        folioRecepcionNuevo = `${mesCode}-${String(registro.consecutivo ?? 1).padStart(3, "0")}-${anioNum}`
-      }
-    }
-
-    
     let folioJustificacionNuevo: string | undefined
     if (esEnvioAValidacion && !solicitud.folio_justificacion) {
       const year = new Date().getFullYear()
@@ -232,7 +201,6 @@ export async function PATCH(req: NextRequest) {
         data:    {
           estado_id: estadoNuevoId!,
           ...(esEnvioAValidacion && { fecha_envio: new Date() }),
-          ...(folioRecepcionNuevo    && { folio_recepcion:     folioRecepcionNuevo }),
           ...(folioJustificacionNuevo && { folio_justificacion: folioJustificacionNuevo }),
           ...(revisorId && { revisor_asignado_id: revisorId }),
         },

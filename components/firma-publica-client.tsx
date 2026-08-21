@@ -194,7 +194,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <AlertCircle className="h-10 w-10 text-accent-foreground" />
             <h2 className="font-sans text-lg font-light">Link en uso</h2>
-            <p className="font-sans text-sm font-light text-gray-500 text-center">
+            <p className="font-sans text-sm font-light text-content-low text-center">
               Este link ya fue abierto por otra persona y estamos esperando a que firme. Si tú eres quien debe firmar, solicita un nuevo link al responsable.
             </p>
           </CardContent>
@@ -210,7 +210,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <AlertCircle className="h-10 w-10 text-destructive" />
             <h2 className="font-sans text-lg font-light text-destructive">Link inválido</h2>
-            <p className="font-sans text-sm font-light text-gray-500 text-center">
+            <p className="font-sans text-sm font-light text-content-low text-center">
               El link no existe o el token no es correcto. Pide uno nuevo al responsable.
             </p>
           </CardContent>
@@ -226,7 +226,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <CheckCircle2 className="h-10 w-10 text-secondary" />
             <h2 className="font-sans text-lg font-light">Proceso completado</h2>
-            <p className="font-sans text-sm font-light text-gray-500 text-center">Todas las firmas ya fueron registradas. Ya puedes cerrar esta pestaña.</p>
+            <p className="font-sans text-sm font-light text-content-low text-center">Todas las firmas ya fueron registradas. Ya puedes cerrar esta pestaña.</p>
           </CardContent>
         </Card>
       </div>
@@ -238,29 +238,27 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
       <div className="min-h-screen flex items-center justify-center p-6">
         <Card className="w-full max-w-lg border-2 border-accent/30">
           <CardHeader className="flex flex-col items-start gap-3">
-            <Info className="h-6 w-6 text-[#2e3b2b] shrink-0" strokeWidth={1.75} />
-            <CardTitle className="font-sans text-base font-normal text-[#2e3b2b]">
+            <Info className="h-6 w-6 text-content-high shrink-0" strokeWidth={1.75} />
+            <CardTitle className="font-sans text-base font-normal text-content-high">
               Aviso importante antes de firmar
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2 font-sans text-sm font-light text-[#5d5e5f]">
+            <div className="flex flex-col gap-2 font-sans text-sm font-light text-content-low">
               <p>Estás por acceder al documento para firmarlo electrónicamente.</p>
               <ul className="list-disc pl-5 flex flex-col gap-1.5">
-                <li>Al presionar <span className="font-medium text-[#2e3b2b]">Acceder</span> se iniciará un cronómetro de <span className="font-medium text-[#2e3b2b]">30 minutos</span>.</li>
+                <li>Al presionar <span className="font-medium text-content-high">Acceder</span> se iniciará un cronómetro de <span className="font-medium text-content-high">30 minutos</span>.</li>
                 <li>Si no firmas en ese tiempo, el link se vencerá y deberás pedir uno nuevo al responsable.</li>
                 <li>Solo una persona debe usar este link. No lo compartas.</li>
-                <li>Necesitarás tu <span className="font-medium text-[#2e3b2b]">certificado (.cer)</span>, <span className="font-medium text-[#2e3b2b]">clave privada (.key)</span> y contraseña de tu e.firma.</li>
+                <li>Necesitarás tu <span className="font-medium text-content-high">certificado (.cer)</span>, <span className="font-medium text-content-high">clave privada (.key)</span> y contraseña de tu e.firma.</li>
               </ul>
             </div>
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="flex justify-between gap-6">
-              <Button onClick={() => window.close()}
-                className="rounded-full border-0 bg-[#ffeaea] text-[#87090c] hover:bg-[#ffeaea] hover:text-[#87090c] focus-visible:outline-[#e7b400]">
+              <Button variant="destructive-low" onClick={() => window.close()}>
                 Cancelar
               </Button>
-              <Button onClick={handleAcceder} disabled={accediendo}
-                className="gap-1.5 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
+              <Button variant="vino" className="gap-1.5" onClick={handleAcceder} disabled={accediendo}>
                 {accediendo ? "Accediendo..." : "Acceder y comenzar"}
               </Button>
             </div>
@@ -277,7 +275,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <Clock className="h-10 w-10 text-destructive" />
             <h2 className="font-sans text-lg font-light text-destructive">Link expirado</h2>
-            <p className="font-sans text-sm font-light text-gray-500 text-center">
+            <p className="font-sans text-sm font-light text-content-low text-center">
               El plazo de 30 minutos para firmar se agotó. Solicita un nuevo link al responsable del proceso.
             </p>
           </CardContent>
@@ -291,24 +289,24 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
       <div className="min-h-screen flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center gap-3 py-10">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#d2fad2]">
-              <CheckCircle2 className="h-8 w-8 text-[#1c7d29]" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/15">
+              <CheckCircle2 className="h-8 w-8 text-secondary" />
             </div>
             <h2 className="font-sans text-lg font-light text-foreground">¡Firma registrada!</h2>
-            <p className="font-sans text-sm font-light text-gray-500 text-center">
+            <p className="font-sans text-sm font-light text-content-low text-center">
               Tu firma quedó registrada correctamente.{" "}
               {exito.estado === "completado"
                 ? "El proceso está completo."
                 : `Se han recibido ${exito.firmados} firmas hasta ahora.`}
             </p>
-            <p className="font-sans text-xs font-light text-gray-500">
+            <p className="font-sans text-xs font-light text-content-low">
               Si la descarga no inició automáticamente,{" "}
               <button onClick={descargarPdfFirmado} className="text-primary underline hover:text-primary/80">
                 haz clic aquí
               </button>
               .
             </p>
-            <p className="font-sans text-xs font-light text-gray-500">Ya puedes cerrar esta pestaña.</p>
+            <p className="font-sans text-xs font-light text-content-low">Ya puedes cerrar esta pestaña.</p>
           </CardContent>
         </Card>
       </div>
@@ -326,11 +324,11 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
       <AlertDialog open={avisoCargoAbierto} onOpenChange={setAvisoCargoAbierto}>
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader className="items-start gap-3 text-left">
-            <Info className="h-6 w-6 text-[#2e3b2b]" strokeWidth={1.75} />
+            <Info className="h-6 w-6 text-content-high" strokeWidth={1.75} />
             <AlertDialogTitle className="ds-title-md font-light text-[color:var(--color-core-piedra-20)]">
               Antes de escribir su cargo
             </AlertDialogTitle>
-            <AlertDialogDescription className="font-sans text-sm font-light leading-relaxed text-gray-500">
+            <AlertDialogDescription className="font-sans text-sm font-light leading-relaxed text-content-low">
               Escriba su cargo con <strong className="font-medium text-[color:var(--color-core-piedra-20)]">exactitud y sin abreviaturas</strong>.
               Este texto aparecerá impreso junto a su firma en el PDF definitivo y
               <strong className="font-medium text-[color:var(--color-core-piedra-20)]"> no podrá modificarse después</strong>.
@@ -341,7 +339,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <header className="rounded-2xl mx-4 mt-4 overflow-hidden shrink-0 z-10" style={{ backgroundColor: "#2e3b2b" }}>
+      <header className="rounded-2xl mx-4 mt-4 overflow-hidden shrink-0 z-10 bg-content-high">
         <div className="flex items-center justify-between flex-wrap gap-y-3 px-4 sm:px-10 pt-6 pb-8">
           <div className="flex items-center min-w-0">
             <div className="shrink-0 pr-6 sm:pr-8">
@@ -368,9 +366,9 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
             <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
               <img src="/Iconos1/account_circle-user-perfil.svg" width={20} height={20} alt="" className="shrink-0" />
               <div>
-                <p className="font-sans text-xs font-light uppercase tracking-wide text-gray-500">Estás firmando como</p>
+                <p className="font-sans text-xs font-light uppercase tracking-wide text-content-low">Estás firmando como</p>
                 <p className="font-sans text-lg font-light text-[color:var(--color-core-piedra-20)] mt-0.5">{firmanteInfo.rol}</p>
-                <p className="font-sans text-xs font-light text-gray-500 mt-3">Cargo que respaldas con tu firma:</p>
+                <p className="font-sans text-xs font-light text-content-low mt-3">Cargo que respaldas con tu firma:</p>
                 <p className="font-sans text-sm font-light text-[color:var(--color-core-piedra-20)] mt-0.5">{firmanteInfo.cargo}</p>
               </div>
             </div>
@@ -383,7 +381,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                   <CardTitle className="font-sans text-base font-light text-[color:var(--color-core-piedra-20)]">
                     Firmar con e.firma
                   </CardTitle>
-                  <CardDescription className="font-sans text-xs font-light text-gray-500 mt-0.5">
+                  <CardDescription className="font-sans text-xs font-light text-content-low mt-0.5">
                     Revisa el documento a la derecha y completa tus credenciales para firmar.
                   </CardDescription>
                 </div>
@@ -392,7 +390,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
             <CardContent>
               <form onSubmit={handleFirmar} className={`flex flex-col gap-5 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="font-sans text-xs font-light text-gray-500">Nombre completo del firmante</Label>
+                  <Label className="font-sans text-xs font-light text-content-low">Nombre completo del firmante</Label>
                   <Input value={nombreFirmante} onChange={e => setNombreFirmante(e.target.value)} placeholder="Nombre completo" aria-invalid={camposIncompletos && !nombreFirmante.trim()} />
                   {camposIncompletos && !nombreFirmante.trim() && (
                     <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
@@ -401,7 +399,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="font-sans text-xs font-light text-gray-500">RFC del firmante</Label>
+                  <Label className="font-sans text-xs font-light text-content-low">RFC del firmante</Label>
                   <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" aria-invalid={camposIncompletos && !usuario} />
                   {camposIncompletos && !usuario && (
                     <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
@@ -410,7 +408,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
+                  <Label className="font-sans text-xs font-light text-content-low flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
                   <Input
                     ref={cargoInputRef}
                     value={cargo}
@@ -437,10 +435,10 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
+                  <Label className="font-sans text-xs font-light text-content-low flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
                   <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} aria-invalid={camposIncompletos && !cerFile} />
                   {cerFile && (
-                    <span className="font-sans text-xs font-light text-[#773357] truncate flex items-center gap-1">
+                    <span className="font-sans text-xs font-light text-accent-primary truncate flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />{cerFile.name}
                     </span>
                   )}
@@ -451,10 +449,10 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="font-sans text-xs font-light text-gray-500 flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
+                  <Label className="font-sans text-xs font-light text-content-low flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
                   <Input type="file" accept=".key" onChange={e => setKeyFile(e.target.files?.[0] ?? null)} aria-invalid={camposIncompletos && !keyFile} />
                   {keyFile && (
-                    <span className="font-sans text-xs font-light text-[#773357] truncate flex items-center gap-1">
+                    <span className="font-sans text-xs font-light text-accent-primary truncate flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />{keyFile.name}
                     </span>
                   )}
@@ -465,7 +463,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="font-sans text-xs font-light text-gray-500">Contraseña de la clave privada</Label>
+                  <Label className="font-sans text-xs font-light text-content-low">Contraseña de la clave privada</Label>
                   <Input type="password" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} aria-invalid={camposIncompletos && !password} />
                   {camposIncompletos && !password && (
                     <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
@@ -479,8 +477,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                     {error}
                   </p>
                 )}
-                <Button type="submit" disabled={trabajando}
-                  className="gap-1.5 self-end mt-1 rounded-full bg-[#773357] text-white hover:bg-[#773357] hover:text-white hover:opacity-90 focus-visible:outline-[#e7b400]">
+                <Button type="submit" variant="vino" className="gap-1.5 self-end mt-1" disabled={trabajando}>
                   {trabajando ? "Firmando..." : "Firmar ahora"}
                 </Button>
               </form>
@@ -490,7 +487,7 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
 
         <div className="bg-muted/30 p-3 flex flex-col min-h-[50vh] lg:min-h-0">
           <div className="flex flex-col flex-1 min-h-0 mx-2 rounded-xl border border-border bg-white shadow-sm overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-[#e5e7eb] shrink-0">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border shrink-0">
               <FileTypeIcon name="justificacion.pdf" size="md" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-gray-800 truncate">Documento a firmar</p>

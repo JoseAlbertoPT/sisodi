@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
 import { ConfirmationModal } from "@/components/ui/confirmation-modal"
@@ -833,314 +833,78 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
     </div>
   )
 }
-function FolioDictamenCard({
-  folioDictamen,
-  onAsignar,
-  esExtemporanea,
+function FolioRecepcionCard({
+  folioRecepcion,
 }: {
-  folioDictamen: string | null
-  onAsignar: (folio: string) => Promise<void>
-  esExtemporanea: boolean
+  folioRecepcion: string | null
 }) {
-  const today = new Date()
-  const [mes,         setMes]         = useState<number>(today.getMonth() + 1)
-  const [anio,        setAnio]        = useState(String(today.getFullYear()))
-  const [consecutivo, setConsecutivo] = useState("1")
-  const [guardando,   setGuardando]   = useState(false)
-  const autoCalledRef = useRef(false)
-  const hasFetchedRef = useRef(false)
-  useEffect(() => {
-    const mesNum  = today.getMonth() + 1
-    const anioNum = today.getFullYear()
-    fetch(`/api/folio-dictamen/siguiente?mes=${mesNum}&anio=${anioNum}`)
-      .then(r => r.json())
-      .then(async json => {
-        if (!json.ok) return
-        const sig = String(json.siguiente)
-        hasFetchedRef.current = true
-        setConsecutivo(sig)
-        if (!esExtemporanea && !folioDictamen && !autoCalledRef.current) {
-          autoCalledRef.current = true
-          await onAsignar(`${sig.padStart(2, "0")}/${String(mesNum).padStart(2, "0")}/${anioNum}`)
-        }
-      })
-      .catch(() => {})
-  }, [])
-  useEffect(() => {
-    if (!esExtemporanea || folioDictamen || !hasFetchedRef.current) return
-    const anioNum = parseInt(anio, 10)
-    if (isNaN(anioNum) || anioNum < 2000) return
-    fetch(`/api/folio-dictamen/siguiente?mes=${mes}&anio=${anioNum}`)
-      .then(r => r.json())
-      .then(json => { if (json.ok) setConsecutivo(String(json.siguiente)) })
-      .catch(() => {})
-  }, [mes, anio])
-  const mesStr      = String(mes).padStart(2, "0")
-  const folioPreview = `${String(consecutivo).padStart(2, "0")}/${mesStr}/${anio}`
-  const handleAsignar = async () => {
-    if (!consecutivo || !mes || !anio) return
-    setGuardando(true)
-    await onAsignar(folioPreview)
-    setGuardando(false)
-  }
-  if (folioDictamen) {
-    return (
-      <Card className="shadow-sm border-secondary/30 border-2 bg-secondary/[0.03]">
-        <CardContent className="flex items-center gap-3 p-4">
-          <Stamp className="h-5 w-5 text-secondary" />
-          <div>
-            <p className="text-sm font-semibold text-card-foreground">Folio de Dictamen Asignado</p>
-            <p className="text-xs text-muted-foreground font-mono">{formatearFolio(folioDictamen)}</p>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-  if (!esExtemporanea) return null
+  if (!folioRecepcion) return null
   return (
-    <Card className="shadow-sm border-border">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-          <Stamp className="h-4 w-4 text-secondary" />
-          {folioDictamen ? "Reasignar Folio de Dictamen" : "Asignar Folio de Dictamen"}
-        </CardTitle>
-        <CardDescription className="text-xs">
-          {folioDictamen
-            ? `Folio actual: ${formatearFolio(folioDictamen)}. Asigne el folio definitivo.`
-            : "Asigne el número secuencial de dictamen antes de aprobar."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Mes</Label>
-            <Select value={String(mes)} onValueChange={v => setMes(Number(v))}>
-              <SelectTrigger className="bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MESES_RECEPCION.map(m => (
-                  <SelectItem key={m.num} value={String(m.num)}>
-                    {m.label} ({String(m.num).padStart(2, "0")})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Año</Label>
-            <Input
-              value={anio}
-              onChange={e => setAnio(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="2026"
-              className="bg-background font-mono"
-              maxLength={4}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Consecutivo</Label>
-            <Input
-              type="number"
-              value={consecutivo}
-              readOnly
-              disabled
-              className="bg-muted font-mono cursor-not-allowed opacity-70"
-            />
-          </div>
+    <Card className="shadow-sm border-primary/30 border-2 bg-primary/[0.03]">
+      <CardContent className="flex items-center gap-3 p-4">
+        <FileText className="h-5 w-5 text-primary" />
+        <div>
+          <p className="text-sm font-semibold text-card-foreground">Folio de Recepción Asignado</p>
+          <p className="text-xs text-muted-foreground font-mono">{folioRecepcion}</p>
         </div>
-        <div className="rounded-md bg-muted/50 px-3 py-2">
-          <span className="text-xs text-muted-foreground">Folio de dictamen: </span>
-          <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview}</span>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Formato NN/MM/AAAA: número secuencial / mes / año.</p>
-        </div>
-        <Button onClick={handleAsignar} disabled={guardando || !consecutivo || !mes || !anio} className="w-full gap-2">
-          {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
-          Asignar Folio de Dictamen
-        </Button>
       </CardContent>
     </Card>
   )
 }
-function FolioRecepcionCard({
-  folioRecepcion,
-  onAsignar,
-  esExtemporanea,
-}: {
-  folioRecepcion: string | null
-  onAsignar: (folio: string) => Promise<void>
-  esExtemporanea: boolean
+// Regla 11: para solicitudes extemporáneas, el folio de recepción ya no se
+// autogenera al abrir el expediente — se captura aquí, en el momento en que
+// el Revisor confirma la aprobación (ver handleAprobar/executeAprobarPending).
+function AprobarFolioRecepcionModal({ open, onClose, onConfirm, guardando }: {
+  open: boolean
+  onClose: () => void
+  onConfirm: (folio: string) => void
+  guardando: boolean
 }) {
-  const today = new Date()
+  const today      = new Date()
   const mesNumHoy  = today.getMonth() + 1
-  const anioNum    = today.getFullYear()
+  const anioNumHoy = today.getFullYear()
   const mesCodeHoy = INICIALES_MES_MAP[String(mesNumHoy).padStart(2, "0")] ?? "XX"
-  const [siguienteFrec, setSiguienteFrec] = useState<number | null>(null)
-  const [ultimoFrec,    setUltimoFrec]    = useState<number | null>(null)
-  const [siguienteExt,  setSiguienteExt]  = useState<number | null>(null)
-  const [mesDefinitivo,      setMesDefinitivo]      = useState<number>(mesNumHoy)
-  const [anioDefinitivo,     setAnioDefinitivo]     = useState<string>(String(anioNum))
-  const [siguienteDefinitivo, setSiguienteDefinitivo] = useState<number | null>(null)
-  const [cargandoDefinitivo,  setCargandoDefinitivo]  = useState(false)
-  const [guardando,    setGuardando]    = useState(false)
-  const autoCalledRef = useRef(false)
-
+  const [ultimoFrec,   setUltimoFrec]   = useState<number | null>(null)
+  const [siguienteExt, setSiguienteExt] = useState<number | null>(null)
   useEffect(() => {
-    fetch(`/api/folio-recepcion/siguiente?mes=${mesNumHoy}&anio=${anioNum}`)
+    if (!open) return
+    setUltimoFrec(null)
+    setSiguienteExt(null)
+    fetch(`/api/folio-recepcion/siguiente?mes=${mesNumHoy}&anio=${anioNumHoy}`)
       .then(r => r.json())
-      .then(async json => {
-        if (!json.ok) return
-        setSiguienteFrec(json.siguiente)
-        setUltimoFrec(json.ultimo)
-        if (!esExtemporanea && !folioRecepcion && !autoCalledRef.current) {
-          autoCalledRef.current = true
-          const folio = `${mesCodeHoy}-${String(json.siguiente).padStart(3, "0")}-${anioNum}`
-          await onAsignar(folio)
-        }
-      })
+      .then(json => { if (json.ok) setUltimoFrec(json.ultimo) })
       .catch(() => {})
-
-    if (esExtemporanea) {
-      fetch(`/api/folio-recepcion/siguiente?mes=${mesNumHoy}&anio=${anioNum}&ext=true`)
-        .then(r => r.json())
-        .then(json => { if (json.ok) setSiguienteExt(json.siguiente) })
-        .catch(() => {})
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!esExtemporanea || !folioRecepcion) return
-    const anio = parseInt(anioDefinitivo, 10)
-    if (isNaN(anio) || anio < 2000) return
-    setCargandoDefinitivo(true)
-    fetch(`/api/folio-recepcion/siguiente?mes=${mesDefinitivo}&anio=${anio}`)
+    fetch(`/api/folio-recepcion/siguiente?mes=${mesNumHoy}&anio=${anioNumHoy}&ext=true`)
       .then(r => r.json())
-      .then(json => { if (json.ok) setSiguienteDefinitivo(json.siguiente) })
+      .then(json => { if (json.ok) setSiguienteExt(json.siguiente) })
       .catch(() => {})
-      .finally(() => setCargandoDefinitivo(false))
-  }, [mesDefinitivo, anioDefinitivo, esExtemporanea, folioRecepcion])
-
-  const mesCodeDefinitivo = INICIALES_MES_MAP[String(mesDefinitivo).padStart(2, "0")] ?? "XX"
-  const folioDefinitivo   = siguienteDefinitivo !== null
-    ? `${mesCodeDefinitivo}-${String(siguienteDefinitivo).padStart(3, "0")}-${parseInt(anioDefinitivo, 10)}`
-    : null
-
-  const folioTemporalPreview = `${mesCodeHoy}-${String(ultimoFrec ?? 0).padStart(3, "0")}-${siguienteExt ?? 1}`
-
-  const handleAsignar = async (folio: string) => {
-    setGuardando(true)
-    await onAsignar(folio)
-    setGuardando(false)
-  }
-  const esFolioTemporal = (f: string) => {
-    const p = f.split("-")
-    return p.length >= 3 && !/^\d{4}$/.test(p[p.length - 1])
-  }
-  if (folioRecepcion && (!esExtemporanea || !esFolioTemporal(folioRecepcion))) {
-    return (
-      <Card className="shadow-sm border-primary/30 border-2 bg-primary/[0.03]">
-        <CardContent className="flex items-center gap-3 p-4">
-          <FileText className="h-5 w-5 text-primary" />
-          <div>
-            <p className="text-sm font-semibold text-card-foreground">Folio de Recepción Asignado</p>
-            <p className="text-xs text-muted-foreground font-mono">{folioRecepcion}</p>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-  if (!esExtemporanea) return null
-  if (folioRecepcion) {
-    return (
-      <Card className="shadow-sm border-amber-300 border-2 bg-amber-50/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-            <FileText className="h-4 w-4 text-amber-600" />Folio de Recepción
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Elija el mes y el año
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <div className="rounded-md bg-muted/50 px-3 py-2">
-            <span className="text-xs text-muted-foreground">Folio temporal: </span>
-            <span className="text-sm font-semibold font-mono text-amber-700">{folioRecepcion}</span>
-          </div>
-
-          {}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Mes del folio definitivo</Label>
-              <Select
-                value={String(mesDefinitivo)}
-                onValueChange={v => setMesDefinitivo(Number(v))}
-              >
-                <SelectTrigger className="bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MESES_RECEPCION.map(m => (
-                    <SelectItem key={m.num} value={String(m.num)}>
-                      {m.label} ({m.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Año</Label>
-              <Input
-                value={anioDefinitivo}
-                onChange={e => setAnioDefinitivo(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                placeholder="2026"
-                className="bg-background font-mono"
-                maxLength={4}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-md bg-muted/50 px-3 py-2">
-            <span className="text-xs text-muted-foreground">Folio definitivo: </span>
-            <span className="text-sm font-semibold font-mono text-card-foreground">
-              {cargandoDefinitivo ? "Cargando…" : (folioDefinitivo ?? "—")}
-            </span>
-          </div>
-
-          <Button
-            onClick={() => folioDefinitivo && handleAsignar(folioDefinitivo)}
-            disabled={guardando || cargandoDefinitivo || !folioDefinitivo}
-            className="w-full gap-2"
-          >
-            {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-            Asignar Folio Definitivo
-          </Button>
-        </CardContent>
-      </Card>
-    )
-  }
-  const listoTemporal = ultimoFrec !== null && siguienteExt !== null
+  }, [open, mesNumHoy, anioNumHoy])
+  const listo        = ultimoFrec !== null && siguienteExt !== null
+  const folioPreview = listo ? `${mesCodeHoy}-${String(ultimoFrec).padStart(3, "0")}-${siguienteExt}` : null
   return (
-    <Card className="shadow-sm border-border">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
-          <FileText className="h-4 w-4 text-primary" />Asignar Folio de Recepción
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Folio de extemporánea: último folio asignado + número de extemporánea (ej. AB-001-1).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="rounded-md bg-muted/50 px-3 py-2">
-          <span className="text-xs text-muted-foreground">Folio de recepción: </span>
-          <span className="text-sm font-semibold font-mono text-card-foreground">
-            {listoTemporal ? folioTemporalPreview : "Cargando…"}
-          </span>
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Capturar Folio de Recepción</DialogTitle>
+          <DialogDescription>
+            Esta solicitud es extemporánea — captura el folio de recepción que se le asignará al aprobar.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 px-6 pb-2">
+          <div className="rounded-md bg-muted/50 px-3 py-2">
+            <span className="text-xs text-muted-foreground">Folio de recepción: </span>
+            <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview ?? "Cargando…"}</span>
+          </div>
         </div>
-        <Button onClick={() => handleAsignar(folioTemporalPreview)} disabled={guardando || !listoTemporal} className="w-full gap-2">
-          {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-          Asignar Folio de Recepción
-        </Button>
-      </CardContent>
-    </Card>
+        <DialogFooter>
+          <Button variant="default" onClick={onClose} disabled={guardando}>Cancelar</Button>
+          <Button variant="primary" disabled={!folioPreview || guardando} onClick={() => folioPreview && onConfirm(folioPreview)} className="gap-1.5">
+            {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Confirmar y aprobar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 interface RevisorInfo { id: string; nombre: string; correo: string }
@@ -1259,7 +1023,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [showAprobarAsignarModal, setShowAprobarAsignarModal] = useState(false)
   const [showDescargarConfirm,    setShowDescargarConfirm]    = useState(false)
   const [showConfirmacion,        setShowConfirmacion]        = useState<string | null>(null)
-  const [aprobarPending, setAprobarPending] = useState<{ modalidad?: "electronica" | "autografa" } | null>(null)
+  const [aprobarPending, setAprobarPending] = useState<{ modalidad?: "electronica" | "autografa"; folioRecepcion?: string } | null>(null)
+  const [showFolioRecepcionModal, setShowFolioRecepcionModal] = useState(false)
   const [showFirmaSeleccionConfirm, setShowFirmaSeleccionConfirm] = useState(false)
   const [showObservarConfirm, setShowObservarConfirm] = useState(false)
   const [obsPendiente,        setObsPendiente]        = useState("")
@@ -1429,11 +1194,13 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     if (!solicitud) return null
     return solicitud.folioRecepcion ?? solicitud._raw?.folio_recepcion ?? null
   }, [solicitud])
-  const hasFolioDictamen    = !!folioDictamenResuelto
   const canApproveChecklist = checklistStats.allDone && !checklistStats.hasNo
   const canApprove =
     filtro === 3 ? sinObservacion
-    : filtro === 2 ? (sinObservacion && hasFolioDictamen)
+    // Regla 12: el folio de dictamen ya no existe en esta etapa (se asigna
+    // hasta que Emisión aprueba) — Verificación aprueba solo con base en que
+    // no haya observaciones pendientes, igual que Emisión.
+    : filtro === 2 ? sinObservacion
     : canApproveChecklist
   // Además de su uso original (checklist de Filtro 1 ya completado en una vuelta
   // anterior), esta bandera también marca cuándo le "toca turno" a un filtro por
@@ -1459,7 +1226,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   )
   const observarBlocked = false
 
-  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string, modalidadFirmaValue?: "electronica" | "autografa") => {
+  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string, modalidadFirmaValue?: "electronica" | "autografa", folioRecepcionValue?: string) => {
     if (!solicitud) return
     setGuardando(true)
     try {
@@ -1474,6 +1241,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           observaciones: observaciones ? [observaciones] : undefined,
           ...(revisorId ? { revisorId } : {}),
           ...(modalidadFirmaValue ? { modalidadFirma: modalidadFirmaValue } : {}),
+          ...(folioRecepcionValue ? { folioRecepcion: folioRecepcionValue } : {}),
         }),
       })
       const json = await res.json()
@@ -1481,8 +1249,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       accionExitosaRef.current = accion
       setSolicitud(prev => prev ? {
         ...prev,
-        estado:        json.estadoNuevo ?? prev.estado,
-        folioDictamen: json.folioDictamen ?? prev.folioDictamen,
+        estado:         json.estadoNuevo ?? prev.estado,
+        folioDictamen:  json.folioDictamen ?? prev.folioDictamen,
+        folioRecepcion: json.folioRecepcion ?? prev.folioRecepcion,
+        folio:          json.folioRecepcion ?? prev.folio,
       } : prev)
       return json.estadoNuevo as string
     } catch { showToast("error", "Error de conexión", "No se pudo conectar con el servidor.") }
@@ -1508,6 +1278,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       setShowAprobarAsignarModal(true)
       return
     }
+    if (filtro === 1 && solicitud?.esExtemporanea && !revisorId) {
+      setShowFolioRecepcionModal(true)
+      return
+    }
     if (revisorId) { await patchEstado("aprobar", undefined, revisorId); return }
     setAprobarPending({})
   }
@@ -1516,6 +1290,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     setAprobarPending(null)
     if (!pending) return
     await patchEstado("aprobar", undefined, undefined, pending.modalidad)
+  }
+  const executeAprobarFolioRecepcion = async (folio: string) => {
+    setShowFolioRecepcionModal(false)
+    await patchEstado("aprobar", undefined, undefined, undefined, folio)
   }
   const handleConfirmEmit = async () => {
     setShowEmitConfirm(false)
@@ -1566,56 +1344,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
     if (nuevoEstado) setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
   }
-  const handleAsignarFolioDictamen = useCallback(async (folio: string) => {
-    if (!solicitud) return
-    try {
-      const res = await fetch("/api/filtro", {
-        method:  "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          solicitudId:   solicitud.id,
-          accion:        "asignarFolio",
-          folioDictamen: folio,
-          usuarioId:     (user as any)?.id ?? "",
-          filtro,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok || !json.ok) {
-        console.warn("[asignarFolio] API error:", json?.error)
-        return
-      }
-      setSolicitud(prev => prev ? { ...prev, folioDictamen: folio } : prev)
-    } catch (err) {
-      console.error("[asignarFolio] Network error:", err)
-    }
-  }, [solicitud, filtro, user])
-
-  const handleAsignarFolioRecepcion = useCallback(async (folio: string) => {
-    if (!solicitud) return
-    try {
-      const res = await fetch("/api/filtro", {
-        method:  "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          solicitudId:    solicitud.id,
-          accion:         "asignarFolioRecepcion",
-          folioRecepcion: folio,
-          usuarioId:      (user as any)?.id ?? "",
-          filtro,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok || !json.ok) {
-        console.warn("[asignarFolioRecepcion] API error:", json?.error)
-        return
-      }
-      setSolicitud(prev => prev ? { ...prev, folioRecepcion: folio, folio } : prev)
-    } catch (err) {
-      console.error("[asignarFolioRecepcion] Network error:", err)
-    }
-  }, [solicitud, filtro, user])
-
   const isEmitido      = solicitud?.estado === "Emitido"
   const isAprobado     = solicitud?.estado === "Pendiente Firma Dictamen"
   const isAceptadoPorRevisor = filtro === 1 && (
@@ -1753,6 +1481,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         folio={formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}
         guardando={guardando}
       />
+      <AprobarFolioRecepcionModal
+        open={showFolioRecepcionModal}
+        onClose={() => setShowFolioRecepcionModal(false)}
+        onConfirm={executeAprobarFolioRecepcion}
+        guardando={guardando}
+      />
       <ConfirmAlertDialog
         open={showFirmaSeleccionConfirm}
         onOpenChange={setShowFirmaSeleccionConfirm}
@@ -1798,7 +1532,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="ds-title-md text-content-high">
-                {solicitud.folio ?? <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>}
+                {solicitud.folio ?? (
+                  solicitud.folioJustificacion
+                    ? <span className="text-muted-foreground font-normal text-base">JUST {solicitud.folioJustificacion}</span>
+                    : <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>
+                )}
               </h2>
               <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>
               {isEmitido && (
@@ -1811,7 +1549,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                   <FileText className="h-3 w-3" />Rec. {solicitud.folio}
                 </Badge>
               )}
-              {folioDictamenResuelto && (
+              {isEmitido && folioDictamenResuelto && (
                 <Badge className="bg-secondary/15 text-secondary border-0 text-xs gap-1">
                   <Stamp className="h-3 w-3" />Dict. {formatearFolio(folioDictamenResuelto)}
                 </Badge>
@@ -1886,10 +1624,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                 {filtro !== 3 && (
                   <>
                     {filtro === 1 && (
-                      <FolioDictamenCard folioDictamen={folioDictamenResuelto} onAsignar={handleAsignarFolioDictamen} esExtemporanea={solicitud.esExtemporanea} />
-                    )}
-                    {filtro === 1 && (
-                      <FolioRecepcionCard folioRecepcion={folioRecepcionResuelto} onAsignar={handleAsignarFolioRecepcion} esExtemporanea={solicitud.esExtemporanea} />
+                      <FolioRecepcionCard folioRecepcion={folioRecepcionResuelto} />
                     )}
                     {filtro === 1 && checklistYaRealizado && (
                       <Card className="shadow-sm border-2 border-secondary/40 bg-secondary/[0.04]">
@@ -2053,18 +1788,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                           </CardContent>
                         </Card>
                       </>
-                    )}
-
-                    {filtro === 2 && !hasFolioDictamen && (
-                      <Card className="shadow-sm border-primary/40 border-2 bg-primary/[0.04]">
-                        <CardContent className="flex items-start gap-3 p-4">
-                          <Stamp className="h-5 w-5 shrink-0 text-primary mt-0.5" />
-                          <div>
-                            <span className="text-sm font-medium text-primary">Folio de Dictamen requerido</span>
-                            <p className="text-xs text-muted-foreground">Debe asignarse el folio de dictamen antes de aprobar.</p>
-                          </div>
-                        </CardContent>
-                      </Card>
                     )}
 
                     {filtro === 1 && (

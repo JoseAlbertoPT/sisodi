@@ -48,7 +48,7 @@ export function FirmaModal({
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent showCloseButton={false} className={`w-[92vw] max-h-[90vh] overflow-y-auto shadow-2xl ${esElectronica && procesoIniciado ? "sm:max-w-3xl" : "sm:max-w-lg"}`}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xs">
+          <DialogTitle className="flex items-center gap-2">
             {esElectronica ? <Shield className="h-5 w-5 text-primary" /> : <FileSignature className="h-5 w-5 text-secondary" />}
             {esElectronica && !procesoIniciado ? (
               <span>

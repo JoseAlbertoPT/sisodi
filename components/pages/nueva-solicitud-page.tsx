@@ -29,6 +29,7 @@ import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { useAuth } from "@/lib/auth-context"
 import { parseDateDMY, isPeriodoVigente, type PeriodoCap3000, type PeriodoCap1000 } from "@/lib/calendario-recepcion-mock"
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
+import { InfoTooltip } from "@/components/ui/info-tooltip"
 import { useHistoricoStore } from "@/lib/historico-store"
 import type { HistoricoRow } from "@/lib/parse-excel-historico"
 import { RANGOS_TABULADOR, esMostrarEnFormulario } from "@/lib/tabulador"
@@ -361,6 +362,42 @@ function esFechaPasada(dateStr: string): boolean {
   if (!dateStr) return false
   return dateStr < getVigenciaMin()
 }
+function todayIso(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, "0")
+  const d = String(now.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+// Regla de vigencia: la fecha de término no puede exceder 6 meses desde el inicio
+// ni el 31 de diciembre del año en que se realiza la solicitud, lo que ocurra primero.
+function getVigenciaFinLimiteIso(inicioIso: string): string | undefined {
+  if (!inicioIso) return undefined
+  const [y, m, d] = inicioIso.split("-").map(Number)
+  if (!y || !m || !d) return undefined
+  const seisMeses = new Date(y, m - 1, d)
+  seisMeses.setMonth(seisMeses.getMonth() + 6)
+  const finDeAnio = new Date(y, 11, 31)
+  const limite = seisMeses < finDeAnio ? seisMeses : finDeAnio
+  const ly = limite.getFullYear()
+  const lm = String(limite.getMonth() + 1).padStart(2, "0")
+  const ld = String(limite.getDate()).padStart(2, "0")
+  return `${ly}-${lm}-${ld}`
+}
+function minIsoDate(...fechas: (string | undefined)[]): string | undefined {
+  return fechas.filter((f): f is string => !!f).reduce<string | undefined>(
+    (min, f) => (min === undefined || f < min ? f : min),
+    undefined,
+  )
+}
+function maxIsoDate(...fechas: (string | undefined)[]): string | undefined {
+  return fechas.filter((f): f is string => !!f).reduce<string | undefined>(
+    (max, f) => (max === undefined || f > max ? f : max),
+    undefined,
+  )
+}
+// Placeholder: pendiente texto definitivo del área responsable (observación 9).
+const TOOLTIP_VIGENCIA = "La fecha de inicio se calcula a partir del día de la solicitud. La fecha de término puede seleccionarse hasta 6 meses después, sin exceder el 31 de diciembre del año en curso."
 function dmyToIso(dmy?: string): string {
   if (!dmy || !dmy.includes("/")) return ""
   const [d, m, y] = dmy.split("/")
@@ -1390,10 +1427,10 @@ function FormularioPrestacion({
     datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "3" : "")
   )
   const [vigenciaInicio, setVigenciaInicio] = useState(
-    initialData?.vigenciaInicio ?? (prefilled ? "2026-01-01" : "")
+    initialData?.vigenciaInicio ?? todayIso()
   )
   const [vigenciaFin, setVigenciaFin] = useState(
-    initialData?.vigenciaFin ?? (prefilled ? "2026-06-30" : "")
+    initialData?.vigenciaFin ?? ""
   )
 
   const sugerencias = useMemo(() => {
@@ -1895,6 +1932,7 @@ function FormularioPrestacion({
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
+                <InfoTooltip text={TOOLTIP_VIGENCIA} />
                 {bloqueadoPorRenovacion && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-secondary text-secondary ml-1">
                     Editable
@@ -1904,9 +1942,9 @@ function FormularioPrestacion({
               {(() => {
                 const periodoVigMin = dmyToIso(periodoFechaInicio)
                 const periodoVigMax = dmyToIso(periodoFechaFin)
-                const vigMin = periodoVigMin || undefined
-                const vigMax = periodoVigMax || undefined
-                const efectivoMin = vigMin || vigenciaInicio || ""
+                const vigMin = maxIsoDate(periodoVigMin || undefined, todayIso())
+                const reglaVigMax = getVigenciaFinLimiteIso(vigenciaInicio)
+                const vigMax = minIsoDate(periodoVigMax || undefined, reglaVigMax)
                 const inicioError = !!vigenciaInicio && !!vigMin && vigenciaInicio < vigMin
                 const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
                 return (
@@ -1917,7 +1955,7 @@ function FormularioPrestacion({
                         value={isoToDate(vigenciaInicio)}
                         fromDate={vigMin ? isoToDate(vigMin) : undefined}
                         toDate={vigMax ? isoToDate(vigMax) : undefined}
-                        startMonth={isoToDate(vigenciaInicio || efectivoMin)}
+                        startMonth={isoToDate(vigenciaInicio || vigMin || "")}
                         onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                         placeholder="Seleccionar inicio"
                         className={inicioError ? "border-destructive" : ""}
@@ -1932,16 +1970,16 @@ function FormularioPrestacion({
                       <span className="text-xs text-muted-foreground">Término</span>
                       <DatePickerHabil
                         value={isoToDate(vigenciaFin)}
-                        fromDate={isoToDate(vigenciaInicio || efectivoMin)}
+                        fromDate={isoToDate(vigenciaInicio || vigMin || "")}
                         toDate={vigMax ? isoToDate(vigMax) : undefined}
-                        startMonth={isoToDate(vigenciaFin || vigenciaInicio || efectivoMin)}
+                        startMonth={isoToDate(vigenciaFin || vigenciaInicio)}
                         onChange={(d) => d && setVigenciaFin(dateToIso(d))}
                         placeholder="Seleccionar término"
                         className={finError ? "border-destructive" : ""}
                       />
                       {finError && (
                         <p className="text-xs text-destructive flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3 shrink-0" />Fecha posterior al fin del periodo.
+                          <AlertCircle className="h-3 w-3 shrink-0" />La vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso.
                         </p>
                       )}
                     </div>
@@ -2194,8 +2232,8 @@ function FormularioNombramiento({
   }, [catalogoUAs])
   const [programaInput, setProgramaInput] = useState(datosRenovacion?.programaProyecto ?? initialData?.programaProyecto ?? (prefilled ? "P-005 Fortalecimiento Institucional" : ""))
   const sigef = useProgramasSigef(secretariaConfirmada)
-  const [vigenciaInicio, setVigenciaInicio] = useState(initialData?.vigenciaInicio ?? (prefilled ? "2026-03-01" : ""))
-  const [vigenciaFin,    setVigenciaFin]    = useState(initialData?.vigenciaFin ?? (prefilled ? "2026-08-31" : ""))
+  const [vigenciaInicio, setVigenciaInicio] = useState(initialData?.vigenciaInicio ?? todayIso())
+  const [vigenciaFin,    setVigenciaFin]    = useState(initialData?.vigenciaFin ?? "")
   const [numeroPrestadores, setNumeroPrestadores] = useState(datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "2" : ""))
   const [denominacion, setDenominacion] = useState(initialData?.denominacion ?? (prefilled ? "Jefe de Departamento" : ""))
   const [puestoJefeInmediato, setPuestoJefeInmediato] = useState(initialData?.puestoJefeInmediato ?? (prefilled ? "Director de Área" : ""))
@@ -2669,14 +2707,15 @@ function FormularioNombramiento({
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Vigencia
+                <InfoTooltip text={TOOLTIP_VIGENCIA} />
                 {bloqueadoPorRenovacion && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-secondary text-secondary ml-1">Editable</Badge>}
               </Label>
               {(() => {
                 const periodoVigMin = dmyToIso(periodoFechaInicio)
                 const periodoVigMax = dmyToIso(periodoFechaFin)
-                const vigMin = periodoVigMin || undefined
-                const vigMax = periodoVigMax || undefined
-                const efectivoMin = vigMin || vigenciaInicio || ""
+                const vigMin = maxIsoDate(periodoVigMin || undefined, todayIso())
+                const reglaVigMax = getVigenciaFinLimiteIso(vigenciaInicio)
+                const vigMax = minIsoDate(periodoVigMax || undefined, reglaVigMax)
                 const inicioError = !!vigenciaInicio && !!vigMin && vigenciaInicio < vigMin
                 const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
                 return (
@@ -2687,7 +2726,7 @@ function FormularioNombramiento({
                         value={isoToDate(vigenciaInicio)}
                         fromDate={vigMin ? isoToDate(vigMin) : undefined}
                         toDate={vigMax ? isoToDate(vigMax) : undefined}
-                        startMonth={isoToDate(vigenciaInicio || efectivoMin)}
+                        startMonth={isoToDate(vigenciaInicio || vigMin || "")}
                         onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                         placeholder="Seleccionar inicio"
                         className={inicioError ? "border-destructive" : ""}
@@ -2700,15 +2739,15 @@ function FormularioNombramiento({
                       <span className="text-xs text-muted-foreground">Término</span>
                       <DatePickerHabil
                         value={isoToDate(vigenciaFin)}
-                        fromDate={isoToDate(vigenciaInicio || efectivoMin)}
+                        fromDate={isoToDate(vigenciaInicio || vigMin || "")}
                         toDate={vigMax ? isoToDate(vigMax) : undefined}
-                        startMonth={isoToDate(vigenciaFin || vigenciaInicio || efectivoMin)}
+                        startMonth={isoToDate(vigenciaFin || vigenciaInicio)}
                         onChange={(d) => d && setVigenciaFin(dateToIso(d))}
                         placeholder="Seleccionar término"
                         className={finError ? "border-destructive" : ""}
                       />
                       {finError && (
-                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />Fecha posterior al fin del periodo.</p>
+                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />La vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso.</p>
                       )}
                     </div>
                   </div>
@@ -3735,7 +3774,6 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
     }
     setStep("formulario")
   }
-
   const handleBack = useCallback(() => {
     if (step === "formulario" && editSolicitud) { onCancel?.(); return }
     if (step === "formulario") setStep("tipo")
@@ -4354,14 +4392,16 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             const isEditingBorrador = !!editSolicitud?.id
             const _periodoMin = dmyToIso(periodoVigenciaRange.min)
             const _periodoMax = dmyToIso(periodoVigenciaRange.max)
+            const _reglaFinMax = getVigenciaFinLimiteIso(formData.vigenciaInicio ?? "")
             const _inicioOk = !!formData.vigenciaInicio &&
               (!_periodoMin || formData.vigenciaInicio >= _periodoMin) &&
               (!_periodoMax || formData.vigenciaInicio <= _periodoMax)
             const _finOk = !!formData.vigenciaFin &&
               (!_periodoMax || formData.vigenciaFin <= _periodoMax) &&
+              (!_reglaFinMax || formData.vigenciaFin <= _reglaFinMax) &&
               (!formData.vigenciaInicio || formData.vigenciaFin >= formData.vigenciaInicio)
             const vigenciaOk = hasPermiso || isEditingBorrador
-              ? !!(formData.vigenciaInicio) && !!(formData.vigenciaFin)
+              ? !!(formData.vigenciaInicio) && !!(formData.vigenciaFin) && (!_reglaFinMax || formData.vigenciaFin <= _reglaFinMax)
               : _inicioOk && _finOk
             const effectiveFormDataForValidation = editSolicitud?.formData
               ? { ...editSolicitud.formData, ...formData }

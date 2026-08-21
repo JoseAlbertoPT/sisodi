@@ -473,7 +473,7 @@ export function procesarFilas(
         folio_dictamen:        folioDictamen || null,
         fecha_emision:         fechaDictamen,
         secretaria:            canonico ?? (secretariaRaw || null),
-        secretaria_txt_snapshot: secretariaRaw || null,
+        secretaria_txt_snapshot: canonico ?? (secretariaRaw || null),
         modalidad_firma:       "autografa",
         unidad_administrativa: getCell(row, colActivo.unidadAdscripcion) || null,
         unidad_responsable:    getCell(row, colActivo.unidadResponsableGasto) || null,

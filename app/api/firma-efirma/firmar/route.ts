@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { efirmaClient, firmadosCount, normalizarEstado } from "@/lib/efirma-client"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { ESTADO_POR_BANDEJA_PENDIENTE } from "@/lib/firma-plantillas"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -101,6 +102,55 @@ export async function POST(req: NextRequest) {
 
       return { firmadosLocal, completo }
     })
+
+    // Bug crítico corregido: a diferencia de /api/firma-efirma/firmar-interno,
+    // esta ruta (firmante externo) no avanzaba el estado de la solicitud al
+    // siguiente firmante interno pendiente ni dejaba rastro en el historial —
+    // por eso, tras completarse la firma externa, el hand-off a UEFA (o al
+    // interno que corresponda) dependía de que el estado ya viniera correcto
+    // por casualidad desde antes. Se replica aquí la misma lógica que usa
+    // firmar-interno para que esta transición quede respaldada igual que las
+    // demás del flujo.
+    if (!result.completo) {
+      const siguientePendiente = firmante.firma_proceso.firmantes
+        .filter(f => f.tipo === "interno" && !f.firmado)
+        .sort((a, b) => a.orden - b.orden)[0]
+      const siguienteEstado = siguientePendiente
+        ? ESTADO_POR_BANDEJA_PENDIENTE[(siguientePendiente.bandeja ?? "") as keyof typeof ESTADO_POR_BANDEJA_PENDIENTE]
+        : null
+      if (siguienteEstado) {
+        const estadoSig = await prisma.estado.findFirst({
+          where: { nombre: { equals: siguienteEstado, mode: "insensitive" } },
+        })
+        if (!estadoSig) {
+          return NextResponse.json(
+            { ok: false, error: `Estado "${siguienteEstado}" no existe en BD. Corre el seed de estados.` },
+            { status: 500 },
+          )
+        }
+        const solicitudActual = await prisma.solicitud.findUnique({
+          where: { id: firmante.firma_proceso.solicitud_id },
+          select: { estado_id: true },
+        })
+        await prisma.$transaction([
+          prisma.solicitud.update({
+            where: { id: firmante.firma_proceso.solicitud_id },
+            data: { estado_id: estadoSig.id },
+          }),
+          prisma.historial_solicitud.create({
+            data: {
+              solicitud_id: firmante.firma_proceso.solicitud_id,
+              // No hay usuario_id: quien firma es externo y no tiene cuenta en
+              // el sistema. Se atribuye al usuario que inició el proceso de firma.
+              usuario_id: firmante.firma_proceso.creado_por_id,
+              estado_anterior_id: solicitudActual?.estado_id ?? null,
+              estado_nuevo_id: estadoSig.id,
+              comentario: `Firma externa completada (${firmante.rol}). Avanza a ${siguienteEstado}.`,
+            },
+          }),
+        ])
+      }
+    }
 
     broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({

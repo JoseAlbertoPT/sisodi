@@ -50,6 +50,29 @@ async function generarFolioDictamen(tipo: "dictamen" | "opinion"): Promise<strin
   return `${ini}-${num}-${anio}`
 }
 
+const FOLIO_RECEPCION_MANUAL_REGEX = /^[A-Z]{2}-\d{3}-\d{4}$/
+
+async function generarSiguienteFolioRecepcion(mes: number, anio: number): Promise<string> {
+  const registro = await prisma.consecutivo_folio.upsert({
+    where:  { tipo_mes_anio: { tipo: "FREC", mes, anio } },
+    update: { consecutivo: { increment: 1 } },
+    create: { tipo: "FREC", mes, anio, consecutivo: 1 },
+  })
+  const ini = INICIALES_MES[mes] ?? "XX"
+  const num = String(registro.consecutivo).padStart(3, "0")
+  return `${ini}-${num}-${anio}`
+}
+
+async function generarSiguienteFolioDictamen(mes: number, anio: number): Promise<string> {
+  const registro = await prisma.consecutivo_folio.upsert({
+    where:  { tipo_mes_anio: { tipo: "FDICT", mes, anio } },
+    update: { consecutivo: { increment: 1 } },
+    create: { tipo: "FDICT", mes, anio, consecutivo: 1 },
+  })
+  const num = String(registro.consecutivo).padStart(2, "0")
+  return `${num}/${String(mes).padStart(2, "0")}/${anio}`
+}
+
 function resolverFolioDictamen(item: any): string | null {
   return (
     item?.folioDictamen         ??
@@ -745,12 +768,44 @@ export async function PATCH(req: NextRequest) {
     const asignarRevisor = filtro === 2 && nombreEstadoNuevo === estadoEnRevision(1) && revisorId
     const guardarModalidad = accion === "aprobar" && filtro === 3 && (modalidadFirma === "electronica" || modalidadFirma === "autografa")
 
+    // Regla 11: el folio de recepción se asigna en el momento en que el Revisor
+    // (filtro 1) aprueba — nunca antes (ver FolioRecepcionCard, ya sin auto-asignación).
+    // Si la solicitud es extemporánea, el folio debe venir capturado manualmente
+    // en el body; si no, se autogenera de forma atómica.
+    let folioRecepcionAsignar: string | null = null
+    if (accion === "aprobar" && filtro === 1 && !(solicitud as any).folio_recepcion) {
+      if ((solicitud as any).es_extemporanea) {
+        if (!folioRecepcion || !FOLIO_RECEPCION_MANUAL_REGEX.test(folioRecepcion)) {
+          return NextResponse.json(
+            { ok: false, error: "Esta solicitud es extemporánea: se requiere capturar el folio de recepción manualmente, con formato MESCODE-###-AAAA (ej. MY-001-2026)." },
+            { status: 400 }
+          )
+        }
+        folioRecepcionAsignar = folioRecepcion
+      } else {
+        const ahora = new Date()
+        folioRecepcionAsignar = await generarSiguienteFolioRecepcion(ahora.getMonth() + 1, ahora.getFullYear())
+      }
+    }
+
+    // Regla 12: el folio de dictamen se asigna cuando Emisión (filtro 3) aprueba
+    // el dictamen Y selecciona la modalidad de firma por primera vez — es decir,
+    // justo cuando guardarModalidad pasa a true y aún no había modalidad guardada.
+    let folioDictamenAsignar: string | null = null
+    const esPrimeraAprobacionEmision = guardarModalidad && !(solicitud as any).modalidad_firma
+    if (esPrimeraAprobacionEmision && !(solicitud as any).folio_dictamen) {
+      const ahora = new Date()
+      folioDictamenAsignar = await generarSiguienteFolioDictamen(ahora.getMonth() + 1, ahora.getFullYear())
+    }
+
     const solicitudActualizada = await prisma.solicitud.update({
       where: { id: idNum },
       data:  {
         estado_id: estadoNuevo.id,
         ...(asignarRevisor ? { revisor_asignado_id: revisorId } : {}),
         ...(guardarModalidad ? { modalidad_firma: modalidadFirma } : {}),
+        ...(folioRecepcionAsignar ? { folio_recepcion: folioRecepcionAsignar } : {}),
+        ...(folioDictamenAsignar ? { folio_dictamen: folioDictamenAsignar } : {}),
       },
       include: {
         estado:  true,
@@ -891,10 +946,11 @@ export async function PATCH(req: NextRequest) {
 
     broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({
-      ok:            true,
-      estadoNuevo:   nombreEstadoNuevo,
-      folioDictamen: solicitud.dictamen?.folio ?? (solicitud as any).folio_anterior ?? null,
-      data:          solicitudActualizada,
+      ok:             true,
+      estadoNuevo:    nombreEstadoNuevo,
+      folioDictamen:  folioDictamenAsignar ?? solicitud.dictamen?.folio ?? (solicitud as any).folio_anterior ?? null,
+      folioRecepcion: folioRecepcionAsignar ?? (solicitud as any).folio_recepcion ?? null,
+      data:           solicitudActualizada,
     })
   } catch (error: any) {
     console.error("[PATCH /api/filtro]", error)

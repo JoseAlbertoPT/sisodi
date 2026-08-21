@@ -70,7 +70,7 @@ export function FirmaProgresoDialog({
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base">
+          <DialogTitle>
             {proceso.folio_recepcion ?? proceso.folio_justificacion ?? `SOL-${proceso.solicitud_id}`} — {proceso.tipo_solicitud}
           </DialogTitle>
         </DialogHeader>

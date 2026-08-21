@@ -246,7 +246,7 @@ export function SeguimientoGeneralView({ refreshSignal }: { refreshSignal?: numb
                           <span className="text-card-foreground font-semibold">
                             {s.folio_recepcion ?? <span className="italic text-muted-foreground">Sin FREC</span>}
                           </span>
-                          {s.folio_dictamen && (
+                          {s.folio_dictamen && s.es_emitida && (
                             <span className="text-[10px] text-muted-foreground">DIC: {s.folio_dictamen}</span>
                           )}
                         </div>

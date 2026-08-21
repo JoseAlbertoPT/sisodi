@@ -1052,7 +1052,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, g
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="ds-title-md text-content-high">{folioMostrar}</h2>
               <UefaEstadoBadge estado={solicitud.estado} />
-              {folioDictamenMostrar && (
+              {isEmitida && folioDictamenMostrar && (
                 <Badge className="bg-secondary/15 text-secondary border-0 text-sm gap-1">
                   <Stamp className="h-3.5 w-3.5" />Dict. {folioDictamenMostrar}
                 </Badge>

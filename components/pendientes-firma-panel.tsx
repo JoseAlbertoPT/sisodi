@@ -190,7 +190,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                       {esMiTurno ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" style={{ color: "var(--sem-content-low)" }}>
+                            <Button variant="ghost" size="icon">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -213,7 +213,6 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                           variant="ghost" size="sm"
                           onClick={() => setProgresoTarget(p)}
                           className="gap-1.5 font-medium -ml-3"
-                          style={{ color: "var(--sem-content-low)" }}
                         >
                           <Eye className="h-4 w-4" />Ver
                         </Button>

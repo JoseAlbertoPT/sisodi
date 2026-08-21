@@ -6,6 +6,7 @@ import {
   type DictamenPrestacionData,
 } from "@/components/plantillas/PlantillaDictamenPrestacionServicios";
 import { claveParaPdf, folioSinSiglas, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
+import { puedeMostrarFolioDictamen } from "@/lib/firma-visibilidad";
 import { applyTextRules } from "@/lib/utils";
 import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
 import React from "react";
@@ -53,6 +54,7 @@ export async function buildDictamenPrestacionBuffer(
         where: { id: Number(solicitudId) },
         include: {
           dictamen: true,
+          estado: { select: { nombre: true } },
           historial_solicitud: {
             where: { comentario: { contains: MARCA_HISTORICO_IMPORTADO } },
             take: 1,
@@ -61,6 +63,12 @@ export async function buildDictamenPrestacionBuffer(
         },
       })
     : null;
+
+  // Regla 12: el dictamen definitivo no se puede descargar hasta que la
+  // solicitud tenga la última firma requerida (estado "Emitido").
+  if (sol && !puedeMostrarFolioDictamen((sol as any).estado?.nombre)) {
+    throw new Error("El dictamen aún no puede descargarse: falta completar el proceso de firma.");
+  }
 
   let data: DictamenPrestacionData;
   let folio: string;
@@ -168,7 +176,15 @@ async function buildPDFResponse(solicitudId: string | null, overrides: PdfOverri
     );
   }
 
-  const result = await buildDictamenPrestacionBuffer(solicitudId, overrides, catalogoId);
+  let result;
+  try {
+    result = await buildDictamenPrestacionBuffer(solicitudId, overrides, catalogoId);
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "No se pudo generar el dictamen" },
+      { status: 403 },
+    );
+  }
   if (!result) {
     return NextResponse.json(
       { ok: false, error: "Solicitud no encontrada" },

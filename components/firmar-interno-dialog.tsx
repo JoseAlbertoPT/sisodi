@@ -275,8 +275,8 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
     />
     <Dialog open={open && !exito} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
       <DialogContent className="w-[90vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="px-8 py-4">
-          <DialogTitle className="flex items-center gap-2 text-base">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
             {titulo ?? "Firmar con tu e.firma"}
           </DialogTitle>
@@ -447,7 +447,6 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
             <div className="-mx-8 -mb-6 mt-2 flex items-center justify-end gap-2 border-t border-[var(--sem-border-md)] px-6 py-4">
               <Button
                 variant="default"
-                className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
                 onClick={() => { reset(); onClose() }}
                 disabled={trabajando}
               >
@@ -456,7 +455,6 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               <Button
                 type="submit"
                 variant="vino"
-                className="rounded-full h-10 px-6 font-normal shadow-sm"
                 disabled={trabajando}
               >
                 {trabajando && <Loader2 className="h-4 w-4 animate-spin" />}

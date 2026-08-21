@@ -6,6 +6,7 @@ import {
   type CartaDescriptivaData,
 } from "@/components/plantillas/PlantillaCartaDescriptivaServicios";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
+import { puedeMostrarFolioDictamen } from "@/lib/firma-visibilidad";
 import { buildRomanNumberedList } from "@/lib/roman-list";
 import { applyTextRules } from "@/lib/utils";
 import React from "react";
@@ -77,6 +78,7 @@ export async function buildCartaDescriptivaBuffer(
     ? await prisma.solicitud.findUnique({
         where: { id: Number(solicitudId) },
         include: {
+          estado: { select: { nombre: true } },
           historial_solicitud: {
             where: { comentario: { contains: MARCA_HISTORICO_IMPORTADO } },
             take: 1,
@@ -103,7 +105,10 @@ export async function buildCartaDescriptivaBuffer(
 
   if (sol) {
     const esHistoricoImportado = sol.historial_solicitud.length > 0;
-    const folio = sol.folio_dictamen ?? sol.folio_recepcion ?? String(sol.id);
+    // Regla 12: el folio de dictamen no se expone en documentos descargables
+    // hasta que la solicitud llegue a "Emitido" (última firma completada).
+    const folioDictamenVisible = puedeMostrarFolioDictamen((sol as any).estado?.nombre) ? sol.folio_dictamen : null;
+    const folio = folioDictamenVisible ?? sol.folio_recepcion ?? String(sol.id);
     source = {
       fecha: formatFechaLarga(fechaOverride ?? sol.fecha_creacion ?? sol.fecha_envio),
       objeto: sol.objeto,
@@ -115,7 +120,7 @@ export async function buildCartaDescriptivaBuffer(
       comp_soc: sol.comp_soc,
       valores: sol.valores,
       areas_exp: sol.areas_exp,
-      folioBase: sol.folio_recepcion ?? sol.folio_dictamen ?? String(sol.id),
+      folioBase: sol.folio_recepcion ?? folioDictamenVisible ?? String(sol.id),
       clave: claveOverride ?? claveParaPdf(sol.secretaria, folio, esHistoricoImportado),
     };
   } else if (catalogoId) {

@@ -235,11 +235,19 @@ export function FileDropZone({
 export function UploadedFileRow({
   nombre,
   ruta,
+  subtitle,
   onVer,
+  onRemove,
+  removing,
 }: {
   nombre: string
   ruta?: string
+  /** Línea secundaria opcional (p. ej. fecha / quién lo subió). */
+  subtitle?: string
   onVer?: () => void
+  /** Si se provee, muestra un botón "quitar" (X) en vez de/además de "Ver". */
+  onRemove?: () => void
+  removing?: boolean
 }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
@@ -247,7 +255,10 @@ export function UploadedFileRow({
         <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
         <FileTypeIcon name={nombre} size="sm" />
       </div>
-      <span className="text-sm font-medium text-gray-800 truncate flex-1 leading-snug">{nombre}</span>
+      <div className="flex flex-1 min-w-0 flex-col">
+        <span className="truncate text-sm font-medium text-gray-800 leading-snug">{nombre}</span>
+        {subtitle && <span className="mt-0.5 text-xs text-gray-400">{subtitle}</span>}
+      </div>
       {(ruta || onVer) && (
         <button
           type="button"
@@ -255,6 +266,17 @@ export function UploadedFileRow({
           className="shrink-0 text-xs font-medium text-[var(--sem-accent-primary)] hover:underline"
         >
           Ver
+        </button>
+      )}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={removing}
+          aria-label="Quitar archivo"
+          className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors disabled:opacity-40"
+        >
+          {removing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
         </button>
       )}
     </div>

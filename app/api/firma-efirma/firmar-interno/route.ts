@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { efirmaClient, firmadosCount, normalizarEstado } from "@/lib/efirma-client"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { checkSesionUsuario } from "@/lib/validar-sesion"
+import { ESTADO_POR_BANDEJA_PENDIENTE } from "@/lib/firma-plantillas"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -128,17 +129,11 @@ export async function POST(req: NextRequest) {
       // firmar. Revisor puede firmar antes que UEFA (no se esperan entre
       // sí), así que si UEFA sigue pendiente, el estado no debe saltarse su
       // turno aunque Revisor ya haya firmado.
-      const estadoPorBandejaPendiente: Record<string, string> = {
-        uefa:       "Pendiente Firma Justificacion",
-        revision:   "Pendiente Firma Revision",
-        validacion: "Pendiente Firma Verificacion",
-        emision:    "Pendiente Firma Emisor",
-      }
       const siguientePendiente = firmante.firma_proceso.firmantes
         .filter(f => f.tipo === "interno" && f.id !== firmante.id && !f.firmado)
         .sort((a, b) => a.orden - b.orden)[0]
       const siguienteEstado = siguientePendiente
-        ? estadoPorBandejaPendiente[siguientePendiente.bandeja ?? ""]
+        ? ESTADO_POR_BANDEJA_PENDIENTE[(siguientePendiente.bandeja ?? "") as keyof typeof ESTADO_POR_BANDEJA_PENDIENTE]
         : null
       if (siguienteEstado) {
         const estadoSig = await prisma.estado.findFirst({

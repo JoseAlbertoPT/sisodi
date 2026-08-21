@@ -13,6 +13,7 @@ import { efirmaClient } from "@/lib/efirma-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
+import { puedeMostrarFolioDictamen } from "@/lib/firma-visibilidad";
 import { stripLeadingRomanNumeral } from "@/lib/roman-list";
 import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
 import React from "react";
@@ -278,15 +279,12 @@ export async function buildJustificacionBuffer(
     });
     const esHistoricoImportado = (sol?.historial_solicitud.length ?? 0) > 0;
     // La página de Dictamen/Opinión Técnica Funcional solo debe incluirse a
-    // partir de que Emisión (filtro 3) ya lo aprobó. El registro `dictamen`
-    // NO sirve como señal: se crea desde antes, al asignar folio en Revisión
-    // (filtro 1, ver <FolioDictamenCard>/"asignarFolio" en revision-do-page.tsx
-    // y app/api/filtro/route.ts), mucho antes de que Emisión lo vea siquiera.
-    // La señal correcta es el estado de la solicitud: al aprobar en Emisión
-    // (app/api/filtro/route.ts, accion "aprobar" con filtro===3) pasa a
-    // "Pendiente Firma Dictamen" (autógrafa, para descargar y firmar fuera del
-    // sistema) o "Pendiente Firma Justificacion" (electrónica, arranca el
-    // proceso de firma electrónica); y termina en "Emitido" una vez firmado.
+    // partir de que Emisión (filtro 3) ya lo aprobó. La señal es el estado de
+    // la solicitud: al aprobar en Emisión (app/api/filtro/route.ts, accion
+    // "aprobar" con filtro===3) pasa a "Pendiente Firma Dictamen" (autógrafa,
+    // para descargar y firmar fuera del sistema) o "Pendiente Firma
+    // Justificacion" (electrónica, arranca el proceso de firma electrónica);
+    // y termina en "Emitido" una vez firmado.
     const ESTADOS_CON_DICTAMEN_APROBADO = new Set([
       "pendiente firma dictamen",
       "pendiente firma justificacion",
@@ -296,6 +294,10 @@ export async function buildJustificacionBuffer(
     const tieneDictamen = ESTADOS_CON_DICTAMEN_APROBADO.has(
       (sol?.estado?.nombre ?? "").toLowerCase(),
     );
+    // Regla 12: aunque folio_dictamen ya exista en BD desde que Emisión aprobó,
+    // no debe imprimirse en ningún documento hasta que la firma esté completa
+    // (estado "Emitido").
+    const folioDictamenVisible = puedeMostrarFolioDictamen(sol?.estado?.nombre) ? sol?.folio_dictamen : null;
 
     const fechaDict =
       sol?.dictamen?.fecha_emision ?? (sol as any)?.fecha_emision ?? null;
@@ -407,7 +409,7 @@ export async function buildJustificacionBuffer(
         firmaDictEmitioNombre: firmas.firmaDictEmitioNombre,
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
-        clave: claveParaPdf(sol.secretaria, sol.folio_dictamen, esHistoricoImportado),
+        clave: claveParaPdf(sol.secretaria, folioDictamenVisible, esHistoricoImportado),
         notaDictamen,
         incluirPaginaDictamen: tieneDictamen,
       };
@@ -471,7 +473,7 @@ export async function buildJustificacionBuffer(
         ocultarFirmas: sinFirmas,
         clave: claveParaPdf(
           sol.secretaria,
-          overrides.reutilizacionNumero ? `${sol.folio_dictamen}-${overrides.reutilizacionNumero}` : sol.folio_dictamen,
+          overrides.reutilizacionNumero && folioDictamenVisible ? `${folioDictamenVisible}-${overrides.reutilizacionNumero}` : folioDictamenVisible,
           esHistoricoImportado,
         ),
         notaDictamen,

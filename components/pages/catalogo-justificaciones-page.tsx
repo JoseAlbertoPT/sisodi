@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { DatePickerHabil, dateToIso, isoToDate } from "@/components/ui/date-picker-habil"
+import { InfoTooltip } from "@/components/ui/info-tooltip"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -138,6 +139,9 @@ function maxPrestadoresPermitido(secretaria: string | null | undefined): number 
   const s = (secretaria ?? "").toLowerCase()
   return s.includes("seguridad p") ? 100 : 50
 }
+// Placeholder: pendiente texto definitivo del área responsable (observación 9).
+const TOOLTIP_VIGENCIA = "La fecha de inicio se calcula a partir del día de la solicitud. La fecha de término puede seleccionarse hasta 6 meses después, sin exceder el 31 de diciembre del año en curso."
+const TOOLTIP_MAX_PRESTADORES = "El número máximo de prestadores de servicio depende de la secretaría seleccionada."
 const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
   "en", "a", "al", "con", "por", "para",
@@ -189,6 +193,13 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     const r = new Date(d)
     r.setMonth(r.getMonth() + months)
     return r
+  }
+  // Regla de vigencia: el término no puede exceder 6 meses desde el inicio
+  // ni el 31 de diciembre del año en que se realiza la solicitud, lo que ocurra primero.
+  const vigenciaFinLimite = (inicio: Date) => {
+    const seisMeses = addMonths(inicio, 6)
+    const finDeAnio = new Date(inicio.getFullYear(), 11, 31)
+    return seisMeses < finDeAnio ? seisMeses : finDeAnio
   }
   const [solRec, setSolRec]       = useState<CatalogoRecord | null>(null)
   const [showSol, setShowSol]     = useState(false)
@@ -270,12 +281,12 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     }
   }, [showView, viewRec])
   useEffect(() => {
-    if (solVigFin && solVigFin > addMonths(solVigInicio ?? todayStart, 6)) setSolVigFin(undefined)
+    if (solVigFin && solVigFin > vigenciaFinLimite(solVigInicio ?? todayStart)) setSolVigFin(undefined)
   }, [solVigInicio])
   const openView = (rec: CatalogoRecord) => { setViewRec(rec); setShowView(true) }
   const openSol  = (rec: CatalogoRecord) => {
     setSolRec(rec)
-    setSolVigInicio(undefined)
+    setSolVigInicio(todayStart)
     setSolVigFin(undefined)
     setSolPersonas("")
     setSolPrestadores("")
@@ -286,7 +297,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const handleSolicitar = async () => {
     if (!solRec || !user) return
     if (!solVigInicio || !solVigFin) { setSolError("La vigencia es requerida"); return }
-    if (solVigFin > addMonths(solVigInicio, 6)) { setSolError("La nueva vigencia no puede exceder 6 meses"); return }
+    if (solVigFin > vigenciaFinLimite(solVigInicio)) { setSolError("La nueva vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso"); return }
     if (!isParaestatal(solRec) && solPrestadores) {
       const maxPrestadores = maxPrestadoresPermitido(entidadNombre(solRec))
       if (Number(solPrestadores) > maxPrestadores) {
@@ -654,12 +665,13 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium flex items-center gap-1.5">
                     Nueva vigencia
+                    <InfoTooltip text={TOOLTIP_VIGENCIA} />
                   </Label>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <span className="text-xs text-muted-foreground">Inicio</span>
                       <DatePickerHabil
-                        value={solVigInicio}
+                        value={solVigInicio ?? todayStart}
                         onChange={(d) => setSolVigInicio(d)}
                         fromDate={todayStart}
                         placeholder="Seleccionar inicio"
@@ -670,7 +682,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                       <DatePickerHabil
                         value={solVigFin}
                         fromDate={solVigInicio ?? todayStart}
-                        toDate={addMonths(solVigInicio ?? todayStart, 6)}
+                        toDate={vigenciaFinLimite(solVigInicio ?? todayStart)}
                         onChange={(d) => setSolVigFin(d)}
                         placeholder="Seleccionar término"
                       />
@@ -726,11 +738,12 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     </>
                   ) : (
                     <>
-                      <Label className="text-sm font-medium">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
                         Núm. prestadores de servicio
-                        <span className="ml-1 font-normal text-muted-foreground">
+                        <span className="font-normal text-muted-foreground">
                           (máx. {maxPrestadoresPermitido(entidadNombre(solRec))})
                         </span>
+                        <InfoTooltip text={TOOLTIP_MAX_PRESTADORES} />
                       </Label>
                       <Input
                         type="number"
@@ -813,6 +826,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium flex items-center gap-1.5">
                     Nueva vigencia
+                    <InfoTooltip text={TOOLTIP_VIGENCIA} />
                   </Label>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
@@ -1562,12 +1576,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
 }
 export function CatalogoJustificacionesPage() {
   const { user } = useAuth()
-  // Valor optimista del login mientras se resuelve el chequeo en vivo (evita parpadeo para el
-  // caso común). El chequeo en vivo es la fuente de verdad real: así un cambio de permiso hecho
-  // por un Administrador se refleja sin que el usuario afectado tenga que volver a iniciar sesión.
   const [canAdministrar, setCanAdministrar] = useState(user?.catalogoAdministracion === true)
-  // Optimista con default true (como era el comportamiento histórico) mientras se resuelve
-  // el chequeo en vivo, salvo que el snapshot de login ya diga explícitamente que no.
   const [canConsultar, setCanConsultar] = useState(user?.catalogoConsulta !== false)
   const [consultaCount, setConsultaCount] = useState<number | null>(null)
   const [adminCount, setAdminCount] = useState<number | null>(null)
@@ -1595,7 +1604,7 @@ export function CatalogoJustificacionesPage() {
   return (
     <PageLayout
       title="Catálogo para Dictaminaciones Técnicas Funcionales para la Prestación de Servicios Profesionales de la Administración Pública Centralizada del Poder Ejecutivo Estatal"
-      description="Consulta y reutilización de justificaciones dictaminadas previamente."
+      description="Consulta las Cartas Descriptivas."
     >
       {canAdministrar && canConsultar ? (
         <Tabs defaultValue="consulta" className="w-full gap-3">

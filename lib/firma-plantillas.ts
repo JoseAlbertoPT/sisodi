@@ -61,6 +61,20 @@ const NOMBRAMIENTO_TIEMPO_DET: FirmanteTemplate[] = [
   },
 ]
 
+/**
+ * Nombre del estado de `solicitud` que corresponde a "sigue pendiente de
+ * firma, y el siguiente firmante interno que falta está en esta bandeja".
+ * Compartido entre /api/firma-efirma/firmar-interno (firmante interno firma)
+ * y /api/firma-efirma/firmar (firmante externo firma) para que el avance de
+ * estado tras cada firma sea idéntico sin importar qué ruta lo dispara.
+ */
+export const ESTADO_POR_BANDEJA_PENDIENTE: Record<FirmanteBandeja, string> = {
+  uefa:       "Pendiente Firma Justificacion",
+  revision:   "Pendiente Firma Revision",
+  validacion: "Pendiente Firma Verificacion",
+  emision:    "Pendiente Firma Emisor",
+}
+
 function norm(s: string) {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
 }
