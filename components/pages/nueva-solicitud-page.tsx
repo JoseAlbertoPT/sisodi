@@ -1346,6 +1346,7 @@ function FormularioPrestacion({
   datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
   tipoAdministracionUsuario = "centralizada",
   initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin,
+  permisoActivo = false,
 }: {
   prefilled: boolean
   lockVigenciaOnly?: boolean
@@ -1364,6 +1365,11 @@ function FormularioPrestacion({
   existingAdjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
   periodoFechaInicio?: string
   periodoFechaFin?: string
+  // Habilitar Captura: cuando el usuario tiene un permiso especial activo para
+  // capturar en un periodo ya vencido (ej. enero, con el calendario cerrado),
+  // la vigencia debe poder capturarse dentro de ESE periodo aunque ya haya
+  // pasado — no tiene sentido forzar "hoy" como mínimo en ese caso.
+  permisoActivo?: boolean
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState(false)
@@ -1939,7 +1945,9 @@ function FormularioPrestacion({
               {(() => {
                 const periodoVigMin = dmyToIso(periodoFechaInicio)
                 const periodoVigMax = dmyToIso(periodoFechaFin)
-                const vigMin = maxIsoDate(periodoVigMin || undefined, todayIso())
+                // Con permiso de Habilitar Captura activo, no se fuerza "hoy" como
+                // mínimo: se permite capturar dentro del periodo vencido autorizado.
+                const vigMin = permisoActivo ? (periodoVigMin || undefined) : maxIsoDate(periodoVigMin || undefined, todayIso())
                 const reglaVigMax = getVigenciaFinLimiteIso(vigenciaInicio)
                 const vigMax = minIsoDate(periodoVigMax || undefined, reglaVigMax)
                 const inicio31Dic = !!vigenciaInicio && esInicioSinRangoValido(isoToDate(vigenciaInicio)!)
@@ -2149,6 +2157,7 @@ function FormularioPrestacion({
 function FormularioNombramiento({
   prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
   tipoAdministracionUsuario = "centralizada", initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin, regimenPeriodo = "",
+  permisoActivo = false,
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
@@ -2164,6 +2173,8 @@ function FormularioNombramiento({
   periodoFechaInicio?: string
   periodoFechaFin?: string
   regimenPeriodo?: string
+  // Habilitar Captura: ver comentario en FormularioPrestacion.
+  permisoActivo?: boolean
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState(false)
@@ -2713,7 +2724,9 @@ function FormularioNombramiento({
               {(() => {
                 const periodoVigMin = dmyToIso(periodoFechaInicio)
                 const periodoVigMax = dmyToIso(periodoFechaFin)
-                const vigMin = maxIsoDate(periodoVigMin || undefined, todayIso())
+                // Con permiso de Habilitar Captura activo, no se fuerza "hoy" como
+                // mínimo: se permite capturar dentro del periodo vencido autorizado.
+                const vigMin = permisoActivo ? (periodoVigMin || undefined) : maxIsoDate(periodoVigMin || undefined, todayIso())
                 const reglaVigMax = getVigenciaFinLimiteIso(vigenciaInicio)
                 const vigMax = minIsoDate(periodoVigMax || undefined, reglaVigMax)
                 const inicio31Dic = !!vigenciaInicio && esInicioSinRangoValido(isoToDate(vigenciaInicio)!)
@@ -4371,6 +4384,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               existingAdjuntos={editSolicitud?.adjuntos}
               periodoFechaInicio={periodoVigenciaRange.min}
               periodoFechaFin={periodoVigenciaRange.max}
+              permisoActivo={!!permisoActivo}
             />
           ) : (
             <FormularioNombramiento
@@ -4390,6 +4404,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               periodoFechaInicio={periodoVigenciaRange.min}
               periodoFechaFin={periodoVigenciaRange.max}
               regimenPeriodo={regimenPeriodo}
+              permisoActivo={!!permisoActivo}
             />
           )}
 

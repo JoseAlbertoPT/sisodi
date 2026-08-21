@@ -295,6 +295,11 @@ export function CalendarioPage() {
                 {availableYears.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
             </Select>
+            {!editing && (
+              <Button size="sm" variant="default" className="gap-1.5 text-xs h-9" onClick={abrirEditNota}>
+                Editar nota
+              </Button>
+            )}
             {!editing ? (
               isEmpty ? (
                 <Button size="sm" className="gap-1.5 text-xs h-9" onClick={handleCreateYear} disabled={loading}>
@@ -338,12 +343,6 @@ export function CalendarioPage() {
                 <Button size="sm" className="h-7 w-7 p-0 rounded-md" onClick={handleAddYear}><Check className="h-3 w-3" /></Button>
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => setShowNewYearInput(false)}><X className="h-3 w-3" /></Button>
               </div>
-            )}
-            {!editing && <div className="h-5 w-px bg-border" />}
-            {!editing && (
-              <Button size="sm" variant="default" className="gap-1.5 text-xs h-9" onClick={abrirEditNota}>
-                Editar nota
-              </Button>
             )}
           </div>
         </div>

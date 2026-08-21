@@ -590,7 +590,7 @@ function GraficaSolicitudesTipo({
   return (
     <Card className="shadow-sm border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-card-foreground">Solicitudes por Tipo de Administración</CardTitle>
+        <CardTitle className="text-sm text-card-foreground">Solicitudes de la Administración Pública </CardTitle>
         <p className="text-xs text-muted-foreground">Distribución de solicitudes por tipo de Administración</p>
       </CardHeader>
       <CardContent>
@@ -858,13 +858,13 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
   useEffect(() => { fetchData() }, [fetchData])
   useRealtime(["dashboard"], fetchData)
   const kpis = [
-    { label: "Total de Solicitudes Recibidas",                           value: data?.totalRecibidas ?? 0, icon: FileText,    color: C_VERDE_OSCURO },
+    { label: "Total de solicitudes recibidas",                           value: data?.totalRecibidas ?? 0, icon: FileText,    color: C_VERDE_OSCURO },
     { label: "Justificaciones de Prestación de Servicios Profesionales por Honorarios",                           value: data?.honorarios    ?? 0, icon: Briefcase,   color: C_OLIVA       },
     { label: "Justificaciones de Prestación de Servicios por Honorarios Asimilados a Salarios",     value: data?.asimilados    ?? 0, icon: FileQuestion,color: C_DORADO      },
     { label: "Justificaciones para Nombramiento por Tiempo Determinado",  value: data?.nombramiento  ?? 0, icon: UserCheck,   color: C_VERDE_MEDIO },
-    { label: "Dictaminaciones Emitidas",                                 value: data?.emitidas      ?? 0, icon: FileOutput,  color: C_AMBAR       },
+    { label: "Dictaminaciones emitidas",                                 value: data?.emitidas      ?? 0, icon: FileOutput,  color: C_AMBAR       },
     { label: "Total de Prestadores de Servicio",                  value: data?.prestadores   ?? 0, icon: Users,       color: C_BURDEOS     },
-    { label: "Justificaciones en Proceso",                               value: data?.enProceso     ?? 0, icon: Clock,       color: C_GRIS_VERDE  },
+    { label: "Justificaciones en proceso",                               value: data?.enProceso     ?? 0, icon: Clock,       color: C_GRIS_VERDE  },
   ]
   const { emisionesCentralizada, emisionesParaestatal } = (() => {
     if (!data) return { emisionesCentralizada: [], emisionesParaestatal: [] }
@@ -1040,7 +1040,7 @@ export function DashboardPage(_props?: { onNavigate?: (page: any) => void; onOpe
                 barKey="dictamenes"
               />
               <GraficaEmisiones
-                title="Administración Pública Paraestatal — Opiniones Técnicas Funcionales"
+                title="Administración Pública Paraestatal — Opiniones Técnico Funcionales"
                 data={emisionesParaestatal}
                 barKey="opiniones"
               />

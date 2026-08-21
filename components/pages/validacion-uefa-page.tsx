@@ -1513,7 +1513,7 @@ export function ValidacionUefaPage() {
             <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-bg-base text-content-high">
-                    <th className="px-4 py-3 text-left font-semibold">Folio de Justificación</th>
+                    <th className="px-4 py-3 text-left font-semibold">Folio</th>
                     <th className="px-4 py-3 text-left font-semibold">Régimen de Contratación</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Creación</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha de Recepción</th>
