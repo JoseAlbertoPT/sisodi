@@ -1791,7 +1791,6 @@ function FormularioPrestacion({
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programas o Proyectos
-                <InfoTooltip text={TOOLTIPS.PROGRAMA_PROYECTO} />
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (
@@ -2576,7 +2575,6 @@ function FormularioNombramiento({
             <div className="flex flex-col gap-1.5">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 Programa o Proyecto
-                <InfoTooltip text={TOOLTIPS.PROGRAMA_PROYECTO} />
                 {bloqueadoPorRenovacion && <Lock className="h-3 w-3 text-muted-foreground" />}
               </Label>
               {bloqueadoPorRenovacion ? (

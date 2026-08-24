@@ -688,7 +688,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 <div className="flex flex-col gap-1.5">
                   <span className="text-xs font-medium text-content-high flex items-center gap-1.5">
                     Programa / Proyecto
-                    <InfoTooltip text={TOOLTIPS.PROGRAMA_PROYECTO} />
                   </span>
                   {progSigef.configured && progSigef.proyectos.length > 0 ? (
                     <SelectConBusqueda

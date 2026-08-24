@@ -13,7 +13,7 @@ export const TOOLTIPS = {
   VIGENCIA:
     "La fecha de inicio se calcula a partir del día de la solicitud. La fecha de término puede seleccionarse hasta 6 meses después, sin exceder el 31 de diciembre del año en curso.",
   MAX_PRESTADORES:
-    "El número máximo de prestadores de servicio depende de la secretaría seleccionada.",
+    "El Número Máximo de Prestadores de Servicio depende de la Secretaría / dependencias seleccionada.",
   TABULADOR: "[Texto pendiente por definir]",
   UNIDAD_RESPONSABLE: "[Texto pendiente por definir]",
   PROGRAMA_PROYECTO: "[Texto pendiente por definir]",
