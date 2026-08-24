@@ -167,9 +167,9 @@ export async function GET(req: NextRequest) {
 
     function normalizaRegimenLabel(r: string | null): string {
       const v = (r ?? "").toLowerCase()
-      if (v.includes("asimilad"))   return "Honorarios Asimilados"
+      if (v.includes("asimilad"))   return "Honorarios Asimilados a Salarios"
       if (v.includes("honorario"))  return "Honorarios"
-      if (v.includes("nombramiento")) return "Nombramiento"
+      if (v.includes("nombramiento")) return "Nombramiento por Tiempo Determinado"
       return r ?? "Sin especificar"
     }
     const regimenPrestMap = new Map<string, number>()

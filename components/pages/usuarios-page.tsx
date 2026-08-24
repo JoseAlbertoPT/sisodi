@@ -61,6 +61,7 @@ type Usuario = {
   rol: string
   secretaria: string
   secretariaId: string | null
+  cargo: string | null
   estatus: "Activo" | "Inactivo"
   tipoAdministracion: "centralizada" | "paraestatal"
 }
@@ -82,6 +83,7 @@ async function crearUsuario(data: {
   areaNombre?: string
   secretariaId?: string | null
   secretariaTexto?: string | null
+  cargo?: string
 }): Promise<Usuario> {
   const res = await fetch(`${API}/usuarios`, {
     method: "POST",
@@ -107,6 +109,7 @@ async function actualizarUsuario(
     activo?: boolean
     secretariaId?: string | null
     secretariaTexto?: string | null
+    cargo?: string | null
   }
 ): Promise<Usuario> {
   let currentUserId = ""
@@ -509,6 +512,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     unidad: "",
     unidadId: null as string | null,
     unidadPath: [] as string[],
+    cargo: "",
     estatus: "Activo" as "Activo" | "Inactivo",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -641,6 +645,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
         rolNombre:    form.rol,
         secretariaId: rawSecretariaId,
         secretariaTexto,
+        cargo:        form.cargo,
       })
       if (selectedPermisos.menuIds.length > 0) {
         await updatePermisosUser(nuevo.id, selectedPermisos)
@@ -972,6 +977,16 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                 </div>
               </div>
 
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Cargo</Label>
+                <Input
+                  value={form.cargo}
+                  onChange={(e) => setForm((f) => ({ ...f, cargo: e.target.value }))}
+                  placeholder="Ej. Director de Análisis Normativo"
+                  className="bg-background h-9 py-2 text-xs"
+                />
+              </div>
+
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-3.5 w-3.5 text-blue-600/70" />
@@ -1101,6 +1116,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     secretaria:      usuario.secretaria,
     secretariaId:    usuario.secretariaId,
     secretariaPath:  [] as string[],
+    cargo:           usuario.cargo ?? "",
     estatus:         usuario.estatus,
     password:        "",
     confirmPassword: "",
@@ -1221,6 +1237,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
         activo:          form.estatus === "Activo",
         secretariaId:    rawSecretariaId,
         secretariaTexto,
+        cargo:           form.cargo,
       }
       if (form.password) payload.password = form.password
       const actualizado = await actualizarUsuario(usuario.id, payload as any)
@@ -1410,6 +1427,16 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
                 </button>
               )}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Cargo</Label>
+            <Input
+              value={form.cargo}
+              onChange={(e) => setForm((f) => ({ ...f, cargo: e.target.value }))}
+              placeholder="Ej. Director de Análisis Normativo"
+              className="bg-background h-9 py-2 text-xs"
+            />
           </div>
 
           <div className="flex flex-col gap-3 mb-6">

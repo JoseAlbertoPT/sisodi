@@ -173,7 +173,7 @@ export function DatePickerHabil({
           fromDate={fromDate}
           toDate={toDate}
           weekStartsOn={1}
-          showOutsideDays
+          showOutsideDays={false}
           disabled={[
             ...INHABILES,
             ...(fromDate ? [{ before: fromDate }] : []),

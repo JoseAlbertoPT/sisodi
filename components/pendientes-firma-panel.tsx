@@ -22,6 +22,7 @@ interface FirmanteInfo {
   tipo: string
   bandeja: string | null
   firmado: boolean
+  verificado: boolean
   fecha_firma: string | null
   nombre: string | null
   rfc: string | null
@@ -171,7 +172,11 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                 }
 
                 const miFirmante = p.firmantes.find(f => f.tipo === "interno" && f.bandeja === bandejaActual && !f.firmado) ?? null
-                const siguiente = p.firmantes.filter(f => !f.firmado).sort((a, b) => a.orden - b.orden)[0] ?? null
+                // Un externo firmado pero no verificado todavía cuenta como
+                // "no listo" — bloquea el turno igual que si no hubiera firmado.
+                const siguiente = p.firmantes
+                  .filter(f => !f.firmado || (f.tipo === "externo" && !f.verificado))
+                  .sort((a, b) => a.orden - b.orden)[0] ?? null
                 const esMiTurno = !!(miFirmante && siguiente && miFirmante.id === siguiente.id)
                 return (
                   <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/20">
@@ -235,9 +240,9 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
           titulo={
             dialogIniciarEnSellado
               ? `Sellar y emitir — ${dialogTarget.proceso.folio_recepcion ?? dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`
-              : `Firmar como ${dialogTarget.firmante.rol} — ${dialogTarget.proceso.folio_recepcion ?? dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`
+              : `Firmar Dictamen Técnico Funcional — ${dialogTarget.proceso.folio_recepcion ?? dialogTarget.proceso.folio_justificacion ?? `SOL-${dialogTarget.proceso.solicitud_id}`}`
           }
-          subtitulo={dialogTarget.firmante.cargo}
+          subtitulo={`${dialogTarget.firmante.cargo} - Firmar como ${dialogTarget.firmante.rol}`}
           bandeja={dialogTarget.firmante.bandeja}
           folio={dialogTarget.proceso.folio_recepcion ?? dialogTarget.proceso.folio_justificacion}
           folioDictamen={dialogTarget.proceso.folio_dictamen}

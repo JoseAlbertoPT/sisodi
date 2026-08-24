@@ -64,7 +64,10 @@ export async function GET(req: NextRequest) {
       procesos: procesos.map(p => {
         const externosTotal = p.firmantes.filter(f => f.tipo === "externo").length
         const externosFirmados = p.firmantes.filter(f => f.tipo === "externo" && f.firmado).length
-        const externosCompletos = externosTotal === 0 || externosFirmados === externosTotal
+        // "Completo" para efectos de desbloquear a los internos requiere que
+        // los externos no solo hayan firmado, también que UEFA los haya
+        // verificado (ver /api/firma-efirma/verificar/:id).
+        const externosCompletos = externosTotal === 0 || p.firmantes.every(f => f.tipo !== "externo" || (f.firmado && f.verificado))
         const miFirmaPendiente = usuarioId
           ? (
               p.firmantes.find(f => f.tipo === "interno" && f.usuario_id === usuarioId && !f.firmado)
@@ -112,6 +115,7 @@ export async function GET(req: NextRequest) {
             tipo: f.tipo,
             bandeja: f.bandeja,
             firmado: f.firmado,
+            verificado: f.verificado,
             fecha_firma: f.fecha_firma,
             nombre: f.nombre ?? f.usuario?.nombre ?? null,
             rfc: f.rfc ?? f.usuario?.rfc ?? null,

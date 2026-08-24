@@ -428,7 +428,7 @@ function DonutSimple({ items: rawItems, subLabel }: {
             style={{ opacity: activeIndex === null || activeIndex === index ? 1 : 0.4 }}
           >
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-            <span className={`min-w-0 flex-1 truncate text-xs text-card-foreground ${activeIndex === index ? "font-bold" : "font-medium"}`}>
+            <span className={`min-w-0 flex-1 text-xs text-card-foreground ${activeIndex === index ? "font-bold" : "font-medium"}`}>
               {item.name}
             </span>
             <span className="text-xs font-bold text-card-foreground">

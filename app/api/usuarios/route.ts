@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
         rol:                u.rol.nombre,
         secretaria:         u.secretaria_texto ?? u.area?.nombre ?? "Sin área",
         secretariaId:       u.secretaria_id ?? null,
+        cargo:              u.cargo ?? null,
         estatus:            u.activo ? "Activo" : "Inactivo",
         tipoAdministracion: u.organo_centralizado ? "centralizada" : "paraestatal",
       }))
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { nombre, correo, rfc, password, rolNombre, areaNombre, secretariaId, secretariaTexto } = await req.json()
+    const { nombre, correo, rfc, password, rolNombre, areaNombre, secretariaId, secretariaTexto, cargo } = await req.json()
 
     if (!nombre?.trim())   return err("El nombre es requerido")
     if (!correo?.trim())   return err("El correo es requerido")
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
         area_id:          area?.id ?? null,
         secretaria_id:    secretariaId || null,
         secretaria_texto: secretariaTexto || null,
+        cargo:            cargo?.trim() || null,
         activo:           true,
         must_change_password: true,
       },
@@ -112,6 +114,7 @@ export async function POST(req: NextRequest) {
       rol:                nuevo.rol.nombre,
       secretaria:         nuevo.secretaria_texto ?? nuevo.area?.nombre ?? "Sin área",
       secretariaId:       nuevo.secretaria_id ?? null,
+      cargo:              nuevo.cargo ?? null,
       estatus:            "Activo",
       tipoAdministracion: nuevo.organo_centralizado ? "centralizada" : "paraestatal",
     }, { status: 201 })

@@ -107,6 +107,7 @@ model firma_firmante {
   correo           String?       @db.VarChar(200)
   cargo_firmante   String?       @db.VarChar(300)
   firmado          Boolean       @default(false)
+  verificado       Boolean       @default(false)
   fecha_firma      DateTime?     @db.Timestamp(6)
   acceso_token     String?       @unique @db.VarChar(64)
   accedido_en      DateTime?     @db.Timestamp(6)
@@ -313,6 +314,7 @@ model usuario {
   must_change_password  Boolean?              @default(false)
   secretaria_id         String?               @db.Uuid
   secretaria_texto      String?               @db.VarChar(512)
+  cargo                 String?               @db.VarChar(200)
   codigo_recuperacion    codigo_recuperacion?
   catalogo_solicitudes   catalogo_solicitud[]
   documentos_sellados    documento_sellado[]   @relation("documento_sellado_uploader")

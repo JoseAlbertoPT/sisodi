@@ -15,6 +15,7 @@ import {
   CheckCircle2, Loader2, AlertCircle, Clock,
   FileKey, KeyRound, Briefcase, Info,
 } from "lucide-react"
+import { parseCertificadoInfo } from "@/lib/certificado-cer"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then(m => m.PdfPreview), {
   ssr: false,
@@ -50,6 +51,19 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
   const [avisoCargoAbierto, setAvisoCargoAbierto] = useState(false)
   const [cargoHabilitado, setCargoHabilitado] = useState(false)
   const cargoInputRef = useRef<HTMLInputElement | null>(null)
+
+  const handleCerFile = async (file: File | null) => {
+    setCerFile(file)
+    if (!file) return
+    try {
+      const buffer = await file.arrayBuffer()
+      const info = parseCertificadoInfo(buffer)
+      if (info.nombre) setNombreFirmante(info.nombre)
+      if (info.rfc) setUsuario(info.rfc)
+    } catch {
+      /* si no se puede leer el certificado, se sigue llenando manualmente */
+    }
+  }
 
   const aceptarAvisoCargo = () => {
     setAvisoCargoAbierto(false)
@@ -390,24 +404,6 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
             <CardContent>
               <form onSubmit={handleFirmar} className={`flex flex-col gap-5 ${avisoCargoAbierto ? "pointer-events-none" : ""}`}>
                 <div className="flex flex-col gap-1.5">
-                  <Label className="font-sans text-xs font-light text-content-low">Nombre completo del firmante</Label>
-                  <Input value={nombreFirmante} onChange={e => setNombreFirmante(e.target.value)} placeholder="Nombre completo" aria-invalid={camposIncompletos && !nombreFirmante.trim()} />
-                  {camposIncompletos && !nombreFirmante.trim() && (
-                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label className="font-sans text-xs font-light text-content-low">RFC del firmante</Label>
-                  <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" aria-invalid={camposIncompletos && !usuario} />
-                  {camposIncompletos && !usuario && (
-                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-content-low flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
                   <Input
                     ref={cargoInputRef}
@@ -436,13 +432,31 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-content-low flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
-                  <Input type="file" accept=".cer" onChange={e => setCerFile(e.target.files?.[0] ?? null)} aria-invalid={camposIncompletos && !cerFile} />
+                  <Input type="file" accept=".cer" onChange={e => handleCerFile(e.target.files?.[0] ?? null)} aria-invalid={camposIncompletos && !cerFile} />
                   {cerFile && (
                     <span className="font-sans text-xs font-light text-accent-primary truncate flex items-center gap-1">
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />{cerFile.name}
                     </span>
                   )}
                   {camposIncompletos && !cerFile && (
+                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="font-sans text-xs font-light text-content-low">RFC del firmante</Label>
+                  <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" aria-invalid={camposIncompletos && !usuario} />
+                  {camposIncompletos && !usuario && (
+                    <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className="font-sans text-xs font-light text-content-low">Nombre completo del firmante</Label>
+                  <Input value={nombreFirmante} onChange={e => setNombreFirmante(e.target.value)} placeholder="Nombre completo" aria-invalid={camposIncompletos && !nombreFirmante.trim()} />
+                  {camposIncompletos && !nombreFirmante.trim() && (
                     <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
                     </p>

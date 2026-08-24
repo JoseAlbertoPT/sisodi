@@ -1303,11 +1303,11 @@ function DetalleView({
         )
       )}
       {isEmitido && sol.numeroDictamen && (
-        <div className="flex items-center justify-center gap-2 rounded-xl bg-support-success-low px-4 py-3">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-support-success">
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
             <span className="text-[12px] font-bold text-white leading-none">i</span>
           </div>
-          <span className="text-sm font-light text-support-success">
+          <span className="text-sm font-light text-[#3266cb]">
             <strong className="font-medium">Dictamen Emitido</strong> — No. {sol.numeroDictamen} — Fecha: {sol.fechaDictamen}
           </span>
         </div>

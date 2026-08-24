@@ -13,7 +13,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const { nombre, correo, rfc, password, rolNombre, areaNombre, activo, secretariaId, secretariaTexto } = await req.json()
+    const { nombre, correo, rfc, password, rolNombre, areaNombre, activo, secretariaId, secretariaTexto, cargo } = await req.json()
 
     const usuarioActual = await prisma.usuario.findUnique({ where: { id }, include: { rol: true } })
     if (!usuarioActual) return err("Usuario no encontrado", 404)
@@ -78,6 +78,9 @@ export async function PATCH(
     if (secretariaTexto !== undefined) {
       data.secretaria_texto = secretariaTexto || null
     }
+    if (cargo !== undefined) {
+      data.cargo = cargo?.trim() || null
+    }
 
     if (password) {
       data.password_hash = await bcrypt.hash(password, 12)
@@ -97,6 +100,8 @@ export async function PATCH(
     const nombreCambia = nombre !== undefined && nombre.trim() !== usuarioActual.nombre
     const rfcNuevo = rfc !== undefined ? (rfc ? rfc.trim().toUpperCase() : null) : undefined
     const rfcCambia = rfcNuevo !== undefined && rfcNuevo !== usuarioActual.rfc
+    const cargoNuevo = cargo !== undefined ? (cargo?.trim() || null) : undefined
+    const cargoCambia = cargoNuevo !== undefined && cargoNuevo !== usuarioActual.cargo
     const passwordCambia = !!password
 
     // Conservar permisos de menú: si al editar cambia el contexto del usuario
@@ -176,9 +181,10 @@ export async function PATCH(
       })
     }
 
-    // Rol, contraseña, RFC, nombre, secretaría o dirección cambiados: forzar cierre de
-    // sesión al usuario afectado para que su próximo login recargue el snapshot completo.
-    if (secretariaIdCambia || secretariaTextoCambia || rolCambia || areaCambia || nombreCambia || rfcCambia || passwordCambia) {
+    // Rol, contraseña, RFC, nombre, cargo, secretaría o dirección cambiados: forzar
+    // cierre de sesión al usuario afectado para que su próximo login recargue el
+    // snapshot completo.
+    if (secretariaIdCambia || secretariaTextoCambia || rolCambia || areaCambia || nombreCambia || rfcCambia || cargoCambia || passwordCambia) {
       broadcastForceLogout([id])
     }
 
@@ -190,6 +196,7 @@ export async function PATCH(
       rol:                actualizado.rol.nombre,
       secretaria:         actualizado.secretaria_texto ?? actualizado.area?.nombre ?? "Sin área",
       secretariaId:       actualizado.secretaria_id ?? null,
+      cargo:              actualizado.cargo ?? null,
       estatus:            actualizado.activo ? "Activo" : "Inactivo",
       tipoAdministracion: actualizado.organo_centralizado ? "centralizada" : "paraestatal",
     })

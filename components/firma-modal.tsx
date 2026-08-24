@@ -7,6 +7,26 @@ import { FirmaElectronicaTabs } from "@/components/firma-electronica-tabs"
 import type { SelladoEtapa } from "@/components/sellado-documento-section"
 import { Shield, FileSignature, AlertCircle } from "lucide-react"
 
+function tituloFirmaPorRegimen(regimen: string | null | undefined, folioRecepcion: string | null | undefined): string | null {
+  const rBase = (regimen ?? "").normalize("NFD"
+      )
+  const r = rBase.split("").filter(ch => {
+    const code = ch.charCodeAt(0)
+    return code < 0x0300 || code > 0x036f
+  }).join("").toLowerCase().trim()
+  let accion: string
+  if (r.includes("asimilado")) {
+    accion = "Firmar Justificaciones de Prestación de Servicios por Honorarios Asimilados a Salarios"
+  } else if (r.includes("nombramiento") || r.includes("tiempo determinado")) {
+    accion = "Firmar Justificaciones para Nombramiento por Tiempo Determinado"
+  } else if (r.includes("honorario")) {
+    accion = "Firmar Justificaciones de Prestación de Servicios Profesionales por Honorarios"
+  } else {
+    return null
+  }
+  return folioRecepcion ? `${accion} — ${folioRecepcion}` : accion
+}
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -14,6 +34,7 @@ interface Props {
   folioJustificacion: string
   folioRecepcion?: string | null
   folioDictamen?: string | null
+  regimen?: string | null
   modalidadFirma: "electronica" | "autografa" | null | undefined
   currentUserId: string
   currentUserRol?: string
@@ -21,13 +42,11 @@ interface Props {
   onGenerarPdfBase64: () => Promise<string>
   onFinalizar: () => Promise<void>
   guardandoFinal: boolean
-  /** Si se define, la firma electrónica exige sellado externo después de
-   *  completar las firmas y antes de habilitar "Enviar". */
   selladoEtapa?: SelladoEtapa
 }
 
 export function FirmaModal({
-  open, onClose, solicitudId, folioJustificacion, folioRecepcion, folioDictamen, modalidadFirma,
+  open, onClose, solicitudId, folioJustificacion, folioRecepcion, folioDictamen, regimen, modalidadFirma,
   currentUserId, currentUserRol,
   onGenerarPdf, onGenerarPdfBase64, onFinalizar, guardandoFinal,
   selladoEtapa,
@@ -43,17 +62,20 @@ export function FirmaModal({
   const esElectronica = modalidadFirma === "electronica"
   const esAutografa   = modalidadFirma === "autografa"
   const sinModalidad  = !esElectronica && !esAutografa
+  const tituloRegimen = tituloFirmaPorRegimen(regimen, folioRecepcion)
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent showCloseButton={false} className={`w-[92vw] max-h-[90vh] overflow-y-auto shadow-2xl ${esElectronica && procesoIniciado ? "sm:max-w-3xl" : "sm:max-w-lg"}`}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {esElectronica ? <Shield className="h-5 w-5 text-primary" /> : <FileSignature className="h-5 w-5 text-secondary" />}
+          <DialogTitle className={`flex items-center gap-2 ${tituloRegimen ? "text-sm font-medium" : ""}`}>
+            {esElectronica ? <Shield className="h-5 w-5 text-primary shrink-0" /> : <FileSignature className="h-5 w-5 text-secondary shrink-0" />}
             {esElectronica && !procesoIniciado ? (
               <span>
                 Iniciar proceso de firma del dictamen
               </span>
+            ) : tituloRegimen ? (
+              <span>{tituloRegimen}</span>
             ) : (
               <span>
                 Firmar dictamen — {folioDictamen ?? <span className="italic text-muted-foreground">sin folio</span>}

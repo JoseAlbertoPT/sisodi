@@ -13,7 +13,6 @@ import { efirmaClient } from "@/lib/efirma-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
-import { puedeMostrarFolioDictamen } from "@/lib/firma-visibilidad";
 import { stripLeadingRomanNumeral } from "@/lib/roman-list";
 import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
 import React from "react";
@@ -278,26 +277,28 @@ export async function buildJustificacionBuffer(
       },
     });
     const esHistoricoImportado = (sol?.historial_solicitud.length ?? 0) > 0;
-    // La página de Dictamen/Opinión Técnica Funcional solo debe incluirse a
-    // partir de que Emisión (filtro 3) ya lo aprobó. La señal es el estado de
-    // la solicitud: al aprobar en Emisión (app/api/filtro/route.ts, accion
-    // "aprobar" con filtro===3) pasa a "Pendiente Firma Dictamen" (autógrafa,
-    // para descargar y firmar fuera del sistema) o "Pendiente Firma
-    // Justificacion" (electrónica, arranca el proceso de firma electrónica);
-    // y termina en "Emitido" una vez firmado.
+    // La página de Dictamen/Opinión Técnica Funcional solo debe incluirse una
+    // vez que el dictamen ya está listo para su firma final: "Pendiente Firma
+    // Dictamen" (autógrafa, se descarga para firmar fuera del sistema) o ya
+    // "Emitido". Durante el resto de la cadena de firma electrónica (UEFA,
+    // Revisión, Verificación, Emisor: "Pendiente Firma Justificacion" /
+    // "Pendiente Firma Revision" / "Pendiente Firma Verificacion" / "Pendiente
+    // Firma Emisor") esta página aún no debe aparecer.
     const ESTADOS_CON_DICTAMEN_APROBADO = new Set([
       "pendiente firma dictamen",
-      "pendiente firma justificacion",
-      "pendiente firma emisor",
       "emitido",
     ]);
     const tieneDictamen = ESTADOS_CON_DICTAMEN_APROBADO.has(
       (sol?.estado?.nombre ?? "").toLowerCase(),
     );
-    // Regla 12: aunque folio_dictamen ya exista en BD desde que Emisión aprobó,
-    // no debe imprimirse en ningún documento hasta que la firma esté completa
-    // (estado "Emitido").
-    const folioDictamenVisible = puedeMostrarFolioDictamen(sol?.estado?.nombre) ? sol?.folio_dictamen : null;
+    // Regla 12 (lib/firma-visibilidad.ts) sigue aplicando tal cual en "Mis
+    // Solicitudes"/bandejas y en los demás PDFs (dictamen-prestacion,
+    // carta-descriptiva): ahí el folio de dictamen permanece oculto hasta
+    // "Emitido". En ESTE documento (el que se ve/firma en el portal de firma
+    // electrónica) se pidió explícitamente lo contrario: mostrar el folio del
+    // dictamen en la caja "Justificación" desde que existe (asignado al
+    // aprobar en Emisión), sin esperar a que termine toda la cadena de firmas.
+    const folioDictamenVisible = sol?.folio_dictamen ?? null;
 
     const fechaDict =
       sol?.dictamen?.fecha_emision ?? (sol as any)?.fecha_emision ?? null;

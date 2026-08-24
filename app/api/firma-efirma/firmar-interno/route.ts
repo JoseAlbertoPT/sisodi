@@ -62,17 +62,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Proceso sin identificador del portal" }, { status: 500 })
     }
 
+    // Un externo firmado pero aún no verificado por el primer revisor interno
+    // (UEFA) cuenta como "no listo" para efectos de avanzar el turno — igual
+    // que si no hubiera firmado (ver /api/firma-efirma/verificar/:id).
+    const noListo = (f: { tipo: string; firmado: boolean; verificado: boolean }) =>
+      !f.firmado || (f.tipo === "externo" && !f.verificado)
+
     // Revisor (Filtro 1) no depende de que UEFA haya firmado: su revisión
-    // corre en paralelo, solo espera a que los externos (Elaboró) firmen.
+    // corre en paralelo, solo espera a que los externos (Elaboró) firmen y
+    // queden verificados.
     const anterioresPendientes = firmante.bandeja === "revision"
-      ? firmante.firma_proceso.firmantes.filter(f => f.tipo === "externo" && !f.firmado)
-      : firmante.firma_proceso.firmantes.filter(f => f.orden < firmante.orden && !f.firmado)
+      ? firmante.firma_proceso.firmantes.filter(f => f.tipo === "externo" && noListo(f))
+      : firmante.firma_proceso.firmantes.filter(f => f.orden < firmante.orden && noListo(f))
     if (anterioresPendientes.length > 0) {
       const siguiente = anterioresPendientes.sort((a, b) => a.orden - b.orden)[0]
-      return NextResponse.json({
-        ok: false,
-        error: `Aún no es tu turno. Primero debe firmar #${siguiente.orden} (${siguiente.rol}).`,
-      }, { status: 412 })
+      const razon = !siguiente.firmado
+        ? `Primero debe firmar #${siguiente.orden} (${siguiente.rol}).`
+        : `Falta verificar la firma de #${siguiente.orden} (${siguiente.rol}).`
+      return NextResponse.json({ ok: false, error: `Aún no es tu turno. ${razon}` }, { status: 412 })
     }
 
     const usuarioEfectivo = slotSinAsignar

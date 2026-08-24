@@ -380,22 +380,39 @@ function getVigenciaFinLimiteIso(inicioIso: string): string | undefined {
   if (!inicio) return undefined
   return dateToIso(calcularVigenciaMaxima(inicio))
 }
-function minIsoDate(...fechas: (string | undefined)[]): string | undefined {
-  return fechas.filter((f): f is string => !!f).reduce<string | undefined>(
-    (min, f) => (min === undefined || f < min ? f : min),
-    undefined,
-  )
+// Acota `value` (ISO) dentro de [min, max] cuando esos límites existen — se usa
+// para que "hoy" no quede fuera del rango del periodo elegido (ej. capturar en
+// agosto un periodo de diciembre) tanto al inicializar como al mover los
+// límites del selector de fecha.
+function clampIso(value: string, min?: string, max?: string): string {
+  let v = value
+  if (min && v < min) v = min
+  if (max && v > max) v = max
+  return v
 }
-function maxIsoDate(...fechas: (string | undefined)[]): string | undefined {
-  return fechas.filter((f): f is string => !!f).reduce<string | undefined>(
-    (max, f) => (max === undefined || f > max ? f : max),
-    undefined,
-  )
-}
-function dmyToIso(dmy?: string): string {
-  if (!dmy || !dmy.includes("/")) return ""
-  const [d, m, y] = dmy.split("/")
-  return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
+// Rango del periodo (mes para honorarios, quincena para asimilados/nombramiento)
+// calculado directamente del nombre del periodo + año — no depende de que el
+// calendario de recepción tenga fechaInicio/fechaFin capturadas (no se capturan
+// desde components/pages/calendario-page.tsx, solo limiteDO/limiteDGRH).
+function getRangoPeriodoIso(
+  regimenPeriodo: "" | "honorarios" | "asimilados" | "nombramiento",
+  periodoSeleccionado: string,
+  year: number,
+): { inicio: string; fin: string } | undefined {
+  if (!regimenPeriodo || !periodoSeleccionado) return undefined
+  const mes = periodoNombreAMes(periodoSeleccionado)
+  if (!mes) return undefined
+  const mesIdx = mes - 1
+  if (regimenPeriodo === "honorarios") {
+    return {
+      inicio: dateToIso(new Date(year, mesIdx, 1)),
+      fin: dateToIso(new Date(year, mesIdx + 1, 0)),
+    }
+  }
+  const esPrimeraQuincena = periodoSeleccionado.trim().toLowerCase().startsWith("1ra")
+  return esPrimeraQuincena
+    ? { inicio: dateToIso(new Date(year, mesIdx, 1)),  fin: dateToIso(new Date(year, mesIdx, 15)) }
+    : { inicio: dateToIso(new Date(year, mesIdx, 16)), fin: dateToIso(new Date(year, mesIdx + 1, 0)) }
 }
 
 function esFinDeSemana(dateStr: string): boolean {
@@ -1427,8 +1444,15 @@ function FormularioPrestacion({
   const [numeroPrestadores, setNumeroPrestadores] = useState(
     datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "3" : "")
   )
+  // "Hoy" puede caer fuera del periodo elegido — ya sea porque hay permiso de
+  // Habilitar Captura sobre un periodo vencido, o porque se eligió un periodo
+  // futuro (ej. capturar diciembre estando en agosto). En ambos casos el valor
+  // inicial debe acotarse al periodo, no quedarse en hoy, o el calendario abre
+  // mostrando un mes fuera de rango o la validación de envío queda bloqueada.
   const [vigenciaInicio, setVigenciaInicio] = useState(
-    initialData?.vigenciaInicio ?? todayIso()
+    initialData?.vigenciaInicio ?? (permisoActivo
+      ? (periodoFechaInicio ?? "")
+      : clampIso(todayIso(), periodoFechaInicio, periodoFechaFin))
   )
   const [vigenciaFin, setVigenciaFin] = useState(
     initialData?.vigenciaFin ?? ""
@@ -1943,15 +1967,21 @@ function FormularioPrestacion({
                 )}
               </Label>
               {(() => {
-                const periodoVigMin = dmyToIso(periodoFechaInicio)
-                const periodoVigMax = dmyToIso(periodoFechaFin)
                 // Con permiso de Habilitar Captura activo, no se fuerza "hoy" como
                 // mínimo: se permite capturar dentro del periodo vencido autorizado.
-                const vigMin = permisoActivo ? (periodoVigMin || undefined) : maxIsoDate(periodoVigMin || undefined, todayIso())
-                const reglaVigMax = getVigenciaFinLimiteIso(vigenciaInicio)
-                const vigMax = minIsoDate(periodoVigMax || undefined, reglaVigMax)
+                // Sin permiso, el mínimo es "hoy" salvo que el periodo elegido sea
+                // futuro (ej. diciembre elegido en agosto), en cuyo caso el mínimo
+                // pasa a ser el inicio de ese periodo — nunca se sale del periodo
+                // (mes completo si es honorarios, quincena completa si es
+                // asimilados/nombramiento) por ninguno de los dos extremos.
+                const vigMin       = permisoActivo ? (periodoFechaInicio || undefined) : clampIso(todayIso(), periodoFechaInicio, periodoFechaFin)
+                const vigMaxInicio = periodoFechaFin || undefined
+                // El límite máximo de término es solo la regla de 6 meses / 31-dic
+                // (lib/vigencia.ts), igual que en catalogo-justificaciones-page.tsx.
+                // El periodo de recepción (calendario) no debe acotar la vigencia.
+                const vigMax = getVigenciaFinLimiteIso(vigenciaInicio)
                 const inicio31Dic = !!vigenciaInicio && esInicioSinRangoValido(isoToDate(vigenciaInicio)!)
-                const inicioError = !!vigenciaInicio && ((!!vigMin && vigenciaInicio < vigMin) || inicio31Dic)
+                const inicioError = !!vigenciaInicio && ((!!vigMin && vigenciaInicio < vigMin) || (!!vigMaxInicio && vigenciaInicio > vigMaxInicio) || inicio31Dic)
                 const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
                 return (
                   <div className="grid grid-cols-2 gap-3">
@@ -1960,7 +1990,7 @@ function FormularioPrestacion({
                       <DatePickerHabil
                         value={isoToDate(vigenciaInicio)}
                         fromDate={vigMin ? isoToDate(vigMin) : undefined}
-                        toDate={vigMax ? isoToDate(vigMax) : undefined}
+                        toDate={vigMaxInicio ? isoToDate(vigMaxInicio) : undefined}
                         startMonth={isoToDate(vigenciaInicio || vigMin || "")}
                         onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                         placeholder="Seleccionar inicio"
@@ -1968,7 +1998,7 @@ function FormularioPrestacion({
                       />
                       {inicioError && (
                         <p className="text-xs text-destructive flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3 shrink-0" />{inicio31Dic ? MENSAJE_INICIO_31_DIC : "Fecha anterior al inicio del periodo."}
+                          <AlertCircle className="h-3 w-3 shrink-0" />{inicio31Dic ? MENSAJE_INICIO_31_DIC : "La fecha debe estar dentro del periodo seleccionado."}
                         </p>
                       )}
                     </div>
@@ -2241,7 +2271,14 @@ function FormularioNombramiento({
   }, [catalogoUAs])
   const [programaInput, setProgramaInput] = useState(datosRenovacion?.programaProyecto ?? initialData?.programaProyecto ?? (prefilled ? "P-005 Fortalecimiento Institucional" : ""))
   const sigef = useProgramasSigef(secretariaConfirmada)
-  const [vigenciaInicio, setVigenciaInicio] = useState(initialData?.vigenciaInicio ?? todayIso())
+  // "Hoy" puede caer fuera del periodo elegido — ya sea porque hay permiso de
+  // Habilitar Captura sobre un periodo vencido, o porque se eligió un periodo
+  // futuro (ej. capturar diciembre estando en agosto). En ambos casos el valor
+  // inicial debe acotarse al periodo, no quedarse en hoy, o el calendario abre
+  // mostrando un mes fuera de rango o la validación de envío queda bloqueada.
+  const [vigenciaInicio, setVigenciaInicio] = useState(initialData?.vigenciaInicio ?? (permisoActivo
+    ? (periodoFechaInicio ?? "")
+    : clampIso(todayIso(), periodoFechaInicio, periodoFechaFin)))
   const [vigenciaFin,    setVigenciaFin]    = useState(initialData?.vigenciaFin ?? "")
   const [numeroPrestadores, setNumeroPrestadores] = useState(datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "2" : ""))
   const [denominacion, setDenominacion] = useState(initialData?.denominacion ?? (prefilled ? "Jefe de Departamento" : ""))
@@ -2722,15 +2759,21 @@ function FormularioNombramiento({
                 {bloqueadoPorRenovacion && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-secondary text-secondary ml-1">Editable</Badge>}
               </Label>
               {(() => {
-                const periodoVigMin = dmyToIso(periodoFechaInicio)
-                const periodoVigMax = dmyToIso(periodoFechaFin)
                 // Con permiso de Habilitar Captura activo, no se fuerza "hoy" como
                 // mínimo: se permite capturar dentro del periodo vencido autorizado.
-                const vigMin = permisoActivo ? (periodoVigMin || undefined) : maxIsoDate(periodoVigMin || undefined, todayIso())
-                const reglaVigMax = getVigenciaFinLimiteIso(vigenciaInicio)
-                const vigMax = minIsoDate(periodoVigMax || undefined, reglaVigMax)
+                // Sin permiso, el mínimo es "hoy" salvo que el periodo elegido sea
+                // futuro (ej. diciembre elegido en agosto), en cuyo caso el mínimo
+                // pasa a ser el inicio de ese periodo — nunca se sale del periodo
+                // (mes completo si es honorarios, quincena completa si es
+                // asimilados/nombramiento) por ninguno de los dos extremos.
+                const vigMin       = permisoActivo ? (periodoFechaInicio || undefined) : clampIso(todayIso(), periodoFechaInicio, periodoFechaFin)
+                const vigMaxInicio = periodoFechaFin || undefined
+                // El límite máximo de término es solo la regla de 6 meses / 31-dic
+                // (lib/vigencia.ts), igual que en catalogo-justificaciones-page.tsx.
+                // El periodo de recepción (calendario) no debe acotar la vigencia.
+                const vigMax = getVigenciaFinLimiteIso(vigenciaInicio)
                 const inicio31Dic = !!vigenciaInicio && esInicioSinRangoValido(isoToDate(vigenciaInicio)!)
-                const inicioError = !!vigenciaInicio && ((!!vigMin && vigenciaInicio < vigMin) || inicio31Dic)
+                const inicioError = !!vigenciaInicio && ((!!vigMin && vigenciaInicio < vigMin) || (!!vigMaxInicio && vigenciaInicio > vigMaxInicio) || inicio31Dic)
                 const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
                 return (
                   <div className="grid grid-cols-2 gap-3">
@@ -2739,14 +2782,14 @@ function FormularioNombramiento({
                       <DatePickerHabil
                         value={isoToDate(vigenciaInicio)}
                         fromDate={vigMin ? isoToDate(vigMin) : undefined}
-                        toDate={vigMax ? isoToDate(vigMax) : undefined}
+                        toDate={vigMaxInicio ? isoToDate(vigMaxInicio) : undefined}
                         startMonth={isoToDate(vigenciaInicio || vigMin || "")}
                         onChange={(d) => d && setVigenciaInicio(dateToIso(d))}
                         placeholder="Seleccionar inicio"
                         className={inicioError ? "border-destructive" : ""}
                       />
                       {inicioError && (
-                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />{inicio31Dic ? MENSAJE_INICIO_31_DIC : "Fecha anterior al inicio del periodo."}</p>
+                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />{inicio31Dic ? MENSAJE_INICIO_31_DIC : "La fecha debe estar dentro del periodo seleccionado."}</p>
                       )}
                     </div>
                     <div className="flex flex-col gap-1">
@@ -3610,29 +3653,14 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
     return { row, limiteDODate, enTiempo }
   }, [regimenPeriodo, periodoSeleccionado, calHonorarios, calAsimilados, calNombramiento])
 
-  const periodoFechaInicioEffective = useMemo(() => {
-    if (!periodoInfo?.row) return undefined
-    if (periodoInfo.row.fechaInicio) return periodoInfo.row.fechaInicio
-    const fechaFin = periodoInfo.row.fechaFin
-    if (!fechaFin) return undefined
-    const [, m, y] = fechaFin.split("/").map(Number)
-    const label = regimenPeriodo === "honorarios"
-      ? (periodoInfo.row as PeriodoCap3000).mes
-      : (periodoInfo.row as PeriodoCap1000).quincena
-    const startDay = label?.startsWith("2da") ? 16 : 1
-    return `${String(startDay).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`
-  }, [periodoInfo, regimenPeriodo])
-
-  const periodoVigenciaRange = useMemo(() => {
-    const do_ = periodoInfo?.row?.limiteDO
-    const dgrh = periodoInfo?.row?.limiteDGRH
-    if (!do_ || !dgrh) return { min: undefined, max: undefined }
-    const dateA = parseDateDMY(do_)
-    const dateB = parseDateDMY(dgrh)
-    const earlier = dateA <= dateB ? do_ : dgrh
-    const later   = dateA <= dateB ? dgrh : do_
-    return { min: earlier, max: later }
-  }, [periodoInfo])
+  // Rango real del periodo elegido (mes completo para honorarios, quincena
+  // completa para asimilados/nombramiento), calculado del nombre + año en curso.
+  // Se usa para acotar la Vigencia (Inicio) cuando hay permiso de Habilitar
+  // Captura — ver getRangoPeriodoIso. No depende del calendario de recepción.
+  const periodoRango = useMemo(
+    () => getRangoPeriodoIso(regimenPeriodo, periodoSeleccionado, new Date().getFullYear()),
+    [regimenPeriodo, periodoSeleccionado],
+  )
 
   const periodoVencido = periodoSeleccionado ? (periodoInfo ? !periodoInfo.enTiempo : false) : false
   const permisoActivo = regimenPeriodo && periodoSeleccionado && user?.id
@@ -4382,8 +4410,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               tipoAdministracionUsuario={editSolicitud?.formData?.tipoAdministracionNom ?? user?.tipoAdministracion ?? "centralizada"}
               initialData={editSolicitud?.formData}
               existingAdjuntos={editSolicitud?.adjuntos}
-              periodoFechaInicio={periodoVigenciaRange.min}
-              periodoFechaFin={periodoVigenciaRange.max}
+              periodoFechaInicio={periodoRango?.inicio}
+              periodoFechaFin={periodoRango?.fin}
               permisoActivo={!!permisoActivo}
             />
           ) : (
@@ -4401,8 +4429,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               tipoAdministracionUsuario={editSolicitud?.formData?.tipoAdministracionNom ?? user?.tipoAdministracion ?? "centralizada"}
               initialData={editSolicitud?.formData}
               existingAdjuntos={editSolicitud?.adjuntos}
-              periodoFechaInicio={periodoVigenciaRange.min}
-              periodoFechaFin={periodoVigenciaRange.max}
+              periodoFechaInicio={periodoRango?.inicio}
+              periodoFechaFin={periodoRango?.fin}
               regimenPeriodo={regimenPeriodo}
               permisoActivo={!!permisoActivo}
             />
@@ -4412,8 +4440,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             const periodoStillValid = periodoInfo?.enTiempo ?? false
             const hasPermiso = !!permisoActivo
             const isEditingBorrador = !!editSolicitud?.id
-            const _periodoMin = dmyToIso(periodoVigenciaRange.min)
-            const _periodoMax = dmyToIso(periodoVigenciaRange.max)
+            const _periodoMin = periodoRango?.inicio
+            const _periodoMax = periodoRango?.fin
             const _reglaFinMax = getVigenciaFinLimiteIso(formData.vigenciaInicio ?? "")
             const _inicio31DicIso = isoToDate(formData.vigenciaInicio ?? "")
             const _inicio31Dic = !!_inicio31DicIso && esInicioSinRangoValido(_inicio31DicIso)
@@ -4421,7 +4449,6 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               (!_periodoMin || formData.vigenciaInicio >= _periodoMin) &&
               (!_periodoMax || formData.vigenciaInicio <= _periodoMax)
             const _finOk = !!formData.vigenciaFin &&
-              (!_periodoMax || formData.vigenciaFin <= _periodoMax) &&
               (!_reglaFinMax || formData.vigenciaFin <= _reglaFinMax) &&
               (!formData.vigenciaInicio || formData.vigenciaFin >= formData.vigenciaInicio)
             const vigenciaOk = !_inicio31Dic && (hasPermiso || isEditingBorrador
@@ -4443,7 +4470,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     <span className="text-sm text-[#DC2626]">{errorBorrador}</span>
                   </div>
                 )}
-                {/* {esRenovacion !== "si" && camposFaltantes.length > 0 && (
+                {esRenovacion !== "si" && camposFaltantes.length > 0 && (
                   <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
                     <AlertCircle className="h-4 w-4 shrink-0 text-[#D97706] mt-0.5" />
                     <div className="flex flex-col gap-0.5">
@@ -4455,7 +4482,15 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                       </span>
                     </div>
                   </div>
-                )} */}
+                )}
+                {!canSend && !enviando && !guardandoBorrador && camposOk && !vigenciaOk && (
+                  <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#F5A800] bg-[#FFFBEB] px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-[#D97706] mt-0.5" />
+                    <span className="text-sm text-[#374151]">
+                      Revisa la Vigencia: la fecha de inicio debe caer dentro del periodo seleccionado y la de término no debe exceder el límite permitido.
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
                   <Button variant="default" onClick={handleBack} disabled={enviando || guardandoBorrador}>
                     Anterior

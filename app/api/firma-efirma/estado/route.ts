@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
         tipo: f.tipo,
         bandeja: f.bandeja,
         firmado: f.firmado,
+        verificado: f.verificado,
         fecha_firma: f.fecha_firma,
         nombre: f.nombre ?? f.usuario?.nombre ?? null,
         rfc:    f.rfc    ?? f.usuario?.rfc    ?? null,

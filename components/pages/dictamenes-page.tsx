@@ -73,10 +73,6 @@ function formatearFolio(folio: string | null | undefined): string {
   if (!folio || folio === "—") return "—"
   const matchLegacy = folio.match(/^(\d+)\/(\d{1,2})\/(\d{4})$/)
   if (matchLegacy) return `${matchLegacy[1]}/${matchLegacy[2].padStart(2, "0")}/${matchLegacy[3]}`
-  const matchDictamen = folio.match(/^[A-Z]{2,3}-(\d+)-(\d{4})$/)
-  if (matchDictamen) {
-    return `${matchDictamen[1].padStart(3, "0")}-${matchDictamen[2]}`
-  }
   return folio
 }
 
@@ -268,20 +264,20 @@ const DictamenViewModal = React.memo(({
             >
               Cerrar
             </Button>
-            <Button variant="default" size="sm" onClick={handleDownload} disabled={isDownloading} className="gap-1.5 min-w-[130px]">
+            <Button variant="vino" size="sm" onClick={handleDownload} disabled={isDownloading} className="gap-1.5 min-w-[130px]">
               {isDownloading && <Loader2 className="h-4 w-4 animate-spin" />}
               {isDownloading ? "Generando..." : "Descargar"}
             </Button>
-            {dictamen.tipoFirma === "electronica" && (
+            {/* {dictamen.tipoFirma === "electronica" && (
               <Button
                 size="sm"
-                variant="primary"
+                variant="vino"
                 onClick={() => setShowFirmas(!showFirmas)}
                 className="gap-1.5"
               >
                 {showFirmas ? "Ocultar Firmas" : "Editar Firmas"}
               </Button>
-            )}
+            )} */}
           </div>
         </CardHeader>
         <div className="flex flex-1 overflow-hidden">

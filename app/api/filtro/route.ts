@@ -52,6 +52,22 @@ async function generarFolioDictamen(tipo: "dictamen" | "opinion"): Promise<strin
 
 const FOLIO_RECEPCION_MANUAL_REGEX = /^[A-Z]{2}-\d{3}-\d{4}$/
 
+const MESES_CODE = ["EN","FE","MR","AB","MY","JN","JL","AG","SE","OC","NO","DI"]
+
+async function sincronizarConsecutivoFolioRecepcion(folio: string): Promise<void> {
+  const match = folio.match(/^([A-Z]{2})-(\d{3})-(\d{4})$/)
+  if (!match) return
+  const mesNum         = MESES_CODE.indexOf(match[1]) + 1
+  const consecutivoNum = parseInt(match[2], 10)
+  const anioNum        = parseInt(match[3], 10)
+  if (mesNum <= 0) return
+  await prisma.consecutivo_folio.upsert({
+    where:  { tipo_mes_anio: { tipo: "FREC", mes: mesNum, anio: anioNum } },
+    update: { consecutivo: consecutivoNum },
+    create: { tipo: "FREC", mes: mesNum, anio: anioNum, consecutivo: consecutivoNum },
+  })
+}
+
 async function generarSiguienteFolioRecepcion(mes: number, anio: number): Promise<string> {
   const registro = await prisma.consecutivo_folio.upsert({
     where:  { tipo_mes_anio: { tipo: "FREC", mes, anio } },
@@ -782,6 +798,7 @@ export async function PATCH(req: NextRequest) {
           )
         }
         folioRecepcionAsignar = folioRecepcion
+        try { await sincronizarConsecutivoFolioRecepcion(folioRecepcion) } catch {  }
       } else {
         const ahora = new Date()
         folioRecepcionAsignar = await generarSiguienteFolioRecepcion(ahora.getMonth() + 1, ahora.getFullYear())

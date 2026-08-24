@@ -854,43 +854,69 @@ function FolioRecepcionCard({
 // Regla 11: para solicitudes extemporáneas, el folio de recepción ya no se
 // autogenera al abrir el expediente — se captura aquí, en el momento en que
 // el Revisor confirma la aprobación (ver handleAprobar/executeAprobarPending).
-function AprobarFolioRecepcionModal({ open, onClose, onConfirm, guardando }: {
+function AprobarFolioRecepcionModal({ open, onClose, onConfirm, guardando, defaultMes, defaultAnio }: {
   open: boolean
   onClose: () => void
   onConfirm: (folio: string) => void
   guardando: boolean
+  defaultMes?: number
+  defaultAnio?: number
 }) {
-  const today      = new Date()
-  const mesNumHoy  = today.getMonth() + 1
-  const anioNumHoy = today.getFullYear()
-  const mesCodeHoy = INICIALES_MES_MAP[String(mesNumHoy).padStart(2, "0")] ?? "XX"
-  const [ultimoFrec,   setUltimoFrec]   = useState<number | null>(null)
-  const [siguienteExt, setSiguienteExt] = useState<number | null>(null)
+  const today = new Date()
+  const [mes,  setMes]  = useState(defaultMes  ?? today.getMonth() + 1)
+  const [anio, setAnio] = useState(defaultAnio ?? today.getFullYear())
+  const [siguiente, setSiguiente] = useState<number | null>(null)
   useEffect(() => {
     if (!open) return
-    setUltimoFrec(null)
-    setSiguienteExt(null)
-    fetch(`/api/folio-recepcion/siguiente?mes=${mesNumHoy}&anio=${anioNumHoy}`)
+    setMes(defaultMes ?? today.getMonth() + 1)
+    setAnio(defaultAnio ?? today.getFullYear())
+  }, [open, defaultMes, defaultAnio])
+  useEffect(() => {
+    if (!open) return
+    setSiguiente(null)
+    fetch(`/api/folio-recepcion/siguiente?mes=${mes}&anio=${anio}`)
       .then(r => r.json())
-      .then(json => { if (json.ok) setUltimoFrec(json.ultimo) })
+      .then(json => { if (json.ok) setSiguiente(json.siguiente) })
       .catch(() => {})
-    fetch(`/api/folio-recepcion/siguiente?mes=${mesNumHoy}&anio=${anioNumHoy}&ext=true`)
-      .then(r => r.json())
-      .then(json => { if (json.ok) setSiguienteExt(json.siguiente) })
-      .catch(() => {})
-  }, [open, mesNumHoy, anioNumHoy])
-  const listo        = ultimoFrec !== null && siguienteExt !== null
-  const folioPreview = listo ? `${mesCodeHoy}-${String(ultimoFrec).padStart(3, "0")}-${siguienteExt}` : null
+  }, [open, mes, anio])
+  const mesCode       = MESES_RECEPCION.find(m => m.num === mes)?.code ?? "XX"
+  const folioPreview  = siguiente !== null ? `${mesCode}-${String(siguiente).padStart(3, "0")}-${anio}` : null
+  const aniosDisponibles = Array.from(new Set([today.getFullYear(), today.getFullYear() - 1, anio]))
+    .sort((a, b) => b - a)
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Capturar Folio de Recepción</DialogTitle>
           <DialogDescription>
-            Esta solicitud es extemporánea — captura el folio de recepción que se le asignará al aprobar.
+            Esta solicitud es extemporánea — selecciona el mes y el año del periodo al que corresponde y confirma el folio que se le asignará al aprobar.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 px-6 pb-2">
+          <div className="flex gap-3">
+            <div className="flex flex-col gap-1 flex-1">
+              <span className="text-xs text-muted-foreground">Mes</span>
+              <Select value={String(mes)} onValueChange={v => setMes(Number(v))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MESES_RECEPCION.map(m => (
+                    <SelectItem key={m.num} value={String(m.num)}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-28">
+              <span className="text-xs text-muted-foreground">Año</span>
+              <Select value={String(anio)} onValueChange={v => setAnio(Number(v))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {aniosDisponibles.map(a => (
+                    <SelectItem key={a} value={String(a)}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div className="rounded-md bg-muted/50 px-3 py-2">
             <span className="text-xs text-muted-foreground">Folio de recepción: </span>
             <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview ?? "Cargando…"}</span>
@@ -1486,6 +1512,8 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         onClose={() => setShowFolioRecepcionModal(false)}
         onConfirm={executeAprobarFolioRecepcion}
         guardando={guardando}
+        defaultMes={solicitud?.periodo ? parseInt(solicitud.periodo.split("/")[0], 10) || undefined : undefined}
+        defaultAnio={solicitud?.periodo ? parseInt(solicitud.periodo.split("/")[1], 10) || undefined : undefined}
       />
       <ConfirmAlertDialog
         open={showFirmaSeleccionConfirm}
@@ -2071,6 +2099,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         folioJustificacion={solicitud.folioJustificacion ?? `SOL-${solicitud.id}`}
         folioRecepcion={solicitud.folioRecepcion ?? null}
         folioDictamen={solicitud.folioDictamen ? formatearFolio(solicitud.folioDictamen) : null}
+        regimen={solicitud.regimen}
         modalidadFirma="electronica"
         currentUserId={(user as any)?.id ?? ""}
         onGenerarPdf={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion ?? `SOL-${solicitud.id}`)}

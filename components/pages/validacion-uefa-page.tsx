@@ -1141,15 +1141,14 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, g
       )}
 
       {isPendienteFirma && (
-        <Card className="border-2 border-accent/30 bg-accent/5 shadow-sm">
-          <CardContent className="flex items-center gap-3 py-4">
-            <Stamp className="h-5 w-5 text-accent-foreground" />
-            <div>
-              <span className="text-sm font-medium text-accent-foreground">Pendiente de Firma</span>
-              <p className="text-xs text-muted-foreground">El Revisor aprobó la justificación. Debe firmarla para continuar al paso de Validación Final.</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-[#ecf2ff] px-4 py-3">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3266cb]">
+            <span className="text-[12px] font-bold text-white leading-none">i</span>
+          </div>
+          <span className="text-sm font-light text-[#3266cb]">
+            <strong className="font-medium">Pendiente de Firma</strong> — El Revisor aprobó la justificación. Debe firmarla para continuar al paso de Validación Final.
+          </span>
+        </div>
       )}
 
       {isEnProceso && (
@@ -1370,9 +1369,6 @@ export function ValidacionUefaPage() {
   }, [observarTargetId, user])
 
   const handleFirmarJustificacion = useCallback(async (id: number) => {
-    // No se hace PATCH de estado aquí: el flujo de firma electrónica (FirmaElectronicaTabs)
-    // ya avanza el proceso de firma internamente. Forzar el estado aquí lo mandaba
-    // prematuramente a Emisión aunque aún faltaran firmantes.
     showToast("success", "Firma registrada", "Tu firma quedó registrada correctamente.")
     setSelectedId(null)
     await cargarSolicitudes()
@@ -1471,6 +1467,7 @@ export function ValidacionUefaPage() {
           folioJustificacion={firmaTargetSol.folioJustificacion}
           folioRecepcion={firmaTargetSol.folio && firmaTargetSol.folio !== `SOL-${firmaTargetSol.id}` ? firmaTargetSol.folio : null}
           folioDictamen={firmaTargetSol.numeroDictamen ?? (firmaTargetSol.folioDictamen ? formatearFolio(firmaTargetSol.folioDictamen) : null)}
+          regimen={firmaTargetSol.regimen}
           modalidadFirma={firmaTargetSol.modalidadFirma}
           currentUserId={(user as any)?.id ?? ""}
           currentUserRol={(user as any)?.rol ?? ""}

@@ -35,6 +35,8 @@ interface Props {
   /** Si true, abre directo en el paso 2 (sellado + emitir). Útil cuando el usuario
    *  ya firmó pero abandonó el flujo y vuelve a entrar para terminar de emitir. */
   iniciarEnSellado?: boolean
+  /** Firmantes previos ya firmados (nombre + cargo), para revisar y corregir
+   *  errores de captura antes de continuar. Solo aplica al paso de Verificación. */
   onFirmado?: () => void
 }
 
@@ -50,7 +52,6 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
   const [cargoHabilitado, setCargoHabilitado] = useState(false)
   const [confirmEmitirAbierto, setConfirmEmitirAbierto] = useState(false)
   const [confirmFirmarYEmitirAbierto, setConfirmFirmarYEmitirAbierto] = useState(false)
-  const [ultimoCargo, setUltimoCargo] = useState<string | null>(null)
   /** En el flujo del emisor: pasa a true cuando ya se firmó electrónicamente
    *  pero aún falta subir el sellado y emitir. */
   const [firmaCompleta, setFirmaCompleta] = useState(!!iniciarEnSellado)
@@ -70,16 +71,16 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
     let cancel = false
     fetch(`/api/firma-efirma/ultimo-cargo?usuarioId=${encodeURIComponent(usuarioId)}`, { cache: "no-store" })
       .then(r => r.json())
-      .then(j => { if (!cancel && j?.ok) setUltimoCargo(j.cargo ?? null) })
+      .then(j => {
+        if (cancel || !j?.ok) return
+        if (j.cargo) {
+          setCargo(j.cargo.toUpperCase())
+          setCargoHabilitado(true)
+        }
+      })
       .catch(() => { /* noop */ })
     return () => { cancel = true }
   }, [open, usuarioId])
-
-  const usarUltimoCargo = () => {
-    if (!ultimoCargo) return
-    if (!cargoHabilitado) setCargoHabilitado(true)
-    setCargo(ultimoCargo.toUpperCase())
-  }
 
   const aceptarAvisoCargo = () => {
     setAvisoCargoAbierto(false)
@@ -274,13 +275,13 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
       onClose={cerrarExito}
     />
     <Dialog open={open && !exito} onOpenChange={v => { if (!v) { reset(); onClose() } }}>
-      <DialogContent className="w-[90vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[90vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2 pr-8">
+            <Shield className="h-5 w-5 text-primary shrink-0" />
             {titulo ?? "Firmar con tu e.firma"}
           </DialogTitle>
-          {subtitulo && <p className="text-xs text-muted-foreground mt-0.5">{subtitulo}</p>}
+          {subtitulo && <p className="text-xs text-muted-foreground mt-0.5 pl-7">{subtitulo}</p>}
         </DialogHeader>
 
         {firmaCompleta ? (
@@ -368,12 +369,12 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               />
               {camposInvalidos.cargo ? (
                 <p className="text-[10px] text-support-error flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
+                  <AlertCircle className="h-3 w-3 shrink-0" />
                   Este campo es obligatorio
                 </p>
               ) : (
-                <p className="text-[10px] text-support-warning flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
+                <p className="text-[10px] text-support-warning flex items-start gap-1">
+                  <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
                   Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
                 </p>
               )}
@@ -432,15 +433,15 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               />
               {camposInvalidos.password && (
                 <p className="text-[10px] text-support-error flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
+                  <AlertCircle className="h-3 w-3 shrink-0" />
                   Este campo es obligatorio
                 </p>
               )}
             </div>
 
             {error && (
-              <p className="text-xs text-support-error flex items-center gap-1">
-                <AlertCircle className="h-3.5 w-3.5" />
+              <p className="text-xs text-support-error flex items-start gap-1">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                 {error}
               </p>
             )}

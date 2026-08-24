@@ -9,6 +9,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Falta usuarioId" }, { status: 400 })
     }
 
+    // El cargo capturado en el perfil del usuario (ver Usuarios > Cargo) es la
+    // fuente preferida: es el que un administrador dio de alta a propósito para
+    // que se precargue al firmar. Solo si el usuario no tiene cargo en su
+    // perfil caemos al último cargo que usó en una firma anterior.
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { cargo: true },
+    })
+    if (usuario?.cargo) {
+      return NextResponse.json({ ok: true, cargo: usuario.cargo, fecha: null })
+    }
+
     const ultima = await prisma.firma_firmante.findFirst({
       where: {
         usuario_id: usuarioId,
