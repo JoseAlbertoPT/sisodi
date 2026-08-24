@@ -32,8 +32,15 @@ import {
   AlertTriangle, ListFilter, Loader2,
   ArrowLeft,
   FileText, History, UserCheck, ClipboardCheck, Stamp, X, Inbox,
+  MoreHorizontal, Upload,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { useAuth } from "@/lib/auth-context"
@@ -1292,29 +1299,15 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       .catch(() => {})
     return () => { aborted = true }
   }, [filtro, user])
-  useEffect(() => {
-    const userId = (user as any)?.id ?? ""
-    if (!userId) return
-    const bandejaActual = filtro === 1 ? "revision" : filtro === 2 ? "validacion" : "emision"
-    let aborted = false
-    fetch(`/api/firma-efirma/progreso?usuarioId=${encodeURIComponent(userId)}`, { cache: "no-store" })
-      .then(r => r.json())
-      .then(json => {
-        if (aborted || !json.ok) return
-        const procesos = json.procesos ?? []
-        const count = procesos.filter((p: any) => {
-          if (bandejaActual === "emision" && p.pendiente_emision_por_mi) return true
-          if (!p.mi_firmante_pendiente || p.mi_firmante_pendiente.bandeja !== bandejaActual) return false
-          const miFirmante = p.firmantes.find((f: any) => f.id === p.mi_firmante_pendiente.id)
-          if (!miFirmante) return false
-          const siguiente = [...p.firmantes].filter((f: any) => !f.firmado).sort((a: any, b: any) => a.orden - b.orden)[0]
-          return !!siguiente && miFirmante.orden === siguiente.orden
-        }).length
-        setPendientesFirmaCount(count)
-      })
-      .catch(() => {})
-    return () => { aborted = true }
-  }, [filtro, user])
+  // pendientesFirmaCount se llena exclusivamente vía onCountChange desde
+  // PendientesFirmaPanel (línea más abajo) — antes había un segundo useEffect
+  // aquí que volvía a pedir /api/firma-efirma/progreso con un criterio más
+  // estricto ("solo si es mi turno ahora mismo", en vez de "todo lo pendiente
+  // en esta bandeja"). Los dos `setPendientesFirmaCount` competían y el que
+  // resolviera último ganaba la carrera, así que el badge de "Pendiente de
+  // firma" a veces mostraba un número menor al de filas que realmente se ven
+  // en la tabla (ej. 5 en el badge con 11 filas visibles). Se quita el
+  // duplicado para que el badge y la tabla usen siempre el mismo conteo.
 
   const handleAprobar = useCallback(async (id: string, revisorId?: string) => {
     setGuardando(true)
@@ -1413,22 +1406,47 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
     finally { setGuardando(false) }
   }, [user])
 
+  // Independiente de `activeTab` (a diferencia de `filtered`) para que
+  // PendientesFirmaPanel pueda montarse siempre y reportar un conteo
+  // actualizado incluso cuando el usuario todavía no entra a la pestaña
+  // "Pendiente de firma" — si se ligaba a `filtered`/`activeTab`, el badge se
+  // quedaba con el último valor visto (o 0) hasta que se abría esa pestaña.
+  const autografaPendientesFirma = useMemo(
+    () => filtro === 3
+      ? solicitudes.filter(s => classifySolicitud(s, filtro) === "pendientes_firma" && s._raw?.modalidad_firma === "autografa")
+      : [],
+    [solicitudes, filtro],
+  )
+
   const tabCounts = useMemo(() => {
     const c: Record<TabKey, number> = {
       nuevas: 0, correcciones: 0, revision: 0, observadas: 0,
       pendientes_asignacion: 0, en_validacion: 0, pendientes_firma: 0,
       todas: 0, solicitudes: 0,
     }
-    c.todas = solicitudes.filter(s => classifySolicitud(s, filtro) !== "pendientes_firma").length
+    // Para filtro 3 (Emisión), la pestaña "Todas" también excluye lo clasificado
+    // como "todas" (solicitudes ya emitidas/terminales que classifySolicitud usa
+    // como cajón de sastre) — ver el mismo filtro en `filtered` más abajo. Sin
+    // este exclude aquí, el badge contaba esas solicitudes terminales aunque la
+    // tabla nunca las muestra, mostrando un número mayor al de filas visibles.
+    c.todas = solicitudes.filter(s => {
+      const tab = classifySolicitud(s, filtro)
+      return tab !== "pendientes_firma" && !(filtro === 3 && tab === "todas")
+    }).length
     solicitudes.forEach(s => {
       const tab = classifySolicitud(s, filtro)
       if (tab !== "todas") c[tab]++
     })
     if (filtro === 3) c.nuevas = solicitudes.filter(s => classifySolicitud(s, filtro) !== "todas").length
-    c.pendientes_firma = pendientesFirmaCount
+    // pendientesFirmaCount (de PendientesFirmaPanel/api/firma-efirma/progreso) solo
+    // cubre firma electrónica. Autógrafa (filtro 3) no tiene firma_firmante y se
+    // muestra como filas extra dentro de ese mismo panel (ver autografaPendientesFirma
+    // más abajo) — hay que sumarla aquí también o el badge se queda corto frente a lo
+    // que la pestaña realmente muestra.
+    c.pendientes_firma = pendientesFirmaCount + autografaPendientesFirma.length
     c.solicitudes = solicitudesCount
     return c
-  }, [solicitudes, filtro, pendientesFirmaCount, solicitudesCount])
+  }, [solicitudes, filtro, pendientesFirmaCount, solicitudesCount, autografaPendientesFirma])
 
   const filtered = useMemo(() =>
     solicitudes
@@ -1436,6 +1454,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         const tab = classifySolicitud(s, filtro)
         if (filtro === 3 && tab === "todas") return false
         if (filtro === 3 && activeTab === "nuevas") return true
+        if (activeTab === "pendientes_firma") return false
         if (activeTab !== "todas") return tab === activeTab
         if (tab === "pendientes_firma") return false
         if (filtro === 2) return tab !== "pendientes_asignacion"
@@ -1578,11 +1597,21 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         </Select>
       </div>
 
-      {activeTab === "pendientes_firma" ? (
-        <div className="rounded-2xl bg-background border border-border shadow-sm overflow-hidden">
-          <PendientesFirmaPanel filtro={filtro} currentUserId={(user as any)?.id ?? ""} onCountChange={setPendientesFirmaCount} />
-        </div>
-      ) : (
+      {/* Montado siempre (no solo cuando esta pestaña está activa) para que
+          onCountChange reporte un conteo actualizado desde el primer momento
+          — si solo se montaba al entrar a la pestaña, el badge se quedaba
+          pegado en el último valor visto (o 0) hasta que el usuario ya había
+          entrado ahí, justo el momento en el que el badge deja de servir. */}
+      <div className={`rounded-2xl bg-background border border-border shadow-sm overflow-hidden ${activeTab === "pendientes_firma" ? "" : "hidden"}`}>
+        <PendientesFirmaPanel
+          filtro={filtro}
+          currentUserId={(user as any)?.id ?? ""}
+          onCountChange={setPendientesFirmaCount}
+          autografaItems={autografaPendientesFirma}
+          onOpenReview={onOpenReview}
+        />
+      </div>
+      {activeTab !== "pendientes_firma" && (
       loading ? (
         <div className="rounded-2xl bg-background border border-border shadow-sm">
           <div className="flex items-center justify-center py-12 gap-3">
@@ -1710,6 +1739,32 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                   <FileSearch className="h-4 w-4" />Revisar
                                 </Button>
                               )
+                            ) : filtro === 3 && tab === "pendientes_firma" ? (
+                              // Autógrafa: "Ver" y "Subir" llevan al mismo detalle — al
+                              // estar en "Pendiente Firma Dictamen" (isAprobado), la
+                              // pestaña Emisión se auto-selecciona ahí y ya muestra el
+                              // panel de Descargar/Subir (ver revision-do-page.tsx).
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 -ml-3">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  <DropdownMenuItem
+                                    onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
+                                    className="gap-2 cursor-pointer"
+                                  >
+                                    <Eye className="h-4 w-4" />Ver
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => { setSelectedId(sol.id); onOpenReview?.(sol.id, filtro) }}
+                                    className="gap-2 cursor-pointer"
+                                  >
+                                    <Upload className="h-4 w-4" />Subir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             ) : filtro === 1 && sol.estado.toLowerCase().includes("en revision revisor") ? (
                               <Button
                                 variant="ghost" size="sm"

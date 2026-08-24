@@ -180,6 +180,54 @@ async function resolverNombresFirmantes(
   return out;
 }
 
+// Firma autógrafa (física) no pasa por firma_proceso/firma_firmante — esas
+// tablas solo existen para el portal de firma electrónica. Ahí la única
+// constancia de quién aprobó cada etapa (UEFA/Revisó/Verificó/Emitió) queda
+// en historial_solicitud: la fila que saca a la solicitud de "En Validacion
+// Justificaciones" (UEFA) / "En Revision Revisor" / "En Verificacion Final" /
+// "En Revision Emisor" trae el usuario_id de quien aprobó esa etapa. Se usa
+// la más reciente por si hubo ciclos de observación/reenvío.
+type CampoFirmaNombre = "firmaRevisoNombre" | "firmaDictRevisoNombre" | "firmaDictVerificoNombre" | "firmaDictEmitioNombre"
+type CampoFirmaCargo = "firmaRevisoCargo" | "firmaDictRevisoCargo" | "firmaDictVerificoCargo" | "firmaDictEmitioCargo"
+const ETAPA_NOMBRE_A_CAMPO: Record<string, { nombre: CampoFirmaNombre; cargo: CampoFirmaCargo }> = {
+  "en validacion justificaciones": { nombre: "firmaRevisoNombre",     cargo: "firmaRevisoCargo" },
+  "en revision revisor":           { nombre: "firmaDictRevisoNombre",   cargo: "firmaDictRevisoCargo" },
+  "en verificacion final":         { nombre: "firmaDictVerificoNombre", cargo: "firmaDictVerificoCargo" },
+  "en revision emisor":            { nombre: "firmaDictEmitioNombre",   cargo: "firmaDictEmitioCargo" },
+}
+
+async function resolverNombresFirmantesAutografa(
+  solicitudId: number,
+  base: FirmaNames,
+): Promise<FirmaNames> {
+  const out: FirmaNames = { ...base };
+  const pendientes = Object.values(ETAPA_NOMBRE_A_CAMPO).filter(
+    ({ nombre }) => !out[nombre],
+  );
+  if (pendientes.length === 0) return out;
+
+  const historial = await prisma.historial_solicitud.findMany({
+    where: { solicitud_id: solicitudId },
+    include: {
+      estado_historial_solicitud_estado_anterior_idToestado: { select: { nombre: true } },
+      usuario: { select: { nombre: true, cargo: true } },
+    },
+    orderBy: { fecha: "desc" },
+  });
+
+  for (const h of historial) {
+    const estadoAnterior = (
+      h.estado_historial_solicitud_estado_anterior_idToestado?.nombre ?? ""
+    ).toLowerCase();
+    const campos = ETAPA_NOMBRE_A_CAMPO[estadoAnterior];
+    if (!campos || out[campos.nombre]) continue;
+    out[campos.nombre] = h.usuario?.nombre || "";
+    if (h.usuario?.cargo) out[campos.cargo] = h.usuario.cargo;
+  }
+
+  return out;
+}
+
 interface PdfOverrides {
   vigenciaInicio?: string
   vigenciaFin?: string
@@ -250,17 +298,24 @@ async function buildJustificacionBufferDesdeCatalogo(
   return { buffer: pdfFinal, filename, sol: null };
 }
 
-export async function buildJustificacionBuffer(
-  solicitudId: string | null,
+// Datos ya resueltos (folio, firmas, contenido) de una justificación, separados
+// de su renderizado a PDF (react-pdf) para que buildJustificacionBuffer no mezcle
+// la consulta/armado de datos con el paso de renderizado.
+export interface JustificacionResuelta {
+  kind: "nombramiento" | "honorarios";
+  data: JustificacionNombramientoData | JustificacionData;
+  folio: string;
+  filename: string;
+  sol: any;
+}
+
+export async function resolveJustificacionData(
+  solicitudId: string,
   firmasInput: FirmaNames = {},
   soloFirmanteId: number | null = null,
   overrides: PdfOverrides = {},
   sinFirmas = false,
-  catalogoId: string | null = null,
-): Promise<{ buffer: Buffer | Uint8Array; filename: string; sol: any } | null> {
-  if (!solicitudId) {
-    return catalogoId ? buildJustificacionBufferDesdeCatalogo(catalogoId, overrides) : null;
-  }
+): Promise<JustificacionResuelta | null> {
   let firmas: FirmaNames = { ...firmasInput };
   {
     const sol = await prisma.solicitud.findUnique({
@@ -314,6 +369,12 @@ export async function buildJustificacionBuffer(
       return null;
     }
 
+    const folio =
+      sol.folio_recepcion ??
+      sol.folio_justificacion ??
+      String(sol.id);
+    const filename = `Justificacion_${folio.replace(/\//g, "-")}`;
+
     // Si esta solicitud nació de una reutilización del catálogo (creada por
     // /api/catalogo-justificaciones/procesar), calcula su posición cronológica
     // (1ª, 2ª, 3ª…) entre todas las reutilizaciones del mismo registro del
@@ -335,6 +396,9 @@ export async function buildJustificacionBuffer(
 
     if (!sinFirmas) {
       firmas = await resolverNombresFirmantes(Number(solicitudId), firmas, soloFirmanteId);
+      if ((sol as any).modalidad_firma === "autografa") {
+        firmas = await resolverNombresFirmantesAutografa(Number(solicitudId), firmas);
+      }
     }
 
     const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
@@ -344,8 +408,6 @@ export async function buildJustificacionBuffer(
       : sol.tipo_administracion === 'centralizada' ? 'centralizada'
       : (sol as any).usuario?.organo_centralizado ? 'centralizada'
       : 'paraestatal'
-
-    let pdfElement: React.ReactElement;
 
     if (sol.tipo_solicitud === "nombramiento" || (sol.regimen && sol.regimen.toLowerCase().includes("nombramiento"))) {
       const dataNombramiento: JustificacionNombramientoData = {
@@ -415,10 +477,7 @@ export async function buildJustificacionBuffer(
         incluirPaginaDictamen: tieneDictamen,
       };
 
-      pdfElement = React.createElement(
-        PlantillaNombramientoDeterminado as React.FC<any>,
-        { data: dataNombramiento },
-      );
+      return { kind: "nombramiento", data: dataNombramiento, folio, filename, sol };
     } else {
       const dataHonorarios: JustificacionData = {
         tipoAdministracion,
@@ -482,76 +541,89 @@ export async function buildJustificacionBuffer(
         incluirPaginaDictamen: tieneDictamen,
       };
 
-      pdfElement = React.createElement(
-        PlantillaJustificacionServicios as React.FC<any>,
-        { data: dataHonorarios },
-      );
+      return { kind: "honorarios", data: dataHonorarios, folio, filename, sol };
     }
-
-    const folio =
-      sol.folio_recepcion ??
-      sol.folio_justificacion ??
-      String(sol.id);
-
-    const filename = `Justificacion_${folio.replace(/\//g, "-")}.pdf`;
-
-    const pdfStream = await renderToStream(pdfElement as any);
-
-    let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
-    const esFirmaElectronica = ((sol as any).modalidad_firma ?? "electronica") !== "autografa";
-    if (!sinFirmas && esFirmaElectronica) try {
-      const bypass = process.env.EFIRMA_BYPASS === "true";
-
-      const firmaProceso = await prisma.firma_proceso.findUnique({
-        where: { solicitud_id: Number(solicitudId) },
-        include: bypass
-          ? {
-              firmantes: {
-                orderBy: { orden: "asc" },
-                ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
-              },
-            }
-          : undefined,
-      });
-
-      let firmasPortal: FirmaPortal[] = [];
-
-      if (bypass) {
-        const dummyFirmantes = ((firmaProceso as any)?.firmantes ?? []).filter((f: any) => f.firmado);
-        firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
-      } else if (firmaProceso?.proceso_id) {
-        const estado: any = await efirmaClient.estado(firmaProceso.proceso_id);
-        firmasPortal = Array.isArray(estado?.firmas)
-          ? estado.firmas.map((f: any) => ({
-              usuario: f.usuario ?? "",
-              rolFirmante: f.rolFirmante ?? null,
-              responsable: f.responsable ?? null,
-              selloDigital: f.selloDigital ?? null,
-              estampadoTiempo: f.estampadoTiempo ?? null,
-              selloEstampadoTiempo: f.selloEstampadoTiempo ?? null,
-              noCertificado: f.noCertificado ?? null,
-              noCertificadoGEM: f.noCertificadoGEM ?? null,
-              rfcGEM: f.rfcGEM ?? null,
-              urlValidacion: f.urlValidacion ?? null,
-              firmadoEn: f.firmadoEn ?? null,
-            }))
-          : [];
-      }
-
-      if (firmasPortal.length > 0) {
-        pdfFinal = await agregarConstanciaFirma({
-          pdfBase: pdfFinal as Buffer,
-          firmas: firmasPortal,
-          nombreArchivo: filename,
-          folio,
-        });
-      }
-    } catch (errFirma) {
-      console.error("[pdf/justificacion] Error agregando constancia de firma:", errFirma);
-    }
-
-    return { buffer: pdfFinal, filename, sol };
   }
+}
+
+export async function buildJustificacionBuffer(
+  solicitudId: string | null,
+  firmasInput: FirmaNames = {},
+  soloFirmanteId: number | null = null,
+  overrides: PdfOverrides = {},
+  sinFirmas = false,
+  catalogoId: string | null = null,
+): Promise<{ buffer: Buffer | Uint8Array; filename: string; sol: any } | null> {
+  if (!solicitudId) {
+    return catalogoId ? buildJustificacionBufferDesdeCatalogo(catalogoId, overrides) : null;
+  }
+
+  const resuelto = await resolveJustificacionData(solicitudId, firmasInput, soloFirmanteId, overrides, sinFirmas);
+  if (!resuelto) return null;
+
+  const { data, folio, sol } = resuelto;
+  const filename = `${resuelto.filename}.pdf`;
+
+  const pdfElement = resuelto.kind === "nombramiento"
+    ? React.createElement(PlantillaNombramientoDeterminado as React.FC<any>, { data })
+    : React.createElement(PlantillaJustificacionServicios as React.FC<any>, { data });
+
+  const pdfStream = await renderToStream(pdfElement as any);
+
+  let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
+  const esFirmaElectronica = ((sol as any).modalidad_firma ?? "electronica") !== "autografa";
+  if (!sinFirmas && esFirmaElectronica) try {
+    const bypass = process.env.EFIRMA_BYPASS === "true";
+
+    const firmaProceso = await prisma.firma_proceso.findUnique({
+      where: { solicitud_id: Number(solicitudId) },
+      include: bypass
+        ? {
+            firmantes: {
+              orderBy: { orden: "asc" },
+              ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
+            },
+          }
+        : undefined,
+    });
+
+    let firmasPortal: FirmaPortal[] = [];
+
+    if (bypass) {
+      const dummyFirmantes = ((firmaProceso as any)?.firmantes ?? []).filter((f: any) => f.firmado);
+      firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
+    } else if (firmaProceso?.proceso_id) {
+      const estado: any = await efirmaClient.estado(firmaProceso.proceso_id);
+      firmasPortal = Array.isArray(estado?.firmas)
+        ? estado.firmas.map((f: any) => ({
+            usuario: f.usuario ?? "",
+            rolFirmante: f.rolFirmante ?? null,
+            responsable: f.responsable ?? null,
+            selloDigital: f.selloDigital ?? null,
+            estampadoTiempo: f.estampadoTiempo ?? null,
+            selloEstampadoTiempo: f.selloEstampadoTiempo ?? null,
+            noCertificado: f.noCertificado ?? null,
+            noCertificadoGEM: f.noCertificadoGEM ?? null,
+            rfcGEM: f.rfcGEM ?? null,
+            urlValidacion: f.urlValidacion ?? null,
+            firmadoEn: f.firmadoEn ?? null,
+          }))
+        : [];
+    }
+
+    if (firmasPortal.length > 0) {
+      pdfFinal = await agregarConstanciaFirma({
+        pdfBase: pdfFinal as Buffer,
+        firmas: firmasPortal,
+        nombreArchivo: filename,
+        folio,
+      });
+    }
+  } catch (errFirma) {
+    console.error("[pdf/justificacion] Error agregando constancia de firma:", errFirma);
+  }
+
+  return { buffer: pdfFinal, filename, sol };
 }
 
 async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null, overrides: PdfOverrides = {}, sinFirmas = false, catalogoId: string | null = null) {
@@ -590,6 +662,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const firmas: FirmaNames = {
     firmaElaboroNombre: body.firmaElaboroNombre,
+    firmaElaboroCargo: body.firmaElaboroCargo,
     firmaRevisoNombre: body.firmaRevisoNombre,
     firmaVoBoJuridicoNombre: body.firmaVoBoJuridicoNombre,
     firmaDictRevisoNombre: body.firmaDictRevisoNombre,

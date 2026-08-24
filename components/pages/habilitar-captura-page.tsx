@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Unlock, Trash2, CheckCircle2 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { useAutorizaciones, type PermisoCaptura } from "@/lib/autorizaciones-store"
 import { useCalendario } from "@/lib/calendario-store"
 import { useAuth } from "@/lib/auth-context"
@@ -33,6 +34,8 @@ export function HabilitarCapturaPage() {
   const [periodo,           setPeriodo]           = useState("")
   const [saved,             setSaved]             = useState(false)
   const [confirmRevoke, setConfirmRevoke] = useState<PermisoCaptura | null>(null)
+  const [pageActivos,      setPageActivos]      = useState(1)
+  const [pageTodosActivos, setPageTodosActivos] = useState(1)
 
   useEffect(() => {
     fetchUsuarios()
@@ -46,6 +49,8 @@ export function HabilitarCapturaPage() {
     ? getPermisosUsuario(usuarioSeleccionado.id)
     : []
   const activos = permisosUsuario.filter((p) => p.active && !p.used)
+  const activosTotalPages = Math.ceil(activos.length / ITEMS_PER_PAGE)
+  const activosPageItems  = activos.slice((pageActivos - 1) * ITEMS_PER_PAGE, pageActivos * ITEMS_PER_PAGE)
 
   const periodoOpciones = regimen === "honorarios"
     ? honorarios.map((r) => r.mes)
@@ -69,8 +74,14 @@ export function HabilitarCapturaPage() {
     setTimeout(() => setSaved(false), 2500)
   }
 
-  
+
   const todosActivos = permisos.filter((p) => p.active && !p.used)
+  const todosActivosTotalPages = Math.ceil(todosActivos.length / ITEMS_PER_PAGE)
+  const todosActivosPageItems  = todosActivos.slice((pageTodosActivos - 1) * ITEMS_PER_PAGE, pageTodosActivos * ITEMS_PER_PAGE)
+
+  useEffect(() => { setPageActivos(1) }, [usuarioSeleccionado?.id])
+  useEffect(() => { if (pageActivos > activosTotalPages) setPageActivos(Math.max(1, activosTotalPages)) }, [activosTotalPages, pageActivos])
+  useEffect(() => { if (pageTodosActivos > todosActivosTotalPages) setPageTodosActivos(Math.max(1, todosActivosTotalPages)) }, [todosActivosTotalPages, pageTodosActivos])
 
   return (
     <PageLayout title="Habilitar Captura" description="Otorga permisos de captura extemporánea a usuarios">
@@ -159,24 +170,27 @@ export function HabilitarCapturaPage() {
             ) : activos.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sin permisos activos.</p>
             ) : (
-              <div className="flex flex-col gap-2">
-                {activos.map((p, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-medium text-card-foreground">{p.regimen} · {p.periodo}</span>
-                      <span className="text-[10px] text-muted-foreground">Otorgado: {p.grantedAt} por {p.grantedBy}</span>
+              <>
+                <div className="flex flex-col gap-2">
+                  {activosPageItems.map((p, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-medium text-card-foreground">{p.regimen} · {p.periodo}</span>
+                        <span className="text-[10px] text-muted-foreground">Otorgado: {p.grantedAt} por {p.grantedBy}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmRevoke(p)}
+                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Revocar permiso"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmRevoke(p)}
-                      className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      title="Revocar permiso"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                <TablePagination currentPage={pageActivos} totalPages={activosTotalPages} onPageChange={setPageActivos} />
+              </>
             )}
           </CardContent>
         </Card>
@@ -195,7 +209,7 @@ export function HabilitarCapturaPage() {
             </CardHeader>
             <CardContent className="px-5 pb-5">
               <div className="flex flex-col gap-2">
-                {todosActivos.map((p, i) => (
+                {todosActivosPageItems.map((p, i) => (
                   <div key={i} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-xs font-medium text-card-foreground">{p.userId} — {p.regimen} · {p.periodo}</span>
@@ -212,6 +226,7 @@ export function HabilitarCapturaPage() {
                   </div>
                 ))}
               </div>
+              <TablePagination currentPage={pageTodosActivos} totalPages={todosActivosTotalPages} onPageChange={setPageTodosActivos} />
             </CardContent>
           </Card>
         </>

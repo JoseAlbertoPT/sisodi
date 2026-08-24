@@ -420,13 +420,15 @@ export function FirmaElectronicaTabs({
         <CardContent className="flex flex-col gap-3">
           {internos.map(f => (
             <div key={f.id} className="flex flex-col gap-2">
-              <FirmanteRow
-                firmante={f}
-                modo="interno"
-                esSuTurno={esSuTurno(f)}
-                esCurrent={f.usuario_id === currentUserId || (!f.usuario_id && esClaimUefaValido(f) && esSuTurno(f))}
-                onFirmar={() => setFirmandoInline(f.id)}
-              />
+              {firmandoInline !== f.id && (
+                <FirmanteRow
+                  firmante={f}
+                  modo="interno"
+                  esSuTurno={esSuTurno(f)}
+                  esCurrent={f.usuario_id === currentUserId || (!f.usuario_id && esClaimUefaValido(f) && esSuTurno(f))}
+                  onFirmar={() => setFirmandoInline(f.id)}
+                />
+              )}
               {firmandoInline === f.id && (
                 <div className="rounded-lg border border-accent-primary/30 bg-accent-primary/5 p-6 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
@@ -656,7 +658,7 @@ function VerificarExternoDialog({
 
   return (
     <Dialog open onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="w-[90vw] sm:max-w-md">
+      <DialogContent className="w-[90vw] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="pr-8">Verificar firma — {rolFirmaMostrar(firmante.rol)}</DialogTitle>
         </DialogHeader>
@@ -664,20 +666,20 @@ function VerificarExternoDialog({
         <div className="flex flex-col gap-6 py-3">
           {editando ? (
             <>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 max-w-xs mx-auto w-full">
                 <Label className="text-sm">Nombre completo</Label>
-                <Input value={nombre} onChange={e => setNombre(e.target.value)} />
+                <Input value={nombre} onChange={e => setNombre(e.target.value)} className="h-8 text-sm" />
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 max-w-xs mx-auto w-full">
                 <Label className="text-sm">Cargo / Puesto</Label>
-                <Input value={cargo} onChange={e => setCargo(e.target.value)} />
+                <Input value={cargo} onChange={e => setCargo(e.target.value)} className="h-8 text-sm" />
               </div>
               {error && (
-                <p className="text-sm text-support-error flex items-center gap-1">
+                <p className="text-sm text-support-error flex items-center gap-1 justify-center">
                   <AlertCircle className="h-3.5 w-3.5 shrink-0" />{error}
                 </p>
               )}
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-center gap-2">
                 <Button
                   variant="default"
                   disabled={guardando}
@@ -807,7 +809,7 @@ function FirmanteRow({
       )}
 
       {modo === "interno" && !firmante.firmado && esCurrent && esSuTurno && (
-        <Button size="sm" onClick={onFirmar} className="self-start gap-1.5">
+        <Button size="sm" variant="vino" onClick={onFirmar} className="self-end gap-1.5">
           Firmar mi parte
         </Button>
       )}

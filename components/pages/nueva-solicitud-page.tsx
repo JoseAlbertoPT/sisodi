@@ -3902,9 +3902,6 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       if (!periodoStillValid && !hasPermiso && !isEditingBorrador) return
       setEnviando(true); setErrorEnvio(null)
       try {
-        if (!periodoStillValid && hasPermiso && user?.id && regimenPeriodo && periodoSeleccionado) {
-          await consumirPermiso(user.id, regimenPeriodo, periodoSeleccionado)
-        }
         const usuarioId = (user as any)?.id ?? (user as any)?.uuid ?? null
         if (!usuarioId) { setErrorEnvio("No se pudo identificar al usuario."); setEnviando(false); return }
 
@@ -3930,6 +3927,13 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
           solicitudId = json.data?.id
           if (!solicitudId) { setErrorEnvio("No se pudo obtener el ID de la solicitud."); setEnviando(false); return }
           setFolioGenerado(json.folio ?? json.data?.folio_justificacion ?? json.data?.folio_recepcion ?? "")
+        }
+
+        // El permiso solo se consume una vez que la solicitud ya quedó creada/
+        // actualizada correctamente — si se consumiera antes y el registro
+        // fallara, el usuario se quedaría sin permiso y sin solicitud.
+        if (!periodoStillValid && hasPermiso && user?.id && regimenPeriodo && periodoSeleccionado) {
+          await consumirPermiso(user.id, regimenPeriodo, periodoSeleccionado)
         }
 
         if (archivosAdjuntos.length > 0 && solicitudId) {

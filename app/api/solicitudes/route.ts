@@ -2,13 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { getEstadoId } from "@/lib/estado-cache"
-import { validarVigencia } from "@/lib/vigencia"
-
-function parseDate(v: unknown): Date | null {
-  if (!v) return null
-  const d = new Date(v as string)
-  return isNaN(d.getTime()) ? null : d
-}
+import { validarVigencia, parseFechaLocal as parseDate } from "@/lib/vigencia"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 async function resolverPeriodoId(periodoId?: number, mes?: number, anio?: number): Promise<number | undefined> {

@@ -79,6 +79,22 @@ async function generarSiguienteFolioRecepcion(mes: number, anio: number): Promis
   return `${ini}-${num}-${anio}`
 }
 
+const FOLIO_DICTAMEN_MANUAL_REGEX = /^\d{2}\/\d{2}\/\d{4}$/
+
+async function sincronizarConsecutivoFolioDictamen(folio: string): Promise<void> {
+  const match = folio.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!match) return
+  const consecutivoNum = parseInt(match[1], 10)
+  const mesNum         = parseInt(match[2], 10)
+  const anioNum        = parseInt(match[3], 10)
+  if (mesNum < 1 || mesNum > 12) return
+  await prisma.consecutivo_folio.upsert({
+    where:  { tipo_mes_anio: { tipo: "FDICT", mes: mesNum, anio: anioNum } },
+    update: { consecutivo: consecutivoNum },
+    create: { tipo: "FDICT", mes: mesNum, anio: anioNum, consecutivo: consecutivoNum },
+  })
+}
+
 async function generarSiguienteFolioDictamen(mes: number, anio: number): Promise<string> {
   const registro = await prisma.consecutivo_folio.upsert({
     where:  { tipo_mes_anio: { tipo: "FDICT", mes, anio } },
@@ -698,6 +714,7 @@ export async function PATCH(req: NextRequest) {
       include: {
         estado: true,
         dictamen: true,
+        firma_proceso: { select: { archivo_firmado: true } },
         historial_solicitud: {
           include: {
             estado_historial_solicitud_estado_nuevo_idToestado: true,
@@ -743,6 +760,18 @@ export async function PATCH(req: NextRequest) {
       } else {
         const estadoActual = solicitud.estado.nombre.toLowerCase()
         if (estadoActual.includes("pendiente firma dictamen")) {
+          // No emitir sin el PDF firmado subido de vuelta: en autógrafa, "Aprobar"
+          // aquí es el mismo botón "Emitir Dictamen" que en el frontend ya se
+          // deshabilita sin archivo (ver canEmit en revision-do-page.tsx), pero esa
+          // es solo una validación de UI — sin este chequeo en el servidor, cualquier
+          // reintento/carrera podría saltar a "Emitido" y sacar la solicitud de
+          // Emisión antes de que el archivo firmado exista.
+          if ((solicitud as any).modalidad_firma === "autografa" && !(solicitud as any).firma_proceso?.archivo_firmado) {
+            return NextResponse.json(
+              { ok: false, error: "Debes subir el PDF firmado antes de emitir el dictamen." },
+              { status: 400 },
+            )
+          }
           nombreEstadoNuevo = "Emitido"
         } else if (modalidadFirma === "autografa") {
           // Firma autógrafa: todo se resuelve dentro de Emisión (descarga/sube el
@@ -784,6 +813,15 @@ export async function PATCH(req: NextRequest) {
     const asignarRevisor = filtro === 2 && nombreEstadoNuevo === estadoEnRevision(1) && revisorId
     const guardarModalidad = accion === "aprobar" && filtro === 3 && (modalidadFirma === "electronica" || modalidadFirma === "autografa")
 
+    // Una solicitud extemporánea solo puede firmarse de forma autógrafa — no
+    // se permite firma electrónica, sin importar lo que mande el cliente.
+    if (guardarModalidad && (solicitud as any).es_extemporanea && modalidadFirma !== "autografa") {
+      return NextResponse.json(
+        { ok: false, error: "Esta solicitud es extemporánea: solo se permite firma autógrafa." },
+        { status: 400 },
+      )
+    }
+
     // Regla 11: el folio de recepción se asigna en el momento en que el Revisor
     // (filtro 1) aprueba — nunca antes (ver FolioRecepcionCard, ya sin auto-asignación).
     // Si la solicitud es extemporánea, el folio debe venir capturado manualmente
@@ -811,8 +849,19 @@ export async function PATCH(req: NextRequest) {
     let folioDictamenAsignar: string | null = null
     const esPrimeraAprobacionEmision = guardarModalidad && !(solicitud as any).modalidad_firma
     if (esPrimeraAprobacionEmision && !(solicitud as any).folio_dictamen) {
-      const ahora = new Date()
-      folioDictamenAsignar = await generarSiguienteFolioDictamen(ahora.getMonth() + 1, ahora.getFullYear())
+      if ((solicitud as any).es_extemporanea) {
+        if (!folioDictamen || !FOLIO_DICTAMEN_MANUAL_REGEX.test(folioDictamen)) {
+          return NextResponse.json(
+            { ok: false, error: "Esta solicitud es extemporánea: se requiere capturar el folio de dictamen manualmente, con formato NN/MM/AAAA (ej. 02/03/2026)." },
+            { status: 400 },
+          )
+        }
+        folioDictamenAsignar = folioDictamen
+        try { await sincronizarConsecutivoFolioDictamen(folioDictamen) } catch {  }
+      } else {
+        const ahora = new Date()
+        folioDictamenAsignar = await generarSiguienteFolioDictamen(ahora.getMonth() + 1, ahora.getFullYear())
+      }
     }
 
     const solicitudActualizada = await prisma.solicitud.update({

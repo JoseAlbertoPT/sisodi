@@ -3,9 +3,13 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Download, Upload, Loader2, AlertCircle, X, CheckCircle2 } from "lucide-react"
 import { FileDropZone, FileTypeIcon } from "@/components/ui/file-drop-zone"
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog"
+import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 
 interface FirmaProceso {
   id: number
@@ -20,7 +24,6 @@ interface Props {
   solicitudId: number
   folioJustificacion: string
   currentUserId: string
-  onGenerarPdf: () => Promise<void> | void
   onFinalizar: () => Promise<void> | void
   guardandoFinal: boolean
   /** Si true, no muestra su propio botón "Enviar a Emisor" — para cuando este
@@ -36,7 +39,6 @@ export function FirmaAutografaPanel({
   solicitudId,
   folioJustificacion,
   currentUserId,
-  onGenerarPdf,
   onFinalizar,
   guardandoFinal,
   hideEnviar,
@@ -49,6 +51,29 @@ export function FirmaAutografaPanel({
   const [clearing, setClearing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showEnviarConfirm, setShowEnviarConfirm] = useState(false)
+  const [descargando, setDescargando] = useState(false)
+  const [showElaboroDialog, setShowElaboroDialog] = useState(false)
+  const [elaboroNombre, setElaboroNombre] = useState("")
+  const [elaboroCargo, setElaboroCargo] = useState("")
+  const [elaboroError, setElaboroError] = useState<string | null>(null)
+
+  const handleConfirmarDescarga = async () => {
+    if (!elaboroNombre.trim() || !elaboroCargo.trim()) {
+      setElaboroError("Nombre y cargo son obligatorios")
+      return
+    }
+    setElaboroError(null)
+    setDescargando(true)
+    try {
+      await generateJustificacionPDF(solicitudId, folioJustificacion, {
+        firmaElaboroNombre: elaboroNombre.trim(),
+        firmaElaboroCargo: elaboroCargo.trim(),
+      })
+      setShowElaboroDialog(false)
+    } finally {
+      setDescargando(false)
+    }
+  }
 
   const cargar = useCallback(async () => {
     setLoading(true); setError(null)
@@ -123,13 +148,50 @@ export function FirmaAutografaPanel({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onGenerarPdf()}
+            onClick={() => { setElaboroError(null); setShowElaboroDialog(true) }}
+            disabled={descargando}
             className="gap-1.5"
           >
-            Descargar PDF ({folioJustificacion})
+            {descargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Descargar PDF
           </Button>
         </CardContent>
       </Card>
+
+      <Dialog open={showElaboroDialog} onOpenChange={(v) => { if (!descargando) setShowElaboroDialog(v) }}>
+        <DialogContent className="w-[92vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Datos de quien elabora</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-2">
+            <p className="text-xs text-muted-foreground pl-3">
+              Nombre y cargo de la Persona Titular de la Unidad Administrativa u Organismo Auxiliar que aparecerán en el recuadro &quot;Elaboró&quot; del PDF.
+            </p>
+            <div className="flex flex-col gap-1.5 max-w-xs mx-auto w-full">
+              <Label className="text-sm">Nombre completo</Label>
+              <Input value={elaboroNombre} onChange={(e) => setElaboroNombre(e.target.value)} className="h-8 text-sm" />
+            </div>
+            <div className="flex flex-col gap-1.5 max-w-xs mx-auto w-full">
+              <Label className="text-sm">Cargo / Puesto</Label>
+              <Input value={elaboroCargo} onChange={(e) => setElaboroCargo(e.target.value)} className="h-8 text-sm" />
+            </div>
+            {elaboroError && (
+              <p className="text-sm text-support-error flex items-center gap-1 justify-center">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />{elaboroError}
+              </p>
+            )}
+            <div className="flex justify-center gap-2 pt-1">
+              <Button type="button" variant="default" onClick={() => setShowElaboroDialog(false)} disabled={descargando}>
+                Cancelar
+              </Button>
+              <Button type="button" variant="vino" onClick={handleConfirmarDescarga} disabled={descargando} className="gap-1.5">
+                {descargando && <Loader2 className="h-4 w-4 animate-spin" />}
+                Descargar PDF
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Card className="border-border py-4 gap-3">
         <CardHeader className="px-5 pb-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">

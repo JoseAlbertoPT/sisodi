@@ -2,13 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { requireCatalogoConsulta } from "@/lib/api-guard"
-import { validarVigencia } from "@/lib/vigencia"
-
-function parseDate(val: string | null | undefined): Date | null {
-  if (!val) return null
-  const d = new Date(val)
-  return isNaN(d.getTime()) ? null : d
-}
+import { validarVigencia, parseFechaLocal as parseDate } from "@/lib/vigencia"
 
 function trunc(val: string | null | undefined, max: number): string | null {
   return val ? val.substring(0, max) : null

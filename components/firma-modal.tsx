@@ -37,7 +37,6 @@ interface Props {
   modalidadFirma: "electronica" | "autografa" | null | undefined
   currentUserId: string
   currentUserRol?: string
-  onGenerarPdf: () => Promise<void> | void
   onGenerarPdfBase64: () => Promise<string>
   onFinalizar: () => Promise<void>
   guardandoFinal: boolean
@@ -49,7 +48,7 @@ interface Props {
 export function FirmaModal({
   open, onClose, solicitudId, folioJustificacion, folioRecepcion, folioDictamen, regimen, modalidadFirma,
   currentUserId, currentUserRol,
-  onGenerarPdf, onGenerarPdfBase64, onFinalizar, guardandoFinal,
+  onGenerarPdfBase64, onFinalizar, guardandoFinal,
   selladoEtapa,
 }: Props) {
   const [finalizando, setFinalizando] = useState(false)
@@ -103,7 +102,6 @@ export function FirmaModal({
               solicitudId={solicitudId}
               folioJustificacion={folioJustificacion}
               currentUserId={currentUserId}
-              onGenerarPdf={onGenerarPdf}
               onFinalizar={handleFinalizar}
               onCancelar={onClose}
               guardandoFinal={finalizando || guardandoFinal}

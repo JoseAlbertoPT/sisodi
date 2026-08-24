@@ -1,18 +1,30 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { StatusBadge, C_AZUL_REVISION, C_AZUL_REVISION_BG, C_AMARILLO, C_AMARILLO_BG } from "@/components/ui/status-badge"
-import { AlertCircle, Inbox, Stamp, Eye, MoreHorizontal } from "lucide-react"
+import { AlertCircle, Inbox, Stamp, Eye, MoreHorizontal, Upload } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { FirmarInternoDialog } from "@/components/firmar-interno-dialog"
 import { FirmaProgresoDialog } from "@/components/firma-progreso-dialog"
+import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+// Subconjunto de FiltroSolicitud (components/pages/bandeja-filtro-page.tsx) —
+// duplicado en vez de importado para no crear una dependencia circular entre
+// ambos archivos (ese módulo ya importa este componente).
+interface AutografaItem {
+  id: string
+  folioRecepcion: string | null
+  tipo: string
+  secretaria: string
+  _raw?: any
+}
 
 interface FirmanteInfo {
   id: number
@@ -55,18 +67,24 @@ interface Props {
   filtro: 1 | 2 | 3
   currentUserId: string
   onCountChange?: (count: number) => void
+  /** Solicitudes en firma autógrafa (solo filtro 3) — no tienen firma_firmante,
+   *  así que no aparecen entre `items`; se agregan como filas extra en esta
+   *  misma tabla para no tener dos tablas separadas en "Pendiente de firma". */
+  autografaItems?: AutografaItem[]
+  onOpenReview?: (solicitudId: string, filtro: 1 | 2 | 3) => void
 }
 
 function bandejaParaFiltro(filtro: 1 | 2 | 3): "revision" | "validacion" | "emision" {
   return filtro === 1 ? "revision" : filtro === 2 ? "validacion" : "emision"
 }
 
-export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: Props) {
+export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange, autografaItems = [], onOpenReview }: Props) {
   const [items, setItems] = useState<ProcesoItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [firmanteDialogId, setFirmanteDialogId] = useState<number | null>(null)
   const [progresoTarget, setProgresoTarget] = useState<ProcesoItem | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const bandejaActual = bandejaParaFiltro(filtro)
 
@@ -116,6 +134,22 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
     dialogTarget.proceso.pendiente_emision_por_mi
   )
 
+  // Misma paginación (10 por página) que el resto de las bandejas — ver
+  // components/pages/bandeja-filtro-page.tsx. Se combinan ambos tipos de fila
+  // en una sola lista para que el corte por página aplique a la tabla completa.
+  type Row = { kind: "proceso"; item: ProcesoItem } | { kind: "autografa"; item: AutografaItem }
+  const allRows: Row[] = useMemo(
+    () => [
+      ...items.map((item): Row => ({ kind: "proceso", item })),
+      ...autografaItems.map((item): Row => ({ kind: "autografa", item })),
+    ],
+    [items, autografaItems],
+  )
+  const totalPages = Math.ceil(allRows.length / ITEMS_PER_PAGE)
+  const paginatedRows = allRows.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+  useEffect(() => { setCurrentPage(1) }, [filtro])
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(Math.max(1, totalPages)) }, [totalPages, currentPage])
+
   return (
     <div className="flex flex-col gap-3">
       {error && (
@@ -124,11 +158,11 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
         </div>
       )}
 
-      {!loading && items.length === 0 && !error && (
+      {!loading && items.length === 0 && autografaItems.length === 0 && !error && (
         <EmptyState icon={Inbox} title="Sin firmas pendientes" description="No tienes firmas pendientes en este filtro." />
       )}
 
-      {items.length > 0 && (
+      {(items.length > 0 || autografaItems.length > 0) && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -142,7 +176,9 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
               </tr>
             </thead>
             <tbody>
-              {items.map(p => {
+              {paginatedRows
+                .filter((r): r is Extract<Row, { kind: "proceso" }> => r.kind === "proceso")
+                .map(({ item: p }) => {
                 if (p.pendiente_emision_por_mi) {
                   const miEmisor = p.firmantes.find(f => f.id === p.mi_firmante_emisor_id)
                   return (
@@ -226,10 +262,43 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange }: P
                   </tr>
                 )
               })}
+              {paginatedRows
+                .filter((r): r is Extract<Row, { kind: "autografa" }> => r.kind === "autografa")
+                .map(({ item: sol }) => (
+                <tr key={`autografa-${sol.id}`} className="border-b last:border-b-0 hover:bg-muted/20">
+                  <td className="px-4 py-2 font-mono text-xs">{sol.folioRecepcion ?? sol._raw?.folio_justificacion ?? `SOL-${sol.id}`}</td>
+                  <td className="px-4 py-2 text-xs">{sol.tipo}</td>
+                  <td className="px-4 py-2 text-xs">Emitió</td>
+                  <td className="px-4 py-2 font-mono text-xs">—</td>
+                  <td className="px-4 py-2">
+                    <StatusBadge label="En firma" color={C_AMARILLO} bgColor={C_AMARILLO_BG} />
+                  </td>
+                  <td className="px-4 py-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => onOpenReview?.(sol.id, filtro)} className="gap-2 cursor-pointer">
+                          <Eye className="h-4 w-4" />
+                          Ver
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onOpenReview?.(sol.id, filtro)} className="gap-2 cursor-pointer">
+                          <Upload className="h-4 w-4" />
+                          Subir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       )}
+      <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
 
       {dialogTarget && (
         <FirmarInternoDialog

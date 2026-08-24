@@ -160,3 +160,41 @@ describe("PATCH /api/filtro — Tarea 12: folio de dictamen al aprobar + elegir 
     expect(updateCall[0].data.folio_dictamen).toBeUndefined()
   })
 })
+
+describe("PATCH /api/filtro — emitir (filtro 3, autógrafa): no permite pasar a Emitido sin el PDF firmado subido", () => {
+  it("rechaza con 400 si ya está en Pendiente Firma Dictamen pero no hay archivo_firmado", async () => {
+    solicitudFindUnique.mockResolvedValue(baseSolicitud({
+      estado: { id: 10, nombre: "Pendiente Firma Dictamen" },
+      modalidad_firma: "autografa",
+      folio_dictamen: "07/08/2026",
+      firma_proceso: null,
+    }))
+
+    const res  = await PATCH(makeReq({
+      solicitudId: 1, accion: "aprobar", filtro: 3, usuarioId: "user-1", modalidadFirma: "autografa",
+    }))
+    const json = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(json.ok).toBe(false)
+    expect(solicitudUpdate).not.toHaveBeenCalled()
+  })
+
+  it("permite pasar a Emitido cuando ya existe el archivo firmado subido", async () => {
+    solicitudFindUnique.mockResolvedValue(baseSolicitud({
+      estado: { id: 10, nombre: "Pendiente Firma Dictamen" },
+      modalidad_firma: "autografa",
+      folio_dictamen: "07/08/2026",
+      firma_proceso: { archivo_firmado: "/uploads/firmado/1_123.pdf" },
+    }))
+
+    const res  = await PATCH(makeReq({
+      solicitudId: 1, accion: "aprobar", filtro: 3, usuarioId: "user-1", modalidadFirma: "autografa",
+    }))
+    const json = await res.json()
+
+    expect(json.ok).toBe(true)
+    const updateCall = solicitudUpdate.mock.calls.find((c: any) => c[0].data.estado_id !== undefined)
+    expect(updateCall).toBeTruthy()
+  })
+})

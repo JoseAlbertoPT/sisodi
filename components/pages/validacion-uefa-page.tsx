@@ -1471,9 +1471,6 @@ export function ValidacionUefaPage() {
           modalidadFirma={firmaTargetSol.modalidadFirma}
           currentUserId={(user as any)?.id ?? ""}
           currentUserRol={(user as any)?.rol ?? ""}
-          onGenerarPdf={() => {
-            generateJustificacionPDF(firmaTargetSol.id, firmaTargetSol.folioJustificacion)
-          }}
           onGenerarPdfBase64={async () => generateJustificacionPDFBase64(firmaTargetSol.id)}
           onFinalizar={async () => { await handleFirmarJustificacion(firmaTargetSol.id) }}
           guardandoFinal={guardando}

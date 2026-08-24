@@ -1,6 +1,23 @@
 import { addMonths, endOfYear, isBefore, startOfDay } from "date-fns"
 
 /**
+ * `new Date("YYYY-MM-DD")` interpreta la cadena como medianoche UTC. En un
+ * servidor con timezone detrás de UTC (p. ej. America/Mexico_City, UTC-6),
+ * leer esa fecha con métodos locales (getMonth/getDate, o startOfDay de
+ * date-fns) la corre un día hacia atrás — un 1 de enero termina viéndose
+ * como 31 de diciembre del año anterior. Se parsea a mano como fecha local
+ * para que coincida con lo que el usuario seleccionó en el date picker
+ * (que ya usa `new Date(y, m - 1, d)`, ver components/ui/date-picker-habil.tsx).
+ */
+export function parseFechaLocal(v: unknown): Date | null {
+  if (!v) return null
+  const s = String(v)
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
+  const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(s)
+  return isNaN(d.getTime()) ? null : d
+}
+
+/**
  * Regla de negocio: la vigencia de una carta descriptiva/dictamen no puede
  * exceder 6 meses desde su inicio, y nunca cruza el 31 de diciembre del año
  * en que inició (no hay prórroga automática de un año a otro).

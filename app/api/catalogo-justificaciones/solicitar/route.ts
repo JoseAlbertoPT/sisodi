@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { requireCatalogoConsulta } from "@/lib/api-guard"
-import { validarVigencia } from "@/lib/vigencia"
+import { validarVigencia, parseFechaLocal } from "@/lib/vigencia"
 
 function parseVigenciaRango(nuevaVigencia: string): { inicio: Date; fin: Date } | null {
   const [inicioStr, finStr] = nuevaVigencia.split("/").map((s) => s.trim())
   if (!inicioStr || !finStr) return null
-  const inicio = new Date(inicioStr)
-  const fin = new Date(finStr)
-  if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) return null
+  const inicio = parseFechaLocal(inicioStr)
+  const fin = parseFechaLocal(finStr)
+  if (!inicio || !fin) return null
   return { inicio, fin }
 }
 

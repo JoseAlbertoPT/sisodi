@@ -3,6 +3,7 @@ import {
   calcularVigenciaMaxima,
   esInicioSinRangoValido,
   validarVigencia,
+  parseFechaLocal,
   MENSAJE_INICIO_31_DIC,
 } from "./vigencia"
 
@@ -71,5 +72,19 @@ describe("validarVigencia", () => {
   it("válido: inicio anterior a hoy (permitido a nivel de módulo; la UX lo restringe aparte)", () => {
     const r = validarVigencia(d(2020, 1, 1), d(2020, 6, 30))
     expect(r.ok).toBe(true)
+  })
+})
+
+describe("parseFechaLocal", () => {
+  it("regresión: '2026-01-01' no debe correrse a 31 de diciembre en timezones detrás de UTC", () => {
+    const parsed = parseFechaLocal("2026-01-01")
+    expect(parsed).toEqual(d(2026, 1, 1))
+    expect(esInicioSinRangoValido(parsed!)).toBe(false)
+  })
+
+  it("caso real: honorarios extemporáneo enero 1 a junio 24 debe validar sin error", () => {
+    const inicio = parseFechaLocal("2026-01-01")!
+    const fin = parseFechaLocal("2026-06-24")!
+    expect(validarVigencia(inicio, fin)).toEqual({ ok: true })
   })
 })

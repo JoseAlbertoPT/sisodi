@@ -1,11 +1,16 @@
-export async function generateJustificacionPDF(solicitudId: string | number, folioFallback: string = "") {
+interface JustificacionFirmasOverride {
+  firmaElaboroNombre?: string;
+  firmaElaboroCargo?: string;
+}
+
+export async function generateJustificacionPDF(solicitudId: string | number, folioFallback: string = "", firmas?: JustificacionFirmasOverride) {
   try {
     const res = await fetch("/api/pdf/justificacion", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ solicitudId }),
+      body: JSON.stringify({ solicitudId, ...firmas }),
     });
 
     if (!res.ok) {

@@ -933,6 +933,84 @@ function AprobarFolioRecepcionModal({ open, onClose, onConfirm, guardando, defau
     </Dialog>
   )
 }
+function AprobarFolioDictamenModal({ open, onClose, onConfirm, guardando, defaultMes, defaultAnio }: {
+  open: boolean
+  onClose: () => void
+  onConfirm: (folio: string) => void
+  guardando: boolean
+  defaultMes?: number
+  defaultAnio?: number
+}) {
+  const today = new Date()
+  const [mes,  setMes]  = useState(defaultMes  ?? today.getMonth() + 1)
+  const [anio, setAnio] = useState(defaultAnio ?? today.getFullYear())
+  const [siguiente, setSiguiente] = useState<number | null>(null)
+  useEffect(() => {
+    if (!open) return
+    setMes(defaultMes ?? today.getMonth() + 1)
+    setAnio(defaultAnio ?? today.getFullYear())
+  }, [open, defaultMes, defaultAnio])
+  useEffect(() => {
+    if (!open) return
+    setSiguiente(null)
+    fetch(`/api/folio-dictamen/siguiente?mes=${mes}&anio=${anio}`)
+      .then(r => r.json())
+      .then(json => { if (json.ok) setSiguiente(json.siguiente) })
+      .catch(() => {})
+  }, [open, mes, anio])
+  const folioPreview = siguiente !== null ? `${String(siguiente).padStart(2, "0")}/${String(mes).padStart(2, "0")}/${anio}` : null
+  const aniosDisponibles = Array.from(new Set([today.getFullYear(), today.getFullYear() - 1, anio]))
+    .sort((a, b) => b - a)
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Capturar Folio de Dictamen</DialogTitle>
+          <DialogDescription>
+            Esta solicitud es extemporánea — selecciona el mes y el año del periodo al que corresponde el dictamen y confirma el folio que se le asignará al aprobar.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 px-6 pb-2">
+          <div className="flex gap-3">
+            <div className="flex flex-col gap-1 flex-1">
+              <span className="text-xs text-muted-foreground">Mes</span>
+              <Select value={String(mes)} onValueChange={v => setMes(Number(v))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MESES_RECEPCION.map(m => (
+                    <SelectItem key={m.num} value={String(m.num)}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1 w-28">
+              <span className="text-xs text-muted-foreground">Año</span>
+              <Select value={String(anio)} onValueChange={v => setAnio(Number(v))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {aniosDisponibles.map(a => (
+                    <SelectItem key={a} value={String(a)}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="rounded-md bg-muted/50 px-3 py-2">
+            <span className="text-xs text-muted-foreground">Folio de dictamen: </span>
+            <span className="text-sm font-semibold font-mono text-card-foreground">{folioPreview ?? "Cargando…"}</span>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="default" onClick={onClose} disabled={guardando}>Cancelar</Button>
+          <Button variant="primary" disabled={!folioPreview || guardando} onClick={() => folioPreview && onConfirm(folioPreview)} className="gap-1.5">
+            {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Confirmar y aprobar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
 interface RevisorInfo { id: string; nombre: string; correo: string }
 function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
   open: boolean
@@ -1051,6 +1129,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   const [showConfirmacion,        setShowConfirmacion]        = useState<string | null>(null)
   const [aprobarPending, setAprobarPending] = useState<{ modalidad?: "electronica" | "autografa"; folioRecepcion?: string } | null>(null)
   const [showFolioRecepcionModal, setShowFolioRecepcionModal] = useState(false)
+  const [showFolioDictamenModal, setShowFolioDictamenModal] = useState(false)
   const [showFirmaSeleccionConfirm, setShowFirmaSeleccionConfirm] = useState(false)
   const [showObservarConfirm, setShowObservarConfirm] = useState(false)
   const [obsPendiente,        setObsPendiente]        = useState("")
@@ -1181,6 +1260,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     if (solicitud?.modalidadFirma) setModalidadFirma(solicitud.modalidadFirma)
   }, [solicitud?.modalidadFirma])
   useEffect(() => {
+    // Regla: una solicitud extemporánea solo puede firmarse de forma
+    // autógrafa — no se ofrece la opción de firma electrónica.
+    if (solicitud?.esExtemporanea && modalidadFirma !== "autografa") setModalidadFirma("autografa")
+  }, [solicitud?.esExtemporanea, modalidadFirma])
+  useEffect(() => {
     const yaAvanzo = (error?.startsWith('__avanzada__') ?? false) || error === 'Solicitud enviada al siguiente filtro'
     if (yaAvanzo && !solicitud) onBack(filtro)
   }, [error, solicitud, filtro, onBack])
@@ -1252,7 +1336,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   )
   const observarBlocked = false
 
-  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string, modalidadFirmaValue?: "electronica" | "autografa", folioRecepcionValue?: string) => {
+  const patchEstado = useCallback(async (accion: "aprobar" | "observar", observaciones?: string, revisorId?: string, modalidadFirmaValue?: "electronica" | "autografa", folioRecepcionValue?: string, folioDictamenValue?: string) => {
     if (!solicitud) return
     setGuardando(true)
     try {
@@ -1268,6 +1352,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           ...(revisorId ? { revisorId } : {}),
           ...(modalidadFirmaValue ? { modalidadFirma: modalidadFirmaValue } : {}),
           ...(folioRecepcionValue ? { folioRecepcion: folioRecepcionValue } : {}),
+          ...(folioDictamenValue ? { folioDictamen: folioDictamenValue } : {}),
         }),
       })
       const json = await res.json()
@@ -1323,7 +1408,19 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   }
   const handleConfirmEmit = async () => {
     setShowEmitConfirm(false)
+    // Regla 12 para extemporáneas: el folio de dictamen también debe capturar
+    // el mes/año al que corresponde (igual que el folio de recepción en
+    // Filtro 1), en vez de usar la fecha real de hoy.
+    if (solicitud?.esExtemporanea && !solicitud?.modalidadFirma) {
+      setShowFolioDictamenModal(true)
+      return
+    }
     const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma)
+    if (nuevoEstado) setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
+  }
+  const executeAprobarFolioDictamen = async (folio: string) => {
+    setShowFolioDictamenModal(false)
+    const nuevoEstado = await patchEstado("aprobar", undefined, undefined, modalidadFirma, undefined, folio)
     if (nuevoEstado) setSolicitud(prev => prev ? { ...prev, estado: nuevoEstado } : prev)
   }
   const handleObservar = () => {
@@ -1459,16 +1556,21 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               <div className="text-center">
                 <h3 className="ds-title-md text-content-high">Modalidad de Firma</h3>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Selecciona cómo se firmará el dictamen. Esta decisión aplicará a todas las firmas del flujo; no se puede mezclar electrónica y autógrafa.
+                  {solicitud?.esExtemporanea
+                    ? "Esta solicitud es extemporánea: solo se permite firma autógrafa."
+                    : "Selecciona cómo se firmará el dictamen. Esta decisión aplicará a todas las firmas del flujo; no se puede mezclar electrónica y autógrafa."}
                 </p>
               </div>
               <RadioGroup value={modalidadFirma}
                 onValueChange={v => { setModalidadFirma(v as any); if (v !== "electronica") setSelladoEmisionSubido(false) }}
                 className="flex flex-col gap-3 w-full">
-                {[
-                  { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
-                  { value: "autografa",   label: "Firma Autógrafa",   desc: "Descargue, firme y suba el documento" },
-                ].map(opt => (
+                {(solicitud?.esExtemporanea
+                  ? [{ value: "autografa", label: "Firma Autógrafa", desc: "Descargue, firme y suba el documento" }]
+                  : [
+                      { value: "electronica", label: "Firma Electrónica", desc: "Se firmará digitalmente al emitir" },
+                      { value: "autografa",   label: "Firma Autógrafa",   desc: "Descargue, firme y suba el documento" },
+                    ]
+                ).map(opt => (
                   <label key={opt.value} htmlFor={`confirm-firma-${opt.value}`}
                     className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-3 transition-colors ${modalidadFirma === opt.value ? "border-secondary bg-secondary/5" : "border-border hover:border-secondary/50"}`}>
                     <RadioGroupItem value={opt.value} id={`confirm-firma-${opt.value}`} className="mt-0.5" />
@@ -1511,6 +1613,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         open={showFolioRecepcionModal}
         onClose={() => setShowFolioRecepcionModal(false)}
         onConfirm={executeAprobarFolioRecepcion}
+        guardando={guardando}
+        defaultMes={solicitud?.periodo ? parseInt(solicitud.periodo.split("/")[0], 10) || undefined : undefined}
+        defaultAnio={solicitud?.periodo ? parseInt(solicitud.periodo.split("/")[1], 10) || undefined : undefined}
+      />
+      <AprobarFolioDictamenModal
+        open={showFolioDictamenModal}
+        onClose={() => setShowFolioDictamenModal(false)}
+        onConfirm={executeAprobarFolioDictamen}
         guardando={guardando}
         defaultMes={solicitud?.periodo ? parseInt(solicitud.periodo.split("/")[0], 10) || undefined : undefined}
         defaultAnio={solicitud?.periodo ? parseInt(solicitud.periodo.split("/")[1], 10) || undefined : undefined}
@@ -1998,7 +2108,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                       solicitudId={solicitud.id}
                       folioJustificacion={solicitud.folioJustificacion ?? `SOL-${solicitud.id}`}
                       currentUserId={(user as any)?.id ?? ""}
-                      onGenerarPdf={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion ?? `SOL-${solicitud.id}`)}
                       onFinalizar={() => {}}
                       guardandoFinal={false}
                       hideEnviar
@@ -2102,7 +2211,6 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         regimen={solicitud.regimen}
         modalidadFirma="electronica"
         currentUserId={(user as any)?.id ?? ""}
-        onGenerarPdf={() => generateJustificacionPDF(solicitud.id, solicitud.folioJustificacion ?? `SOL-${solicitud.id}`)}
         onGenerarPdfBase64={async () => generateJustificacionPDFBase64(solicitud.id)}
         onFinalizar={async () => { handleEmitir() }}
         guardandoFinal={guardando}

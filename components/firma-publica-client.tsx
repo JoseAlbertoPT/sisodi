@@ -50,16 +50,20 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
   const [exito, setExito] = useState<{ firmados: number; estado: string } | null>(null)
   const [avisoCargoAbierto, setAvisoCargoAbierto] = useState(false)
   const [cargoHabilitado, setCargoHabilitado] = useState(false)
+  const [nombreDesdeCer, setNombreDesdeCer] = useState(false)
+  const [rfcDesdeCer, setRfcDesdeCer] = useState(false)
   const cargoInputRef = useRef<HTMLInputElement | null>(null)
 
   const handleCerFile = async (file: File | null) => {
     setCerFile(file)
+    setNombreDesdeCer(false)
+    setRfcDesdeCer(false)
     if (!file) return
     try {
       const buffer = await file.arrayBuffer()
       const info = parseCertificadoInfo(buffer)
-      if (info.nombre) setNombreFirmante(info.nombre)
-      if (info.rfc) setUsuario(info.rfc)
+      if (info.nombre) { setNombreFirmante(info.nombre); setNombreDesdeCer(true) }
+      if (info.rfc) { setUsuario(info.rfc); setRfcDesdeCer(true) }
     } catch {
       /* si no se puede leer el certificado, se sigue llenando manualmente */
     }
@@ -446,8 +450,19 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-content-low">RFC del firmante</Label>
-                  <Input value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="RFC (13 caracteres)" aria-invalid={camposIncompletos && !usuario} />
-                  {camposIncompletos && !usuario && (
+                  <Input
+                    value={usuario}
+                    onChange={e => setUsuario(e.target.value)}
+                    placeholder="RFC (13 caracteres)"
+                    aria-invalid={camposIncompletos && !usuario}
+                    readOnly={rfcDesdeCer}
+                    className={rfcDesdeCer ? "bg-muted cursor-not-allowed" : ""}
+                  />
+                  {rfcDesdeCer ? (
+                    <p className="font-sans text-[10px] font-light text-muted-foreground flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" /> Tomado del certificado (.cer)
+                    </p>
+                  ) : camposIncompletos && !usuario && (
                     <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
                     </p>
@@ -455,8 +470,19 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className="font-sans text-xs font-light text-content-low">Nombre completo del firmante</Label>
-                  <Input value={nombreFirmante} onChange={e => setNombreFirmante(e.target.value)} placeholder="Nombre completo" aria-invalid={camposIncompletos && !nombreFirmante.trim()} />
-                  {camposIncompletos && !nombreFirmante.trim() && (
+                  <Input
+                    value={nombreFirmante}
+                    onChange={e => setNombreFirmante(e.target.value)}
+                    placeholder="Nombre completo"
+                    aria-invalid={camposIncompletos && !nombreFirmante.trim()}
+                    readOnly={nombreDesdeCer}
+                    className={nombreDesdeCer ? "bg-muted cursor-not-allowed" : ""}
+                  />
+                  {nombreDesdeCer ? (
+                    <p className="font-sans text-[10px] font-light text-muted-foreground flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" /> Tomado del certificado (.cer)
+                    </p>
+                  ) : camposIncompletos && !nombreFirmante.trim() && (
                     <p className="font-sans text-[10px] font-light text-support-error flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
                     </p>
