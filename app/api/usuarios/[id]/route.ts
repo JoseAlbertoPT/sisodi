@@ -103,6 +103,7 @@ export async function PATCH(
     const cargoNuevo = cargo !== undefined ? (cargo?.trim() || null) : undefined
     const cargoCambia = cargoNuevo !== undefined && cargoNuevo !== usuarioActual.cargo
     const passwordCambia = !!password
+    const seDeshabilita = activo === false && usuarioActual.activo !== false
 
     // Conservar permisos de menú: si al editar cambia el contexto del usuario
     // (secretaría, tipo de administración o rol) y el usuario aún NO tiene permisos
@@ -183,8 +184,9 @@ export async function PATCH(
 
     // Rol, contraseña, RFC, nombre, cargo, secretaría o dirección cambiados: forzar
     // cierre de sesión al usuario afectado para que su próximo login recargue el
-    // snapshot completo.
-    if (secretariaIdCambia || secretariaTextoCambia || rolCambia || areaCambia || nombreCambia || rfcCambia || cargoCambia || passwordCambia) {
+    // snapshot completo. Deshabilitar también fuerza el cierre: si sigue con la
+    // sesión abierta en el navegador, no debe poder seguir usando el sistema.
+    if (secretariaIdCambia || secretariaTextoCambia || rolCambia || areaCambia || nombreCambia || rfcCambia || cargoCambia || passwordCambia || seDeshabilita) {
       broadcastForceLogout([id])
     }
 

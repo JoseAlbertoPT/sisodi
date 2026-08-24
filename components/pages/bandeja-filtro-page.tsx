@@ -529,7 +529,7 @@ function AprobarAsignarModal({ open, onClose, onConfirm, folio, guardando }: {
     if (!open) return
     setSelectedId("")
     setLoading(true)
-    fetch("/api/usuarios?rol=Revisor")
+    fetch("/api/usuarios?rol=Revisor&soloActivos=true")
       .then(r => r.json())
       .then(json => {
         const lista: RevisorInfo[] = (Array.isArray(json) ? json : [])
@@ -616,7 +616,7 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
     if (!open) return
     setSelectedId("")
     setLoading(true)
-    fetch("/api/usuarios?rol=Revisor")
+    fetch("/api/usuarios?rol=Revisor&soloActivos=true")
       .then(r => r.json())
       .then(json => {
         const lista: RevisorInfo[] = (Array.isArray(json) ? json : [])

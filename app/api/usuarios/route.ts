@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     const secretariaIdFiltro = searchParams.get("secretariaId")
     const checkCorreo        = searchParams.get("checkCorreo")
     const checkRfc           = searchParams.get("checkRfc")
+    const soloActivos        = searchParams.get("soloActivos") === "true"
 
     if (checkCorreo) {
       const existe = await prisma.usuario.findFirst({ where: { correo: checkCorreo.trim().toLowerCase() } })
@@ -29,6 +30,9 @@ export async function GET(req: NextRequest) {
     }
     if (secretariaIdFiltro) {
       where.secretaria_id = secretariaIdFiltro
+    }
+    if (soloActivos) {
+      where.activo = true
     }
 
     const usuarios = await prisma.usuario.findMany({
