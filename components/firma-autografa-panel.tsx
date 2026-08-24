@@ -183,7 +183,7 @@ export function FirmaAutografaPanel({
 
       {!hideEnviar && (
         <>
-          <div className="flex justify-end gap-2 px-6 py-4 border-t border-[#E5E7EB]">
+          <div className="-mx-6 -mb-5 mt-1 w-[calc(100%+3rem)] flex justify-end gap-2 border-t border-[var(--sem-bg-surface-high)] px-6 py-4">
             {onCancelar && (
               <Button
                 type="button"
