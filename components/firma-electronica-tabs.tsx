@@ -274,12 +274,12 @@ export function FirmaElectronicaTabs({
   if (!firma) {
     return (
       <div className="flex flex-col items-start gap-3 w-full text-left">
-        <p className="text-sm text-muted-foreground max-w-sm ml-16">
+        <p className="text-base text-muted-foreground max-w-sm">
           Se creará el proceso con todos los firmantes requeridos según el tipo de justificación.
           Los firmantes internos (UEFA, Revisor, Validador, Emisor) se identifican automáticamente a partir del historial de aprobaciones.
         </p>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        <div className="flex w-full justify-end gap-2">
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="-mx-6 -mb-5 mt-2 w-[calc(100%+3rem)] flex justify-end gap-2 border-t border-[var(--sem-bg-surface-high)] px-6 py-4">
           {onCancelar && (
             <Button type="button" variant="default" onClick={onCancelar} disabled={iniciando}>
               Cancelar
@@ -340,7 +340,7 @@ export function FirmaElectronicaTabs({
       />
 
       <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-sm">
           <Badge variant="outline">{firma.estado}</Badge>
           <span className="font-semibold">{firma.firmados} / {totalFirmantes} firmas</span>
           <span className="text-muted-foreground">·</span>
@@ -348,22 +348,22 @@ export function FirmaElectronicaTabs({
         </div>
         <div className="h-2 rounded-full bg-muted overflow-hidden">
           <div
-            className={`h-full transition-all ${firma.estado === "completado" ? "bg-secondary" : "bg-primary"}`}
+            className={`h-full transition-all ${firma.estado === "completado" ? "bg-secondary" : "bg-accent-primary"}`}
             style={{ width: `${pctFirmados}%` }}
           />
         </div>
       </div>
 
-      <Card className="border-border">
+      <Card className="border-border gap-3">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Users className="h-4 w-4 text-secondary" /> Externos
-            <span className="text-xs text-muted-foreground ml-1">(firman primero)</span>
+            <span className="text-sm text-muted-foreground ml-1">(firman primero)</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {externos.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Esta justificación no requiere firmas externas.</p>
+            <p className="text-sm text-muted-foreground">Esta justificación no requiere firmas externas.</p>
           ) : externos.map(f => (
             <FirmanteRow
               key={f.id}
@@ -381,9 +381,9 @@ export function FirmaElectronicaTabs({
       </Card>
 
       {miInterno && (
-      <Card className="border-border">
+      <Card className="border-border gap-3">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Lock className="h-4 w-4 text-muted-foreground" /> Mi firma
           </CardTitle>
         </CardHeader>
@@ -398,18 +398,18 @@ export function FirmaElectronicaTabs({
                 onFirmar={() => setFirmandoInline(f.id)}
               />
               {firmandoInline === f.id && (
-                <div className="rounded-lg border border-primary/30 bg-primary/5 p-6 flex flex-col gap-4">
+                <div className="rounded-lg border border-accent-primary/30 bg-accent-primary/5 p-6 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-primary" /> Firmar como {f.rol}
+                    <h4 className="text-base font-semibold flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-accent-primary" /> Firmar como {f.rol}
                     </h4>
                     <Button size="icon" variant="ghost" onClick={resetFirmandoInline} className="h-7 w-7">
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">{f.cargo}</p>
+                  <p className="text-sm text-muted-foreground">{f.cargo}</p>
                   <div className="flex flex-col gap-2">
-                    <Label className="text-xs flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
+                    <Label className="text-sm flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" /> Cargo / Puesto</Label>
                     <Input
                       ref={cargoInputRef}
                       value={cargoFirma}
@@ -429,18 +429,18 @@ export function FirmaElectronicaTabs({
                       name="cargo-firmante-uefa"
                     />
                     {camposInvalidos.cargo ? (
-                      <p className="text-[10px] text-support-error flex items-center gap-1">
+                      <p className="text-xs text-support-error flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
                       </p>
                     ) : (
-                      <p className="text-[10px] text-support-warning flex items-center gap-1">
+                      <p className="text-xs text-support-warning flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" /> Escriba su cargo correctamente. Aparecerá impreso junto a su firma.
                       </p>
                     )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1">
-                      <Label className="text-xs flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
+                      <Label className="text-sm flex items-center gap-1"><FileKey className="h-3.5 w-3.5" /> Certificado (.cer)</Label>
                       <Input
                         type="file" accept=".cer"
                         aria-invalid={camposInvalidos.cer}
@@ -451,13 +451,13 @@ export function FirmaElectronicaTabs({
                         }}
                       />
                       {camposInvalidos.cer && (
-                        <p className="text-[10px] text-support-error flex items-center gap-1">
+                        <p className="text-xs text-support-error flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
                         </p>
                       )}
                     </div>
                     <div className="flex flex-col gap-1">
-                      <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
+                      <Label className="text-sm flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Clave privada (.key)</Label>
                       <Input
                         type="file" accept=".key"
                         aria-invalid={camposInvalidos.key}
@@ -468,14 +468,14 @@ export function FirmaElectronicaTabs({
                         }}
                       />
                       {camposInvalidos.key && (
-                        <p className="text-[10px] text-support-error flex items-center gap-1">
+                        <p className="text-xs text-support-error flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
                         </p>
                       )}
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="text-xs">Contraseña de la clave privada</Label>
+                    <Label className="text-sm">Contraseña de la clave privada</Label>
                     <Input
                       type="password"
                       value={fraseKey}
@@ -487,13 +487,13 @@ export function FirmaElectronicaTabs({
                       aria-invalid={camposInvalidos.password}
                     />
                     {camposInvalidos.password && (
-                      <p className="text-[10px] text-support-error flex items-center gap-1">
+                      <p className="text-xs text-support-error flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
                       </p>
                     )}
                   </div>
                   {firmandoError && (
-                    <p className="text-xs text-support-error flex items-center gap-1">
+                    <p className="text-sm text-support-error flex items-center gap-1">
                       <AlertCircle className="h-3.5 w-3.5" />
                       {firmandoError}
                     </p>
@@ -515,7 +515,7 @@ export function FirmaElectronicaTabs({
       </Card>
       )}
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {selladoEtapa && puedeContinuar && (
         <SelladoDocumentoSection
@@ -534,7 +534,7 @@ export function FirmaElectronicaTabs({
         />
       )}
 
-      <div className="flex justify-end gap-2 pt-2">
+      <div className="-mx-6 -mb-5 mt-1 w-[calc(100%+3rem)] flex justify-end gap-2 border-t border-[var(--sem-bg-surface-high)] px-6 py-4">
         {onCancelar && (
           <Button type="button" variant="default" onClick={onCancelar} disabled={guardandoFinal}>
             Cancelar
@@ -590,21 +590,21 @@ function FirmanteRow({
     ? `${firmante.rol} (UEFA)`
     : firmante.rol
   return (
-    <div className={`rounded-lg border p-4 flex flex-col gap-2.5 ${esSuTurno && !firmante.firmado ? "border-primary/40 bg-primary/5" : ""}`}>
+    <div className={`rounded-lg border p-4 flex flex-col gap-2.5 ${esSuTurno && !firmante.firmado ? "border-accent-primary/40 bg-accent-primary/5" : ""}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-muted-foreground">#{firmante.orden}</span>
-            <span className="text-sm font-semibold">{rolMostrar}</span>
+            <span className="text-sm font-mono text-muted-foreground">#{firmante.orden}</span>
+            <span className="text-base font-semibold">{rolMostrar}</span>
             {firmante.firmado
-              ? <Badge className="bg-secondary/15 text-secondary border-0 text-[10px] gap-1"><CheckCircle2 className="h-3 w-3" />Firmado</Badge>
+              ? <Badge className="bg-secondary/15 text-secondary border-0 text-sm px-2.5 py-1 gap-1"><CheckCircle2 className="h-3.5 w-3.5" />Firmado</Badge>
               : esperandoTurno
-                ? <Badge variant="outline" className="text-[10px]">Esperando turno</Badge>
-                : <Badge className="bg-primary/15 text-primary border-0 text-[10px]">Turno actual</Badge>}
+                ? <Badge variant="outline" className="text-sm px-2.5 py-1">Esperando turno</Badge>
+                : <Badge className="bg-accent-primary/15 text-accent-primary border-0 text-sm px-2.5 py-1">Turno actual</Badge>}
           </div>
-          <p className="text-xs text-muted-foreground">{firmante.cargo}</p>
+          <p className="text-sm text-muted-foreground">{firmante.cargo}</p>
           {firmante.nombre && (
-            <p className="text-xs mt-1">{firmante.nombre}</p>
+            <p className="text-sm mt-1">{firmante.nombre}</p>
           )}
         </div>
       </div>
@@ -612,7 +612,7 @@ function FirmanteRow({
       {modo === "externo" && !firmante.firmado && link && (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <Input readOnly value={link} className="text-[10px] font-mono" />
+            <Input readOnly value={link} className="text-xs font-mono" />
             <Button size="sm" variant="default" onClick={() => onCopiar?.(link)} className="gap-1.5 shrink-0">
               {copiadoId === firmante.id ? "Copiado" : "Copiar"}
             </Button>
@@ -621,7 +621,7 @@ function FirmanteRow({
             </Button>
           </div>
           {esperandoTurno && (
-            <p className="text-[10px] text-muted-foreground">Este link sólo será válido cuando los anteriores firmen.</p>
+            <p className="text-xs text-muted-foreground">Este link sólo será válido cuando los anteriores firmen.</p>
           )}
         </div>
       )}
