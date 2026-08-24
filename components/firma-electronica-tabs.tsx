@@ -22,7 +22,6 @@ interface Firmante {
   tipo: "externo" | "interno"
   bandeja: string | null
   firmado: boolean
-  verificado: boolean
   fecha_firma: string | null
   nombre: string | null
   rfc: string | null
@@ -62,23 +61,6 @@ interface Props {
 
 const normRol = (s: string) => s.normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "").toLowerCase().trim()
 
-const PALABRAS_MENORES = new Set([
-  "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
-  "en", "a", "al", "con", "por", "para",
-])
-
-function toTitleCaseES(input: string): string {
-  if (!input) return input
-  let wordIndex = 0
-  return input.toLocaleLowerCase("es").replace(/[\p{L}\p{N}]+/gu, (word) => {
-    const capitalized = wordIndex > 0 && PALABRAS_MENORES.has(word)
-      ? word
-      : word.charAt(0).toLocaleUpperCase("es") + word.slice(1)
-    wordIndex++
-    return capitalized
-  })
-}
-
 export function FirmaElectronicaTabs({
   solicitudId,
   folioJustificacion,
@@ -102,7 +84,6 @@ export function FirmaElectronicaTabs({
   const [iniciando, setIniciando] = useState(false)
   const [copiadoId, setCopiadoId] = useState<number | null>(null)
   const [regenerando, setRegenerando] = useState<number | null>(null)
-  const [verificando, setVerificando] = useState<number | null>(null)
   const [firmandoInline, setFirmandoInline] = useState<number | null>(null)
   const [firmaExitosa, setFirmaExitosa] = useState(false)
 
@@ -114,6 +95,7 @@ export function FirmaElectronicaTabs({
   const [firmandoError, setFirmandoError] = useState<string | null>(null)
   const [avisoCargoAbierto, setAvisoCargoAbierto] = useState(false)
   const [cargoHabilitado, setCargoHabilitado] = useState(false)
+  const [ultimoCargo, setUltimoCargo] = useState<string | null>(null)
   const [camposInvalidos, setCamposInvalidos] = useState({ cargo: false, cer: false, key: false, password: false })
   const cargoInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -197,16 +179,16 @@ export function FirmaElectronicaTabs({
     let cancel = false
     fetch(`/api/firma-efirma/ultimo-cargo?usuarioId=${encodeURIComponent(currentUserId)}`, { cache: "no-store" })
       .then(r => r.json())
-      .then(j => {
-        if (cancel || !j?.ok) return
-        if (j.cargo) {
-          setCargoFirma(j.cargo.toUpperCase())
-          setCargoHabilitado(true)
-        }
-      })
+      .then(j => { if (!cancel && j?.ok) setUltimoCargo(j.cargo ?? null) })
       .catch(() => { /* noop */ })
     return () => { cancel = true }
   }, [currentUserId])
+
+  const usarUltimoCargo = () => {
+    if (!ultimoCargo) return
+    if (!cargoHabilitado) setCargoHabilitado(true)
+    setCargoFirma(ultimoCargo.toUpperCase())
+  }
 
   useEffect(() => {
     if (!firma) return
@@ -281,20 +263,6 @@ export function FirmaElectronicaTabs({
     }
   }
 
-  const verificarExterno = async (firmanteId: number) => {
-    setVerificando(firmanteId); setError(null)
-    try {
-      const res = await fetch(`/api/firma-efirma/verificar/${firmanteId}`, { method: "PATCH" })
-      const json = await res.json()
-      if (!res.ok || !json.ok) { setError(json.error ?? "No se pudo verificar"); return }
-      await cargar()
-    } catch {
-      setError("Error de conexión")
-    } finally {
-      setVerificando(null)
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10 gap-2 text-sm text-muted-foreground">
@@ -308,7 +276,7 @@ export function FirmaElectronicaTabs({
       <div className="flex flex-col items-start gap-3 w-full text-left">
         <p className="text-sm text-muted-foreground max-w-sm ml-16">
           Se creará el proceso con todos los firmantes requeridos según el tipo de justificación.
-          Los firmantes internos (UEFA, Revisor, Verificador, Emisor) se identifican automáticamente a partir del historial de aprobaciones.
+          Los firmantes internos (UEFA, Revisor, Validador, Emisor) se identifican automáticamente a partir del historial de aprobaciones.
         </p>
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex w-full justify-end gap-2">
@@ -329,16 +297,12 @@ export function FirmaElectronicaTabs({
   const internosTodos = firmantes.filter(f => f.tipo === "interno")
 
 
-  // Un externo firmado pero aún no verificado cuenta como "no listo" para
-  // efectos de avanzar el turno, igual que si no hubiera firmado.
-  const listo = (x: Firmante) => x.firmado && (x.tipo !== "externo" || x.verificado)
-
   const esSuTurno = (f: Firmante) => {
     if (f.firmado) return false
     if (f.tipo === "interno" && f.bandeja === "revision") {
-      return externos.every(listo)
+      return externos.every(e => e.firmado)
     }
-    return firmantes.filter(x => x.orden < f.orden).every(listo)
+    return firmantes.filter(x => x.orden < f.orden).every(x => x.firmado)
   }
 
 
@@ -411,8 +375,6 @@ export function FirmaElectronicaTabs({
               esSuTurno={esSuTurno(f)}
               onCopiar={(link) => copiarLink(f.id, link)}
               onRegenerar={() => regenerarLink(f.id)}
-              onVerificar={() => verificarExterno(f.id)}
-              verificando={verificando === f.id}
             />
           ))}
         </CardContent>
@@ -607,7 +569,7 @@ export function FirmaElectronicaTabs({
 
 function FirmanteRow({
   firmante, modo, uuid, copiadoId, regenerando, onCopiar, onRegenerar,
-  esSuTurno, esCurrent, onFirmar, onVerificar, verificando,
+  esSuTurno, esCurrent, onFirmar,
 }: {
   firmante: Firmante
   modo: "externo" | "interno"
@@ -619,60 +581,33 @@ function FirmanteRow({
   esSuTurno?: boolean
   esCurrent?: boolean
   onFirmar?: () => void
-  onVerificar?: () => void
-  verificando?: boolean
 }) {
   const link = uuid && firmante.acceso_token
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/firmado/${uuid}?t=${firmante.acceso_token}`
     : ""
   const esperandoTurno = !firmante.firmado && !esSuTurno
-  const rolBase = firmante.rol === "Elaboró" ? "Firmar como Elaboró"
-    : firmante.rol === "Revisó" ? "Firmar como Revisó"
+  const rolMostrar = firmante.bandeja === "uefa" && !/uefa/i.test(firmante.rol)
+    ? `${firmante.rol} (UEFA)`
     : firmante.rol
-  // Se quitó el sufijo "(UEFA)" a pedido — se deja comentado por si se
-  // decide volver a distinguir el paso de UEFA del de Revisión (Filtro 1),
-  // que comparten el mismo rol "Revisó".
-  // const rolMostrar = firmante.bandeja === "uefa" && !/uefa/i.test(rolBase)
-  //   ? `${rolBase} (UEFA)`
-  //   : rolBase
-  const rolMostrar = rolBase
   return (
     <div className={`rounded-lg border p-4 flex flex-col gap-2.5 ${esSuTurno && !firmante.firmado ? "border-primary/40 bg-primary/5" : ""}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-muted-foreground">#{firmante.orden}</span>
             <span className="text-sm font-semibold">{rolMostrar}</span>
             {firmante.firmado
-              ? <Badge className="bg-secondary/15 text-secondary border-0 text-[10px] gap-1"><CheckCircle2 className="h-3 w-3 text-green-600" />Firmado</Badge>
+              ? <Badge className="bg-secondary/15 text-secondary border-0 text-[10px] gap-1"><CheckCircle2 className="h-3 w-3" />Firmado</Badge>
               : esperandoTurno
                 ? <Badge variant="outline" className="text-[10px]">Esperando turno</Badge>
-                : <Badge variant="warning" className="text-[10px]">Turno actual</Badge>}
+                : <Badge className="bg-primary/15 text-primary border-0 text-[10px]">Turno actual</Badge>}
           </div>
-          {firmante.firmado && firmante.nombre ? (
-            <>
-              <p className="text-xs font-medium mt-0.5">{firmante.nombre}</p>
-              {firmante.cargo_firmante && (
-                <p className="text-xs text-muted-foreground">{toTitleCaseES(firmante.cargo_firmante)}</p>
-              )}
-            </>
-          ) : (
-            <p className="text-xs text-muted-foreground">{firmante.cargo}</p>
+          <p className="text-xs text-muted-foreground">{firmante.cargo}</p>
+          {firmante.nombre && (
+            <p className="text-xs mt-1">{firmante.nombre}</p>
           )}
         </div>
       </div>
-
-      {modo === "externo" && firmante.firmado && (
-        <div className="flex justify-end">
-          {firmante.verificado ? (
-            <Badge variant="success" className="text-[10px] gap-1"><CheckCircle2 className="h-3 w-3" />Verificado</Badge>
-          ) : (
-            <Button size="sm" variant="vino" onClick={onVerificar} disabled={verificando} className="gap-1.5">
-              {verificando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-              Verificar
-            </Button>
-          )}
-        </div>
-      )}
 
       {modo === "externo" && !firmante.firmado && link && (
         <div className="flex flex-col gap-1.5">
@@ -686,7 +621,7 @@ function FirmanteRow({
             </Button>
           </div>
           {esperandoTurno && (
-            <p className="text-[10px] text-muted-foreground">Este link solo será válido cuando los anteriores firmen.</p>
+            <p className="text-[10px] text-muted-foreground">Este link sólo será válido cuando los anteriores firmen.</p>
           )}
         </div>
       )}
