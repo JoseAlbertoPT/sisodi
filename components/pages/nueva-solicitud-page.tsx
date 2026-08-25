@@ -1280,7 +1280,7 @@ const FORMULA_LLENADO_CONTENIDO = {
     ],
   },
   actividades: {
-    formula: "VERBO + ACTIVIDAD + MEDIANTE O A TRAVÉS DE QUÉ + CON LA FINALIDAD DE (para) + ALCANCE",
+    formula: "VERBO + ACTIVIDAD + MEDIANTE O A TRAVÉS DE QUÉ + CON LA FINALIDAD DE (para) ",
     titulo: "ACTIVIDADES A REALIZAR",
     descripcion: "Enuncia las actividades específicas que realizará el prestador de servicios.",
     filas: [
