@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { randomBytes } from "crypto"
 import { prisma } from "@/lib/prisma"
 
 const FIRMANTES_INCLUDE = {
@@ -22,6 +23,26 @@ export async function GET(req: NextRequest) {
 
     if (!firma) {
       return NextResponse.json({ ok: true, firma: null })
+    }
+
+    // Regenerar automáticamente el link de cualquier firmante externo cuyo
+    // token haya expirado sin haber firmado — así el admin nunca se topa con
+    // un link muerto en este panel sin darse cuenta; el botón "Regenerar" (a
+    // pedido manual) sigue disponible aparte para forzar uno nuevo en
+    // cualquier momento, sin esperar a que expire.
+    const ahora = new Date()
+    for (const f of firma.firmantes as any[]) {
+      if (f.tipo === "externo" && !f.firmado && f.expira_en && f.expira_en < ahora) {
+        const nuevoToken = randomBytes(32).toString("hex")
+        await prisma.firma_firmante.update({
+          where: { id: f.id },
+          data: { acceso_token: nuevoToken, accedido_en: null, expira_en: null, session_id: null },
+        })
+        f.acceso_token = nuevoToken
+        f.accedido_en = null
+        f.expira_en = null
+        f.session_id = null
+      }
     }
 
     const externosTotal = firma.firmantes.filter((f: any) => f.tipo === "externo").length

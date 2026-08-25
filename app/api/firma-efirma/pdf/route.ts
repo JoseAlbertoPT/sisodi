@@ -35,6 +35,8 @@ export async function GET(req: NextRequest) {
     if (!uuid || !token) {
       return NextResponse.json({ ok: false, error: "Faltan parámetros" }, { status: 400 })
     }
+    const descargar = url.searchParams.get("download") === "1"
+    const contentDisposition = descargar ? "attachment; filename=\"justificacion.pdf\"" : "inline"
 
     const firmante = await prisma.firma_firmante.findUnique({
       where: { acceso_token: String(token) },
@@ -54,7 +56,7 @@ export async function GET(req: NextRequest) {
           status: 200,
           headers: {
             "Content-Type": "application/pdf",
-            "Content-Disposition": "inline",
+            "Content-Disposition": contentDisposition,
             "Cache-Control": "no-store, private",
           },
         })
@@ -92,7 +94,7 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": "inline",
+        "Content-Disposition": contentDisposition,
         "Cache-Control": "no-store, private",
       },
     })

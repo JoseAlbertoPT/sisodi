@@ -7,8 +7,7 @@ export const ESTADO_FINAL = "Emitido"
 export const ESTADO_SIN_DICTAMEN = "En Revision Emisor"
 export const ESTADO_BORRADOR = "Borrador"
 
-// ── Formato "consolidado" (una sola hoja "BASE CONSOLIDADA") ─────────────
-const COL_LEGACY = {
+export const COL_LEGACY = {
   folioJustificacion:     "FOLIO DE JUSTIFICACIÓN/DESCRIPCIÓN",
   fechaJustificacion:     "FECHA DE EMISION DE LA JUSTIFICACION/DESCRIPCION",
   folioDictamen:          "FOLIO DE DICTAMEN/OPINIÓN",
@@ -39,7 +38,6 @@ export const MANUAL_OVERRIDES: Record<string, string> = {
   "JEFATURA DE LA OFICINA DE LA GOBERNATURA DEL ESTADO": "Jefatura de la Oficina de la Gubernatura del Estado",
 }
 
-// ── Formato "multi-hoja" (una hoja por secretaría) ────────────────────────
 const HOJA_FIELD_MATCHERS: [string, (h: string) => boolean][] = [
   ["folioJustificacion",     (h) => h.includes("FOLIO") && h.includes("JUSTIFICACION") && !h.includes("DICTAMEN")],
   ["folioDictamen",          (h) => h.includes("FOLIO") && h.includes("DICTAMEN")],
@@ -79,15 +77,12 @@ function resolveHeaderMapHoja(headers: string[]): Record<string, string> {
     const idx = normalized.findIndex((h) => h !== "" && test(h))
     if (idx >= 0) map[field] = headers[idx]
   }
-  // La hoja BIENESTAR trae la primera columna (folio de justificación) sin
-  // encabezado ("" tras normalizar) en vez de "FOLIO DE JUSTIFICACIÓN".
   if (!map.folioJustificacion && normalized[0] === "") {
     map.folioJustificacion = headers[0]
   }
   return map
 }
 
-// ── Utilidades de parseo (puras, sin dependencias externas) ──────────────
 const COMBINING_MARKS_RE = new RegExp("[\\u0300-\\u036f]", "g")
 function norm(s: string): string {
   return (s ?? "")
@@ -520,7 +515,6 @@ export function procesarFilas(
   return { resultados, toInsert, resumen }
 }
 
-// ── Inserción real en base de datos ───────────────────────────────────────
 export async function insertarSolicitudes(
   toInsert: any[],
   contexto: ContextoImport,
@@ -564,7 +558,6 @@ export async function insertarSolicitudes(
   return creadas
 }
 
-// ── Sincronización de catalogo_justificacion desde solicitudes emitidas ──
 export interface ResultadoSincronizar {
   insertados: number
   total: number

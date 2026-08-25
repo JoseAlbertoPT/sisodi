@@ -463,11 +463,12 @@ function OficioUpload({
       )}
 
       <FileDropZone
-        hint="PDF · máx. 10 MB · 1 archivo"
+        hint="PDF · máx. 50 MB · 1 archivo"
         accept=".pdf,application/pdf"
         files={archivos}
         onFilesChange={handleFilesChange}
         multiple={false}
+        maxSizeMB={50}
         error={error}
       />
     </div>
@@ -1265,27 +1266,46 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
     </div>
   )
 }
-function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
-  const filas: { elemento: string; ejemplo: string }[] = [
-    { elemento: "Verbo Infinitivo",                    ejemplo: "Revisar" },
-    { elemento: "Actividad – ¿Qué hace?",               ejemplo: "Que las descripciones y perfiles de puesto cumplan con las actividades, responsabilidades y requisitos solicitados" },
-    { elemento: "¿Cómo lo hace? / ¿En qué se basa?",   ejemplo: "Realizar el análisis para su elaboración y/o actualización, en apego al procedimiento y metodología establecida por la Dirección General de Desarrollo Organizacional" },
-    { elemento: "Con la Finalidad de / ¿Para qué lo hace?",       ejemplo: "Con la finalidad de que el puesto documentado cumpla con la funcionalidad requerida" },
-    { elemento: "Alcance / ¿Dónde aplica sus funciones?",             ejemplo: "De las plazas que integran la Administración Pública del Gobierno del Estado" },
-  ]
+const FORMULA_LLENADO_CONTENIDO = {
+  objeto: {
+    formula: "VERBO + ACTIVIDAD + MEDIANTE O A TRAVÉS DE QUÉ + CON LA FINALIDAD DE (para) + ALCANCE",
+    titulo: "OBJETO DE CONTRATACIÓN",
+    descripcion: "Redactar de manera específica el motivo por el cual se realizará la contratación, especificando la necesidad de la misma.",
+    filas: [
+      { elemento: "Verbo – Infinitivo",                      ejemplo: "Brindar" },
+      { elemento: "Actividad – ¿Qué hace?",                  ejemplo: "Apoyo técnico-jurídico en el análisis y atención de los asuntos competencia de la Subprocuraduría de Consultoría y Normativa." },
+      { elemento: "¿Cómo lo hace? / ¿En qué se basa?",       ejemplo: "Mediante la investigación, estudio e interpretación de la legislación y normatividad vigente aplicable, la elaboración de proyectos de opiniones jurídicas, la revisión de instrumentos jurídicos, así como la integración, control y seguimiento de expedientes y la actualización de disposiciones legales," },
+      { elemento: "Con la Finalidad ¿Para qué lo hace?",     ejemplo: "Con la finalidad de fortalecer la gestión y atención de los asuntos jurídicos de la Subprocuraduría." },
+      { elemento: "Alcance/ ¿Dónde aplica sus funciones?",   ejemplo: "Coadyuvando a que las actuaciones de la Secretaría de Administración y Finanzas se realicen con apego al marco jurídico vigente aplicable." },
+    ],
+  },
+  actividades: {
+    formula: "VERBO + ACTIVIDAD + MEDIANTE O A TRAVÉS DE QUÉ + CON LA FINALIDAD DE (para) + ALCANCE",
+    titulo: "ACTIVIDADES A REALIZAR",
+    descripcion: "Enuncia las actividades específicas que realizará el prestador de servicios.",
+    filas: [
+      { elemento: "Verbo – Infinitivo",                  ejemplo: "Auxiliar" },
+      { elemento: "Actividad – ¿Qué hace?",              ejemplo: "En la revisión preliminar de convenios, contratos, acuerdos y demás instrumentos jurídicos sometidos a consideración de la Subprocuraduría." },
+      { elemento: "Mediante o ¿A través de qué?",        ejemplo: "Mediante el análisis de su estructura, la verificación de la fundamentación jurídica, la congruencia con la normatividad aplicable y cotejo con formatos o modelos institucionales preestablecidos." },
+      { elemento: "Con la Finalidad ¿Para qué lo hace?", ejemplo: "Con la finalidad de apoyar en la integración de instrumentos jurídicos que fortalezcan la seguridad y certeza jurídica de los actos administrativos y contractuales de la Secretaría de Administración y Finanzas." },
+    ],
+  },
+} as const
+
+function FormulaLlenadoModal({ tipo, onClose }: { tipo: "objeto" | "actividades"; onClose: () => void }) {
+  const { formula, titulo, descripcion, filas } = FORMULA_LLENADO_CONTENIDO[tipo]
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
         className="relative z-10 w-full bg-white flex flex-col overflow-hidden"
-        style={{ maxWidth: 580, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
+        style={{ maxWidth: 760, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
       >
         {/* ── Header ── */}
         <div className="flex items-start justify-between px-6 py-5">
           <div className="flex flex-col gap-1.5">
             <Info className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
-            <span className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">Fórmula de llenado</span>
-            <span className="ds-label-md text-sm! font-light! leading-[1.4]! text-[#5d5e5f]">Guía para redactar correctamente el campo</span>
+            <span className="ds-title-sm text-[18px]! font-normal! leading-[1.35]! text-[#2e3b2b]">Guía para llenar</span>
           </div>
           <button
             onClick={onClose}
@@ -1300,38 +1320,31 @@ function FormulaLlenadoModal({ onClose }: { onClose: () => void }) {
 
 
         <div className="overflow-auto px-6 py-4" style={{ maxHeight: "65vh" }}>
-          <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
-            <tbody>
-              {filas.map((fila, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #E5E7EB" }}>
-                  <td
-                    className="align-top"
-                    style={{
-                      width: "40%",
-                      padding: "12px 16px",
-                      backgroundColor: "#F9FAFB",
-                      color: "#6B7280",
-                      fontWeight: 400,
-                      borderRight: "1px solid #E5E7EB",
-                    }}
-                  >
-                    {fila.elemento}
-                  </td>
-                  <td
-                    className="align-top leading-relaxed"
-                    style={{
-                      padding: "12px 16px",
-                      backgroundColor: "#ffffff",
-                      color: "#5d5e5f",
-                      fontWeight: 400,
-                    }}
-                  >
-                    {fila.ejemplo}
+          <p className="text-center font-bold italic text-xs mb-3" style={{ color: "#2e3b2b" }}>
+            {formula}
+          </p>
+          <div className="rounded-xl border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <tbody>
+                <tr className="border-b border-border/50">
+                  <td colSpan={2} className="px-4 py-3 bg-muted/30">
+                    <p className="text-center font-bold" style={{ color: "#2e3b2b" }}>{titulo}</p>
+                    <p className="text-center text-xs text-muted-foreground">{descripcion}</p>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+                {filas.map((fila, i) => (
+                  <tr key={i} className="border-b border-border/50 last:border-b-0">
+                    <td className="align-top text-center px-4 py-3 bg-muted/30 text-muted-foreground border-r border-border/50 w-56 whitespace-normal">
+                      {fila.elemento}
+                    </td>
+                    <td className="align-top leading-relaxed px-4 py-3 text-card-foreground">
+                      {fila.ejemplo}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
 
@@ -1389,7 +1402,7 @@ function FormularioPrestacion({
   permisoActivo?: boolean
 }) {
   const bloqueadoPorRenovacion = esRenovacion
-  const [showFormulaModal, setShowFormulaModal] = useState(false)
+  const [showFormulaModal, setShowFormulaModal] = useState<"" | "objeto" | "actividades">("")
   const [formulaObjetoShown, setFormulaObjetoShown] = useState(false)
   const [formulaActividadesShown, setFormulaActividadesShown] = useState(false)
 
@@ -1682,7 +1695,7 @@ function FormularioPrestacion({
   const numeroUA = getNumeroUA(secretariaConfirmada || secretariaInput, unidadSeleccionada)
   return (
     <div className="flex flex-col gap-3">
-      {showFormulaModal && <FormulaLlenadoModal onClose={() => setShowFormulaModal(false)} />}
+      {showFormulaModal && <FormulaLlenadoModal tipo={showFormulaModal} onClose={() => setShowFormulaModal("")} />}
       {bloqueadoPorRenovacion && (
         <div className="flex items-start gap-3 rounded-lg border-2 border-secondary/40 bg-secondary/5 px-4 py-3">
           <Lock className="h-5 w-5 shrink-0 text-secondary mt-0.5" />
@@ -2024,7 +2037,7 @@ function FormularioPrestacion({
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2">
-              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal <span className="text-destructive">*</span></Label>
+              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal y Documentación de Soporte <span className="text-destructive">*</span></Label>
               <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} />
             </div>
           </div>
@@ -2037,7 +2050,7 @@ function FormularioPrestacion({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto de la Contratación
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+            <button type="button" onClick={() => setShowFormulaModal("objeto")} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
               <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
@@ -2048,7 +2061,7 @@ function FormularioPrestacion({
             onChange={(e) => {
               if (!bloqueadoPorRenovacion) {
                 if (!formulaObjetoShown && objeto === "" && e.target.value.length > 0) {
-                  setShowFormulaModal(true)
+                  setShowFormulaModal("objeto")
                   setFormulaObjetoShown(true)
                 }
                 setObjeto(e.target.value)
@@ -2066,7 +2079,7 @@ function FormularioPrestacion({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccion.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+            <button type="button" onClick={() => setShowFormulaModal("actividades")} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
               <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
@@ -2079,7 +2092,7 @@ function FormularioPrestacion({
                 const itemAdded = newItems.length > actividades.length
                 const firstContent = newItems.some((v, i) => v.trim() !== "" && (actividades[i] ?? "").trim() === "")
                 if (itemAdded || firstContent) {
-                  setShowFormulaModal(true)
+                  setShowFormulaModal("actividades")
                   setFormulaActividadesShown(true)
                 }
               }
@@ -2206,7 +2219,7 @@ function FormularioNombramiento({
   permisoActivo?: boolean
 }) {
   const bloqueadoPorRenovacion = esRenovacion
-  const [showFormulaModal, setShowFormulaModal] = useState(false)
+  const [showFormulaModal, setShowFormulaModal] = useState<"" | "objeto" | "actividades">("")
   const [formulaObjetoShown, setFormulaObjetoShown] = useState(false)
   const [formulaActividadesShown, setFormulaActividadesShown] = useState(false)
   const [importeNeto,    setImporteNeto]    = useState(
@@ -2447,7 +2460,7 @@ function FormularioNombramiento({
 
   return (
     <div className="flex flex-col gap-3">
-      {showFormulaModal && <FormulaLlenadoModal onClose={() => setShowFormulaModal(false)} />}
+      {showFormulaModal && <FormulaLlenadoModal tipo={showFormulaModal} onClose={() => setShowFormulaModal("")} />}
       {showMarcoModal && (
         <MarcoNormativoModal
 
@@ -2811,7 +2824,7 @@ function FormularioNombramiento({
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2">
-              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal <span className="text-destructive">*</span></Label>
+              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal y Documentación de Soporte <span className="text-destructive">*</span></Label>
               <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} />
             </div>
           </div>
@@ -2823,7 +2836,7 @@ function FormularioNombramiento({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.II ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>II</span>
             Objeto del Nombramiento
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+            <button type="button" onClick={() => setShowFormulaModal("objeto")} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
               <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
@@ -2834,7 +2847,7 @@ function FormularioNombramiento({
             onChange={(e) => {
               if (!bloqueadoPorRenovacion) {
                 if (!formulaObjetoShown && objetoNombramiento === "" && e.target.value.length > 0) {
-                  setShowFormulaModal(true)
+                  setShowFormulaModal("objeto")
                   setFormulaObjetoShown(true)
                 }
                 setObjetoNombramiento(e.target.value)
@@ -2852,7 +2865,7 @@ function FormularioNombramiento({
             <span className={`flex h-7 w-7 items-center justify-center rounded ${seccionNom.III ? "bg-[#7B2D5E]" : "bg-primary"} text-xs font-bold text-primary-foreground`}>III</span>
             Actividades a Realizar
             {bloqueadoPorRenovacion && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-            <button type="button" onClick={() => setShowFormulaModal(true)} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
+            <button type="button" onClick={() => setShowFormulaModal("actividades")} className="ml-1 text-[#9ca3af] hover:text-[#7B2D5E] transition-colors" title="Ver fórmula de llenado">
               <img src="/iconos2/Icon.svg" alt="" className="h-4 w-4" />
             </button>
           </CardTitle>
@@ -2865,7 +2878,7 @@ function FormularioNombramiento({
                 const itemAdded = newItems.length > funciones.length
                 const firstContent = newItems.some((v, i) => v.trim() !== "" && (funciones[i] ?? "").trim() === "")
                 if (itemAdded || firstContent) {
-                  setShowFormulaModal(true)
+                  setShowFormulaModal("actividades")
                   setFormulaActividadesShown(true)
                 }
               }

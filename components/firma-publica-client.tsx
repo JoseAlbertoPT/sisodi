@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import {
   CheckCircle2, Loader2, AlertCircle, Clock,
-  FileKey, KeyRound, Briefcase, Info,
+  FileKey, KeyRound, Briefcase, Info, ExternalLink, Download,
 } from "lucide-react"
 import { parseCertificadoInfo } from "@/lib/certificado-cer"
 
@@ -537,6 +537,25 @@ export function FirmaPublicaClient({ uuid, token }: Props) {
                   {documentoInfo?.fecha && <> · {new Date(documentoInfo.fecha).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</>}
                 </p>
               </div>
+              {/* Algunos navegadores no dibujan bien el visor propio (canvas vía
+                  PDF.js) — este enlace abre el PDF real con el visor nativo del
+                  navegador, que no depende de ese renderizado. */}
+              <a
+                href={pdfSrc}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Ver en otra pestaña
+              </a>
+              <a
+                href={`${pdfSrc}&download=1`}
+                className="shrink-0 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Descargar
+              </a>
             </div>
             <div className="flex-1 min-h-0">
               <PdfPreview fileUrl={pdfSrc} label="Cargando documento…" />

@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import dynamic from "next/dynamic"
 import * as XLSX from "xlsx"
+import { COL_LEGACY, SHEET_NAME_LEGACY } from "@/lib/importar-catalogo-excel"
 import { folioSinSiglas } from "@/lib/clave-dictamen"
 import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
 import { useProgramasSigef } from "@/hooks/use-programas-sigef"
@@ -1130,6 +1131,17 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     XLSX.writeFile(wb, `reporte-general-catalogo-${fecha}.xlsx`, { bookType: "xlsx", type: "binary" })
   }
 
+  // Plantilla en blanco para el importador: mismos encabezados que COL_LEGACY
+  // (formato "consolidado", una sola hoja llamada SHEET_NAME_LEGACY) — así el
+  // archivo que resulte de llenarla se detecta automáticamente al subirlo.
+  const handleDescargarPlantilla = () => {
+    const headers = Object.values(COL_LEGACY)
+    const ws = XLSX.utils.aoa_to_sheet([headers])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, SHEET_NAME_LEGACY)
+    XLSX.writeFile(wb, "plantilla-catalogo-justificaciones.xlsx", { bookType: "xlsx", type: "binary" })
+  }
+
   // Comentado junto con su DropdownMenuItem — ver nota más abajo, en el menú.
   // const handleReporteReutilizaciones = () => {
   //   const reutilizadas = filtered.filter((rec) => rec.catalogo_solicitudes.length > 0)
@@ -1196,10 +1208,10 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
         />
         <Select value={secretariaFilter} onValueChange={setSecretariaFilter}>
           <SelectTrigger className="w-80 bg-card">
-            <SelectValue placeholder="Todas las secretarías" />
+            <SelectValue placeholder="Todas las Secretarías / Dependencia" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todas">Todas las secretarías</SelectItem>
+            <SelectItem value="todas">Todas las Secretarías / Dependencia</SelectItem>
             {secretarias.map(([clave, nombre]) => (
               <SelectItem key={clave} value={clave}>{nombre}</SelectItem>
             ))}
@@ -1214,6 +1226,19 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <FileSpreadsheet className="h-4 w-4" />
           Reporte general
         </Button>
+        {/* Comentado a pedido: la función de importar Excel al catálogo (diálogo,
+            vista previa, plantilla descargable) ya está lista, pero todavía no
+            se pidió como funcionalidad activa. Se deja el botón comentado en
+            vez de borrar el resto — solo hay que descomentarlo cuando se pida.
+        <Button
+          variant="vino"
+          className="gap-1.5 shrink-0"
+          onClick={() => setImportOpen(true)}
+        >
+          <Upload className="h-4 w-4" />
+          Importar Excel al catálogo
+        </Button>
+        */}
         {/* Comentado a pedido: el reporte "General" ya separa por hojas
             (General + Con Movimientos), así que esta opción de menú quedó
             redundante. Se deja el handler por si se reactiva.
@@ -1475,6 +1500,16 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Sube un archivo <span className="font-semibold text-card-foreground">.xlsx</span> con justificaciones dictaminadas (formato consolidado de una sola hoja, o una hoja por secretaría). Primero se muestra una vista previa sin guardar nada; tú confirmas antes de escribir en la base de datos.
                 </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 self-start"
+                  onClick={handleDescargarPlantilla}
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  Descargar plantilla
+                </Button>
                 <FileDropZone
                   accept=".xlsx"
                   hint=".xlsx · máx. 10 MB"

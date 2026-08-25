@@ -10,6 +10,7 @@ import {
 import path from "path";
 import fs from "fs";
 import React from "react";
+import { siglasSecretaria } from "@/lib/clave-dictamen";
 
 // Mismo glifo de viñeta que la Carta Descriptiva (PlantillaCartaDescriptivaServicios):
 // Helvetica no tiene glifo para ❖ (U+2756), así que se registra esta fuente.
@@ -448,7 +449,8 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
           <View style={s.headerCol3}>
             <View style={s.claveBox}>
-              <Text style={s.claveText}>{data.clave || "Clave"}</Text>
+              {/* Solo las siglas de la secretaría — no el folio de dictamen. */}
+              <Text style={s.claveText}>{siglasSecretaria(data.secretaria) || "Clave"}</Text>
             </View>
             <View style={s.pageBox}>
               <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />
@@ -890,7 +892,8 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
           <View style={s.headerCol3}>
             <View style={s.claveBox}>
-              <Text style={s.claveText}>{data.clave || "Clave"}</Text>
+              {/* Solo las siglas de la secretaría — no el folio de dictamen. */}
+              <Text style={s.claveText}>{siglasSecretaria(data.secretaria) || "Clave"}</Text>
             </View>
             <View style={s.pageBox}>
               <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />

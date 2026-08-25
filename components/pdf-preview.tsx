@@ -80,8 +80,18 @@ export function PdfPreview({ fileUrl, label, refreshing }: PdfPreviewProps) {
       )}
 
       {loadError && (
-        <div className="absolute inset-0 flex items-center justify-center h-full p-4 text-sm text-destructive text-center bg-muted">
-          No se pudo cargar el PDF: {loadError}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 h-full p-4 text-sm text-destructive text-center bg-muted">
+          <span>No se pudo mostrar la vista previa: {loadError}</span>
+          {fileUrl && (
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-medium text-primary underline underline-offset-2 hover:opacity-80"
+            >
+              Abrir el PDF en una pestaña nueva
+            </a>
+          )}
         </div>
       )}
 
