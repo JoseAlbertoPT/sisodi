@@ -9,7 +9,7 @@ export type RangoTabulador = {
 
 export const RANGOS_TABULADOR: RangoTabulador[] = [
 
-  { min: 32124.36, max: 49846.50, nivel: "105", categoria: "A a C" },
+  //{ min: 32124.36, max: 49846.50, nivel: "105", categoria: "A a C" },
   { min: 24380.00, max: 32123.30, nivel: "106", categoria: "A a C" },
   { min: 19080.00, max: 24369.40, nivel: "107", categoria: "A a C" },
   { min: 0.00,     max: 18830.90, nivel: "108", categoria: "A a C" },
@@ -19,7 +19,9 @@ export const RANGOS_TABULADOR: RangoTabulador[] = [
   { min: 0.00,     max: 10553.36, nivel: "303", categoria: "A" },
 
 
-  { min: 0.00,     max: 49847.00, nivel: "504", categoria: "ÚNICA",  },
+
+
+  //{ min: 0.00,     max: 49847.00, nivel: "504", categoria: "ÚNICA"},
 
   { min: 0.00, max: 47631.00, nivel: "505", categoria: "A a B" },
     { min: 0.00, max: 44308.00, nivel: "506", categoria: "A a B" },
