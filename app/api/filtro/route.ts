@@ -196,8 +196,15 @@ export async function GET(req: NextRequest) {
         },
       })
       if (viewer) {
-        esRolRevisor = viewer.rol?.nombre?.toLowerCase() === "revisor"
-        esAdmin      = viewer.rol?.nombre?.toLowerCase() === "administrador"
+        const rolNombre = viewer.rol?.nombre?.toLowerCase() ?? ""
+        esRolRevisor = rolNombre === "revisor"
+        esAdmin      = rolNombre === "administrador"
+        // Verificador y Emisor son bandejas centralizadas de DGDO: revisan
+        // solicitudes de TODAS las secretarías, sin importar la propia del
+        // usuario — igual que Administrador. Solo Revisor sigue acotado (por
+        // asignación puntual, ver más abajo), y por eso es el único que no
+        // entra aquí.
+        const esRolGlobalPorSecretaria = esAdmin || rolNombre === "verificador" || rolNombre === "emisor"
 
         // Cada usuario solo ve solicitudes de su propio ámbito, sin importar el
         // rol: un usuario con órgano centralizado ve lo centralizado (incluye
@@ -213,7 +220,7 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({ ok: true, data: [] })
         }
 
-        if (!esRolRevisor && !esAdmin) {
+        if (!esRolRevisor && !esRolGlobalPorSecretaria) {
           if (viewer.secretaria_id) {
             // Alcance a nivel Secretaría: todos los nodos (Direcciones, etc.) de la
             // misma Secretaría, no solo el nodo exacto del usuario.
@@ -228,7 +235,8 @@ export async function GET(req: NextRequest) {
           }
           // Filtro 3 (Emisión/DO): sin secretaría → ve todas las solicitudes
         }
-        // Administrador: sin organoFilter → ve todas las solicitudes en cualquier filtro
+        // Administrador/Verificador/Emisor: sin organoFilter → ven todas las
+        // solicitudes de cualquier secretaría en su filtro correspondiente.
       }
     }
 
