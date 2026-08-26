@@ -122,6 +122,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 40,
     fontFamily: "Helvetica",
     fontSize: 9,
+    lineHeight: 1.15,
     color: "#000",
     position: 'relative',
   },
@@ -205,7 +206,10 @@ const s = StyleSheet.create({
   centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 14 },
   sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 8, marginTop: 10 },
 
-  row: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
+  // flex-start (no flex-end): si el valor hace wrap a 2 renglones (p. ej.
+  // Programa o Proyecto), la etiqueta debe alinearse con el primer renglón,
+  // no con el último.
+  row: { flexDirection: "row", marginBottom: 12, alignItems: "flex-start" },
   bold: { fontFamily: "Helvetica-Bold", marginBottom: 3, marginTop: 3 },
   numLabel: { width: 15, fontFamily: "Helvetica-Bold", fontSize: 9 },
   marginLabel: { fontFamily: "Helvetica-Bold", marginRight: 5, fontSize: 9 },
@@ -486,11 +490,12 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           <Text style={s.valueText}>{toTitleCaseES(data.unidadResponsable)}</Text>
         </View>
 
-        <View style={s.row}>
-          <Text style={s.numLabel}>4.</Text>
-          <Text style={s.marginLabel}>Programa o Proyecto:</Text>
+
+        <Text style={{ fontSize: 9, marginBottom: 12 }}>
+          <Text style={s.numLabel}>4. </Text>
+          <Text style={{ ...s.marginLabel, marginRight: 0 }}>Programa o Proyecto:  </Text>
           <Text style={s.valueText}>{data.programaProyecto}</Text>
-        </View>
+        </Text>
 
         <View style={{ marginBottom: 6 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
@@ -566,7 +571,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
         <View wrap={false}>
           <Text style={s.sectionTitle}>I.1    OBJETO DEL NOMBRAMIENTO POR TIEMPO DETERMINADO:</Text>
-          <Text style={{ textAlign: "justify", lineHeight: 1.5, marginBottom: 10, marginTop: 4 }} wrap={true}>
+          <Text style={{ fontSize: 9, textAlign: "justify", lineHeight: 1.15, marginBottom: 10, marginTop: 4 }} wrap={true}>
             {data.objetoNombramiento}
           </Text>
         </View>

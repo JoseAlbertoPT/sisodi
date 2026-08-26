@@ -110,6 +110,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 40,
     fontFamily: "Helvetica",
     fontSize: 9,
+    lineHeight: 1.15,
     color: "#000",
     position: 'relative',
   },
@@ -198,7 +199,11 @@ const s = StyleSheet.create({
   centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 12 },
   sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 4, marginTop: 10 },
 
-  row: { flexDirection: "row", marginBottom: 8, alignItems: "flex-end", marginLeft: 32 },
+  // flex-start (no flex-end): si el valor es largo y hace wrap a 2 renglones
+  // (p. ej. Programa o Proyecto), la etiqueta debe alinearse con el PRIMER
+  // renglón del valor, no con el último — si no, la etiqueta queda más abajo
+  // que donde empieza el texto, como "rota" respecto al primer renglón.
+  row: { flexDirection: "row", marginBottom: 8, alignItems: "flex-start", marginLeft: 32 },
   bold: { fontFamily: "Helvetica-Bold" },
   numLabel: { width: 15, fontFamily: "Helvetica", fontSize: 9 },
   marginLabel: { fontFamily: "Helvetica", marginRight: 5, fontSize: 9 },
@@ -567,10 +572,15 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={s.valueText}>{data.importeBruto}</Text>
         </View>
 
-        <View style={s.row}>
-          <Text style={s.marginLabel}>Programa o Proyecto:</Text>
+        {/* Texto en línea (un solo <Text> con hijos anidados), no fila flex:
+            "Programa o Proyecto" suele ser largo y necesitar 2 renglones —
+            con flexDirection:"row" el renglón que rebasa puede dibujarse
+            arriba de la fila en vez de abajo (bug de wrap de react-pdf). Con
+            <Text> anidado, el wrap es el mismo que el de un párrafo normal. */}
+        <Text style={{ fontSize: 9, marginLeft: 32, marginBottom: 8 }}>
+          <Text style={{ ...s.marginLabel, marginRight: 0 }}>Programa o Proyecto:  </Text>
           <Text style={s.valueText}>{data.programaProyecto}</Text>
-        </View>
+        </Text>
 
         {/* Ocultos a pedido del usuario (no eliminar, solo comentado):
         <View style={s.row}>
@@ -609,7 +619,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
 
         <View wrap={false}>
           <Text style={s.sectionTitle}>1.2    OBJETO DE LA CONTRATACIÓN:</Text>
-          <Text style={{ textAlign: "justify", lineHeight: 1.4, marginBottom: 8, marginLeft: 32 }}>{data.objetoContratacion}</Text>
+          <Text style={{ fontSize: 9, textAlign: "justify", lineHeight: 1.15, marginBottom: 8, marginLeft: 32 }}>{data.objetoContratacion}</Text>
         </View>
 
         <View wrap={false}>
