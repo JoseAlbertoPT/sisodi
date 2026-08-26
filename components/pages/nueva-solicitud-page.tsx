@@ -1742,8 +1742,6 @@ function FormularioPrestacion({
                     const ua = catalogoUAsConGuardada.find((u) => u.clave === clave)
                     setClaveUA(clave)
                     setUnidadSeleccionada(ua?.nombre ?? "")
-                    setProgramaSeleccionado("")
-                    setTipoActividadSeleccionado("")
                   }}
                    >
                   <SelectTrigger className="w-full font-mono">
@@ -1758,7 +1756,7 @@ function FormularioPrestacion({
               ) : (
                 <Input
                   value={claveUA}
-                  onChange={(e) => { setClaveUA(e.target.value); setProgramaSeleccionado(""); setTipoActividadSeleccionado("") }}
+                  onChange={(e) => setClaveUA(e.target.value)}
                   placeholder="Ingrese clave de la unidad administrativa"
                   className="font-mono"
                 />
@@ -3411,6 +3409,57 @@ function toItems(v: unknown, key: keyof FormularioData): string[] {
   return []
 }
 
+/**
+ * Diff de listas por CONTENIDO (LCS), no por posición fija: si se borra un
+ * punto, los siguientes se recorren una posición pero siguen siendo el mismo
+ * texto — comparar posición contra posición los marcaría a todos como
+ * "cambiados" en cadena. Aquí se alinean por coincidencia exacta de texto;
+ * lo que no encaja en la subsecuencia común se agrupa en pares
+ * eliminado→agregado consecutivos (una edición real) o se muestra solo como
+ * eliminado/agregado si no hay pareja.
+ */
+function diffListItems(oldItems: string[], newItems: string[]): { indice: number; de: string; a: string }[] {
+  const n = oldItems.length, m = newItems.length
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = oldItems[i] === newItems[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
+    }
+  }
+  type Op = { type: "equal" | "del" | "add"; value: string; oldIndex?: number; newIndex?: number }
+  const ops: Op[] = []
+  let i = 0, j = 0
+  while (i < n && j < m) {
+    if (oldItems[i] === newItems[j]) { ops.push({ type: "equal", value: oldItems[i] }); i++; j++ }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ type: "del", value: oldItems[i], oldIndex: i }); i++ }
+    else { ops.push({ type: "add", value: newItems[j], newIndex: j }); j++ }
+  }
+  while (i < n) { ops.push({ type: "del", value: oldItems[i], oldIndex: i }); i++ }
+  while (j < m) { ops.push({ type: "add", value: newItems[j], newIndex: j }); j++ }
+
+  const resultado: { indice: number; de: string; a: string }[] = []
+  let k = 0
+  while (k < ops.length) {
+    if (ops[k].type === "equal") { k++; continue }
+    const dels: Op[] = []
+    const adds: Op[] = []
+    while (k < ops.length && ops[k].type !== "equal") {
+      if (ops[k].type === "del") dels.push(ops[k]); else adds.push(ops[k])
+      k++
+    }
+    const pares = Math.max(dels.length, adds.length)
+    for (let p = 0; p < pares; p++) {
+      const del = dels[p], add = adds[p]
+      resultado.push({
+        indice: (del?.oldIndex ?? add?.newIndex ?? 0) + 1,
+        de: del?.value ?? "—",
+        a: add?.value ?? "—",
+      })
+    }
+  }
+  return resultado
+}
+
 function computeDiff(
   oldData: Partial<FormularioData>,
   newData: Partial<FormularioData>,
@@ -3467,9 +3516,19 @@ function computeDiff(
     if (oldCmp === newCmp) return []
 
     if (DIFF_LIST_KEYS.has(key)) {
+      // Diff por contenido (LCS), no por posición fija: si se borra un punto,
+      // los siguientes se recorren pero siguen siendo el mismo texto — con
+      // diffListItems solo se marcan los puntos realmente eliminados/
+      // agregados/editados, no toda la cola desplazada.
       const oldItems = toItems(oldData[key], key)
       const newItems = toItems(newData[key], key)
-      return [{ campo: label, de: oldItems.join("\n") || "—", a: newItems.join("\n") || "—" }]
+      const diffs = diffListItems(oldItems, newItems)
+      const multiple = oldItems.length > 1 || newItems.length > 1
+      return diffs.map(d => ({
+        campo: multiple ? `${label} (punto ${d.indice})` : label,
+        de: d.de,
+        a: d.a,
+      }))
     }
 
     const fmt = (v: unknown): string => {
@@ -3736,9 +3795,17 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
   const normCat = (s: string) =>
     s.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ")
 
+  // Al editar una solicitud de OTRA secretaría distinta a la del usuario que
+  // edita (p. ej. un Administrador corrigiendo una solicitud de Finanzas), el
+  // catálogo de Unidades/URG debe resolverse contra la secretaría PROPIA de
+  // la solicitud, no la del editor — si no, la reconciliación de abajo no
+  // encuentra la Unidad Responsable del Gasto real (es de otro catálogo) y
+  // la deja en blanco o, peor, la sustituye por una clave coincidente de la
+  // secretaría del editor.
+  const secretariaParaCatalogoUAs = editSolicitud?.formData?.secretaria ?? userSecretariaOriginal
   const catalogoUAsDelUsuario = useMemo((): { clave: string; nombre: string }[] => {
-    if (!userSecretariaOriginal || catalogoTree.length === 0) return []
-    const secNorm = normCat(userSecretariaOriginal)
+    if (!secretariaParaCatalogoUAs || catalogoTree.length === 0) return []
+    const secNorm = normCat(secretariaParaCatalogoUAs)
     const rootNode = catalogoTree.find((n) => {
       const nn = normCat(n.nombre)
       return nn === secNorm || nn.includes(secNorm) || secNorm.includes(nn)
@@ -3749,7 +3816,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         clave:  ua.ua_clave_administrativa ?? ua.clave_reporte_plazas ?? "",
         nombre: ua.nombre,
       }))
-  }, [catalogoTree, userSecretariaOriginal])
+  }, [catalogoTree, secretariaParaCatalogoUAs])
   const foliosReales = useMemo((): FolioExcel[] => {
     const foliosExcel = excelRows.length === 0 ? [] : excelRows
       .filter((row) => {

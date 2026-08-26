@@ -44,10 +44,14 @@ export async function generateJustificacionPDF(solicitudId: string | number, fol
 }
 
 export async function generateJustificacionPDFBase64(solicitudId: string | number): Promise<string> {
+  // Este PDF es el que se sube al portal de firma electrónica ("Firma de
+  // Justificación") — ahí no debe verse el folio de dictamen (paraFirma:
+  // true hace que la plantilla muestre solo las siglas de la secretaría, no
+  // la clave completa que sí se ve en Dictámenes/Catálogo).
   const res = await fetch("/api/pdf/justificacion", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ solicitudId }),
+    body: JSON.stringify({ solicitudId, paraFirma: true }),
   });
   if (!res.ok) {
     const errData = await res.json().catch(() => null);

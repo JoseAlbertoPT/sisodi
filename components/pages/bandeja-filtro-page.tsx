@@ -175,8 +175,9 @@ function classifyDO(s: FiltroSolicitud): TabKey {
   const n = s.estado.toLowerCase()
   if (n === "pendiente do" || n.includes("en revision revisor")) return "pendientes_asignacion"
   if (n === "pendiente firma dictamen" || n === "pendiente firma verificacion") return "pendientes_firma"
-  if (n.includes("observado por emisor")) return "en_validacion"
+
   if (
+    n.includes("observado por emisor") ||
     n.includes("observado por verificacion final") ||
     n.includes("observado por do")     || n.includes("devuelta por do") ||
     n.includes("observado do filtro")
@@ -193,7 +194,7 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   const estadoObservado  = getEstadoObservado(filtro)
   const estadoNorm       = s.estado.toLowerCase()
   if (filtro === 3 && estadoNorm === "observado por verificacion final") return "todas"
-  if (filtro === 1 && estadoNorm === "observado por verificacion final") return "revision"
+  if (filtro === 1 && estadoNorm === "observado por verificacion final") return "observadas"
   if (estadoNorm === estadoObservado.toLowerCase()) return "observadas"
   if (filtro === 1) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma justificacion" || estadoNorm === "pendiente firma revision") return "pendientes_firma"
@@ -1662,10 +1663,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                               ? <StatusBadge label="En firma" color={config.badgeStyle.color as string} bgColor={config.badgeStyle.backgroundColor as string} />
                               : <StatusBadge label={config.label} color={config.badgeStyle.color as string} bgColor={config.badgeStyle.backgroundColor as string} />
                             }
-                            {((filtro === 1 && sol.estado.toLowerCase() === "observado por verificacion final") ||
-                              (filtro === 2 && sol.estado.toLowerCase().includes("observado por emisor"))) && (
-                              <StatusBadge label="Observado" color={C_ROSA_VINO} bgColor={C_ROSA_VINO_BG} />
-                            )}
                           </div>
                         </td>
 

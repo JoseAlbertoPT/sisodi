@@ -12,7 +12,7 @@ import {
 import { efirmaClient } from "@/lib/efirma-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
-import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
+import { claveParaPdf, siglasSecretaria, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import { stripLeadingRomanNumeral } from "@/lib/roman-list";
 import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
 import React from "react";
@@ -315,6 +315,7 @@ export async function resolveJustificacionData(
   soloFirmanteId: number | null = null,
   overrides: PdfOverrides = {},
   sinFirmas = false,
+  soloSiglas = false,
 ): Promise<JustificacionResuelta | null> {
   let firmas: FirmaNames = { ...firmasInput };
   {
@@ -472,7 +473,10 @@ export async function resolveJustificacionData(
         firmaDictEmitioNombre: firmas.firmaDictEmitioNombre,
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
-        clave: claveParaPdf(sol.secretaria, folioDictamenVisible, esHistoricoImportado),
+        // El folio de dictamen (JOGE/1/02/2025) solo debe verse en Dictámenes
+        // y Catálogo — en el PDF que se sube al portal de Firma de
+        // Justificación (soloSiglas=true) se muestran solo las siglas.
+        clave: soloSiglas ? siglasSecretaria(sol.secretaria) : claveParaPdf(sol.secretaria, folioDictamenVisible, esHistoricoImportado),
         notaDictamen,
         incluirPaginaDictamen: tieneDictamen,
       };
@@ -533,7 +537,10 @@ export async function resolveJustificacionData(
         ocultarFirmas: sinFirmas,
         // "Justificación"/"Clave" (siglas + folio) nunca lleva el consecutivo de
         // reutilización — solo el campo "Folio" de abajo, ver JustificacionData.folio.
-        clave: claveParaPdf(sol.secretaria, folioDictamenVisible, esHistoricoImportado),
+        // El folio de dictamen (JOGE/1/02/2025) solo debe verse en Dictámenes
+        // y Catálogo — en el PDF que se sube al portal de Firma de
+        // Justificación (soloSiglas=true) se muestran solo las siglas.
+        clave: soloSiglas ? siglasSecretaria(sol.secretaria) : claveParaPdf(sol.secretaria, folioDictamenVisible, esHistoricoImportado),
         folio: overrides.reutilizacionNumero && folioDictamenVisible
           ? `${folioDictamenVisible}-${overrides.reutilizacionNumero}`
           : (folioDictamenVisible ?? ""),
@@ -553,12 +560,13 @@ export async function buildJustificacionBuffer(
   overrides: PdfOverrides = {},
   sinFirmas = false,
   catalogoId: string | null = null,
+  soloSiglas = false,
 ): Promise<{ buffer: Buffer | Uint8Array; filename: string; sol: any } | null> {
   if (!solicitudId) {
     return catalogoId ? buildJustificacionBufferDesdeCatalogo(catalogoId, overrides) : null;
   }
 
-  const resuelto = await resolveJustificacionData(solicitudId, firmasInput, soloFirmanteId, overrides, sinFirmas);
+  const resuelto = await resolveJustificacionData(solicitudId, firmasInput, soloFirmanteId, overrides, sinFirmas, soloSiglas);
   if (!resuelto) return null;
 
   const { data, folio, sol } = resuelto;
@@ -626,7 +634,7 @@ export async function buildJustificacionBuffer(
   return { buffer: pdfFinal, filename, sol };
 }
 
-async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null, overrides: PdfOverrides = {}, sinFirmas = false, catalogoId: string | null = null) {
+async function generatePDFResponse(solicitudId: string | null, firmasInput: FirmaNames = {}, soloFirmanteId: number | null = null, overrides: PdfOverrides = {}, sinFirmas = false, catalogoId: string | null = null, soloSiglas = false) {
   try {
     if (!solicitudId && !catalogoId) {
       return NextResponse.json(
@@ -635,7 +643,7 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
       );
     }
 
-    const result = await buildJustificacionBuffer(solicitudId, firmasInput, soloFirmanteId, overrides, sinFirmas, catalogoId);
+    const result = await buildJustificacionBuffer(solicitudId, firmasInput, soloFirmanteId, overrides, sinFirmas, catalogoId, soloSiglas);
     if (!result) {
       return NextResponse.json(
         { ok: false, error: "Solicitud no encontrada" },
@@ -671,7 +679,7 @@ export async function POST(req: NextRequest) {
     formato: body.formato === 'en_linea' ? 'en_linea' : 'fisico',
   };
   const catalogoId = body.catalogoId ? String(body.catalogoId) : null;
-  return generatePDFResponse(body.solicitudId, firmas, null, {}, false, catalogoId);
+  return generatePDFResponse(body.solicitudId, firmas, null, {}, false, catalogoId, body.paraFirma === true);
 }
 
 export async function GET(req: NextRequest) {

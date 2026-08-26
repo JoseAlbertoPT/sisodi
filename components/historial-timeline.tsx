@@ -10,7 +10,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 export interface HistorialEntryData {
   fecha: string
@@ -282,7 +281,12 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
         </div>
 
         {/* Lista de cambios */}
-        <ScrollArea className="max-h-[65vh] bg-muted/20">
+        {/* overflow-y-auto nativo (no Radix ScrollArea): min-h-0 sigue siendo
+            necesario porque, como hijo flex de DialogContent (flex flex-col),
+            sin esto el navegador ignora max-h y el contenedor crece para
+            caber todo su contenido en vez de scrollear — el sobrante queda
+            cortado por el overflow-hidden del modal, sin forma de verlo. */}
+        <div className="max-h-[65vh] min-h-0 overflow-y-auto bg-muted/20">
           <div className="flex flex-col divide-y divide-border/50">
             {cambios.map((c, i) => (
               <div key={i} className="px-6 py-5">
@@ -340,7 +344,7 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
       </DialogContent>
     </Dialog>
