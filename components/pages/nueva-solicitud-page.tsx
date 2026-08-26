@@ -1675,7 +1675,10 @@ function FormularioPrestacion({
   const handleProgramaChange = (val: string) => {
     if (bloqueadoPorRenovacion) return
     setProgramaSeleccionado(val)
-    setTipoActividadSeleccionado("")
+    // No se borra tipoActividadSeleccionado: aunque las opciones de Tipo de
+    // Actividad se filtran por programa, `tiposActividad` (más abajo) ya
+    // conserva el valor guardado como opción extra aunque no esté en la
+    // lista recalculada — así solo cambia lo que el usuario tocó.
   }
   const handleRegimenChange = (val: string) => {
     if (bloqueadoPorRenovacion) return

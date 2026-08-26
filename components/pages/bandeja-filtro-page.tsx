@@ -823,11 +823,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
       ? "Firmar Dictamen → Emitir"
       : "Aprobar → Firma Justificación"
 
-  // Una vez que Revisor aprueba/observa, la solicitud sale de "en revision
-  // revisor" (a "aceptado por revisor", "observado por revisor"/"observado
-  // por do", o avanza de bandeja) — sin este chequeo, Aprobar/Observar
-  // seguían habilitados y permitían repetir la acción sobre la misma
-  // solicitud hasta que llegara de nuevo.
+
   const puedeAccionar = filtro === 2
     ? solicitud.estado.toLowerCase() === "en verificacion final"
     : filtro === 1
