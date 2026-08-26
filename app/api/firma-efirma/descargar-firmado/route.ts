@@ -24,10 +24,20 @@ export async function GET(req: NextRequest) {
       ?? `SOL-${solicitudId}`
     const filename = `${folio}-firmado.pdf`
 
+    // Este es el archivo que se descarga desde el portal público de Firma de
+    // Justificación — igual que la vista previa, no debe llevar el folio de
+    // dictamen (soloSiglas) ni la hoja de Constancia de Firma Electrónica
+    // (incluirConstancia): esa hoja y el folio completo solo se ven en
+    // Dictámenes/Catálogo.
     const result = await buildJustificacionBuffer(
       String(solicitudId),
       { formato: "en_linea" },
       firmante.id,
+      {},
+      false,
+      null,
+      true,
+      false,
     )
     if (!result) {
       return NextResponse.json({ ok: false, error: "No se pudo generar el PDF" }, { status: 502 })

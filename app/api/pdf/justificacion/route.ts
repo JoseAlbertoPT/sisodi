@@ -561,6 +561,7 @@ export async function buildJustificacionBuffer(
   sinFirmas = false,
   catalogoId: string | null = null,
   soloSiglas = false,
+  incluirConstancia = true,
 ): Promise<{ buffer: Buffer | Uint8Array; filename: string; sol: any } | null> {
   if (!solicitudId) {
     return catalogoId ? buildJustificacionBufferDesdeCatalogo(catalogoId, overrides) : null;
@@ -580,7 +581,7 @@ export async function buildJustificacionBuffer(
 
   let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
   const esFirmaElectronica = ((sol as any).modalidad_firma ?? "electronica") !== "autografa";
-  if (!sinFirmas && esFirmaElectronica) try {
+  if (!sinFirmas && esFirmaElectronica && incluirConstancia) try {
     const bypass = process.env.EFIRMA_BYPASS === "true";
 
     const firmaProceso = await prisma.firma_proceso.findUnique({
