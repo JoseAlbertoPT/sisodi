@@ -449,8 +449,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
           <View style={s.headerCol3}>
             <View style={s.claveBox}>
-              {/* Solo las siglas de la secretaría — no el folio de dictamen. */}
-              <Text style={s.claveText}>{siglasSecretaria(data.secretaria) || "Clave"}</Text>
+              <Text style={s.claveText}>{data.clave || siglasSecretaria(data.secretaria) || "Clave"}</Text>
             </View>
             <View style={s.pageBox}>
               <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />
@@ -892,8 +891,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
           <View style={s.headerCol3}>
             <View style={s.claveBox}>
-              {/* Solo las siglas de la secretaría — no el folio de dictamen. */}
-              <Text style={s.claveText}>{siglasSecretaria(data.secretaria) || "Clave"}</Text>
+              <Text style={s.claveText}>{data.clave || siglasSecretaria(data.secretaria) || "Clave"}</Text>
             </View>
             <View style={s.pageBox}>
               <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />

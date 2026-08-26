@@ -517,11 +517,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
           <View style={s.headerCol3}>
             <View style={s.claveBox}>
-              {/* Solo las siglas de la secretaría en el encabezado de esta
-                  página — no el folio de dictamen. `data.clave` (siglas +
-                  folio) sigue usándose tal cual en el resto del documento
-                  (p. ej. la caja "Justificación:" de la página del Dictamen). */}
-              <Text style={s.claveText}>{siglasSecretaria(data.secretaria) || "Clave"}</Text>
+              <Text style={s.claveText}>{data.clave || siglasSecretaria(data.secretaria) || "Clave"}</Text>
             </View>
             <View style={s.pageBox}>
               <Text style={s.claveText} render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`} />

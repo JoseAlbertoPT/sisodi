@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PageLayout } from "@/components/page-layout"
+import { claveParaPdf } from "@/lib/clave-dictamen"
 
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
@@ -252,7 +253,7 @@ const DictamenViewModal = React.memo(({
                 {titulo}
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                Número: {dictamen.folioDictamen ?? "—"} | Folio Recepción: {folioRecepcionFormateado}
+                Número: {dictamen.folioDictamen ? claveParaPdf(dictamen.secretaria, formatearFolio(dictamen.folioDictamen), false) : "—"} | Folio Recepción: {folioRecepcionFormateado}
               </p>
             </div>
           </div>
@@ -356,7 +357,7 @@ export function DictamenesPage() {
   const [filterTipo,       setFilterTipo]       = useState("todos")
   const [currentPage,      setCurrentPage]      = useState(1)
 
-  const descargarPdfDictamen = async (solicitudId: string, folio: string | null, firmas: Record<string, string> = {}, formato: 'fisico' | 'en_linea' = 'fisico') => {
+  const descargarPdfDictamen = async (solicitudId: string, folio: string | null, firmas: Record<string, string> = {}, formato: 'fisico' | 'en_linea' = 'fisico', secretaria?: string) => {
     setDownloadingId(solicitudId)
     try {
       const res = await fetch("/api/pdf/justificacion", {
@@ -374,7 +375,8 @@ export function DictamenesPage() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      const folioName = folio ? folio.replace(/\//g, "-") : solicitudId
+      const claveArchivo = folio ? claveParaPdf(secretaria, formatearFolio(folio), false) : null
+      const folioName = claveArchivo ? claveArchivo.replace(/\//g, "-") : (folio ? folio.replace(/\//g, "-") : solicitudId)
       const suffix = formato === 'en_linea' ? '_EnLinea' : ''
       a.download = `Dictamen_${folioName}${suffix}.pdf`
       document.body.appendChild(a)
@@ -490,7 +492,7 @@ export function DictamenesPage() {
           dictamen={viewing} 
           onClose={() => setViewing(null)} 
           isDownloading={downloadingId === viewing.id}
-          onDownload={(firmas, formato) => descargarPdfDictamen(viewing.id, viewing.folioDictamen, firmas, formato)}
+          onDownload={(firmas, formato) => descargarPdfDictamen(viewing.id, viewing.folioDictamen, firmas, formato, viewing.secretaria)}
         />
       )}
 
@@ -563,7 +565,7 @@ export function DictamenesPage() {
                     <tr key={d.id} className="border-b border-border/50 hover:bg-muted/50 transition-colors">
 
                       <td className="px-4 py-3 font-medium text-card-foreground font-mono text-xs">
-                        {d.folioDictamen ?? "—"}
+                        {d.folioDictamen ? claveParaPdf(d.secretaria, formatearFolio(d.folioDictamen), false) : "—"}
                       </td>
 
                       <td className="px-4 py-3 font-medium text-card-foreground font-mono text-xs">
@@ -638,6 +640,7 @@ export function DictamenesPage() {
                                 d.folioDictamen,
                                 {},
                                 d.tipoFirma === 'electronica' ? 'en_linea' : 'fisico',
+                                d.secretaria,
                               )}
                               disabled={downloadingId === d.id}
                               className="gap-2 cursor-pointer"
