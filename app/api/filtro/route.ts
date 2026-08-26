@@ -306,13 +306,21 @@ export async function GET(req: NextRequest) {
         return n2.includes("enviada a validacion") || n2.includes("en validacion justificaciones")
       }).length
 
-      const lastObservacion = historial.find((h) => {
-        const nombre =
-          h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
-        return nombre.toLowerCase().includes("observad")
-      })
+      // Última observación real (la más reciente, no la primera — historial
+      // viene ordenado ascendente) y solo de Revisión/Verificación/Emisión
+      // (DO): "Observado por Validacion" es de UEFA/Validación y no cuenta
+      // aquí, aunque también contenga la palabra "observad".
+      let lastObservacion: (typeof historial)[number] | undefined
+      for (let i = historial.length - 1; i >= 0; i--) {
+        const nombre = (historial[i].estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
+        if (nombre.includes("observad") && !nombre.includes("validacion")) {
+          lastObservacion = historial[i]
+          break
+        }
+      }
       const lastObservedEstado =
         lastObservacion?.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? null
+      const lastObservedUsuario = lastObservacion?.usuario?.nombre ?? null
 
       const lastObservedStage = (() => {
         if (!lastObservedEstado) return null
@@ -320,6 +328,11 @@ export async function GET(req: NextRequest) {
         if (n.includes("revisor")) return 1
         if (n.includes("verificacion final")) return 2
         if (n.includes("emisor")) return 3
+        // "Observado por DO"/"Devuelta por DO": caso especial de Revisor
+        // reobservando una solicitud ya "Aceptado por Revisor" (ver PATCH
+        // accion=observar, filtro 1) — sigue siendo una observación de
+        // Revisión, no tiene el nombre de bandeja en el texto del estado.
+        if (n.includes("por do") || n.includes("do filtro")) return 1
         const m = lastObservedEstado.match(/filtro\s+(\d)/i)
         return m ? parseInt(m[1], 10) : null
       })()
@@ -432,6 +445,7 @@ export async function GET(req: NextRequest) {
         lastObservedStage,
         lastObservedDate,
         lastObservedEstado,
+        lastObservedUsuario,
         slaRestante,
         openedInFiltro:   { [filtro]: openedInFiltro }  as Record<number, boolean>,
         isNuevaEnFiltro:  { [filtro]: isNuevaEnFiltro } as Record<number, boolean>,

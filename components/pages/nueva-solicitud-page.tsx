@@ -3936,7 +3936,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         })
         const json = await res.json()
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al actualizar el borrador."); setGuardandoBorrador(false); return }
-        setFolioBorradorGuardado(json.data?.folio_justificacion ?? editSolicitud.id)
+        setFolioBorradorGuardado(json.data?.folio_recepcion ?? json.data?.folio_justificacion ?? editSolicitud.id)
         const estadoOrig = (editSolicitud.estado ?? "").toLowerCase()
         const nuevoEstadoTrasCorreccion = (() => {
           if (editSolicitud.estadoSiguienteTrasSave) return editSolicitud.estadoSiguienteTrasSave
@@ -3996,7 +3996,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
           const json = await res.json()
           if (!res.ok || !json.ok) { setErrorEnvio(json.error ?? "Error al actualizar la solicitud."); setEnviando(false); return }
           solicitudId = Number(editSolicitud.id)
-          setFolioGenerado(json.data?.folio_justificacion ?? editSolicitud.id)
+          setFolioGenerado(json.data?.folio_recepcion ?? json.data?.folio_justificacion ?? editSolicitud.id)
         } else {
           const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData, tipoAdministracion: user?.tipoAdministracion })
           const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })

@@ -1312,16 +1312,25 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
     // no haya observaciones pendientes, igual que Emisión.
     : filtro === 2 ? sinObservacion
     : canApproveChecklist
-  // Además de su uso original (checklist de Filtro 1 ya completado en una vuelta
-  // anterior), esta bandera también marca cuándo le "toca turno" a un filtro por
-  // recibir el rechazo de un filtro posterior en la cadena (p. ej. Verificador
-  // recibiendo "Observado por Emisor"), a diferencia de su propio marcador de
-  // observado (que NO debe reabrir turno — ver nota en enTurno).
+  // "El checklist ya se completó en una vuelta anterior" — true tanto si YO
+  // (este filtro) ya lo observé (mi propio marcador) como si me lo rechazó
+  // un filtro posterior. Controla si se muestra la tarjeta de solo lectura
+  // "Checklist ya fue realizado" en vez del checklist interactivo — NO debe
+  // usarse para decidir si "me toca turno" (ver rechazadoPorFiltroPosterior).
   const checklistYaRealizado =
     (filtro === 1 && (
       (solicitud?.estado ?? "").toLowerCase().includes("observado por verificacion final") ||
       (solicitud?.estado ?? "").toLowerCase() === "observado por revisor"
     )) ||
+    (filtro === 2 && (solicitud?.estado ?? "").toLowerCase() === "observado por emisor")
+  // Distinto del anterior: SOLO el rechazo de un filtro POSTERIOR en la
+  // cadena reabre mi turno (p. ej. Verificador recibiendo "Observado por
+  // Emisor"). El marcador de MI PROPIA observación (p. ej. Revisor viendo
+  // "Observado por Revisor") no debe reabrirme el turno — si no, tras
+  // observar, el botón de Observar/Aprobar se volvía a habilitar de
+  // inmediato sobre la misma solicitud, antes de que regresara corregida.
+  const rechazadoPorFiltroPosterior =
+    (filtro === 1 && (solicitud?.estado ?? "").toLowerCase().includes("observado por verificacion final")) ||
     (filtro === 2 && (solicitud?.estado ?? "").toLowerCase() === "observado por emisor")
   const isEnTabObservadas = (() => {
     const n = (solicitud?.estado ?? "").toLowerCase()
@@ -1375,6 +1384,11 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       h.estadoNuevo.toLowerCase().includes("en revision revisor")
     )
   , [solicitud])
+  // Folio a mostrar en los modales de confirmación: si ya tiene folio de
+  // recepción (Regla 11, se asigna al aprobar en Revisor) se prefiere ese,
+  // porque es el identificador oficial de la solicitud de ahí en adelante —
+  // el de justificación solo aplica mientras no se le haya asignado.
+  const folioParaModal = formatearFolio(solicitud?.folioRecepcion ?? solicitud?.folioJustificacion ?? solicitud?.folio ?? null)
   const handleAprobar = async (revisorId?: string) => {
     if (filtro === 3) {
       const modalidadExistente = solicitud?.modalidadFirma
@@ -1394,6 +1408,20 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
       return
     }
     if (revisorId) { await patchEstado("aprobar", undefined, revisorId); return }
+    // Filtro 1, no extemporánea: al aprobar se le asigna folio de recepción
+    // por primera vez (Regla 11) — se previsualiza aquí para que el usuario
+    // sepa con qué folio quedará antes de confirmar.
+    if (filtro === 1 && !solicitud?.folioRecepcion) {
+      try {
+        const res = await fetch("/api/filtro/proximo-folio-recepcion")
+        const json = await res.json()
+        setAprobarPending({ folioRecepcion: json.ok ? json.folio : undefined })
+        return
+      } catch {
+        setAprobarPending({})
+        return
+      }
+    }
     setAprobarPending({})
   }
   const executeAprobarPending = async () => {
@@ -1477,10 +1505,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
   // isEnTabObservadas NO debe habilitar "enTurno": es cierto para cualquier estado
   // "observado/devuelta", incluido el que deja este mismo filtro al observar (p. ej.
   // "Observado por Verificacion Final"), y eso reabría Aprobar/Observar sobre una
-  // solicitud que ya salió de esta bandeja. checklistYaRealizado ya cubre el caso
-  // legítimo de Filtro 1 recibiendo una solicitud rechazada por un filtro posterior.
+  // solicitud que ya salió de esta bandeja. rechazadoPorFiltroPosterior ya cubre el
+  // caso legítimo de Filtro 1 recibiendo una solicitud rechazada por un filtro
+  // posterior (a diferencia de checklistYaRealizado, que también es cierto para
+  // el propio marcador de observación y NO debe reabrir turno).
   const enTurno = (solicitud?.estado ?? "").toLowerCase() === estadoEnRevisionEtapa
-    || isAceptadoPorRevisor || checklistYaRealizado
+    || isAceptadoPorRevisor || rechazadoPorFiltroPosterior
   const showEmisionTab = filtro === 3 && (isAprobado || isEmitido)
   const ocultarRevisionTrasAprobar = isAprobado
   useEffect(() => {
@@ -1606,7 +1636,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         open={showAprobarAsignarModal}
         onClose={() => setShowAprobarAsignarModal(false)}
         onConfirm={(revisorId) => { setShowAprobarAsignarModal(false); handleAprobar(revisorId) }}
-        folio={formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}
+        folio={folioParaModal}
         guardando={guardando}
       />
       <AprobarFolioRecepcionModal
@@ -1638,7 +1668,10 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         onOpenChange={(v) => { if (!v) setAprobarPending(null) }}
         onConfirm={executeAprobarPending}
         title="¿Aprobar y avanzar al siguiente paso?"
-        description={<>La solicitud <strong className="font-semibold">{formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}</strong> avanzará al siguiente paso del proceso.</>}
+        description={<>
+          La solicitud <strong className="font-semibold">{folioParaModal}</strong> avanzará al siguiente paso del proceso
+          {aprobarPending?.folioRecepcion && <> con el folio de recepción <strong className="font-semibold">{aprobarPending.folioRecepcion}</strong></>}.
+        </>}
         confirmLabel="Sí, aprobar"
       />
       <ConfirmAlertDialog
@@ -1646,7 +1679,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
         onOpenChange={setShowObservarConfirm}
         onConfirm={executeObservar}
         title="¿Estás seguro de observar?"
-        description={<>Vas a marcar la solicitud <strong className="font-semibold">{formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}</strong> con observaciones. Se devolverá a la etapa anterior.</>}
+        description={<>Vas a marcar la solicitud <strong className="font-semibold">{folioParaModal}</strong> con observaciones. Se devolverá a la etapa anterior.</>}
         confirmLabel="Sí, continuar"
       />
       {onEditSolicitud && (
@@ -1655,7 +1688,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
           onOpenChange={setShowEditarConfirm}
           onConfirm={() => { setShowEditarConfirm(false); onEditSolicitud(rawToEditPayload(solicitud)) }}
           title="¿Estás seguro de editar?"
-          description={<>Vas a editar la solicitud <strong className="font-semibold">{formatearFolio(solicitud?.folioJustificacion ?? solicitud?.folio ?? null)}</strong>.</>}
+          description={<>Vas a editar la solicitud <strong className="font-semibold">{folioParaModal}</strong>.</>}
           confirmLabel="Sí, editar"
         />
       )}
@@ -1672,7 +1705,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               <h2 className="ds-title-md text-content-high">
                 {solicitud.folio ?? (
                   solicitud.folioJustificacion
-                    ? <span className="text-muted-foreground font-normal text-base">JUST {solicitud.folioJustificacion}</span>
+                    ? <span className="text-muted-foreground font-normal text-base">{solicitud.folioJustificacion}</span>
                     : <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>
                 )}
               </h2>

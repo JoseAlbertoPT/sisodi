@@ -1,4 +1,3 @@
-
 export type RangoTabulador = {
   min: number
   max: number
@@ -8,7 +7,6 @@ export type RangoTabulador = {
 }
 
 export const RANGOS_TABULADOR: RangoTabulador[] = [
-
   //{ min: 32124.36, max: 49846.50, nivel: "105", categoria: "A a C" },
   { min: 24380.00, max: 32123.30, nivel: "106", categoria: "A a C" },
   { min: 19080.00, max: 24369.40, nivel: "107", categoria: "A a C" },
@@ -18,11 +16,7 @@ export const RANGOS_TABULADOR: RangoTabulador[] = [
   { min: 10554.00, max: 11658.94, nivel: "302", categoria: "A" },
   { min: 0.00,     max: 10553.36, nivel: "303", categoria: "A" },
 
-
-
-
   //{ min: 0.00,     max: 49847.00, nivel: "504", categoria: "ÚNICA"},
-
   { min: 0.00, max: 47631.00, nivel: "505", categoria: "A a B" },
     { min: 0.00, max: 44308.00, nivel: "506", categoria: "A a B" },
     { min: 0.00, max: 40985.00, nivel: "507", categoria: "A a B" },
@@ -32,14 +26,12 @@ export const RANGOS_TABULADOR: RangoTabulador[] = [
 ]
 
 const NIVELES_FORMULARIO = new Set(["105", "106","107", "108", "109", "301", "302", "303", "504", "505", "506", "507", "508", "509", "510"])
-
 export function esMostrarEnFormulario(nivel: string): boolean {
   return NIVELES_FORMULARIO.has(nivel)
 }
 
 const fmt = (n: number) =>
   `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
 export function formatRangoTabulador(nivel: string | null | undefined, categoria: string | null | undefined): string | null {
   if (!nivel) return null
   const rango = RANGOS_TABULADOR.find(

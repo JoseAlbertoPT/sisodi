@@ -35,7 +35,7 @@ import {
   AlertTriangle, ListFilter, Loader2,
   ArrowLeft,
   FileText, History, UserCheck, ClipboardCheck, Stamp, X, Inbox,
-  MoreHorizontal, Upload,
+  MoreHorizontal, Upload, UserPlus, UserCog,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import {
@@ -80,6 +80,7 @@ interface FiltroSolicitud {
   lastObservedStage: number | null
   lastObservedDate: string | null
   lastObservedEstado: string | null
+  lastObservedUsuario: string | null
   slaRestante: number | null
   openedInFiltro: Record<number, boolean>
   isNuevaEnFiltro: Record<number, boolean>
@@ -124,9 +125,14 @@ function formatearFolio(folio: string | null | undefined): string {
   if (match) return `${match[1]}/${match[2].padStart(2, "0")}/${match[3]}`
   return folio
 }
-// Regla 11: mientras no exista folio de recepción (el Revisor aún no aprueba),
-// se usa el folio de justificación tal cual está guardado (ej. "ID-2026-0014")
-// como identificador provisional.
+
+function apartadoObservoLabel(stage: number | null): string | null {
+  if (stage === 1) return "Revisión"
+  if (stage === 2) return "Verificación"
+  if (stage === 3) return "Emisión"
+  return null
+}
+
 function folioJustificacionParaMostrar(folio: string | null | undefined): string | null {
   return folio?.trim() || null
 }
@@ -688,10 +694,7 @@ const MESES_DICT = [
   { value: "09", label: "SEPTIEMBRE(09)" }, { value: "10", label: "OCTUBRE(10)" },
   { value: "11", label: "NOVIEMBRE(11)" }, { value: "12", label: "DICIEMBRE(12)" },
 ]
-// Regla 12: el folio de dictamen ya no se puede asignar desde el panel del
-// Revisor (filtro 1) — se asigna del lado del servidor cuando Emisión aprueba
-// el dictamen y elige la modalidad de firma (ver app/api/filtro/route.ts).
-// Esta tarjeta queda solo informativa/de solo lectura.
+
 function FolioDictamenCard({
   folioDictamen,
 }: {
@@ -819,16 +822,19 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
     : solicitud.estado.toLowerCase().includes("pendiente firma dictamen")
       ? "Firmar Dictamen → Emitir"
       : "Aprobar → Firma Justificación"
-  // Filtro 2: una vez observada, la solicitud sale de la bandeja del Verificador
-  // (vuelve a Revisor/DO) y sigue apareciendo aquí solo para consulta en "Observadas".
-  // Aprobar/Observar ya no aplican ahí, aunque el usuario reabra el detalle.
+
+  // Una vez que Revisor aprueba/observa, la solicitud sale de "en revision
+  // revisor" (a "aceptado por revisor", "observado por revisor"/"observado
+  // por do", o avanza de bandeja) — sin este chequeo, Aprobar/Observar
+  // seguían habilitados y permitían repetir la acción sobre la misma
+  // solicitud hasta que llegara de nuevo.
   const puedeAccionar = filtro === 2
     ? solicitud.estado.toLowerCase() === "en verificacion final"
+    : filtro === 1
+    ? ["en revision revisor", "aceptado por revisor"].includes(solicitud.estado.toLowerCase())
     : true
   const folioFormateado = formatearFolio(solicitud.folioRecepcion)
-  // Regla 11: mientras el Revisor no apruebe (y por lo tanto no exista folio
-  // de recepción), el encabezado se identifica con el folio de justificación
-  // en vez de un placeholder vacío.
+
   const folioJustificacionRaw = solicitud._raw?.folio_justificacion as string | null | undefined
   const folioJustificacionFormateado = folioJustificacionParaMostrar(folioJustificacionRaw)
   const historial: HistorialEntryData[] =
@@ -1698,8 +1704,13 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          {sol.lastObservedEstado ? (
-                            <span className="text-xs text-muted-foreground">{sol.lastObservedEstado}</span>
+                          {sol.lastObservedUsuario ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-card-foreground">{sol.lastObservedUsuario}</span>
+                              {apartadoObservoLabel(sol.lastObservedStage) && (
+                                <span className="text-[11px] text-muted-foreground">{apartadoObservoLabel(sol.lastObservedStage)}</span>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">---</span>
                           )}
@@ -1710,16 +1721,21 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                           <div className="flex items-center gap-1.5">
                             {filtro === 2 ? (
                               tab === "pendientes_asignacion" ? (
-                                <Button
-                                  variant="ghost" size="sm"
-                                  onClick={() => setAsignarRevisorTarget(sol.id)}
-                                  disabled={guardando}
-                                  className="gap-1.5 font-medium -ml-3"
-                                  style={{ color: "var(--sem-content-low)" }}
-                                >
-                                  <UserCheck className="h-4 w-4" />
-                                  {sol.estado.toLowerCase().includes("en revision revisor") ? "Reasignar Revisor" : "Asignar Revisor"}
-                                </Button>
+                                (() => {
+                                  const esReasignar = sol.estado.toLowerCase().includes("en revision revisor")
+                                  return (
+                                    <Button
+                                      variant="ghost" size="sm"
+                                      onClick={() => setAsignarRevisorTarget(sol.id)}
+                                      disabled={guardando}
+                                      className={`gap-1.5 font-medium -ml-3 ${esReasignar ? "text-orange-600 hover:text-orange-700" : ""}`}
+                                      style={esReasignar ? undefined : { color: C_AZUL_REVISION }}
+                                    >
+                                      {esReasignar ? <UserCog className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                                      {esReasignar ? "Reasignar Revisor" : "Asignar Revisor"}
+                                    </Button>
+                                  )
+                                })()
                               ) : tab === "observadas" ? (
                                 <Button
                                   variant="ghost" size="sm"
