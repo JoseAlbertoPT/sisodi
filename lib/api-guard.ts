@@ -88,3 +88,34 @@ export async function requireCatalogoConsulta(userId: string | null): Promise<Ne
   }
   return null
 }
+
+export const VERIFICACION_MENU_KEY = "bandeja-filtro2"
+// Bandera de BLOQUEO, no de permiso — con una sola acción posible, una
+// bandera de "permiso" no puede distinguir "explícitamente desactivado" de
+// "nunca configurado" (quitarla del arreglo lo deja en [] en ambos casos).
+export const VERIFICACION_ACCION_SIN_FIRMA = "sin_firma"
+
+/**
+ * Firma en Verificación es libre por rol (ver firmar-interno/route.ts:
+ * bandejaLibrePorRol) — cualquier Verificador puede firmar cualquier
+ * solicitud ahí. Este checkbox ("Firma" en Permisos de menús, ver
+ * menu-permiso-tree.tsx) solo sirve para REVOCAR esa capacidad a un usuario
+ * puntual sin quitarle el acceso de solo lectura a la bandeja. Sin override
+ * explícito (acciones vacío) se mantiene el comportamiento histórico:
+ * cualquiera con acceso puede firmar.
+ */
+export async function puedeFirmarVerificacion(userId: string | null): Promise<boolean> {
+  if (!userId) return false
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: userId },
+    select: {
+      usuario_menu: {
+        where: { menu: { key: VERIFICACION_MENU_KEY } },
+        select: { acciones: true },
+      },
+    },
+  })
+  if (!usuario) return false
+  const acciones = usuario.usuario_menu[0]?.acciones ?? []
+  return !acciones.includes(VERIFICACION_ACCION_SIN_FIRMA)
+}

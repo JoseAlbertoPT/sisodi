@@ -114,6 +114,7 @@ export async function GET(req: NextRequest) {
             cargo: f.cargo,
             tipo: f.tipo,
             bandeja: f.bandeja,
+            usuario_id: f.usuario_id,
             firmado: f.firmado,
             verificado: f.verificado,
             fecha_firma: f.fecha_firma,

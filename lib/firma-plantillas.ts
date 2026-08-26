@@ -116,10 +116,21 @@ export async function resolverUsuariosInternos(solicitudId: number): Promise<Usu
     const n = entry?.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? ""
     return nombres.some(x => norm(x) === norm(n))
   }
+  // Última coincidencia, no la primera: si la solicitud fue observada y
+  // regresó a este mismo filtro (p. ej. tras "Reasignar Revisor"), puede
+  // haber más de una transición a este estado en el historial — la más
+  // reciente es quien realmente la aprobó al final, no quien la aprobó la
+  // primera vez antes de que la devolvieran.
+  const ultimaCoincidencia = (nombres: string[]) => {
+    for (let i = historial.length - 1; i >= 0; i--) {
+      if (matchNombre(historial[i], nombres)) return historial[i]
+    }
+    return undefined
+  }
 
-  const revisorEntry   = historial.find(h => matchNombre(h, ["En Verificacion Final"]))
-  const validadorEntry = historial.find(h => matchNombre(h, ["En Revision Emisor"]))
-  const emisorEntry    = historial.find(h => matchNombre(h, ["Pendiente Firma Dictamen", "Pendiente Firma Justificacion", "Emitido"]))
+  const revisorEntry   = ultimaCoincidencia(["En Verificacion Final"])
+  const validadorEntry = ultimaCoincidencia(["En Revision Emisor"])
+  const emisorEntry    = ultimaCoincidencia(["Pendiente Firma Dictamen", "Pendiente Firma Justificacion", "Emitido"])
 
   return {
     revisor_id:   revisorEntry?.usuario_id    ?? null,
@@ -130,8 +141,10 @@ export async function resolverUsuariosInternos(solicitudId: number): Promise<Usu
 
 /**
  * Resuelve el usuario_id para una entrada de plantilla interna, según su bandeja.
- * Devuelve null si es externo, si es UEFA (queda libre para cualquier usuario
- * con ese rol, ver arriba), o si no se encontró al interno en el historial.
+ * Devuelve null si es externo, si es UEFA o Validación (quedan libres para
+ * cualquier usuario con ese rol — ver la verificación de rol en
+ * /api/firma-efirma/firmar-interno), o si no se encontró al interno en el
+ * historial.
  */
 export function usuarioIdParaFirmante(
   template: FirmanteTemplate,
@@ -142,7 +155,7 @@ export function usuarioIdParaFirmante(
   switch (template.bandeja) {
     case "uefa":       return null
     case "revision":   return internos.revisor_id
-    case "validacion": return internos.validador_id
+    case "validacion": return null
     case "emision":    return internos.emisor_id
     default:           return null
   }

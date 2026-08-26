@@ -4,6 +4,7 @@ import { efirmaClient, firmadosCount, normalizarEstado } from "@/lib/efirma-clie
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { checkSesionUsuario } from "@/lib/validar-sesion"
 import { ESTADO_POR_BANDEJA_PENDIENTE } from "@/lib/firma-plantillas"
+import { puedeFirmarVerificacion } from "@/lib/api-guard"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -37,21 +38,32 @@ export async function POST(req: NextRequest) {
     if (!firmante)                          return NextResponse.json({ ok: false, error: "Firmante no encontrado" }, { status: 404 })
     if (firmante.tipo !== "interno")        return NextResponse.json({ ok: false, error: "Este firmante no es interno" }, { status: 400 })
 
+    // Los bloques UEFA y Validación no están atados a quien aprobó, sino a
+    // cualquier usuario con el rol correspondiente: se verifica el rol en vez
+    // de confiar en el usuario_id de la solicitud, que el cliente podría
+    // falsear. Por eso ignoran el candado de "usuario_id asignado" de abajo,
+    // sin importar si ese campo quedó null o con un usuario_id específico.
+    const bandejaLibrePorRol = firmante.bandeja === "uefa" || firmante.bandeja === "validacion"
     const slotSinAsignar = !firmante.usuario_id
-    if (!BYPASS && !slotSinAsignar && firmante.usuario_id !== usuarioId) {
+    if (!BYPASS && !bandejaLibrePorRol && !slotSinAsignar && firmante.usuario_id !== usuarioId) {
       return NextResponse.json({ ok: false, error: "No te corresponde firmar este bloque" }, { status: 403 })
     }
-    // El bloque UEFA no está atado a quien aprobó ("Pendiente DO"), sino a
-    // cualquier usuario con rol UEFA: se verifica aquí en vez de confiar en
-    // el usuario_id de la solicitud, que el cliente podría falsear.
-    if (!BYPASS && slotSinAsignar && firmante.bandeja === "uefa") {
+    if (!BYPASS && bandejaLibrePorRol) {
       const solicitante = await prisma.usuario.findUnique({
         where: { id: usuarioId },
         include: { rol: true },
       })
       const rolSolicitante = norm(solicitante?.rol.nombre ?? "")
-      if (!solicitante || (rolSolicitante !== "uefa" && rolSolicitante !== "administrador")) {
-        return NextResponse.json({ ok: false, error: "Solo un usuario con rol UEFA puede firmar este bloque" }, { status: 403 })
+      const rolesPermitidos = firmante.bandeja === "uefa" ? ["uefa", "administrador"] : ["verificador", "administrador"]
+      if (!solicitante || !rolesPermitidos.includes(rolSolicitante)) {
+        const rolEsperado = firmante.bandeja === "uefa" ? "UEFA" : "Verificador"
+        return NextResponse.json({ ok: false, error: `Solo un usuario con rol ${rolEsperado} puede firmar este bloque` }, { status: 403 })
+      }
+      // Permiso puntual "Firma" en Permisos de menús > Verificación — permite
+      // dejar a un usuario con acceso de solo lectura a la bandeja, sin
+      // capacidad de firmar (ver lib/api-guard.ts:puedeFirmarVerificacion).
+      if (firmante.bandeja === "validacion" && !(await puedeFirmarVerificacion(usuarioId))) {
+        return NextResponse.json({ ok: false, error: "No tienes permiso para firmar en Verificación" }, { status: 403 })
       }
     }
     if (firmante.firmado)                   return NextResponse.json({ ok: false, error: "Ya firmaste" }, { status: 409 })
@@ -82,7 +94,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: `Aún no es tu turno. ${razon}` }, { status: 412 })
     }
 
-    const usuarioEfectivo = slotSinAsignar
+    // Si el bloque es de rol libre (UEFA/Validación), el firmante real es
+    // quien está autenticado ahora, sin importar a quién quedó asignado el
+    // usuario_id originalmente (puede ser otro miembro del mismo rol).
+    const usuarioEfectivo = (slotSinAsignar || bandejaLibrePorRol)
       ? await prisma.usuario.findUnique({ where: { id: usuarioId } })
       : firmante.usuario
     const rfcUsuario = usuarioEfectivo?.rfc
@@ -112,7 +127,7 @@ export async function POST(req: NextRequest) {
           rfc: rfcUsuario.toUpperCase(),
           nombre: usuarioEfectivo?.nombre ?? portalRes?.firma?.responsable ?? null,
           cargo_firmante: String(cargoFirmante).trim(),
-          ...(slotSinAsignar ? { usuario_id: usuarioId } : {}),
+          ...(slotSinAsignar || bandejaLibrePorRol ? { usuario_id: usuarioId } : {}),
         },
       })
       const firmadosLocal = await tx.firma_firmante.count({

@@ -15,9 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-// Subconjunto de FiltroSolicitud (components/pages/bandeja-filtro-page.tsx) —
-// duplicado en vez de importado para no crear una dependencia circular entre
-// ambos archivos (ese módulo ya importa este componente).
 interface AutografaItem {
   id: string
   folioRecepcion: string | null
@@ -33,6 +30,7 @@ interface FirmanteInfo {
   cargo: string
   tipo: string
   bandeja: string | null
+  usuario_id: string | null
   firmado: boolean
   verificado: boolean
   fecha_firma: string | null
@@ -67,15 +65,29 @@ interface Props {
   filtro: 1 | 2 | 3
   currentUserId: string
   onCountChange?: (count: number) => void
-  /** Solicitudes en firma autógrafa (solo filtro 3) — no tienen firma_firmante,
-   *  así que no aparecen entre `items`; se agregan como filas extra en esta
-   *  misma tabla para no tener dos tablas separadas en "Pendiente de firma". */
+
   autografaItems?: AutografaItem[]
   onOpenReview?: (solicitudId: string, filtro: 1 | 2 | 3) => void
 }
 
 function bandejaParaFiltro(filtro: 1 | 2 | 3): "revision" | "validacion" | "emision" {
   return filtro === 1 ? "revision" : filtro === 2 ? "validacion" : "emision"
+}
+
+// Etiqueta de en qué etapa va realmente el proceso (para las filas "en
+// proceso", donde todavía no es mi turno) — así se distingue una solicitud
+// detenida en UEFA de una ya en Revisión/Validación/Emisión, en vez de un
+// genérico "En firma" que no dice nada del avance real.
+function etapaActualLabel(siguiente: FirmanteInfo | null): string {
+  if (!siguiente) return "En firma"
+  if (siguiente.tipo === "externo") return "Esperando firma externa"
+  switch (siguiente.bandeja) {
+    case "uefa":       return "En UEFA"
+    case "revision":   return "En Revisión"
+    case "validacion": return "En Validación"
+    case "emision":    return "En Emisión"
+    default:           return "En firma"
+  }
 }
 
 export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange, autografaItems = [], onOpenReview }: Props) {
@@ -85,8 +97,21 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange, aut
   const [firmanteDialogId, setFirmanteDialogId] = useState<number | null>(null)
   const [progresoTarget, setProgresoTarget] = useState<ProcesoItem | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  // Solo aplica a la bandeja de validación (libre por rol) — arranca en true
+  // para no ocultarle el botón a quien sí tiene permiso mientras carga.
+  const [puedeFirmarVerificacion, setPuedeFirmarVerificacion] = useState(true)
 
   const bandejaActual = bandejaParaFiltro(filtro)
+
+  useEffect(() => {
+    if (bandejaActual !== "validacion" || !currentUserId) return
+    let cancel = false
+    fetch(`/api/firma-efirma/puede-firmar-verificacion?userId=${encodeURIComponent(currentUserId)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (!cancel && d) setPuedeFirmarVerificacion(d.puede === true) })
+      .catch(() => {})
+    return () => { cancel = true }
+  }, [bandejaActual, currentUserId])
 
   const cargar = useCallback(async () => {
     if (!currentUserId) { setLoading(false); return }
@@ -98,14 +123,18 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange, aut
       const procesos: ProcesoItem[] = json.procesos ?? []
       const filtrados = procesos.filter(p => {
         if (bandejaActual === "emision" && p.pendiente_emision_por_mi) return true
-        // Si la solicitud ya llegó a "Emitido" por su propio flujo, el proceso de
-        // firma quedó obsoleto (aunque queden firmantes internos sin marcar) y no
-        // debe seguir apareciendo como pendiente en ningún apartado.
+
         if ((p.estado_solicitud ?? "").toLowerCase() === "emitido") return false
-        // Se busca directo en la lista de firmantes (no solo mi_firmante_pendiente, que la
-        // API solo resuelve para el primer pendiente en orden) para poder ver el proceso
-        // aunque todavía no sea mi turno.
-        return p.firmantes.some(f => f.tipo === "interno" && f.bandeja === bandejaActual && !f.firmado)
+
+        // Validación es una bandeja libre por rol (como UEFA): cualquier
+        // Verificador ve y puede firmar todas las solicitudes ahí, sin
+        // importar a quién quedó asignado el usuario_id (ver
+        // /api/firma-efirma/firmar-interno). Revisión y Emisión siguen
+        // atadas a quien realmente aprobó esa solicitud.
+        return p.firmantes.some(f =>
+          f.tipo === "interno" && f.bandeja === bandejaActual && !f.firmado &&
+          (bandejaActual === "validacion" || f.usuario_id === currentUserId)
+        )
       })
       setItems(filtrados)
     } catch {
@@ -134,9 +163,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange, aut
     dialogTarget.proceso.pendiente_emision_por_mi
   )
 
-  // Misma paginación (10 por página) que el resto de las bandejas — ver
-  // components/pages/bandeja-filtro-page.tsx. Se combinan ambos tipos de fila
-  // en una sola lista para que el corte por página aplique a la tabla completa.
+
   type Row = { kind: "proceso"; item: ProcesoItem } | { kind: "autografa"; item: AutografaItem }
   const allRows: Row[] = useMemo(
     () => [
@@ -207,13 +234,20 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange, aut
                   )
                 }
 
-                const miFirmante = p.firmantes.find(f => f.tipo === "interno" && f.bandeja === bandejaActual && !f.firmado) ?? null
-                // Un externo firmado pero no verificado todavía cuenta como
-                // "no listo" — bloquea el turno igual que si no hubiera firmado.
+                const miFirmante = p.firmantes.find(f =>
+                  f.tipo === "interno" && f.bandeja === bandejaActual && !f.firmado &&
+                  (bandejaActual === "validacion" || f.usuario_id === currentUserId)
+                ) ?? null
+
                 const siguiente = p.firmantes
                   .filter(f => !f.firmado || (f.tipo === "externo" && !f.verificado))
                   .sort((a, b) => a.orden - b.orden)[0] ?? null
                 const esMiTurno = !!(miFirmante && siguiente && miFirmante.id === siguiente.id)
+                // En Validación (bandeja libre por rol) el checkbox "Firma" de
+                // Permisos de menús puede revocarle a este usuario puntual la
+                // capacidad de firmar aunque sea su turno — en ese caso solo
+                // puede "Ver", igual que el backend ya lo bloquearía.
+                const puedeFirmarAqui = bandejaActual !== "validacion" || puedeFirmarVerificacion
                 return (
                   <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/20">
                     <td className="px-4 py-2 font-mono text-xs">{p.folio_recepcion ?? p.folio_justificacion ?? `SOL-${p.solicitud_id}`}</td>
@@ -222,13 +256,13 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange, aut
                     <td className="px-4 py-2 font-mono text-xs">{p.firmados}/{p.total_firmantes}</td>
                     <td className="px-4 py-2">
                       <StatusBadge
-                        label={esMiTurno ? "Para firmar" : "En firma"}
+                        label={esMiTurno ? "Para firmar" : etapaActualLabel(siguiente)}
                         color={C_AMARILLO}
                         bgColor={C_AMARILLO_BG}
                       />
                     </td>
                     <td className="px-4 py-2">
-                      {esMiTurno ? (
+                      {esMiTurno && puedeFirmarAqui ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -263,6 +297,7 @@ export function PendientesFirmaPanel({ filtro, currentUserId, onCountChange, aut
                 )
               })}
               {paginatedRows
+
                 .filter((r): r is Extract<Row, { kind: "autografa" }> => r.kind === "autografa")
                 .map(({ item: sol }) => (
                 <tr key={`autografa-${sol.id}`} className="border-b last:border-b-0 hover:bg-muted/20">

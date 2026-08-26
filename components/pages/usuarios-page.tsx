@@ -33,6 +33,7 @@ import {
 } from "@/lib/permisos-api"
 import {
   MenuPermisoTree, CATALOGO_MENU_KEY, CATALOGO_ACCION_ADMINISTRACION, CATALOGO_ACCION_CONSULTA,
+  VERIFICACION_ACCION_SIN_FIRMA,
 } from "@/components/menu-permiso-tree"
 import {
 
@@ -1050,6 +1051,12 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                         menuActions: setCatalogoAccion(prev.menuActions, menuId, accion, checked),
                       }))
                     }}
+                    onVerificacionAccionChange={(menuId, checked) => {
+                      setSelectedPermisos((prev) => ({
+                        ...prev,
+                        menuActions: setVerificacionAccion(prev.menuActions, menuId, checked),
+                      }))
+                    }}
                     rolUsuario={form.rol}
                   />
                 </div>
@@ -1591,6 +1598,16 @@ function clearCatalogoAccion(actions: Record<string, string[]>, menuId: string):
   return { ...actions, [menuId]: [] }
 }
 
+function setVerificacionAccion(
+  actions: Record<string, string[]>,
+  menuId: string,
+  checked: boolean,
+): Record<string, string[]> {
+  const current = new Set(actions[menuId] ?? [])
+  if (checked) current.delete(VERIFICACION_ACCION_SIN_FIRMA); else current.add(VERIFICACION_ACCION_SIN_FIRMA)
+  return { ...actions, [menuId]: Array.from(current) }
+}
+
 type PermisoModalProps = {
   usuario: Usuario
   onClose: () => void
@@ -1665,6 +1682,13 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     setPermisos((prev) => {
       if (!prev) return prev
       return { ...prev, menuActions: setCatalogoAccion(prev.menuActions, menuId, accion, checked) }
+    })
+  }, [])
+
+  const handleVerificacionAccionChange = useCallback((menuId: string, checked: boolean) => {
+    setPermisos((prev) => {
+      if (!prev) return prev
+      return { ...prev, menuActions: setVerificacionAccion(prev.menuActions, menuId, checked) }
     })
   }, [])
 
@@ -1793,6 +1817,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
                     level={0}
                     menuActions={permisos.menuActions}
                     onCatalogoAccionChange={handleCatalogoAccionChange}
+                    onVerificacionAccionChange={handleVerificacionAccionChange}
                     rolUsuario={usuario.rol}
                   />
                 </div>

@@ -14,6 +14,26 @@ export const CATALOGO_ACCION_CONSULTA = "consulta"
 // Prisma y no puede usarse desde un componente cliente.
 const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador", "Revisor"]
 
+// Debe reflejar lib/api-guard.ts:VERIFICACION_MENU_KEY/VERIFICACION_ACCION_SIN_FIRMA
+// (misma razón: ese módulo importa Prisma y no puede usarse en cliente).
+export const VERIFICACION_MENU_KEY = "bandeja-filtro2"
+// Bandera de BLOQUEO (no de permiso) a propósito: con una sola acción posible,
+// una bandera de "permiso" no puede distinguir "explícitamente desactivado"
+// de "nunca configurado" — quitarla del arreglo lo deja en [] en ambos casos.
+// Con una bandera de bloqueo, [] siempre significa "sin override" (permitido,
+// comportamiento histórico) y solo se activa al marcarla explícitamente.
+export const VERIFICACION_ACCION_SIN_FIRMA = "sin_firma"
+
+/**
+ * Sin override explícito (acciones vacío) cualquiera con acceso a la
+ * sección puede firmar — comportamiento histórico. El checkbox "Firma" solo
+ * sirve para REVOCAR esa capacidad a un usuario puntual sin quitarle el
+ * acceso de solo lectura a la bandeja de Verificación.
+ */
+export function verificacionIncluyeFirma(acciones: string[] | undefined): boolean {
+  return !(acciones ?? []).includes(VERIFICACION_ACCION_SIN_FIRMA)
+}
+
 /**
  * Consulta y Administración de Catálogo son independientes entre sí (ver
  * lib/api-guard.ts:puedeAdministrarCatalogo/puedeConsultarCatalogo). Sin
@@ -75,6 +95,7 @@ export function MenuPermisoTree({
   level,
   menuActions,
   onCatalogoAccionChange,
+  onVerificacionAccionChange,
   rolUsuario,
 }: {
   nodes: MenuNode[]
@@ -83,6 +104,7 @@ export function MenuPermisoTree({
   level: number
   menuActions?: Record<string, string[]>
   onCatalogoAccionChange?: (menuId: string, accion: "consulta" | "administracion", checked: boolean) => void
+  onVerificacionAccionChange?: (menuId: string, checked: boolean) => void
   rolUsuario?: string
 }) {
   const menuIdSet = new Set(menuIds)
@@ -176,6 +198,7 @@ export function MenuPermisoTree({
                             depth={0}
                             menuActions={menuActions}
                             onCatalogoAccionChange={onCatalogoAccionChange}
+                            onVerificacionAccionChange={onVerificacionAccionChange}
                             rolUsuario={rolUsuario}
                           />
                         ))}
@@ -197,6 +220,7 @@ export function MenuPermisoTree({
               depth={level}
               menuActions={menuActions}
               onCatalogoAccionChange={onCatalogoAccionChange}
+              onVerificacionAccionChange={onVerificacionAccionChange}
               rolUsuario={rolUsuario}
             />
           </div>
@@ -213,6 +237,7 @@ function MenuPermisoRow({
   depth,
   menuActions,
   onCatalogoAccionChange,
+  onVerificacionAccionChange,
   rolUsuario,
 }: {
   node: MenuNode
@@ -221,6 +246,7 @@ function MenuPermisoRow({
   depth: number
   menuActions?: Record<string, string[]>
   onCatalogoAccionChange?: (menuId: string, accion: "consulta" | "administracion", checked: boolean) => void
+  onVerificacionAccionChange?: (menuId: string, checked: boolean) => void
   rolUsuario?: string
 }) {
   const menuIdSet = new Set(menuIds)
@@ -229,6 +255,8 @@ function MenuPermisoRow({
   const esCatalogo = node.key === CATALOGO_MENU_KEY
   const incluyeAdministracion = catalogoIncluyeAdministracion(menuActions?.[node.id], rolUsuario)
   const incluyeConsulta = catalogoIncluyeConsulta(menuActions?.[node.id])
+  const esVerificacion = node.key === VERIFICACION_MENU_KEY
+  const incluyeFirma = verificacionIncluyeFirma(menuActions?.[node.id])
 
   return (
     <div
@@ -286,6 +314,24 @@ function MenuPermisoRow({
             </button>
           </div>
         )}
+        {esVerificacion && isChecked && onVerificacionAccionChange && (
+          <div className="flex items-center gap-3 shrink-0" role="group" aria-label="Permiso de firma en Verificación">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={incluyeFirma}
+              className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md transition-colors ${
+                incluyeFirma ? "text-content-high font-medium" : "text-muted-foreground hover:text-content-high"
+              }`}
+              onClick={() => onVerificacionAccionChange(node.id, !incluyeFirma)}
+            >
+              {incluyeFirma && (
+                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "9999px", backgroundColor: "#10b981", flexShrink: 0 }} />
+              )}
+              Firma
+            </button>
+          </div>
+        )}
       </div>
 
       {hasChildren && (
@@ -299,6 +345,7 @@ function MenuPermisoRow({
               depth={depth + 1}
               menuActions={menuActions}
               onCatalogoAccionChange={onCatalogoAccionChange}
+              onVerificacionAccionChange={onVerificacionAccionChange}
               rolUsuario={rolUsuario}
             />
           ))}
