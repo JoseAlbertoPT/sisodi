@@ -10,6 +10,7 @@ import { seedPeriodos } from "./seed/periodos"
 import { seedCalendario } from "./seed/calendario"
 import { seedSecretarias } from "./seed/secretarias"
 import { seedParaestatales } from "./seed/paraestatales"
+import { seedTabulador } from "./seed/tabulador"
 
 async function main() {
   console.log("== Seed inicial ==")
@@ -23,6 +24,7 @@ async function main() {
   await seedCalendario(prisma)
   await seedSecretarias(prisma)
   await seedParaestatales(prisma)
+  await seedTabulador(prisma)
   console.log("== Seed completo ==")
 }
 

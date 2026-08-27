@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react"
 import {
@@ -53,18 +54,24 @@ export function CalendarioProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<CalendarioResponse>(emptyResponse)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Recuerda para qué ejercicio ya se cargaron datos, para no volver a mostrar
+  // el spinner de carga en refrescos silenciosos (tiempo real / polling) del
+  // mismo año — solo al cambiar de ejercicio o en la carga inicial.
+  const loadedEjercicioRef = useRef<number | null>(null)
 
   const load = useCallback(async () => {
-    setLoading(true)
+    const isNuevoEjercicio = loadedEjercicioRef.current !== ejercicio
+    if (isNuevoEjercicio) setLoading(true)
     setError(null)
     try {
       const res = await fetchCalendario(ejercicio)
       setData(res)
+      loadedEjercicioRef.current = ejercicio
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar calendario")
-      setData(emptyResponse())
+      if (isNuevoEjercicio) setData(emptyResponse())
     } finally {
-      setLoading(false)
+      if (isNuevoEjercicio) setLoading(false)
     }
   }, [ejercicio])
 

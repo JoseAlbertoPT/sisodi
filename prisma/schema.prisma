@@ -489,3 +489,18 @@ model permiso_captura {
   consumed_at DateTime? @db.Timestamp(6)
   usuario     usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
+
+// Tabulador de niveles/categorías usado por "Equivalencia al Tabulador" en el
+// formulario de Nueva Solicitud (antes vivía hardcodeado en lib/tabulador.ts).
+model tabulador {
+  id                Int      @id @default(autoincrement())
+  nivel             String   @db.VarChar(20)
+  categoria         String   @db.VarChar(50)
+  importe_bruto_min Decimal  @db.Decimal(14, 2)
+  importe_bruto_max Decimal  @db.Decimal(14, 2)
+  // [] = aplica a todas las Secretarías/Dependencias. No vacío = solo a las
+  // nombradas ahí (nombre tal cual en organo_centralizado).
+  secretarias       String[] @default([])
+  creado_en         DateTime @default(now()) @db.Timestamp(6)
+  actualizado_en    DateTime @default(now()) @updatedAt @db.Timestamp(6)
+}

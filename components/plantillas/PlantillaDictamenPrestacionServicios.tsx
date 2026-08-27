@@ -34,10 +34,15 @@ export interface DictamenPrestacionData {
   referenciaDoc?: string;
   revisionDoc?: string;
   notaDictamen?: string;
+  firmaNombre?: string;
+  firmaCargo?: string;
+  firmaUrlValidacion?: string;
+  firmaQrPng?: Buffer;
 }
 
 const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20finanzas.png"));
 const MARCA_MORELOS = fs.readFileSync(path.join(process.cwd(), "public/LOGO_MORELOS_V1.png"));
+const BANNER_COMPLETO = fs.readFileSync(path.join(process.cwd(), "public/banner-completo.png"));
 
 // Palabras que se mantienen en minúscula (salvo cuando son la primera palabra).
 const PALABRAS_MENORES = new Set([
@@ -259,7 +264,7 @@ const s = StyleSheet.create({
   vigCellValue: { fontSize: 8 },
 
   notaWrapper: { marginTop: 12, marginBottom: 6 },
-  notaTitle: { fontFamily: "Helvetica-Bold", fontSize: 9, marginBottom: 2 },
+  notaTitle: { fontFamily: "Helvetica-Bold", fontSize: 8 },
   notaText: { fontSize: 8, textAlign: "justify", lineHeight: 1.4 },
 
   footerTable: {
@@ -299,6 +304,21 @@ function parseDateParts(dateStr: string) {
   return { d: trimmed, m: "", y: "" };
 }
 
+// Textos largos (objeto de la contratación, fundamento legal, etc.) achican
+// letra y entrelineado para caber en menos renglones y no empujar el resto
+// del documento (NOTA, firma) a una hoja adicional.
+function tamanoTextoLargo(text: string | null | undefined): { fontSize: number; lineHeight: number } {
+  const len = (text ?? "").length;
+  if (len <= 150) return { fontSize: 9, lineHeight: 1.4 };
+  if (len <= 300) return { fontSize: 8.5, lineHeight: 1.3 };
+  if (len <= 450) return { fontSize: 8, lineHeight: 1.25 };
+  if (len <= 600) return { fontSize: 7.5, lineHeight: 1.2 };
+  return { fontSize: 7, lineHeight: 1.15 };
+}
+
+const FUNDAMENTO_TEXTO =
+  "Con fundamento en lo dispuesto por los artículos 1, 9, fracción III y 24, fracción XL, de la Ley Orgánica de la Administración Pública para el Estado Libre y Soberano de Morelos, en relación con los numerales 1, 5, fracción XIV, 7, 10, fracción XVII y 23, fracción III, del Reglamento Interior de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal y demás disposiciones jurídicas y administrativas aplicables y una vez realizado el análisis técnico funcional se determina que la Justificación de Prestación de Servicios, relativa a la(s) contratación(es) que se menciona(n), cumple con la metodología y los requisitos establecidos por la Dirección General de Desarrollo Organizacional de la Secretaría de Administración y Finanzas del Poder Ejecutivo Estatal, por lo que se emite el Dictamen Técnico Funcional de Justificación de Prestación de Servicios:";
+
 export function PlantillaDictamenPrestacionServicios({
   data,
 }: {
@@ -313,11 +333,12 @@ export function PlantillaDictamenPrestacionServicios({
 
   const inD = parseDateParts(data.vigenciaInicio);
   const finD = parseDateParts(data.vigenciaFin);
+  const tieneFirma = !!data.firmaNombre;
 
   return (
     <Document>
-      <Page size="LETTER" style={s.page} wrap>
-        <View style={s.pageFrame} fixed />
+      <Page size="LETTER" style={tieneFirma ? [s.page, { paddingBottom: 94 }] : s.page} wrap>
+        <View style={tieneFirma ? [s.pageFrame, { bottom: 88 }] : s.pageFrame} fixed />
         <View style={s.watermarkContainer} fixed>
           <Image src={MARCA_MORELOS} style={s.watermarkImage} />
         </View>
@@ -383,20 +404,7 @@ export function PlantillaDictamenPrestacionServicios({
         </View>
 
         <Text style={s.fundamentoText}>
-          Con fundamento en lo dispuesto por los artículos 1, 9, fracción III y
-          24, fracción XL, de la Ley Orgánica de la Administración Pública para
-          el Estado Libre y Soberano de Morelos, en relación con los numerales
-          1, 5, fracción XIV, 7, 10, fracción XVII y 23, fracción III, del
-          Reglamento Interior de la Secretaría de Administración y Finanzas del
-          Poder Ejecutivo Estatal y demás disposiciones jurídicas y
-          administrativas aplicables y una vez realizado el análisis técnico
-          funcional se determina que la Justificación de Prestación de
-          Servicios, relativa a la(s) contratación(es) que se menciona(n),
-          cumple con la metodología y los requisitos establecidos por la
-          Dirección General de Desarrollo Organizacional de la Secretaría de
-          Administración y Finanzas del Poder Ejecutivo Estatal, por lo que se
-          emite el Dictamen Técnico Funcional de Justificación de Prestación de
-          Servicios:
+          {FUNDAMENTO_TEXTO}
         </Text>
 
         <View style={s.fieldRow}>
@@ -413,7 +421,9 @@ export function PlantillaDictamenPrestacionServicios({
 
         <View style={s.fieldRow}>
           <Text style={s.fieldLabel}>Objeto de la contratación:</Text>
-          <Text style={s.fieldValueMulti}>{data.objetoContratacion}</Text>
+          <Text style={[s.fieldValueMulti, tamanoTextoLargo(data.objetoContratacion)]}>
+            {data.objetoContratacion}
+          </Text>
         </View>
 
         <View style={s.fieldRow}>
@@ -484,13 +494,33 @@ export function PlantillaDictamenPrestacionServicios({
         </View>
 
         <View style={s.notaWrapper} wrap={false}>
-          <Text style={s.notaTitle}>NOTA:</Text>
           <Text style={s.notaText}>
+            <Text style={s.notaTitle}>NOTA: </Text>
             {data.notaDictamen ?? NOTA_DICTAMEN_DEFAULT}
           </Text>
         </View>
 
-        <View style={s.footerTable} fixed>
+        {data.firmaNombre ? (
+          <View wrap={false} style={{ marginTop: 4, alignItems: "center" }}>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 9, textAlign: "center", marginBottom: 2 }}>
+              ATENTAMENTE
+            </Text>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 8, textAlign: "center", marginBottom: 1, color: "#B00020" }}>
+              DOCUMENTO FIRMADO ELECTRÓNICAMENTE
+            </Text>
+            <Text style={{ fontSize: 7, textAlign: "center", lineHeight: 1.25, maxWidth: "88%", marginBottom: 3 }}>
+              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+            </Text>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 9, textAlign: "center" }}>
+              {data.firmaNombre}
+            </Text>
+            {data.firmaCargo ? (
+              <Text style={{ fontSize: 8, textAlign: "center" }}>{data.firmaCargo}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        <View style={tieneFirma ? [s.footerTable, { bottom: 30 }] : s.footerTable} fixed>
           <View style={s.footerLeft}>
             <Text style={s.footerLine}>
               <Text style={s.footerLabelBold}>Formato:</Text>{" "}
@@ -517,6 +547,22 @@ export function PlantillaDictamenPrestacionServicios({
             </Text>
           </View>
         </View>
+
+        {tieneFirma ? (
+          <View style={{ position: "absolute", bottom: 8, left: 22, right: 22 }} fixed>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end", width: "100%", marginBottom: 0 }}>
+              {data.firmaUrlValidacion ? (
+                <Text style={{ fontSize: 6, color: "#1a4fba", marginRight: 6, marginTop: 10 }}>
+                  {data.firmaUrlValidacion}
+                </Text>
+              ) : null}
+              {data.firmaQrPng ? (
+                <Image src={data.firmaQrPng} style={{ width: 54, height: 54, marginTop: -12 }} />
+              ) : null}
+            </View>
+            <Image src={BANNER_COMPLETO} style={{ width: "100%", height: 16 }} />
+          </View>
+        ) : null}
       </Page>
     </Document>
   );

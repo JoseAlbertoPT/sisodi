@@ -1,17 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { FilterTabs } from "@/components/ui/filter-tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   Loader2, Check, X,
   CalendarPlus, ChevronDown, AlertCircle,
+  CalendarDays, FileText, Rows3,
 } from "lucide-react"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { PageLayout } from "@/components/page-layout"
+import { TabuladorTabContent } from "@/components/tabulador-tab-content"
 import { useCalendario } from "@/lib/calendario-store"
 import { updateCalendario, buildEmptyCalendario, mesNumero, mesDeQuincena, type CalendarioResponse } from "@/lib/calendario-api"
 import { useToast } from "@/hooks/use-toast"
@@ -118,6 +120,7 @@ function DateCell({ value }: { value: string }) {
     </span>
   )
 }
+
 export function CalendarioPage() {
   const { toast } = useToast()
   const {
@@ -201,20 +204,33 @@ export function CalendarioPage() {
   })
   const [showNewYearInput, setShowNewYearInput] = useState(false)
   const [newYearValue, setNewYearValue] = useState("")
-  const [showEditNota, setShowEditNota] = useState(false)
+  const [mainTab, setMainTab] = useState<"calendario" | "nota" | "tabulador">("calendario")
+  const [notaLoaded, setNotaLoaded]     = useState(false)
   const [notaValue, setNotaValue]       = useState("")
+  const [notaOriginal, setNotaOriginal] = useState("")
+  const [notaEditing, setNotaEditing]   = useState(false)
   const [notaLoading, setNotaLoading]   = useState(false)
   const [notaSaving, setNotaSaving]     = useState(false)
   const [notaError, setNotaError]       = useState<string | null>(null)
-  const abrirEditNota = () => {
-    setShowEditNota(true)
+
+  useEffect(() => {
+    if (mainTab !== "nota" || notaLoaded || notaLoading) return
     setNotaError(null)
     setNotaLoading(true)
     fetch("/api/configuracion/nota-dictamen")
       .then((res) => res.json())
-      .then((json) => { if (json.ok) setNotaValue(json.valor) })
+      .then((json) => { if (json.ok) { setNotaValue(json.valor); setNotaOriginal(json.valor) }; setNotaLoaded(true) })
       .catch(() => setNotaError("No se pudo cargar la nota"))
       .finally(() => setNotaLoading(false))
+  }, [mainTab, notaLoaded, notaLoading])
+  const iniciarEditNota = () => {
+    setNotaError(null)
+    setNotaEditing(true)
+  }
+  const cancelarEditNota = () => {
+    setNotaValue(notaOriginal)
+    setNotaError(null)
+    setNotaEditing(false)
   }
   const guardarNota = async () => {
     setNotaSaving(true)
@@ -227,7 +243,9 @@ export function CalendarioPage() {
       })
       const json = await res.json()
       if (!res.ok || !json.ok) throw new Error(json.error || "Error al guardar la nota")
-      setShowEditNota(false)
+      setNotaOriginal(notaValue)
+      setNotaEditing(false)
+      toast({ title: "Nota guardada", description: "Los cambios se guardaron correctamente." })
     } catch (e) {
       setNotaError(e instanceof Error ? e.message : "Error al guardar la nota")
     } finally {
@@ -270,11 +288,39 @@ export function CalendarioPage() {
     nombramiento: displayData.nombramiento.filter((r) => r.limiteDO && !r.limiteDO.startsWith("/")).length,
   }
   return (
-    <>
     <PageLayout
-      title="Calendario de Recepción"
-      description={`Periodo de aceptación y fechas límite para la recepción de solicitudes — Ejercicio ${ejercicio}`}
+      title={
+        mainTab === "nota"
+          ? "Nota del Dictamen Técnico Funcional y de la Justificación de Prestación de Servicios"
+          : mainTab === "tabulador"
+            ? "Tabulador"
+            : "Calendario de Recepción"
+      }
+      description={
+        mainTab === "nota"
+          ? "Este texto se imprime automáticamente en ambos documentos al guardar."
+          : mainTab === "tabulador"
+            ? "Niveles, categorías e importes brutos usados en la Equivalencia al Tabulador."
+            : `Periodo de aceptación y fechas límite para la recepción de solicitudes — Ejercicio ${ejercicio}`
+      }
       >
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "calendario" | "nota" | "tabulador")} className="w-full gap-4">
+        <TabsList>
+
+          <TabsTrigger value="calendario" className="gap-1.5">
+            <CalendarDays className="h-4 w-4" />Calendario
+          </TabsTrigger>
+
+          <TabsTrigger value="tabulador" className="gap-1.5">
+            <Rows3 className="h-4 w-4" />Tabulador
+          </TabsTrigger>
+
+          <TabsTrigger value="nota" className="gap-1.5">
+            <FileText className="h-4 w-4" />Nota
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="calendario">
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {!loading && (!isEmpty || editing) ? (
@@ -295,11 +341,6 @@ export function CalendarioPage() {
                 {availableYears.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
               </SelectContent>
             </Select>
-            {!editing && (
-              <Button size="sm" variant="default" className="gap-1.5 text-xs h-9" onClick={abrirEditNota}>
-                Editar nota
-              </Button>
-            )}
             {!editing ? (
               isEmpty ? (
                 <Button size="sm" className="gap-1.5 text-xs h-9" onClick={handleCreateYear} disabled={loading}>
@@ -509,57 +550,73 @@ export function CalendarioPage() {
           </>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="tabulador">
+          <TabuladorTabContent />
+        </TabsContent>
+
+        <TabsContent value="nota">
+          <Card className="shadow-none">
+            <CardContent className="flex flex-col gap-4 py-6">
+              {notaLoading ? (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-8">
+                  <Loader2 className="h-4 w-4 animate-spin" />Cargando…
+                </div>
+              ) : (
+                <textarea
+                  value={notaValue}
+                  onChange={(e) => setNotaValue(e.target.value)}
+                  readOnly={!notaEditing}
+                  rows={10}
+                  className={`w-full rounded-lg border px-3 py-2 text-sm leading-relaxed focus:outline-none ${
+                    notaEditing
+                      ? "border-[var(--sem-border-md)] bg-background focus:border-[#2D3B2D]"
+                      : "border-border/60 bg-muted/30 text-muted-foreground cursor-default"
+                  }`}
+                />
+              )}
+              {notaError && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" />{notaError}
+                </p>
+              )}
+              <div className="flex items-center justify-end gap-2">
+                {!notaEditing ? (
+                  <Button
+                    variant="vino"
+                    className="rounded-full h-10 px-6 font-normal shadow-sm gap-1.5"
+                    onClick={iniciarEditNota}
+                    disabled={notaLoading}
+                  >
+                    Editar
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="default"
+                      className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+                      onClick={cancelarEditNota}
+                      disabled={notaSaving}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      variant="vino"
+                      className="rounded-full h-10 px-6 font-normal shadow-sm gap-1.5"
+                      onClick={guardarNota}
+                      disabled={notaSaving}
+                    >
+                      {notaSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {notaSaving ? "Guardando…" : "Guardar"}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </PageLayout>
-    <Dialog open={showEditNota} onOpenChange={setShowEditNota}>
-      <DialogContent className="max-w-xl bg-white p-0 gap-0 overflow-hidden">
-        <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
-          <DialogTitle className="ds-title-md text-content-high">
-            Editar nota
-          </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">
-            Este texto se imprime en la nota del Dictamen Técnico Funcional y de la Justificación de Prestación de Servicios. Al guardar, se actualiza en ambos documentos.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 px-6 py-5">
-          {notaLoading ? (
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-8">
-              <Loader2 className="h-4 w-4 animate-spin" />Cargando…
-            </div>
-          ) : (
-            <textarea
-              value={notaValue}
-              onChange={(e) => setNotaValue(e.target.value)}
-              rows={8}
-              className="w-full rounded-lg border border-[var(--sem-border-md)] px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-[#2D3B2D]"
-            />
-          )}
-          {notaError && (
-            <p className="text-xs text-destructive flex items-center gap-1">
-              <AlertCircle className="h-3.5 w-3.5" />{notaError}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
-          <Button
-            variant="default"
-            className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
-            onClick={() => setShowEditNota(false)}
-            disabled={notaSaving}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="vino"
-            className="rounded-full h-10 px-6 font-normal shadow-sm gap-1.5"
-            onClick={guardarNota}
-            disabled={notaSaving || notaLoading}
-          >
-            {notaSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {notaSaving ? "Guardando…" : "Guardar"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-    </>
   )
 }

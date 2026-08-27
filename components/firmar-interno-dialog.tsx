@@ -50,6 +50,11 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
   const [exito, setExito] = useState(false)
   const [avisoCargoAbierto, setAvisoCargoAbierto] = useState(false)
   const [cargoHabilitado, setCargoHabilitado] = useState(false)
+  // Cuando ya existe un cargo previo (usuario ya firmó antes con este cargo),
+  // el campo se bloquea de forma permanente — no se deja editar ni siquiera
+  // pasando por el aviso de "escríbalo con exactitud" (eso es solo para la
+  // primera vez que este usuario firma y aún no hay cargo registrado).
+  const [cargoBloqueado, setCargoBloqueado] = useState(false)
   const [confirmEmitirAbierto, setConfirmEmitirAbierto] = useState(false)
   const [confirmFirmarYEmitirAbierto, setConfirmFirmarYEmitirAbierto] = useState(false)
   /** En el flujo del emisor: pasa a true cuando ya se firmó electrónicamente
@@ -75,7 +80,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
         if (cancel || !j?.ok) return
         if (j.cargo) {
           setCargo(j.cargo.toUpperCase())
-          setCargoHabilitado(true)
+          setCargoBloqueado(true)
         }
       })
       .catch(() => { /* noop */ })
@@ -93,6 +98,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
     setError(null); setExito(false)
     setAvisoCargoAbierto(false)
     setCargoHabilitado(false)
+    setCargoBloqueado(false)
     setConfirmEmitirAbierto(false)
     setConfirmFirmarYEmitirAbierto(false)
     setFirmaCompleta(false)
@@ -352,17 +358,18 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
               <Input
                 ref={cargoInputRef}
                 value={cargo}
-                readOnly={!cargoHabilitado}
-                tabIndex={cargoHabilitado ? undefined : -1}
-                onMouseDown={e => { if (!cargoHabilitado) { e.preventDefault(); setAvisoCargoAbierto(true) } }}
-                onFocus={e => { if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
+                readOnly={cargoBloqueado || !cargoHabilitado}
+                tabIndex={!cargoBloqueado && cargoHabilitado ? undefined : -1}
+                onMouseDown={e => { if (cargoBloqueado) { e.preventDefault(); return } if (!cargoHabilitado) { e.preventDefault(); setAvisoCargoAbierto(true) } }}
+                onFocus={e => { if (cargoBloqueado) { e.target.blur(); return } if (!cargoHabilitado) { e.target.blur(); setAvisoCargoAbierto(true) } }}
                 onChange={e => {
+                  if (cargoBloqueado) return
                   const val = e.target.value.toUpperCase()
                   setCargo(val)
                   if (camposInvalidos.cargo && val.trim()) setCamposInvalidos(p => ({ ...p, cargo: false }))
                 }}
                 placeholder="EJ. DIRECTOR DE ANÁLISIS NORMATIVO"
-                className={`uppercase ${!cargoHabilitado ? "cursor-pointer" : ""}`}
+                className={`uppercase ${!cargoBloqueado && !cargoHabilitado ? "cursor-pointer" : ""}`}
                 aria-invalid={camposInvalidos.cargo}
                 autoComplete="off"
                 name="cargo-firmante-interno"
@@ -371,6 +378,11 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                 <p className="text-[10px] text-support-error flex items-center gap-1">
                   <AlertCircle className="h-3 w-3 shrink-0" />
                   Este campo es obligatorio
+                </p>
+              ) : cargoBloqueado ? (
+                <p className="text-[10px] text-muted-foreground flex items-start gap-1">
+                  <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
+                  Este es el cargo con el que ya ha firmado antes y no puede editarse aquí.
                 </p>
               ) : (
                 <p className="text-[10px] text-support-warning flex items-start gap-1">

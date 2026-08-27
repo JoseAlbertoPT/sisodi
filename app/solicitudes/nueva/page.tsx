@@ -26,7 +26,8 @@ import { parseDateDMY, isPeriodoVigente, type PeriodoCap3000, type PeriodoCap100
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
 import { useHistoricoStore } from "@/lib/historico-store"
 import type { HistoricoRow } from "@/lib/parse-excel-historico"
-import { RANGOS_TABULADOR } from "@/lib/tabulador"
+import { useTabulador } from "@/hooks/use-tabulador"
+import { secretariaAplica } from "@/lib/tabulador"
 import { filtrarSecretarias, getUAsForSecretaria, getClaveForUA } from "@/lib/ua-claves-catalog"
 import { fetchCentralizadaTree, type OrganoCentralizadoNode } from "@/lib/catalogo-api"
 import type { SolicitudDetalle } from "@/components/pages/revision-do-page"
@@ -980,13 +981,6 @@ function TagInput({
 
 type TabuladorEntry = { nivel: string; categoria: string }
 
-const SSPC_KEYWORDS = ["SEGURIDAD Y PROTECCION CIUDADANA", "SEGURIDAD Y PROTECCIÓN CIUDADANA", "SSPC"]
-function isSSPC(secretaria?: string) {
-  if (!secretaria) return false
-  const upper = secretaria.toUpperCase()
-  return SSPC_KEYWORDS.some((k) => upper.includes(k))
-}
-
 function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSeleccionadoChange, secretaria }: {
   nivelCategoria?: string; importeBruto?: string; readonly?: boolean
   onSeleccionadoChange?: (nivel: string, categoria: string) => void
@@ -995,12 +989,10 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
   const normalizedImporte = parseImporteBruto(importeBruto || "")
   const [busqueda, setBusqueda]         = useState("")
   const [seleccionado, setSeleccionado] = useState<TabuladorEntry | null>(null)
+  const { rangos: rangosTabulador } = useTabulador()
   const rangosActivos = useMemo(() =>
-    RANGOS_TABULADOR.filter((r) => {
-      const niv = parseInt(r.nivel, 10)
-      return niv >= 500 && niv < 600 ? isSSPC(secretaria) : true
-    }),
-  [secretaria])
+    rangosTabulador.filter((r) => secretariaAplica(r.secretarias, secretaria)),
+  [rangosTabulador, secretaria])
   useEffect(() => {
     const normalized = parseImporteBruto(importeBruto || "")
     const q = normalized || ""
@@ -1041,7 +1033,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
                 let nivel = coincidencias[0]?.nivel || nivelCategoria || ""
                 if (!nivel && normalizedImporte) {
                   const val = parseMoney(normalizedImporte)
-                  const match = RANGOS_TABULADOR.find((r) => val >= r.min && val <= r.max)
+                  const match = rangosTabulador.find((r) => val >= r.min && val <= r.max)
                   nivel = match?.nivel ?? ""
                 }
                 if (!nivel && !normalizedImporte) {
@@ -1100,7 +1092,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
                       <span className="text-sm font-semibold text-card-foreground shrink-0">
                         {c.nivel} : {formatMXN(c.min)} - {formatMXN(c.max)}
                       </span>
-                      <span className="text-xs text-muted-foreground truncate">{c.puesto}</span>
+                      <span className="text-xs text-muted-foreground truncate">{c.categoria}</span>
                       {isSelected && <CheckCircle2 className="h-4 w-4 text-secondary ml-auto shrink-0" />}
                     </div>
                   )

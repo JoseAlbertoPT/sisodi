@@ -1,40 +1,37 @@
+import { normalizeText } from "@/lib/utils"
+
 export type RangoTabulador = {
   min: number
   max: number
   nivel: string
   categoria: string
-  puesto: string
-}
-
-export const RANGOS_TABULADOR: RangoTabulador[] = [
-  //{ min: 32124.36, max: 49846.50, nivel: "105", categoria: "A a C" },
-  { min: 24380.00, max: 32123.30, nivel: "106", categoria: "A a C" },
-  { min: 19080.00, max: 24369.40, nivel: "107", categoria: "A a C" },
-  { min: 0.00,     max: 18830.90, nivel: "108", categoria: "A a C" },
-  { min: 0.00,     max: 13292.40, nivel: "109", categoria: "A a C" },
-  { min: 11660.00, max: 15898.94, nivel: "301", categoria: "A" },
-  { min: 10554.00, max: 11658.94, nivel: "302", categoria: "A" },
-  { min: 0.00,     max: 10553.36, nivel: "303", categoria: "A" },
-
-  //{ min: 0.00,     max: 49847.00, nivel: "504", categoria: "ÚNICA"},
-  { min: 0.00, max: 47631.00, nivel: "505", categoria: "A a B" },
-    { min: 0.00, max: 44308.00, nivel: "506", categoria: "A a B" },
-    { min: 0.00, max: 40985.00, nivel: "507", categoria: "A a B" },
-    { min: 0.00, max: 36554.00, nivel: "508", categoria: "A a B" },
-    { min: 0.00, max: 33231.00, nivel: "509", categoria: "A a B" },
-    { min: 0.00, max: 31569.00, nivel: "510", categoria: "A a B" },
-]
-
-const NIVELES_FORMULARIO = new Set(["105", "106","107", "108", "109", "301", "302", "303", "504", "505", "506", "507", "508", "509", "510"])
-export function esMostrarEnFormulario(nivel: string): boolean {
-  return NIVELES_FORMULARIO.has(nivel)
+  /** [] = aplica a todas las Secretarías. No vacío = solo a las nombradas ahí. */
+  secretarias: string[]
 }
 
 const fmt = (n: number) =>
   `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-export function formatRangoTabulador(nivel: string | null | undefined, categoria: string | null | undefined): string | null {
+
+/**
+ * Si `rango.secretarias` está vacío, aplica a cualquier Secretaría. Si no,
+ * solo aplica cuando `secretariaActual` coincide (comparación sin acentos ni
+ * mayúsculas) con alguna de las nombradas — ver "Secretaria /Dependencia"
+ * en la pestaña Tabulador.
+ */
+export function secretariaAplica(secretariasRango: string[], secretariaActual: string | null | undefined): boolean {
+  if (secretariasRango.length === 0) return true
+  if (!secretariaActual) return false
+  const normActual = normalizeText(secretariaActual)
+  return secretariasRango.some((s) => normalizeText(s) === normActual)
+}
+
+export function formatRangoTabulador(
+  rangos: RangoTabulador[],
+  nivel: string | null | undefined,
+  categoria: string | null | undefined,
+): string | null {
   if (!nivel) return null
-  const rango = RANGOS_TABULADOR.find(
+  const rango = rangos.find(
     r => r.nivel === nivel && (categoria ? r.categoria === categoria : true)
   )
   if (!rango) return null

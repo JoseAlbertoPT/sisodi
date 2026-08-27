@@ -89,6 +89,26 @@ export async function requireCatalogoConsulta(userId: string | null): Promise<Ne
   return null
 }
 
+const normalizaRol = (s: string) =>
+  s.normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "").toLowerCase().trim()
+
+// La firma electrónica al reutilizar un registro del Catálogo (autofirma
+// inmediata, ver dictamen-prestacion-completo/route.ts) solo la puede hacer
+// UEFA o un Administrador — a diferencia de "Administrar Catálogo" (Emisor/
+// Verificador/Revisor también pueden reutilizar/cancelar, ver
+// puedeAdministrarCatalogo), firmar el Dictamen queda más restringido.
+export const ROLES_FIRMA_CATALOGO = ["uefa", "administrador"]
+
+export async function puedeFirmarCatalogo(userId: string | null): Promise<boolean> {
+  if (!userId) return false
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: userId },
+    select: { rol: { select: { nombre: true } } },
+  })
+  if (!usuario) return false
+  return ROLES_FIRMA_CATALOGO.includes(normalizaRol(usuario.rol.nombre))
+}
+
 export const VERIFICACION_MENU_KEY = "bandeja-filtro2"
 // Bandera de BLOQUEO, no de permiso — con una sola acción posible, una
 // bandera de "permiso" no puede distinguir "explícitamente desactivado" de

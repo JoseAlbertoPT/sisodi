@@ -56,7 +56,6 @@ import { COL_LEGACY, SHEET_NAME_LEGACY } from "@/lib/importar-catalogo-excel"
 import { folioSinSiglas } from "@/lib/clave-dictamen"
 import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
 import { useProgramasSigef } from "@/hooks/use-programas-sigef"
-
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
   loading: () => (
@@ -143,6 +142,13 @@ function maxPrestadoresPermitido(secretaria: string | null | undefined): number 
   const s = (secretaria ?? "").toLowerCase()
   return s.includes("seguridad p") ? 100 : 50
 }
+async function fileToBase64(file: File): Promise<string> {
+  const buf = await file.arrayBuffer()
+  const bytes = new Uint8Array(buf)
+  let binary = ""
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+  return btoa(binary)
+}
 const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
   "en", "a", "al", "con", "por", "para",
@@ -197,6 +203,14 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [solPersonas, setSolPersonas]       = useState("")
   const [solPrestadores, setSolPrestadores] = useState("")
   const [solPrograma, setSolPrograma]       = useState("")
+  const [solImporteBruto, setSolImporteBruto] = useState("")
+
+  const [showFirmarSol, setShowFirmarSol]     = useState(false)
+  const [solFirmaCargo, setSolFirmaCargo]     = useState("")
+  const [solFirmaCargoBloqueado, setSolFirmaCargoBloqueado] = useState(false)
+  const [solFirmaCerFile, setSolFirmaCerFile] = useState<File | null>(null)
+  const [solFirmaKeyFile, setSolFirmaKeyFile] = useState<File | null>(null)
+  const [solFirmaPassword, setSolFirmaPassword] = useState("")
   const [solLoading, setSolLoading]   = useState(false)
   const [solError, setSolError]       = useState<string | null>(null)
   const [canRec, setCanRec]           = useState<CatalogoRecord | null>(null)
@@ -205,6 +219,15 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [canVigFin,    setCanVigFin]    = useState<Date | undefined>(undefined)
   const [canLoading, setCanLoading]   = useState(false)
   const [canError, setCanError]       = useState<string | null>(null)
+  const [canFirmarCatalogo, setCanFirmarCatalogo] = useState(false)
+
+  useEffect(() => {
+    if (!user?.id) { setCanFirmarCatalogo(false); return }
+    fetch(`/api/catalogo-justificaciones/puede-administrar?userId=${user.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setCanFirmarCatalogo(d?.puedeFirmar === true))
+      .catch(() => {})
+  }, [user?.id])
   const progSigef = useProgramasSigef(solRec ? entidadNombre(solRec) : "")
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -280,11 +303,19 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     setSolPersonas("")
     setSolPrestadores("")
     setSolPrograma(rec.programa_proyecto || "")
+    setSolImporteBruto("")
     setSolError(null)
+    setShowFirmarSol(false)
+    setSolFirmaCargo("")
+    setSolFirmaCerFile(null)
+    setSolFirmaKeyFile(null)
+    setSolFirmaPassword("")
     setShowSol(true)
   }
-  const handleSolicitar = async () => {
+
+  const abrirFirmarYGenerar = () => {
     if (!solRec || !user) return
+    if (!canFirmarCatalogo) { setSolError("Solo un usuario con rol UEFA o Administrador puede firmar."); return }
     if (!solVigInicio || !solVigFin) { setSolError("La vigencia es requerida"); return }
     if (esInicioSinRangoValido(solVigInicio)) { setSolError(MENSAJE_INICIO_31_DIC); return }
     if (solVigFin > calcularVigenciaMaxima(solVigInicio)) { setSolError("La nueva vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso"); return }
@@ -294,6 +325,30 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         setSolError(`El número de prestadores no puede exceder ${maxPrestadores} para esta secretaría`)
         return
       }
+    }
+
+    setSolError(null)
+    setSolFirmaCargo("")
+    setSolFirmaCargoBloqueado(false)
+    setSolFirmaCerFile(null)
+    setSolFirmaKeyFile(null)
+    setSolFirmaPassword("")
+    setShowFirmarSol(true)
+    fetch(`/api/firma-efirma/ultimo-cargo?usuarioId=${encodeURIComponent(user.id)}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.ok && j.cargo) {
+          setSolFirmaCargo(String(j.cargo).toUpperCase())
+          setSolFirmaCargoBloqueado(true)
+        }
+      })
+      .catch(() => { /* noop */ })
+  }
+  const handleFirmarYGenerar = async () => {
+    if (!solRec || !user) return
+    if (!solFirmaCargo.trim() || !solFirmaCerFile || !solFirmaKeyFile || !solFirmaPassword) {
+      setSolError("Completa cargo, .cer, .key y contraseña")
+      return
     }
     setSolLoading(true)
     setSolError(null)
@@ -320,16 +375,32 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         }),
       })
       const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
-      const params = new URLSearchParams({
+      const [cerB64, keyB64] = await Promise.all([
+        fileToBase64(solFirmaCerFile),
+        fileToBase64(solFirmaKeyFile),
+      ])
+      const body: Record<string, unknown> = {
         vigenciaInicio: vi,
         vigenciaFin: vf,
+        firmaCargo: solFirmaCargo.trim(),
+        firmaUsuarioId: user.id,
+        firmaCertificado: cerB64,
+        firmaClavePrivada: keyB64,
+        firmaFraseClavePrivada: solFirmaPassword,
+      }
+      if (solRec.solicitud.id) body.solicitudId = solRec.solicitud.id
+      else body.catalogoId = solRec.id
+      if (np) body.numeroPersonas = np
+      if (programaCambio) body.programaProyecto = programaCambio
+      const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       })
-      if (solRec.solicitud.id) params.set("id", String(solRec.solicitud.id))
-      else params.set("catalogoId", String(solRec.id))
-      if (np) params.set("numeroPersonas", np)
-      if (programaCambio) params.set("programaProyecto", programaCambio)
-      const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo?${params}`)
-      if (!pdfRes.ok) throw new Error("Error al generar el PDF")
+      if (!pdfRes.ok) {
+        const errJson = await pdfRes.json().catch(() => null)
+        throw new Error(errJson?.error ?? "Error al generar el PDF")
+      }
       const blob = await pdfRes.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -337,6 +408,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       a.download = `Dictamen_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
       a.click()
       URL.revokeObjectURL(url)
+      setShowFirmarSol(false)
       setShowSol(false)
       void fetchData()
     } catch (e) {
@@ -599,7 +671,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
             ) : pdfBlobUrl ? (
               <PdfPreview fileUrl={pdfBlobUrl} />
             ) : (
-
               <div className="flex flex-col items-center justify-center h-full gap-3">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/20">
                   <AlertCircle className="h-7 w-7 text-white/70" />
@@ -766,6 +837,23 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     </>
                   )}
                 </div>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium">Importe Bruto</Label>
+                  <Input
+                    type="text"
+                    placeholder="$0.00"
+                    value={solImporteBruto}
+                    onChange={(e) => setSolImporteBruto(e.target.value)}
+                    disabled={solLoading}
+                    className="bg-background"
+                  />
+                </div>
+                {!canFirmarCatalogo && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    Solo un usuario con rol UEFA o Administrador puede firmar la reutilización.
+                  </div>
+                )}
                 {solError && (
                   <div className="flex items-center gap-2 text-xs text-destructive">
                     <AlertCircle className="h-4 w-4 shrink-0" />{solError}
@@ -784,14 +872,16 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 <Button
                   variant="vino"
                   className="rounded-full h-10 px-6 font-normal shadow-sm"
-                  onClick={handleSolicitar}
+                  onClick={abrirFirmarYGenerar}
                   disabled={
                     solLoading ||
+                    !canFirmarCatalogo ||
                     !solVigInicio ||
                     !solVigFin ||
                     esInicioSinRangoValido(solVigInicio) ||
                     (!isParaestatal(solRec) && Number(solPrestadores || 0) > maxPrestadoresPermitido(entidadNombre(solRec)))
                   }
+                  title={!canFirmarCatalogo ? "Solo un usuario con rol UEFA o Administrador puede firmar." : undefined}
                 >
                   {solLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {solLoading ? "Generando…" : "Generar"}
@@ -799,6 +889,90 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showFirmarSol} onOpenChange={(v) => { if (!v && !solLoading) setShowFirmarSol(false) }}>
+        <DialogContent className="max-w-xl bg-white p-0 gap-0 overflow-hidden">
+          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
+            <DialogTitle className="ds-title-md text-content-high">
+              Firmar Dictamen Técnico Funcional
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              El Dictamen se emite con firma electrónica. Complete sus credenciales de e.firma.
+            </p>
+          </div>
+          <div className="flex flex-col gap-4 px-6 py-5">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs flex items-center gap-1">Cargo / Puesto</Label>
+              <Input
+                value={solFirmaCargo}
+                readOnly={solFirmaCargoBloqueado}
+                onChange={(e) => { if (!solFirmaCargoBloqueado) setSolFirmaCargo(e.target.value.toUpperCase()) }}
+                placeholder="EJ. DIRECTOR DE ANÁLISIS NORMATIVO"
+                className={`uppercase bg-background ${solFirmaCargoBloqueado ? "cursor-not-allowed" : ""}`}
+                disabled={solLoading}
+              />
+              {solFirmaCargoBloqueado && (
+                <p className="text-[10px] text-muted-foreground">
+                  Cargo tomado de tu usuario — no puede editarse aquí.
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label className="text-xs">Certificado (.cer)</Label>
+                <Input
+                  type="file" accept=".cer"
+                  onChange={(e) => setSolFirmaCerFile(e.target.files?.[0] ?? null)}
+                  disabled={solLoading}
+                />
+                {solFirmaCerFile && <span className="text-xs text-muted-foreground truncate">{solFirmaCerFile.name}</span>}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-xs">Clave privada (.key)</Label>
+                <Input
+                  type="file" accept=".key"
+                  onChange={(e) => setSolFirmaKeyFile(e.target.files?.[0] ?? null)}
+                  disabled={solLoading}
+                />
+                {solFirmaKeyFile && <span className="text-xs text-muted-foreground truncate">{solFirmaKeyFile.name}</span>}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">Contraseña de la clave privada</Label>
+              <Input
+                type="password"
+                value={solFirmaPassword}
+                onChange={(e) => setSolFirmaPassword(e.target.value)}
+                autoComplete="new-password"
+                disabled={solLoading}
+              />
+            </div>
+            {solError && (
+              <div className="flex items-center gap-2 text-xs text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />{solError}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
+            <Button
+              variant="default"
+              className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+              onClick={() => setShowFirmarSol(false)}
+              disabled={solLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm"
+              onClick={handleFirmarYGenerar}
+              disabled={solLoading || !solFirmaCargo.trim() || !solFirmaCerFile || !solFirmaKeyFile || !solFirmaPassword}
+            >
+              {solLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {solLoading ? "Firmando…" : "Firmar y Generar"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog open={showCan} onOpenChange={setShowCan}>
@@ -1001,10 +1175,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   useRealtime(["catalogo"], fetchData)
   const [confirmToggle, setConfirmToggle] = useState<AdminRecord | null>(null)
 
-  // Catálogo fijo de las 16 secretarías (organo_centralizado, tipo=SECRETARIA de nivel
-  // raíz), independiente de si ya tienen registros en el catálogo de justificaciones —
-  // antes el filtro se armaba solo con las secretarías que aparecían en allRecords, así
-  // que una sin reutilizaciones todavía simplemente no salía en la lista.
   const [secretariasCanonicas, setSecretariasCanonicas] = useState<string[]>([])
   useEffect(() => {
     fetch("/api/catalogo/centralizada")
@@ -1048,7 +1218,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       if (vf) params.set("vigenciaFin", vf)
       const np = sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores
       if (np) params.set("numeroPersonas", String(np))
-
       const pdfRes = await fetch(`/api/pdf/justificacion?${params}`)
       if (!pdfRes.ok) throw new Error("Error al generar el PDF")
       const blob = await pdfRes.blob()
@@ -1103,7 +1272,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     ws["!cols"] = rows[0].map((_, c) =>
       ({ wch: Math.min(50, Math.max(12, ...rows.map((r) => String(r[c] ?? "").length))) }),
     )
-    // Activa los desplegables de filtro de Excel en el encabezado (p. ej. filtrar por Folio).
     ws["!autofilter"] = { ref: ws["!ref"]! }
     XLSX.utils.book_append_sheet(wb, ws, nombreHoja)
   }
@@ -1131,9 +1299,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     XLSX.writeFile(wb, `reporte-general-catalogo-${fecha}.xlsx`, { bookType: "xlsx", type: "binary" })
   }
 
-  // Plantilla en blanco para el importador: mismos encabezados que COL_LEGACY
-  // (formato "consolidado", una sola hoja llamada SHEET_NAME_LEGACY) — así el
-  // archivo que resulte de llenarla se detecta automáticamente al subirlo.
   const handleDescargarPlantilla = () => {
     const headers = Object.values(COL_LEGACY)
     const ws = XLSX.utils.aoa_to_sheet([headers])
@@ -1142,26 +1307,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     XLSX.writeFile(wb, "plantilla-catalogo-justificaciones.xlsx", { bookType: "xlsx", type: "binary" })
   }
 
-  // Comentado junto con su DropdownMenuItem — ver nota más abajo, en el menú.
-  // const handleReporteReutilizaciones = () => {
-  //   const reutilizadas = filtered.filter((rec) => rec.catalogo_solicitudes.length > 0)
-  //   const wb = buildReporteWorkbook(reutilizadas)
-  //   const fecha = new Date().toISOString().slice(0, 10)
-  //   XLSX.writeFile(wb, `reporte-reutilizaciones-catalogo-${fecha}.xlsx`, { bookType: "xlsx", type: "binary" })
-  // }
+
 
   const norm = (s: string | null | undefined) =>
     (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
   const secretariaDe = (rec: AdminRecord) => entidadNombre(rec).split(">")[0].trim()
-  // Clave normalizada (sin acentos/mayúsculas) para que el filtro no distinga variantes
-  // del mismo nombre (el texto crudo de secretaria/secretaria_txt_snapshot no siempre
-  // viene consistente, p. ej. "SECRETARIA DE CULTURA" vs "Secretaría de Cultura").
   const secretariaClave = (rec: AdminRecord) => norm(secretariaDe(rec)).replace(/\s+/g, " ")
-  // Lista fija de las 16 secretarías (organo_centralizado raíz), no derivada de
-  // allRecords — así siempre salen las 16, incluida una que todavía no tenga
-  // reutilizaciones en el catálogo. Se respeta el orden que ya trae la API
-  // (mismo `orden` que se edita en Unidades Administrativas), sin reordenar
-  // alfabéticamente — así, si cambian el orden en UA, se refleja aquí también.
   const secretarias = useMemo(
     () => secretariasCanonicas
       .map((nombre) => [norm(nombre).replace(/\s+/g, " "), nombre] as const),

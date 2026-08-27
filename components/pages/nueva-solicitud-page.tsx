@@ -34,7 +34,8 @@ import { InfoTooltip } from "@/components/ui/info-tooltip"
 import { TOOLTIPS } from "@/lib/tooltips-textos"
 import { useHistoricoStore } from "@/lib/historico-store"
 import type { HistoricoRow } from "@/lib/parse-excel-historico"
-import { RANGOS_TABULADOR, esMostrarEnFormulario } from "@/lib/tabulador"
+import { useTabulador } from "@/hooks/use-tabulador"
+import { secretariaAplica } from "@/lib/tabulador"
 import { filtrarSecretarias, getUAsForSecretaria, getClaveForUA } from "@/lib/ua-claves-catalog"
 import { fetchCentralizadaTree, type OrganoCentralizadoNode } from "@/lib/catalogo-api"
 import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
@@ -463,11 +464,11 @@ function OficioUpload({
       )}
 
       <FileDropZone
-        hint="PDF · máx. 50 MB · 1 archivo"
+        hint="PDF · máx. 50 MB · puede subir varios archivos"
         accept=".pdf,application/pdf"
         files={archivos}
         onFilesChange={handleFilesChange}
-        multiple={false}
+        multiple={true}
         maxSizeMB={50}
         error={error}
       />
@@ -1091,13 +1092,6 @@ function TagInput({
 
 type TabuladorEntry = { nivel: string; categoria: string }
 
-const SSPC_KEYWORDS = ["SEGURIDAD Y PROTECCION CIUDADANA", "SEGURIDAD Y PROTECCIÓN CIUDADANA", "SSPC"]
-function isSSPC(secretaria?: string) {
-  if (!secretaria) return false
-  const upper = secretaria.toUpperCase()
-  return SSPC_KEYWORDS.some((k) => upper.includes(k))
-}
-
 function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSeleccionadoChange, secretaria, initialNivel, initialCategoria }: {
   nivelCategoria?: string; importeBruto?: string; readonly?: boolean
   onSeleccionadoChange?: (nivel: string, categoria: string) => void
@@ -1111,13 +1105,10 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
   const [seleccionado, setSeleccionado] = useState<TabuladorEntry | null>(
     initialNivel ? { nivel: initialNivel, categoria: initialCategoria ?? "" } : null
   )
+  const { rangos: rangosTabulador } = useTabulador()
   const rangosActivos = useMemo(() =>
-    RANGOS_TABULADOR.filter((r) => {
-      if (!esMostrarEnFormulario(r.nivel)) return false
-      const niv = parseInt(r.nivel, 10)
-      return niv >= 500 && niv < 600 ? isSSPC(secretaria) : true
-    }),
-  [secretaria])
+    rangosTabulador.filter((r) => secretariaAplica(r.secretarias, secretaria)),
+  [rangosTabulador, secretaria])
   useEffect(() => {
     const normalized = parseImporteBruto(importeBruto || "")
     const q = normalized || ""
@@ -1171,7 +1162,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
               let nivel = coincidencias[0]?.nivel || nivelCategoria || ""
               if (!nivel && normalizedImporte) {
                 const val = parseMoney(normalizedImporte)
-                const match = RANGOS_TABULADOR.find((r) => val >= r.min && val <= r.max)
+                const match = rangosTabulador.find((r) => val >= r.min && val <= r.max)
                 nivel = match?.nivel ?? ""
               }
               if (!nivel && !normalizedImporte) return "—"
@@ -2038,7 +2029,7 @@ function FormularioPrestacion({
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2">
-              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal y Documentación de Soporte <span className="text-destructive">*</span></Label>
+              <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal y Documentación de Soporte <span className="text-destructive"></span></Label>
               <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} />
             </div>
           </div>

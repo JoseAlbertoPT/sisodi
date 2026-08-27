@@ -5,11 +5,8 @@ import fs from "fs/promises"
 import { createHash } from "crypto"
 
 export interface FirmaPortal {
-  /** RFC del firmante */
   usuario: string
-  /** Rol del firmante (ej. "Elaboró", "Revisó") */
   rolFirmante: string | null
-  /** Nombre completo del firmante */
   responsable: string | null
   selloDigital: string | null
   estampadoTiempo: string | null
@@ -19,7 +16,6 @@ export interface FirmaPortal {
   rfcGEM: string | null
   urlValidacion: string | null
   firmadoEn?: string | Date | null
-  /** Cargo institucional (solo se usa en modo bypass / bd local) */
   cargo?: string | null
 }
 
@@ -60,7 +56,6 @@ interface DrawContext {
   logoImage: Awaited<ReturnType<PDFDocument["embedPng"]>> | null
 }
 
-/* ── Utilidades de texto ── */
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
   if (!text) return []
@@ -122,15 +117,13 @@ function getLogoBytes(): Promise<Buffer | null> {
   return logoBytesPromise
 }
 
-async function generarQRPng(text: string, size = 220): Promise<Buffer> {
+export async function generarQRPng(text: string, size = 220): Promise<Buffer> {
   return QRCode.toBuffer(text, {
     type: "png", errorCorrectionLevel: "M",
     margin: 1, width: size,
     color: { dark: "#1a1208", light: "#FFFFFF" },
   })
 }
-
-/* ── Banda lateral + watermark ── */
 
 function drawBandaLateral(page: PDFPage): void {
   const bandaW = 6
@@ -153,8 +146,6 @@ function drawWatermark(page: PDFPage, font: PDFFont): void {
 function drawFondo(page: PDFPage): void {
   page.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: cArena })
 }
-
-/* ── Manejo de páginas ── */
 
 function nuevaPaginaConstancia(ctx: DrawContext, conTitulo: boolean): void {
   const page = ctx.pdfDoc.addPage([PAGE_W, PAGE_H])
@@ -207,8 +198,6 @@ function ensureSpace(ctx: DrawContext, needed: number): void {
     nuevaPaginaConstancia(ctx, false)
   }
 }
-
-/* ── Ficha del documento (doc-card) ── */
 
 function drawDocCard(ctx: DrawContext, nombreArchivo: string, huella: string, total: number): void {
   const cardX = MARGIN
@@ -275,8 +264,6 @@ function drawDocCard(ctx: DrawContext, nombreArchivo: string, huella: string, to
   ctx.y -= cardH + 8
 }
 
-/* ── Section head numerado ── */
-
 function drawSectionHead(ctx: DrawContext, num: string, titulo: string): void {
   const numText = `§ ${num}`
   ctx.page.drawText(numText, { x: MARGIN, y: ctx.y, size: 8, font: ctx.fontBold, color: cCafe })
@@ -296,8 +283,6 @@ function drawSectionHead(ctx: DrawContext, num: string, titulo: string): void {
 
   ctx.y -= 14
 }
-
-/* ── Tarjeta de firmante ── */
 
 function colorPorRol(rol: string): { bg: ReturnType<typeof rgb>; text: ReturnType<typeof rgb> } {
   const r = rol.toLowerCase()
@@ -340,6 +325,7 @@ function drawFirmanteCard(
   y: number,
   w: number,
   h: number,
+  mostrarNumero: boolean,
 ): void {
   const padX = 10
   const innerX = x + padX
@@ -355,17 +341,19 @@ function drawFirmanteCard(
 
   let cy = y - 12
 
-  const numCenter = { x: innerX + 7, y: cy + 1 }
-  ctx.page.drawCircle({
-    x: numCenter.x, y: numCenter.y, size: 6,
-    color: cCafeSoft, borderColor: cCafeBorder, borderWidth: 0.4,
-  })
-  const numText = String(index + 1)
-  const numTW = ctx.fontBold.widthOfTextAtSize(numText, 6.5)
-  ctx.page.drawText(numText, {
-    x: numCenter.x - numTW / 2, y: numCenter.y - 2,
-    size: 6.5, font: ctx.fontBold, color: cCafe,
-  })
+  if (mostrarNumero) {
+    const numCenter = { x: innerX + 7, y: cy + 1 }
+    ctx.page.drawCircle({
+      x: numCenter.x, y: numCenter.y, size: 6,
+      color: cCafeSoft, borderColor: cCafeBorder, borderWidth: 0.4,
+    })
+    const numText = String(index + 1)
+    const numTW = ctx.fontBold.widthOfTextAtSize(numText, 6.5)
+    ctx.page.drawText(numText, {
+      x: numCenter.x - numTW / 2, y: numCenter.y - 2,
+      size: 6.5, font: ctx.fontBold, color: cCafe,
+    })
+  }
 
   const rol = (firma.rolFirmante || "Firmante").trim()
   const rolUpper = rol.toUpperCase()
@@ -373,7 +361,7 @@ function drawFirmanteCard(
   const rolFontSize = 5.5
   const rolW = ctx.fontBold.widthOfTextAtSize(rolUpper, rolFontSize) + 8
   const rolH = 9
-  const rolX = innerX + 17
+  const rolX = mostrarNumero ? innerX + 17 : innerX
   const rolY = cy - 3
   ctx.page.drawRectangle({
     x: rolX, y: rolY, width: rolW, height: rolH, color: roleBg,
@@ -485,14 +473,12 @@ function drawFirmantesGrid(ctx: DrawContext, firmas: FirmaPortal[]): void {
 
     fila.forEach((firma, k) => {
       const x = MARGIN + k * (cardW + colGap)
-      drawFirmanteCard(ctx, firma, i + k, x, ctx.y, cardW, alturaFila)
+      drawFirmanteCard(ctx, firma, i + k, x, ctx.y, cardW, alturaFila, firmas.length > 1)
     })
 
     ctx.y -= alturaFila + 10
   }
 }
-
-/* ── Sección de validación (fondo verde oscuro) ── */
 
 function drawValidacion(
   ctx: DrawContext,
@@ -550,8 +536,6 @@ function drawValidacion(
   }
 
 }
-
-/* ── Footer ── */
 
 function drawFooter(ctx: DrawContext, uuid: string | null): void {
   const footY = 32

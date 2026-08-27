@@ -36,6 +36,12 @@ export const COL_LEGACY = {
 
 export const MANUAL_OVERRIDES: Record<string, string> = {
   "JEFATURA DE LA OFICINA DE LA GOBERNATURA DEL ESTADO": "Jefatura de la Oficina de la Gubernatura del Estado",
+  // Nombre corto ("Secretaria de Administracion", sin acentos ni "y Finanzas")
+  // que usa el catálogo local estático de app/solicitudes/nueva/page.tsx y
+  // components/pages/nueva-solicitud-page.tsx como clave/valor por default —
+  // no coincide con el nombre oficial en organo_centralizado, así que sin
+  // este alias "Programa o Proyecto" (SIGeF) se queda en configured:false.
+  "SECRETARIA DE ADMINISTRACION": "Secretaría de Administración y Finanzas",
 }
 
 const HOJA_FIELD_MATCHERS: [string, (h: string) => boolean][] = [
