@@ -5,10 +5,28 @@ import {
   View,
   Image,
   StyleSheet,
+  Font,
 } from "@react-pdf/renderer";
 import path from "path";
 import fs from "fs";
 import React from "react";
+import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
+
+const quetzalliPath = resolveQuetzalliSansPath();
+if (quetzalliPath) {
+  Font.register({
+    family: "QuetzalliSans",
+    fonts: [
+      { src: quetzalliPath },
+      { src: quetzalliPath, fontStyle: "italic" },
+    ],
+  });
+}
+// Solo existe el peso Thin de QuetzalliSans por ahora — se usa la misma
+// familia para "bold" (react-pdf no puede negritar sintéticamente); en
+// cuanto se agregue el peso Bold real, registrarlo aparte y usarlo aquí.
+const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
+const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
 export interface CartaDescriptivaData {
   objetoContratacion: string;
@@ -34,7 +52,7 @@ const s = StyleSheet.create({
     paddingTop: 30,
     paddingBottom: 70,
     paddingHorizontal: 40,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     fontSize: 9,
     color: "#000",
     position: "relative",
@@ -94,12 +112,13 @@ const s = StyleSheet.create({
   },
   headerCol3: { width: "25%", flexDirection: "column" },
   headerTitle: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 10,
     textAlign: "center",
+    letterSpacing: 0.6,
   },
   headerSubtitle: {
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     fontSize: 8,
     textAlign: "center",
     marginTop: 3,
@@ -116,21 +135,21 @@ const s = StyleSheet.create({
   claveText: { fontSize: 8, textAlign: "center" },
 
   fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 6 },
-  fechaLabel: { fontSize: 8, fontFamily: "Helvetica-Bold" },
-  fechaValue: { fontSize: 8, fontFamily: "Helvetica" },
-  centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 16 },
+  fechaLabel: { fontSize: 8, fontFamily: FONT_BOLD , letterSpacing: 0.6},
+  fechaValue: { fontSize: 8, fontFamily: FONT_REGULAR },
+  centeredTitle: { fontFamily: FONT_BOLD, fontSize: 10, textAlign: "center", marginBottom: 16 , letterSpacing: 0.6},
   notaText: { fontSize: 8, textAlign: "justify", lineHeight: 1.4, marginBottom: 14 },
-  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 8, marginTop: 10 },
-  bold: { fontFamily: "Helvetica-Bold" },
+  sectionTitle: { fontFamily: FONT_BOLD, fontSize: 10, marginBottom: 8, marginTop: 10 , letterSpacing: 0.6},
+  bold: { fontFamily: FONT_BOLD , letterSpacing: 0.6},
 
   paragraph: { textAlign: "justify", lineHeight: 1.5, marginBottom: 8, marginTop: 4 },
 
   listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10, marginTop: 2 },
-  listNum: { width: 15, fontFamily: "Helvetica-Bold" },
+  listNum: { width: 15, fontFamily: FONT_BOLD },
   listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.5 },
 
   bulletItemContainer: { flexDirection: "row", marginBottom: 1, paddingLeft: 20 },
-  bulletSign: { width: 15, fontFamily: "Helvetica" },
+  bulletSign: { width: 15, fontFamily: FONT_REGULAR },
 });
 
 const MESES = [

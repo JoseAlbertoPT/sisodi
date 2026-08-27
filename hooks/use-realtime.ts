@@ -2,18 +2,33 @@
 
 import { useEffect, useRef } from "react"
 
+// Una sola acción del usuario (crear solicitud + subir adjuntos + cambiar de
+// estado) dispara varios broadcasts seguidos (ver broadcastUpdate en
+// lib/sse-manager.ts). Sin agrupar, cada pestaña abierta de cada usuario
+// conectado repetiría su refetch pesado una vez por broadcast; agrupamos los
+// que lleguen dentro de esta ventana en un solo refetch.
+const DEBOUNCE_MS = 800
+
 export function useRealtime(apartados: string[], onUpdate: () => void) {
   const onUpdateRef = useRef(onUpdate)
   onUpdateRef.current = onUpdate
 
   useEffect(() => {
     const es = new EventSource("/api/events")
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    const scheduleUpdate = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null
+        onUpdateRef.current()
+      }, DEBOUNCE_MS)
+    }
 
     es.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as { apartados?: string[] }
         if (data.apartados?.some((a) => apartados.includes(a))) {
-          onUpdateRef.current()
+          scheduleUpdate()
         }
       } catch {}
     }
@@ -34,6 +49,7 @@ export function useRealtime(apartados: string[], onUpdate: () => void) {
     return () => {
       es.close()
       clearInterval(pollTimer)
+      if (debounceTimer) clearTimeout(debounceTimer)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

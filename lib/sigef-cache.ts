@@ -16,11 +16,26 @@ export const CACHE_TTL_MS = 12 * 60 * 60 * 1000
 const cache = new Map<string, { at: number; proyectos: SigefProyecto[] }>()
 const refrescando = new Set<string>()
 
+// El WS de SIGeF corre en la infraestructura del proveedor y se ha visto caer
+// de forma intermitente incluso ya en producción (ver project_sigef_ws
+// memory / integracion-sigef-progreso.md). Sin esto, mientras el servicio
+// está caído CADA usuario que abre el formulario paga el timeout completo
+// (SIGEF_TIMEOUT_MS, 10s por default) antes de caer al catálogo local — se
+// siente como que "Programa o Proyecto a veces no carga". Cacheamos la falla
+// un rato corto para que los siguientes intentos caigan al fallback de
+// inmediato en vez de reintentar contra un servicio que ya sabemos que no
+// responde.
+const FALLO_TTL_MS = 2 * 60 * 1000
+const fallos = new Map<string, { at: number; error: Error }>()
+
 function refrescarEnSegundoPlano(idDependencia: string) {
   if (refrescando.has(idDependencia)) return
   refrescando.add(idDependencia)
   consultarProyectosPorDependencia(idDependencia)
-    .then((proyectos) => cache.set(idDependencia, { at: Date.now(), proyectos }))
+    .then((proyectos) => {
+      cache.set(idDependencia, { at: Date.now(), proyectos })
+      fallos.delete(idDependencia)
+    })
     .catch((e) => console.error("[sigef cache refresh]", idDependencia, e))
     .finally(() => refrescando.delete(idDependencia))
 }
@@ -31,9 +46,19 @@ export async function getProyectosCached(idDependencia: string): Promise<SigefPr
     if (Date.now() - cached.at >= CACHE_TTL_MS) refrescarEnSegundoPlano(idDependencia)
     return cached.proyectos
   }
-  const proyectos = await consultarProyectosPorDependencia(idDependencia)
-  cache.set(idDependencia, { at: Date.now(), proyectos })
-  return proyectos
+  const fallo = fallos.get(idDependencia)
+  if (fallo && Date.now() - fallo.at < FALLO_TTL_MS) throw fallo.error
+
+  try {
+    const proyectos = await consultarProyectosPorDependencia(idDependencia)
+    cache.set(idDependencia, { at: Date.now(), proyectos })
+    fallos.delete(idDependencia)
+    return proyectos
+  } catch (e) {
+    const error = e instanceof Error ? e : new Error(String(e))
+    fallos.set(idDependencia, { at: Date.now(), error })
+    throw error
+  }
 }
 
 // Los registros históricos/importados no siempre guardan la Secretaría con el

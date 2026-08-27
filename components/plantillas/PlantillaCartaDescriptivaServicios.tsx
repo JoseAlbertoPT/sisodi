@@ -10,11 +10,28 @@ import {
 import path from "path";
 import fs from "fs";
 import React from "react";
+import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
 
 Font.register({
   family: "NotoSymbols",
   src: path.join(process.cwd(), "public/fonts/NotoSansSymbols2-Regular.ttf"),
 });
+
+const quetzalliPath = resolveQuetzalliSansPath();
+if (quetzalliPath) {
+  Font.register({
+    family: "QuetzalliSans",
+    fonts: [
+      { src: quetzalliPath },
+      { src: quetzalliPath, fontStyle: "italic" },
+    ],
+  });
+}
+// Solo existe el peso Thin de QuetzalliSans por ahora — se usa la misma
+// familia para "bold" (react-pdf no puede negritar sintéticamente); en
+// cuanto se agregue el peso Bold real, registrarlo aparte y usarlo aquí.
+const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
+const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
 Font.registerHyphenationCallback((word) => [word]);
 
@@ -44,7 +61,7 @@ const s = StyleSheet.create({
     paddingTop: 30,
     paddingBottom: 40,
     paddingHorizontal: 40,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     fontSize: 10,
     color: "#000",
     position: "relative",
@@ -104,10 +121,11 @@ const s = StyleSheet.create({
     borderRightColor: "#000",
   },
   headerTitle: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 9,
     textAlign: "center",
     lineHeight: 1.3,
+    letterSpacing: 0.6,
   },
   headerCol3: {
     width: "23%",
@@ -137,16 +155,17 @@ const s = StyleSheet.create({
     lineHeight: 1.4,
     marginBottom: 14,
   },
-  notaLabel: { fontFamily: "Helvetica-Bold" },
+  notaLabel: { fontFamily: FONT_BOLD , letterSpacing: 0.6},
 
   sectionTitleWrap: {
     marginTop: 10,
     marginBottom: 12,
   },
   sectionTitle: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 11,
     textAlign: "center",
+    letterSpacing: 0.6,
   },
 
   subSectionRow: {
@@ -156,13 +175,15 @@ const s = StyleSheet.create({
   },
   subSectionNumber: {
     width: 32,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 10,
+    letterSpacing: 0.6,
   },
   subSectionTitle: {
     flex: 1,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 10,
+    letterSpacing: 0.6,
   },
 
   paragraph: {
@@ -185,14 +206,16 @@ const s = StyleSheet.create({
 
   subSubTitle: {
     fontSize: 10,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     marginLeft: 48,
     marginTop: 6,
     marginBottom: 4,
+    letterSpacing: 0.6,
   },
   subSubNumber: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 10,
+    letterSpacing: 0.6,
   },
 
   bulletRow: {

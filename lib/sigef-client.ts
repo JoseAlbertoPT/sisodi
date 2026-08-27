@@ -163,7 +163,13 @@ async function callSigefOperation<T>(operation: string, extraFields: Record<stri
     if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) {
       throw new Error(`SIGeF no respondió en ${timeoutMs}ms (timeout)`)
     }
-    throw new Error(`No se pudo conectar con SIGeF: ${e instanceof Error ? e.message : e}`)
+    // `fetch failed` es el mensaje genérico de undici; la razón real (conexión
+    // rechazada, DNS, TLS, socket cerrado a medias) vive en `e.cause` y sin
+    // esto se pierde — dejando "fetch failed" como único rastro en los logs,
+    // sin forma de saber qué fue distinto entre un intento que sí conecta y
+    // uno que no.
+    const causa = e instanceof Error && e.cause ? ` (causa: ${String((e.cause as any)?.code ?? e.cause)})` : ""
+    throw new Error(`No se pudo conectar con SIGeF: ${e instanceof Error ? e.message : e}${causa}`)
   }
   const text = await res.text()
   if (!res.ok) {

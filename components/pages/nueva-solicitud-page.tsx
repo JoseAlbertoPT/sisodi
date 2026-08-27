@@ -3329,6 +3329,24 @@ function resolverPeriodoLabel(periodo: string, regimen: string, vigenciaFin?: st
   return `${quincena} ${mesNombre}`
 }
 
+// Sin esto, si el backend se queda esperando una conexión de BD libre (ver
+// lib/prisma.ts) el fetch nunca resuelve ni rechaza, y el botón "Enviar a
+// Validación"/"Guardar borrador" se queda en "Enviando..." para siempre en
+// vez de mostrar un error y dejar reintentar.
+async function fetchConTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = 20_000,
+): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 function periodoNombreAMes(nombre: string): number | null {
   const lower = (nombre ?? "").toLowerCase()
   for (let i = 0; i < MESES_LOWER_BUILD.length; i++) {
@@ -3923,7 +3941,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       if (editSolicitud?.id) {
         const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: false, esRenovacion, folioSeleccionado, formData, tipoAdministracion: user?.tipoAdministracion })
         const historialDiff = editSolicitud.formData ? computeDiff(editSolicitud.formData, formData) : []
-        const res = await fetch("/api/solicitudes", {
+        const res = await fetchConTimeout("/api/solicitudes", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ solicitudId: Number(editSolicitud.id), ...campos, ...(historialDiff.length > 0 ? { historialDiff } : {}) }),
@@ -3941,7 +3959,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
           return null
         })()
         if (nuevoEstadoTrasCorreccion) {
-          const vRes = await fetch("/api/validacion", {
+          const vRes = await fetchConTimeout("/api/validacion", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -3960,7 +3978,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         }
       } else {
         const payload = { ...buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: false, esRenovacion, folioSeleccionado, formData, tipoAdministracion: user?.tipoAdministracion }), estado_nombre: "Borrador" }
-        const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+        const res = await fetchConTimeout("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         const json = await res.json()
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al guardar el borrador."); setGuardandoBorrador(false); return }
         setFolioBorradorGuardado(json.folio ?? json.data?.folio_recepcion ?? "")
@@ -3982,7 +4000,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         if (editSolicitud?.id) {
           const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData, tipoAdministracion: user?.tipoAdministracion })
           const historialDiff = editSolicitud.formData ? computeDiff(editSolicitud.formData, formData) : []
-          const res = await fetch("/api/solicitudes", {
+          const res = await fetchConTimeout("/api/solicitudes", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ solicitudId: Number(editSolicitud.id), ...campos, ...(historialDiff.length > 0 ? { historialDiff } : {}) }),
@@ -3993,7 +4011,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
           setFolioGenerado(json.data?.folio_recepcion ?? json.data?.folio_justificacion ?? editSolicitud.id)
         } else {
           const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData, tipoAdministracion: user?.tipoAdministracion })
-          const res = await fetch("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+          const res = await fetchConTimeout("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
           const json = await res.json()
           if (!res.ok || !json.ok) { setErrorEnvio(json.error ?? "Error al registrar la solicitud."); setEnviando(false); return }
           solicitudId = json.data?.id
@@ -4014,12 +4032,14 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               const fd = new FormData()
               fd.append("file", file)
               fd.append("solicitudId", String(solicitudId))
-              return fetch("/api/adjunto", { method: "POST", body: fd })
+              // Los PDF pueden pesar hasta 50 MB (ver FileDropZone), por eso
+              // este fetch usa más margen que el resto.
+              return fetchConTimeout("/api/adjunto", { method: "POST", body: fd }, 60_000)
             }))
           } catch {  }
         }
 
-        const patchRes = await fetch("/api/validacion", {
+        const patchRes = await fetchConTimeout("/api/validacion", {
           method: "PATCH", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ solicitudId, nuevoEstado: "En Validacion Justificaciones", usuarioId, comentario: "Solicitud enviada a Validacion de Justificaciones por la URG" }),
         })

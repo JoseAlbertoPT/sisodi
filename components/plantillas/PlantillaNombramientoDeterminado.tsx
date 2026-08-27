@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import React from "react";
 import { siglasSecretaria } from "@/lib/clave-dictamen";
+import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
 
 // Mismo glifo de viñeta que la Carta Descriptiva (PlantillaCartaDescriptivaServicios):
 // Helvetica no tiene glifo para ❖ (U+2756), así que se registra esta fuente.
@@ -18,6 +19,22 @@ Font.register({
   family: "NotoSymbols",
   src: path.join(process.cwd(), "public/fonts/NotoSansSymbols2-Regular.ttf"),
 });
+
+const quetzalliPath = resolveQuetzalliSansPath();
+if (quetzalliPath) {
+  Font.register({
+    family: "QuetzalliSans",
+    fonts: [
+      { src: quetzalliPath },
+      { src: quetzalliPath, fontStyle: "italic" },
+    ],
+  });
+}
+// Solo existe el peso Thin de QuetzalliSans por ahora — se usa la misma
+// familia para "bold" (react-pdf no puede negritar sintéticamente); en
+// cuanto se agregue el peso Bold real, registrarlo aparte y usarlo aquí.
+const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
+const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
 // Palabras que se mantienen en minúscula (salvo cuando son la primera palabra).
 const PALABRAS_MENORES = new Set([
@@ -120,7 +137,7 @@ const s = StyleSheet.create({
     paddingTop: 30,
     paddingBottom: 40,
     paddingHorizontal: 40,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     fontSize: 9,
     lineHeight: 1.15,
     color: "#000",
@@ -181,15 +198,17 @@ const s = StyleSheet.create({
   },
   headerCol3: { width: "25%", flexDirection: "column" },
   headerSecretaria: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 11,
     textAlign: "center",
     marginBottom: 4,
+    letterSpacing: 0.6,
   },
   headerTitle: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 10,
     textAlign: "center",
+    letterSpacing: 0.6,
   },
   claveBox: {
     flex: 1,
@@ -203,22 +222,22 @@ const s = StyleSheet.create({
   claveText: { fontSize: 8, textAlign: "center" },
 
   fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 26 },
-  centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 14 },
-  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 8, marginTop: 10 },
+  centeredTitle: { fontFamily: FONT_BOLD, fontSize: 10, textAlign: "center", marginBottom: 14 , letterSpacing: 0.6},
+  sectionTitle: { fontFamily: FONT_BOLD, fontSize: 10, marginBottom: 8, marginTop: 10 , letterSpacing: 0.6},
 
   // flex-start (no flex-end): si el valor hace wrap a 2 renglones (p. ej.
   // Programa o Proyecto), la etiqueta debe alinearse con el primer renglón,
   // no con el último.
   row: { flexDirection: "row", marginBottom: 12, alignItems: "flex-start" },
-  bold: { fontFamily: "Helvetica-Bold", marginBottom: 3, marginTop: 3 },
-  numLabel: { width: 15, fontFamily: "Helvetica-Bold", fontSize: 9 },
-  marginLabel: { fontFamily: "Helvetica-Bold", marginRight: 5, fontSize: 9 },
+  bold: { fontFamily: FONT_BOLD, marginBottom: 3, marginTop: 3 , letterSpacing: 0.6},
+  numLabel: { width: 15, fontFamily: FONT_BOLD, fontSize: 9 },
+  marginLabel: { fontFamily: FONT_BOLD, marginRight: 5, fontSize: 9 },
   valueText: {
     flex: 1,
     borderBottomWidth: 1,
     borderBottomColor: "#000",
     fontSize: 9,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     paddingBottom: 2,
   },
 
@@ -232,7 +251,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  checkText: { fontSize: 8, fontFamily: "Helvetica-Bold" },
+  checkText: { fontSize: 8, fontFamily: FONT_BOLD },
 
   vigenciaBoxWrap: { flexDirection: "row", alignItems: "flex-end" },
   vigCellColumn: { alignItems: "center", marginRight: 4 },
@@ -259,7 +278,7 @@ const s = StyleSheet.create({
     borderBottomColor: "#000",
   },
   renovHeaderText: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     textAlign: "center",
     fontSize: 8,
   },
@@ -316,7 +335,7 @@ const s = StyleSheet.create({
     borderRightColor: "#000",
   },
   tableColHeadText: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 8,
     textAlign: "center",
   },
@@ -332,7 +351,7 @@ const s = StyleSheet.create({
   },
 
   listItemContainer: { flexDirection: "row", marginBottom: 6, paddingLeft: 10, marginTop: 2 },
-  listNum: { width: 18, fontFamily: "Helvetica-Bold" },
+  listNum: { width: 18, fontFamily: FONT_BOLD },
   listTextWrap: { flex: 1, textAlign: "justify", lineHeight: 1.5 },
   bulletItemContainer: { flexDirection: "row", marginBottom: 2, paddingLeft: 15, marginTop: 1 },
   bulletSign: { width: 18, fontSize: 7, fontFamily: "NotoSymbols" },
@@ -354,20 +373,22 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   firmaLabel: { fontSize: 8, marginBottom: 5, textAlign: "center" },
-  firmaNombre: { fontSize: 9, fontFamily: "Helvetica-Bold", textAlign: "center", marginBottom: 5, minHeight: 12 },
+  firmaNombre: { fontSize: 9, fontFamily: FONT_BOLD, textAlign: "center", marginBottom: 5, minHeight: 12 , letterSpacing: 0.6},
   firmaDesc: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 7,
     textAlign: "center",
     lineHeight: 1.3,
+    letterSpacing: 0.6,
   },
 
   dictTitle: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 10,
     textAlign: "center",
     marginBottom: 10,
     marginTop: 5,
+    letterSpacing: 0.6,
   },
   dictP: {
     fontSize: 9,
@@ -462,7 +483,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         </View>
 
         <View style={s.fechaRow}>
-          <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 5, marginBottom: 5 }}>Fecha de elaboración de la Justificación: </Text>
+          <Text style={{ fontFamily: FONT_BOLD, marginTop: 5, marginBottom: 5 }}>Fecha de elaboración de la Justificación: </Text>
           <Text style={{ borderBottomWidth: 1, minWidth: 100, textAlign: "center", marginTop: 5, marginBottom: 5 }}>
             {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}
           </Text>
@@ -502,7 +523,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             <Text style={s.numLabel}>5.</Text>
             <Text style={{ ...s.marginLabel, width: 145 }}>Denominación del Nombramiento:</Text>
             <View style={{ flex: 1, borderBottomWidth: 1, borderBottomColor: "#000", minHeight: 14 }}>
-              <Text style={{ fontSize: 9, fontFamily: "Helvetica", paddingBottom: 2 }}>
+              <Text style={{ fontSize: 9, fontFamily: FONT_REGULAR, paddingBottom: 2 }}>
                 {data.denominacionNombramiento || ""}
               </Text>
             </View>
@@ -514,7 +535,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             <Text style={s.numLabel}>6.</Text>
             <Text style={{ ...s.marginLabel, width: 90 }}>Tipo de Actividad:</Text>
             <View style={{ flex: 1, borderBottomWidth: 1, borderBottomColor: "#000", minHeight: 14 }}>
-              <Text style={{ fontSize: 9, fontFamily: "Helvetica", paddingBottom: 2 }}>
+              <Text style={{ fontSize: 9, fontFamily: FONT_REGULAR, paddingBottom: 2 }}>
                 {data.tipoActividad || ""}
               </Text>
             </View>
@@ -635,8 +656,8 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
           {data.formato === 'en_linea' && (
             <View style={{ marginTop: 20, marginBottom: 15, alignItems: 'center' }}>
-              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-              <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+              <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+              <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
               <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
                 a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
               </Text>
@@ -646,11 +667,11 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           {!data.ocultarFirmas ? (
             <View style={{ flexDirection: "row", justifyContent: "center", marginTop: data.formato === 'en_linea' ? 10 : 30 }}>
               <View style={{ width: "45%", alignItems: "center" }}>
-                <Text style={{ fontSize: 8, marginBottom: 5, fontFamily: "Helvetica-Bold" }}>Vo. Bo. Marco Normativo</Text>
+                <Text style={{ fontSize: 8, marginBottom: 5, fontFamily: FONT_BOLD, letterSpacing: 0.6 }}>Vo. Bo. Marco Normativo</Text>
                 <Text style={s.firmaNombre}>{data.firmaVoBoJuridicoNombre || ""}</Text>
                 <View style={{ borderTopWidth: 1, borderTopColor: "#000", width: "100%", marginBottom: 4 }}></View>
-                <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Titular de la Unidad de Enlace</Text>
-                <Text style={{ fontSize: 7, textAlign: "center", fontFamily: "Helvetica-Bold" }}>Jurídico o Equivalente</Text>
+                <Text style={{ fontSize: 7, textAlign: "center", fontFamily: FONT_BOLD, letterSpacing: 0.6 }}>Titular de la Unidad de Enlace</Text>
+                <Text style={{ fontSize: 7, textAlign: "center", fontFamily: FONT_BOLD, letterSpacing: 0.6 }}>Jurídico o Equivalente</Text>
               </View>
             </View>
           ) : null}
@@ -699,7 +720,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
               </View>
             </View>
             <View style={s.tableRow}>
-              <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", textAlign: "center" }}>Lesiones</Text></View>
+              <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, fontFamily: FONT_BOLD, textAlign: "center" }}>Lesiones</Text></View>
               <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, textAlign: "center" }}>Bajo</Text></View>
               <View style={{ ...s.tableCol, width: "25%" }}><Text style={{ fontSize: 8, textAlign: "center" }}>Medio</Text></View>
               <View style={{ ...s.tableColNoBorder, width: "25%" }}><Text style={{ fontSize: 8, textAlign: "center" }}>Alto</Text></View>
@@ -766,7 +787,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
         <View wrap={false}>
           <Text style={{ ...s.bold, marginTop: 10, marginBottom: 12 }}>II.2    COMPETENCIAS LABORALES REQUERIDAS:</Text>
-          <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 3, marginLeft: 15, marginBottom: 2 }}>II.2.1  Administrativas:</Text>
+          <Text style={{ fontFamily: FONT_BOLD, marginTop: 3, marginLeft: 15, marginBottom: 2, letterSpacing: 0.6 }}>II.2.1  Administrativas:</Text>
           {data.perfil?.competenciasAdministrativas?.slice(0, 1).map((comp, i) => (
             <View key={`ca-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -782,7 +803,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         ))}
 
         <View wrap={false}>
-          <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 8, marginLeft: 15, marginBottom: 6 }}>II.2.2  Técnicas:</Text>
+          <Text style={{ fontFamily: FONT_BOLD, marginTop: 8, marginLeft: 15, marginBottom: 6, letterSpacing: 0.6 }}>II.2.2  Técnicas:</Text>
           {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
             <View key={`ct-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -798,7 +819,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         ))}
 
         <View wrap={false}>
-          <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 8, marginLeft: 15, marginBottom: 6 }}>II.2.3  Sociales:</Text>
+          <Text style={{ fontFamily: FONT_BOLD, marginTop: 8, marginLeft: 15, marginBottom: 6, letterSpacing: 0.6 }}>II.2.3  Sociales:</Text>
           {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
             <View key={`cs-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -814,7 +835,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         ))}
 
         <View wrap={false}>
-          <Text style={{ fontFamily: "Helvetica-Bold", marginTop: 3, marginLeft: 15, marginBottom: 2 }}>II.2.4  Valores:</Text>
+          <Text style={{ fontFamily: FONT_BOLD, marginTop: 3, marginLeft: 15, marginBottom: 2, letterSpacing: 0.6 }}>II.2.4  Valores:</Text>
           {data.perfil?.valores?.slice(0, 1).map((val, i) => (
             <View key={`val-${i}`} style={{...s.bulletItemContainer, paddingLeft: 30}}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -852,8 +873,8 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           <View>
             {data.formato === 'en_linea' ? (
               <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
-                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+                <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+                <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
                 <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
                   a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
                 </Text>
@@ -921,11 +942,11 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
         )}
 
         <View style={s.dictRow}>
-          <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>Dictamen Técnico Funcional: </Text>
+          <Text style={{ fontSize: 9, fontFamily: FONT_BOLD }}>Dictamen Técnico Funcional: </Text>
           <View style={s.checkboxRect}>
             {data.tipoAdministracion === "centralizada" && <Text style={s.checkText}>X</Text>}
           </View>
-          <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginLeft: 30 }}>Opinión Técnica Funcional: </Text>
+          <Text style={{ fontSize: 9, fontFamily: FONT_BOLD, marginLeft: 30 }}>Opinión Técnica Funcional: </Text>
           <View style={s.checkboxRect}>
             {data.tipoAdministracion === "paraestatal" && <Text style={s.checkText}>X</Text>}
           </View>
@@ -936,7 +957,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             <View style={s.dictBoxLeft}>
               <Text style={{ fontSize: 9 }}>Fecha de dictaminación:</Text>
               {data.fechaDictaminacion && (
-                <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginTop: 8 }}>
+                <Text style={{ fontSize: 10, fontFamily: FONT_BOLD, marginTop: 8 }}>
                   {data.fechaDictaminacion}
                 </Text>
               )}
@@ -950,7 +971,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
             </View>
           </View>
           <View style={s.dictBoxRow2}>
-            <Text style={{ fontSize: 10, fontFamily: "Helvetica-Bold", marginBottom: 4 }}>Nota:</Text>
+            <Text style={{ fontSize: 10, fontFamily: FONT_BOLD, marginBottom: 4, letterSpacing: 0.6 }}>Nota:</Text>
             <Text style={{ fontSize: 8, textAlign: "justify", lineHeight: 1.4 }}>
               {data.notaDictamen ?? NOTA_DICTAMEN_DEFAULT}
             </Text>
@@ -963,8 +984,8 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           <View>
             {data.formato === 'en_linea' ? (
               <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
-                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+                <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+                <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
                 <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
                   a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
                 </Text>

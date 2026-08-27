@@ -5,10 +5,29 @@ import {
   View,
   Image,
   StyleSheet,
+  Font,
 } from "@react-pdf/renderer";
 import path from "path";
 import fs from "fs";
 import React from "react";
+import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
+
+const quetzalliPath = resolveQuetzalliSansPath();
+if (quetzalliPath) {
+  Font.register({
+    family: "QuetzalliSans",
+    fonts: [
+      { src: quetzalliPath },
+      { src: quetzalliPath, fontStyle: "italic" },
+    ],
+  });
+}
+// Solo existe el peso Thin de QuetzalliSans por ahora — se usa la misma
+// familia para "bold" (react-pdf no puede negritar sintéticamente); en
+// cuanto se agregue el peso Bold real, registrarlo aparte y usarlo aquí.
+const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
+const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
+
 const NOTA_DICTAMEN_DEFAULT =
   "Esta Dirección General únicamente dictamina sobre la funcionalidad de las actividades conforme con la metodología establecida y queda fuera de sus atribuciones la distribución y ejecución de los recursos para el pago de las contrataciones, en las cuales se deberá observar lo dispuesto por el Artículo Quinto del Presupuesto de Egresos del Gobierno del Estado de Morelos para el ejercicio fiscal 2026 y demás normatividad aplicable.";
 
@@ -71,7 +90,7 @@ const s = StyleSheet.create({
     paddingTop: 30,
     paddingBottom: 90,
     paddingHorizontal: 40,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     fontSize: 9,
     color: "#000",
     position: "relative",
@@ -131,10 +150,11 @@ const s = StyleSheet.create({
     borderRightColor: "#000",
   },
   headerTitle: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 10,
     textAlign: "center",
     lineHeight: 1.3,
+    letterSpacing: 0.6,
   },
   headerCol3: {
     width: "25%",
@@ -154,24 +174,24 @@ const s = StyleSheet.create({
   fechaRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginBottom: 12,
+    marginBottom: 6,
   },
   fechaText: { fontSize: 9 },
 
   fieldRow: {
     flexDirection: "row",
-    marginBottom: 6,
+    marginBottom: 4,
     alignItems: "flex-end",
   },
   fieldLabel: {
     width: "30%",
     fontSize: 9,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
   },
   fieldLabelBox: {
     width: "30%",
     fontSize: 9,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     borderWidth: 1,
     borderColor: "#000",
     paddingVertical: 3,
@@ -189,13 +209,13 @@ const s = StyleSheet.create({
 
   regimenRow: {
     flexDirection: "row",
-    marginBottom: 10,
+    marginBottom: 6,
     alignItems: "center",
   },
   regimenLabel: {
     width: "30%",
     fontSize: 9,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     borderWidth: 1,
     borderColor: "#000",
     paddingVertical: 3,
@@ -216,15 +236,19 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  checkText: { fontSize: 8, fontFamily: "Helvetica-Bold" },
+  // Se fuerza Helvetica-Bold (no FONT_BOLD/QuetzalliSans): dentro de una caja
+  // de 12x12 con borde, la métrica de línea de QuetzalliSans es demasiado alta
+  // y Yoga descarta el glifo por completo — la "X" queda invisible aunque el
+  // régimen sí esté seleccionado.
+  checkText: { fontSize: 8, fontFamily: FONT_BOLD , letterSpacing: 0.6},
   checkLabel: { fontSize: 9, marginRight: 20 },
 
   fundamentoText: {
     fontSize: 9,
     textAlign: "justify",
     lineHeight: 1.4,
-    marginTop: 10,
-    marginBottom: 12,
+    marginTop: 6,
+    marginBottom: 8,
   },
 
   fieldValueMulti: {
@@ -241,14 +265,14 @@ const s = StyleSheet.create({
     fontSize: 8,
     fontStyle: "italic",
     marginTop: 2,
-    marginBottom: 6,
+    marginBottom: 4,
     marginLeft: "30%",
     color: "#333",
   },
 
   vigenciaRow: {
     flexDirection: "row",
-    marginBottom: 10,
+    marginBottom: 6,
     alignItems: "flex-end",
   },
   vigCellColumn: { alignItems: "center", marginRight: 4 },
@@ -263,8 +287,8 @@ const s = StyleSheet.create({
   },
   vigCellValue: { fontSize: 8 },
 
-  notaWrapper: { marginTop: 12, marginBottom: 6 },
-  notaTitle: { fontFamily: "Helvetica-Bold", fontSize: 8 },
+  notaWrapper: { marginTop: 8, marginBottom: 4 },
+  notaTitle: { fontFamily: FONT_BOLD, fontSize: 8 , letterSpacing: 0.6},
   notaText: { fontSize: 8, textAlign: "justify", lineHeight: 1.4 },
 
   footerTable: {
@@ -281,7 +305,7 @@ const s = StyleSheet.create({
   },
   footerRight: { width: "40%", padding: 6 },
   footerLine: { fontSize: 8, marginBottom: 2 },
-  footerLabelBold: { fontFamily: "Helvetica-Bold" },
+  footerLabelBold: { fontFamily: FONT_BOLD },
 });
 
 function parseDateParts(dateStr: string) {
@@ -502,20 +526,20 @@ export function PlantillaDictamenPrestacionServicios({
 
         {data.firmaNombre ? (
           <View wrap={false} style={{ marginTop: 4, alignItems: "center" }}>
-            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 9, textAlign: "center", marginBottom: 2 }}>
+            <Text style={{ fontFamily: FONT_BOLD, fontSize: 8, textAlign: "center", marginBottom: 2 , letterSpacing: 0.6}}>
               ATENTAMENTE
             </Text>
-            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 8, textAlign: "center", marginBottom: 1, color: "#B00020" }}>
+            <Text style={{ fontFamily: FONT_BOLD, fontSize: 7, textAlign: "center", marginBottom: 1, color: "#B00020" , letterSpacing: 0.6}}>
               DOCUMENTO FIRMADO ELECTRÓNICAMENTE
             </Text>
             <Text style={{ fontSize: 7, textAlign: "center", lineHeight: 1.25, maxWidth: "88%", marginBottom: 3 }}>
               a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
             </Text>
-            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 9, textAlign: "center" }}>
+            <Text style={{ fontFamily: FONT_BOLD, fontSize: 8, textAlign: "center" , letterSpacing: 0.6}}>
               {data.firmaNombre}
             </Text>
             {data.firmaCargo ? (
-              <Text style={{ fontSize: 8, textAlign: "center" }}>{data.firmaCargo}</Text>
+              <Text style={{ fontFamily: FONT_BOLD, fontSize: 7, textAlign: "center" , letterSpacing: 0.6}}>{data.firmaCargo}</Text>
             ) : null}
           </View>
         ) : null}
@@ -552,7 +576,7 @@ export function PlantillaDictamenPrestacionServicios({
           <View style={{ position: "absolute", bottom: 8, left: 22, right: 22 }} fixed>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end", width: "100%", marginBottom: 0 }}>
               {data.firmaUrlValidacion ? (
-                <Text style={{ fontSize: 6, color: "#1a4fba", marginRight: 6, marginTop: 10 }}>
+                <Text style={{ fontSize: 6, color: "#000000", marginRight: 6, marginTop: 10 }}>
                   {data.firmaUrlValidacion}
                 </Text>
               ) : null}

@@ -12,11 +12,28 @@ import fs from "fs";
 import React from "react";
 import { toRoman } from "@/lib/roman-list";
 import { siglasSecretaria } from "@/lib/clave-dictamen";
+import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
 
 Font.register({
   family: "NotoSymbols",
   src: path.join(process.cwd(), "public/fonts/NotoSansSymbols2-Regular.ttf"),
 });
+
+const quetzalliPath = resolveQuetzalliSansPath();
+if (quetzalliPath) {
+  Font.register({
+    family: "QuetzalliSans",
+    fonts: [
+      { src: quetzalliPath },
+      { src: quetzalliPath, fontStyle: "italic" },
+    ],
+  });
+}
+// Solo existe el peso Thin de QuetzalliSans por ahora — se usa la misma
+// familia para "bold" (react-pdf no puede negritar sintéticamente); en
+// cuanto se agregue el peso Bold real, registrarlo aparte y usarlo aquí.
+const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
+const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
 const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
@@ -108,7 +125,7 @@ const s = StyleSheet.create({
     paddingTop: 30,
     paddingBottom: 70,
     paddingHorizontal: 40,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     fontSize: 9,
     lineHeight: 1.15,
     color: "#000",
@@ -169,18 +186,20 @@ const s = StyleSheet.create({
   },
   headerCol3: { width: "25%", flexDirection: "column" },
   headerSecretaria: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 11,
     textAlign: "center",
     marginBottom: 4,
+    letterSpacing: 0.6,
   },
   headerTitle: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 10,
     textAlign: "center",
+    letterSpacing: 0.6,
   },
   headerSubtitle: {
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     fontSize: 8,
     textAlign: "center",
     marginTop: 3,
@@ -196,21 +215,21 @@ const s = StyleSheet.create({
   claveText: { fontSize: 8, textAlign: "center" },
 
   fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10, marginRight: -63 },
-  centeredTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, textAlign: "center", marginBottom: 12 },
-  sectionTitle: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 4, marginTop: 10 },
+  centeredTitle: { fontFamily: FONT_BOLD, fontSize: 10, textAlign: "center", marginBottom: 12 , letterSpacing: 0.6},
+  sectionTitle: { fontFamily: FONT_BOLD, fontSize: 10, marginBottom: 4, marginTop: 10 , letterSpacing: 0.6},
 
   // flex-start (no flex-end): si el valor es largo y hace wrap a 2 renglones
   // (p. ej. Programa o Proyecto), la etiqueta debe alinearse con el PRIMER
   // renglón del valor, no con el último — si no, la etiqueta queda más abajo
   // que donde empieza el texto, como "rota" respecto al primer renglón.
   row: { flexDirection: "row", marginBottom: 8, alignItems: "flex-start", marginLeft: 32 },
-  bold: { fontFamily: "Helvetica-Bold" },
-  numLabel: { width: 15, fontFamily: "Helvetica", fontSize: 9 },
-  marginLabel: { fontFamily: "Helvetica", marginRight: 5, fontSize: 9 },
+  bold: { fontFamily: FONT_BOLD , letterSpacing: 0.6},
+  numLabel: { width: 15, fontFamily: FONT_REGULAR, fontSize: 9 },
+  marginLabel: { fontFamily: FONT_REGULAR, marginRight: 5, fontSize: 9 },
   valueText: {
     flex: 1,
     fontSize: 9,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
   },
 
   checkboxRect: {
@@ -223,7 +242,11 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  checkText: { fontSize: 8, fontFamily: "Helvetica-Bold" },
+  // Se fuerza Helvetica-Bold (no FONT_BOLD/QuetzalliSans): dentro de una caja
+  // de 12x12 con borde, la métrica de línea de QuetzalliSans es demasiado alta
+  // y Yoga descarta el glifo por completo — la "X" queda invisible aunque el
+  // régimen sí esté seleccionado.
+  checkText: { fontSize: 8, fontFamily: FONT_BOLD , letterSpacing: 0.6},
 
   vigenciaBoxWrap: { flexDirection: "row", alignItems: "flex-end" },
   vigCellColumn: { alignItems: "center", marginRight: 4 },
@@ -250,7 +273,7 @@ const s = StyleSheet.create({
     borderBottomColor: "#000",
   },
   renovHeaderText: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     textAlign: "center",
     fontSize: 8,
   },
@@ -301,19 +324,20 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   firmaLabel: { fontSize: 8, marginBottom: 5, textAlign: "center" },
-  firmaNombre: { fontSize: 9, fontFamily: "Helvetica-Bold", textAlign: "center", marginBottom: 5, minHeight: 12 },
+  firmaNombre: { fontSize: 9, fontFamily: FONT_BOLD, textAlign: "center", marginBottom: 5, minHeight: 12 , letterSpacing: 0.6},
   firmaDesc: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 7,
     textAlign: "center",
     lineHeight: 1.3,
+    letterSpacing: 0.6,
   },
 
   pdcPage: {
     paddingTop: 30,
     paddingBottom: 90,
     paddingHorizontal: 40,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     fontSize: 9,
     color: "#000",
     position: "relative",
@@ -354,10 +378,11 @@ const s = StyleSheet.create({
     borderRightColor: "#000",
   },
   pdcHeaderTitle: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: FONT_BOLD,
     fontSize: 10,
     textAlign: "center",
     lineHeight: 1.3,
+    letterSpacing: 0.6,
   },
   pdcHeaderCol3: { width: "25%", flexDirection: "column" },
   pdcFolioBox: {
@@ -374,11 +399,11 @@ const s = StyleSheet.create({
   pdcFechaText: { fontSize: 9 },
 
   pdcFieldRow: { flexDirection: "row", marginBottom: 6, alignItems: "flex-end" },
-  pdcFieldLabel: { width: "30%", fontSize: 9, fontFamily: "Helvetica" },
+  pdcFieldLabel: { width: "30%", fontSize: 9, fontFamily: FONT_REGULAR },
   pdcFieldLabelBox: {
     width: "30%",
     fontSize: 9,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     borderWidth: 1,
     borderColor: "#000",
     paddingVertical: 3,
@@ -407,7 +432,7 @@ const s = StyleSheet.create({
   pdcRegimenLabel: {
     width: "30%",
     fontSize: 9,
-    fontFamily: "Helvetica",
+    fontFamily: FONT_REGULAR,
     borderWidth: 1,
     borderColor: "#000",
     paddingVertical: 3,
@@ -435,7 +460,7 @@ const s = StyleSheet.create({
   pdcVigCellValue: { fontSize: 8 },
 
   pdcNotaWrapper: { marginTop: 12, marginBottom: 6 },
-  pdcNotaTitle: { fontFamily: "Helvetica-Bold", fontSize: 9, marginBottom: 2 },
+  pdcNotaTitle: { fontFamily: FONT_BOLD, fontSize: 9, marginBottom: 2 , letterSpacing: 0.6},
   pdcNotaText: { fontSize: 8, textAlign: "justify", lineHeight: 1.4 },
 
   pdcFooterTable: {
@@ -449,7 +474,7 @@ const s = StyleSheet.create({
   pdcFooterLeft: { width: "60%", padding: 6 },
   pdcFooterRight: { width: "40%", padding: 6 },
   pdcFooterLine: { fontSize: 8, marginBottom: 2 },
-  pdcFooterLabelBold: { fontFamily: "Helvetica-Bold" },
+  pdcFooterLabelBold: { fontFamily: FONT_BOLD },
 
   firmasDictWrapper: {
     flexDirection: "row",
@@ -754,8 +779,8 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <View wrap={false} style={{ marginTop: 25 }}>
             {data.formato === 'en_linea' ? (
               <View style={{ marginBottom: 15, alignItems: 'center' }}>
-                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+                <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+                <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
                 <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
                   a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
                 </Text>
@@ -914,8 +939,8 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <View wrap={false} style={{ marginTop: 20 }}>
             {data.formato === 'en_linea' ? (
               <View style={{ marginBottom: 15, alignItems: 'center' }}>
-                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 10, textAlign: 'center', marginBottom: 4 }}>ATENTAMENTE</Text>
-                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020' }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
+                <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+                <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
                 <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
                   a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
                 </Text>
