@@ -177,7 +177,7 @@ function getSistemaFontBytes(): Promise<{ regular: Buffer; bold: Buffer }> {
   return sistemaFontsPromise
 }
 
-async function generarQRPng(text: string, size = 220): Promise<Buffer> {
+export async function generarQRPng(text: string, size = 220): Promise<Buffer> {
   return QRCode.toBuffer(text, {
     type: "png", errorCorrectionLevel: "M",
     margin: 1, width: size,
