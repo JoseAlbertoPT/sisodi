@@ -41,10 +41,38 @@ function err(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status })
 }
 
+// Como err(), pero además manda cuántos ms faltan para que se levante el
+// bloqueo — así el cliente puede deshabilitar el formulario y reactivarlo
+// solo, sin que la persona tenga que reintentar a ciegas.
+function errBloqueo(msg: string, retryAfterMs: number) {
+  return NextResponse.json({ error: msg, retryAfterMs }, { status: 429 })
+}
+
 function maskEmail(correo: string) {
   const [local, dominio] = correo.split("@")
   if (!local || !dominio) return "****@****.***"
   return local[0] + "***" + local[local.length - 1] + "@" + dominio
+}
+
+/**
+ * Bloqueo escalonado por intentos fallidos de login (usuario.intentos_fallidos
+ * / bloqueado_hasta / nivel_bloqueo): la primera vez, 5 intentos fallidos
+ * bloquean la cuenta 2 minutos. Una vez que se llegó a bloquear alguna vez
+ * (nivel_bloqueo >= 1), el umbral baja a 3 intentos y la duración sube a 5
+ * minutos — y ese umbral/duración más estrictos se mantienen para cualquier
+ * bloqueo posterior (nivel_bloqueo se topa en 1, no sigue escalando). Un
+ * login exitoso reinicia todo a cero.
+ */
+const INTENTOS_UMBRAL_INICIAL = 5
+const DURACION_BLOQUEO_INICIAL_MS = 2 * 60 * 1000
+const INTENTOS_UMBRAL_ESCALADO = 3
+const DURACION_BLOQUEO_ESCALADO_MS = 5 * 60 * 1000
+
+function formatearEspera(ms: number): string {
+  const totalSeg = Math.max(1, Math.ceil(ms / 1000))
+  if (totalSeg < 60) return `${totalSeg} segundo${totalSeg !== 1 ? "s" : ""}`
+  const min = Math.ceil(totalSeg / 60)
+  return `${min} minuto${min !== 1 ? "s" : ""}`
 }
 
 export async function GET(req: NextRequest) {
@@ -81,7 +109,7 @@ export async function POST(req: NextRequest) {
 
       if (!rfc || !password) return err("RFC y contraseña son requeridos")
 
-      const usuario = await prisma.usuario.findUnique({
+      let usuario = await prisma.usuario.findUnique({
         where:   { rfc: rfc.trim().toUpperCase() },
         include: { rol: true, area: true, organo_centralizado: true },
       })
@@ -89,8 +117,50 @@ export async function POST(req: NextRequest) {
       if (!usuario)        return err("Credenciales incorrectas", 401)
       if (!usuario.activo) return err("Su cuenta está desactivada. Contacte al administrador.", 403)
 
+      const ahora = new Date()
+
+      if (usuario.bloqueado_hasta && usuario.bloqueado_hasta > ahora) {
+        const restanteMs = usuario.bloqueado_hasta.getTime() - ahora.getTime()
+        return errBloqueo(`Cuenta bloqueada temporalmente por demasiados intentos fallidos. Intente de nuevo en ${formatearEspera(restanteMs)}.`, restanteMs)
+      }
+
+      // El bloqueo anterior ya expiró: se limpia y se arranca el conteo de
+      // intentos desde cero, pero conservando nivel_bloqueo (umbral más
+      // estricto para el siguiente bloqueo).
+      if (usuario.bloqueado_hasta) {
+        usuario = await prisma.usuario.update({
+          where: { id: usuario.id },
+          data:  { bloqueado_hasta: null, intentos_fallidos: 0 },
+          include: { rol: true, area: true, organo_centralizado: true },
+        })
+      }
+
       const valida = await bcrypt.compare(password, usuario.password_hash)
-      if (!valida) return err("Credenciales incorrectas", 401)
+      if (!valida) {
+        const escalado = usuario.nivel_bloqueo >= 1
+        const umbral = escalado ? INTENTOS_UMBRAL_ESCALADO : INTENTOS_UMBRAL_INICIAL
+        const nuevosIntentos = usuario.intentos_fallidos + 1
+
+        if (nuevosIntentos >= umbral) {
+          const duracionMs = escalado ? DURACION_BLOQUEO_ESCALADO_MS : DURACION_BLOQUEO_INICIAL_MS
+          await prisma.usuario.update({
+            where: { id: usuario.id },
+            data: {
+              intentos_fallidos: 0,
+              bloqueado_hasta:   new Date(ahora.getTime() + duracionMs),
+              nivel_bloqueo:     Math.min(usuario.nivel_bloqueo + 1, 1),
+            },
+          })
+          return errBloqueo(`Demasiados intentos fallidos. Cuenta bloqueada por ${formatearEspera(duracionMs)}.`, duracionMs)
+        }
+
+        await prisma.usuario.update({ where: { id: usuario.id }, data: { intentos_fallidos: nuevosIntentos } })
+        return err("Credenciales incorrectas", 401)
+      }
+
+      if (usuario.intentos_fallidos > 0 || usuario.nivel_bloqueo > 0) {
+        await prisma.usuario.update({ where: { id: usuario.id }, data: { intentos_fallidos: 0, bloqueado_hasta: null, nivel_bloqueo: 0 } })
+      }
 
       const [catalogoAdministracion, catalogoConsulta] = await Promise.all([
         puedeAdministrarCatalogo(usuario.id),
@@ -197,7 +267,10 @@ export async function POST(req: NextRequest) {
       const hash    = await bcrypt.hash(nuevaPassword, 12)
       const updated = await prisma.usuario.updateMany({
         where: { rfc: rfc.trim().toUpperCase(), activo: true },
-        data:  { password_hash: hash, must_change_password: false },
+        // Restablecer por correo ya verifica identidad (código enviado a su
+        // correo) — de paso se limpia cualquier bloqueo por intentos
+        // fallidos, para no dejarlo bloqueado después de recuperar el acceso.
+        data:  { password_hash: hash, must_change_password: false, intentos_fallidos: 0, bloqueado_hasta: null, nivel_bloqueo: 0 },
       })
 
       if (updated.count === 0) return err("Usuario no encontrado", 404)

@@ -315,6 +315,13 @@ model usuario {
   secretaria_id         String?               @db.Uuid
   secretaria_texto      String?               @db.VarChar(512)
   cargo                 String?               @db.VarChar(200)
+  // Bloqueo por intentos fallidos de login (ver POST /api/auth?action=login):
+  // intentos_fallidos cuenta consecutivos desde el último bloqueo/login
+  // exitoso; nivel_bloqueo escala el umbral/duración del siguiente bloqueo
+  // (0 = aún no se ha bloqueado nunca, 1+ = ya escaló al menos una vez).
+  intentos_fallidos     Int                   @default(0)
+  bloqueado_hasta       DateTime?             @db.Timestamp(6)
+  nivel_bloqueo         Int                   @default(0)
   codigo_recuperacion    codigo_recuperacion?
   catalogo_solicitudes   catalogo_solicitud[]
   documentos_sellados    documento_sellado[]   @relation("documento_sellado_uploader")

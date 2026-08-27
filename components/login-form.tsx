@@ -415,7 +415,23 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [error,        setError]        = useState("")
   const [loading,      setLoading]      = useState(false)
+  const [bloqueoSeg,   setBloqueoSeg]   = useState(0)
   const [mostrarModalRecuperar, setMostrarModalRecuperar] = useState(false)
+
+  const iniciarBloqueo = (ms: number) => {
+    let seg = Math.ceil(ms / 1000)
+    setBloqueoSeg(seg)
+    const iv = setInterval(() => {
+      seg -= 1
+      if (seg <= 0) { clearInterval(iv); setBloqueoSeg(0); setError(""); return }
+      setBloqueoSeg(seg)
+    }, 1000)
+  }
+  const formatBloqueo = (seg: number) => {
+    const m = Math.floor(seg / 60)
+    const s = seg % 60
+    return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${s}s`
+  }
 
   // Cambio de contraseña inline
   const [mustChangePassword, setMustChangePassword] = useState(false)
@@ -461,13 +477,18 @@ export function LoginForm() {
     setLoading(true)
     try {
       const result = await login(rfc.trim().toUpperCase(), password)
-      if (!result) { setError("Credenciales incorrectas"); return }
+      if ("error" in result) {
+        setError(result.error)
+        if (result.retryAfterMs) iniciarBloqueo(result.retryAfterMs)
+        return
+      }
       if (result.mustChangePassword) { setMustChangePassword(true) }
     } catch { setError("Error de conexión. Intente de nuevo.") }
     finally { setLoading(false) }
   }
+  const bloqueado = bloqueoSeg > 0
   const labelClass = "block font-sans text-[13px] font-normal leading-[120%] text-content-high mb-1"
-  const inputClass = "w-full rounded-xl border border-border-high bg-bg-base px-4 py-3 pr-11 text-sm text-content-high placeholder:text-content-low/60 outline-none focus:border-content-high transition-colors"
+  const inputClass = "w-full rounded-xl border border-border-high bg-bg-base px-4 py-3 pr-11 text-sm text-content-high placeholder:text-content-low/60 outline-none focus:border-content-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
@@ -483,6 +504,7 @@ export function LoginForm() {
             if (!mustChangePassword) { setRfc(e.target.value.toUpperCase()); setError("") }
           }}
           readOnly={mustChangePassword}
+          disabled={bloqueado}
           maxLength={13}
           autoComplete="username"
           className={`${inputClass} uppercase placeholder:normal-case`}
@@ -501,13 +523,15 @@ export function LoginForm() {
             if (!mustChangePassword) { setPassword(e.target.value); setError("") }
           }}
           readOnly={mustChangePassword}
+          disabled={bloqueado}
           autoComplete="current-password"
           className={inputClass}
         />
         <button
           type="button"
           onClick={() => { if (!mustChangePassword) setShowPassword(!showPassword) }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-content-low/60 hover:text-content-high transition-colors"
+          disabled={bloqueado}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-content-low/60 hover:text-content-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
@@ -574,13 +598,15 @@ export function LoginForm() {
     {error && (
       <p className="mt-1 flex items-center justify-center gap-1.5 px-1 text-xs font-light text-support-error">
         <AlertCircle size={14} strokeWidth={1.75} className="shrink-0" />
-        <span>{error}</span>
+        <span>
+          {bloqueado ? `Cuenta bloqueada. Intente de nuevo en ${formatBloqueo(bloqueoSeg)}.` : error}
+        </span>
       </p>
     )}
 
     <button
       type="submit"
-      disabled={loading || changeLoading || (mustChangePassword && !todasOk)}
+      disabled={loading || changeLoading || bloqueado || (mustChangePassword && !todasOk)}
       className="mt-2 mx-auto block rounded-full px-10 py-2 font-sans text-[16px] font-normal leading-[120%] bg-accent-primary text-accent-on-primary transition-opacity hover:opacity-90 disabled:opacity-60"
     >
       {changeLoading

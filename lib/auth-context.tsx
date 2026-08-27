@@ -24,7 +24,7 @@ interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (rfc: string, password: string) => Promise<{ mustChangePassword: boolean } | null>
+  login: (rfc: string, password: string) => Promise<{ mustChangePassword: boolean } | { error: string; retryAfterMs?: number }>
   logout: () => void
   changePassword: (rfc: string, nuevaPassword: string) => Promise<void>
 }
@@ -60,22 +60,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (
     rfc: string,
     password: string
-  ): Promise<{ mustChangePassword: boolean } | null> => {
+  ): Promise<{ mustChangePassword: boolean } | { error: string; retryAfterMs?: number }> => {
     try {
       const res = await fetch("/api/auth?action=login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rfc, password }),
       })
-      if (!res.ok) return null
-      const data: User = await res.json()
-      if (!data.mustChangePassword) {
-        setUser(data)
+      const data = await res.json().catch(() => null)
+      if (!res.ok) return { error: data?.error ?? "Credenciales incorrectas", retryAfterMs: data?.retryAfterMs }
+      if (!(data as User).mustChangePassword) {
+        setUser(data as User)
         sessionStorage.setItem("sdtf_just_logged_in", "1")
       }
-      return { mustChangePassword: data.mustChangePassword }
+      return { mustChangePassword: (data as User).mustChangePassword }
     } catch {
-      return null
+      return { error: "Error de conexión. Intente de nuevo." }
     }
   }
 
