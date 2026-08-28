@@ -54,6 +54,7 @@ import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
 import { ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { AvanceSolicitud } from "@/components/solicitud-status-tabs"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { generateDictamenPrestacionPDF } from "@/lib/generate-dictamen-prestacion-pdf"
@@ -1148,13 +1149,14 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-white">Historial de Estatus</span>
                   <span className="text-[10px] text-white/60">
-                    {historial.length} entrada{historial.length !== 1 ? "s" : ""} registrada{historial.length !== 1 ? "s" : ""}
+                    Folio {solicitud.folioRecepcion ? folioFormateado : (solicitud.folioSolicitud ?? solicitud.id)}
                   </span>
                 </div>
                 <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
                   <span className="text-[11px] font-semibold text-white/90">{historial.length} entrada{historial.length !== 1 ? "s" : ""}</span>
                 </div>
               </div>
+              <AvanceSolicitud estado={solicitud.estado} tipo={solicitud.tipo} />
               <div className="bg-card px-5 pt-4 pb-2">
                 <HistorialTimeline entries={historial} />
               </div>

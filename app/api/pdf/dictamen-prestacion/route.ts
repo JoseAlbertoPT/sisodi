@@ -43,6 +43,7 @@ interface PdfOverrides {
   vigenciaFin?: string
   numeroPrestadores?: number
   programaProyecto?: string
+  importeBruto?: number
   firmaNombre?: string
   firmaCargo?: string
   firmaUrlValidacion?: string
@@ -124,7 +125,7 @@ export async function buildDictamenPrestacionBuffer(
       tipoServicios: applyTextRules(sol.tipo_actividades ?? ""),
       claveNombrePrograma: applyTextRules(overrides.programaProyecto ?? sol.programa_proyecto ?? ""),
       objetoContratacion: applyTextRules(sol.objeto ?? ""),
-      importeBruto: formatImporte(sol.importe_bruto),
+      importeBruto: formatImporte(overrides.importeBruto ?? sol.importe_bruto),
       tipoPagoLabel: (sol.tipo_importe ?? "").replace(/_/g, " ") || undefined,
       justificacion: claveParaPdf(sol.secretaria, folio, esHistoricoImportado) || sol.folio_justificacion || "",
       numeroPrestadores: overrides.numeroPrestadores ?? sol.numero_prestadores ?? 1,
@@ -155,7 +156,7 @@ export async function buildDictamenPrestacionBuffer(
       tipoServicios: applyTextRules(cj.tipo_actividad ?? ""),
       claveNombrePrograma: applyTextRules(overrides.programaProyecto ?? cj.programa_proyecto ?? ""),
       objetoContratacion: applyTextRules(cj.objeto ?? ""),
-      importeBruto: formatImporte(cj.importe_bruto),
+      importeBruto: formatImporte(overrides.importeBruto ?? cj.importe_bruto),
       tipoPagoLabel: (cj.tipo_pago ?? "").replace(/_/g, " ") || undefined,
       // Histórico: sin siglas calculadas, el folio real tal cual (claveParaPdf con esHistorico=true).
       justificacion: claveParaPdf(cj.secretaria, folio, true) || cj.folio_justificacion || "",

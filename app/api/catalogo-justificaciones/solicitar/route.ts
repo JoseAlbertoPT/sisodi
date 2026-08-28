@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
       nueva_vigencia,
       nuevo_numero_personas,
       nuevos_numero_prestadores,
+      nuevo_importe_bruto,
       tipo,
       programa_anterior,
       nuevo_programa_proyecto,
@@ -76,6 +77,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (!esCancelacion && nuevo_importe_bruto) {
+      const importe = Number(nuevo_importe_bruto)
+      if (!Number.isFinite(importe) || importe <= 0) {
+        return NextResponse.json({ error: "Importe bruto inválido" }, { status: 400 })
+      }
+    }
+
     const record = await prisma.catalogo_solicitud.create({
       data: {
         catalogo_justificacion_id: Number(catalogo_justificacion_id),
@@ -83,6 +91,7 @@ export async function POST(req: NextRequest) {
         nueva_vigencia: String(nueva_vigencia).trim(),
         nuevo_numero_personas: esCancelacion || !nuevo_numero_personas ? null : Number(nuevo_numero_personas),
         nuevos_numero_prestadores: esCancelacion || !nuevos_numero_prestadores ? null : Number(nuevos_numero_prestadores),
+        nuevo_importe_bruto: esCancelacion || !nuevo_importe_bruto ? null : Number(nuevo_importe_bruto),
         tipo: tipoNormalizado,
         programa_anterior: esCancelacion || !nuevo_programa_proyecto ? null : (String(programa_anterior ?? "").trim() || null),
         nuevo_programa_proyecto: esCancelacion || !nuevo_programa_proyecto ? null : String(nuevo_programa_proyecto).trim(),

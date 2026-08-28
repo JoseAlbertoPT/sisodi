@@ -45,6 +45,7 @@ import { type HistorialEntryData } from "@/components/historial-timeline"
 import { HistorialPanel, ObservacionesPanel } from "@/components/solicitud-status-tabs"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
+import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 
 type UefaEstado = string
 
@@ -1008,11 +1009,68 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, secretariaId }: 
   )
 }
 
-function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, guardando }: {
+function rawToEditPayload(solicitud: UefaSolicitud): EditSolicitudPayload {
+  const raw = solicitud._raw ?? {}
+  const regimenRaw = (raw.regimen ?? "").toLowerCase()
+  const regimen: EditSolicitudPayload["regimen"] = regimenRaw.includes("asimilado") ? "asimilados"
+    : regimenRaw.includes("nombramiento") || regimenRaw.includes("tiempo determinado") ? "nombramiento"
+    : "honorarios"
+  const tipo: EditSolicitudPayload["tipo"] = regimen === "nombramiento" ? "nombramiento" : "prestacion"
+  const fmt = (d: any) => { if (!d) return ""; const dt = new Date(d); return isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10) }
+  return {
+    id: String(solicitud.id),
+    tipo,
+    regimen,
+    periodo: "",
+    estado: solicitud.estado,
+    adjuntos: (raw.adjunto ?? []).map((a: any) => ({ id: a.id, nombre_archivo: a.nombre_archivo, ruta: a.ruta })),
+    formData: {
+      secretaria:              raw.secretaria ?? "",
+      unidadAdministrativa:    raw.unidad_administrativa ?? "",
+      unidadResponsable:       raw.unidad_responsable ?? "",
+      programaProyecto:        raw.programa_proyecto ?? "",
+      regimen:                 raw.regimen ?? "",
+      tipoActividades:         raw.tipo_actividades ?? "",
+      numeroPrestadores:       raw.numero_prestadores != null ? String(raw.numero_prestadores) : "",
+      denominacion:            raw.denominacion ?? "",
+      puestoJefeInmediato:     raw.puesto_jefe_inmediato ?? "",
+      tipoAdministracionNom:   (raw.tipo_administracion === "paraestatal" ? "paraestatal" : "centralizada") as "centralizada" | "paraestatal",
+      vigenciaInicio:          fmt(raw.vigencia_inicio),
+      vigenciaFin:             fmt(raw.vigencia_fin),
+      importeBruto:            raw.importe_bruto != null ? String(raw.importe_bruto) : "",
+      tipoImporte:             raw.tipo_importe ?? "Mensual",
+      nivelTabulador:          raw.nivel_tabulador ?? "",
+      categoriaTabulador:      raw.categoria_tabulador ?? "",
+      objeto:                  raw.objeto ?? "",
+      actividades:             Array.isArray(raw.actividades) ? raw.actividades.filter(Boolean) : [],
+      responsabilidades:       Array.isArray(raw.responsabilidades) ? raw.responsabilidades.filter(Boolean) : [],
+      marcoNormativo:          Array.isArray(raw.marco_normativo) ? raw.marco_normativo.filter(Boolean) : [],
+      condicionesRiesgos:      Array.isArray(raw.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : [],
+      resguardoActivos:        raw.resguardo_activos ?? "",
+      riesgoCaidas:            raw.riesgo_caidas ?? "",
+      riesgoMutilaciones:      raw.riesgo_mutilaciones ?? "",
+      riesgoGolpes:            raw.riesgo_golpes ?? "",
+      riesgoOtros:             raw.riesgo_otros ?? "",
+      condicionCambioDomicilio: raw.condicion_cambio_domicilio ?? false,
+      condicionHorario:        raw.condicion_horario ?? false,
+      condicionViajar:         raw.condicion_viajar ?? false,
+      escolaridad:             raw.escolaridad ?? "",
+      compAdm:                 raw.comp_adm ?? "",
+      compTec:                 raw.comp_tec ?? "",
+      compSoc:                 raw.comp_soc ?? "",
+      valores:                 raw.valores ?? "",
+      areasExp:                raw.areas_exp ?? "",
+    },
+  }
+}
+
+function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud, onAbrirFirma, guardando }: {
   solicitud: UefaSolicitud; onBack: () => void
   onAprobar: (id: number) => void; onObservar: (id: number) => void
+  onEditSolicitud?: (payload: EditSolicitudPayload) => void
   onAbrirFirma: (id: number) => void; guardando: boolean
 }) {
+  const [showEditarConfirm, setShowEditarConfirm] = useState(false)
   const [showDictamen,       setShowDictamen]       = useState(false)
   const [showAprobarConfirm, setShowAprobarConfirm] = useState(false)
   const [showDescargarConfirm, setShowDescargarConfirm] = useState(false)
@@ -1075,6 +1133,17 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, g
           </Button>
           {isNueva && (
             <>
+              {onEditSolicitud && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setShowEditarConfirm(true)}
+                  disabled={guardando}
+                >
+                  Editar
+                </Button>
+              )}
               <Button
                 variant="default"
                 size="sm"
@@ -1211,7 +1280,13 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, g
             </div>
 
             {rightTab === "historial" && (
-              <HistorialPanel entries={solicitud.historial} title="Historial de Estatus" />
+              <HistorialPanel
+                entries={solicitud.historial}
+                title="Historial de Estatus"
+                folio={solicitud.folio}
+                estado={solicitud.estado}
+                tipo={solicitud.tipo}
+              />
             )}
 
             {rightTab === "observaciones" && (
@@ -1249,11 +1324,21 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onAbrirFirma, g
         description={`Se descargará el PDF de la justificación ${solicitud.folioJustificacion}.`}
         confirmLabel="Sí, descargar"
       />
+      {onEditSolicitud && (
+        <ConfirmAlertDialog
+          open={showEditarConfirm}
+          onOpenChange={setShowEditarConfirm}
+          onConfirm={() => { setShowEditarConfirm(false); onEditSolicitud(rawToEditPayload(solicitud)) }}
+          title="¿Estás seguro de editar?"
+          description={<>Vas a editar la solicitud <strong className="font-semibold">{solicitud.folioJustificacion}</strong>. Los cambios se guardarán sin marcarla como observada.</>}
+          confirmLabel="Sí, editar"
+        />
+      )}
     </div>
   )
 }
 
-export function ValidacionUefaPage() {
+export function ValidacionUefaPage({ onEditSolicitud }: { onEditSolicitud?: (payload: EditSolicitudPayload) => void } = {}) {
   const { user } = useAuth()
 
   const hasDataRef                               = useRef(false)
@@ -1423,6 +1508,7 @@ export function ValidacionUefaPage() {
           onBack={() => setSelectedId(null)}
           onAprobar={handleAprobar}
           onObservar={id => setObservarTargetId(id)}
+          onEditSolicitud={onEditSolicitud}
           onAbrirFirma={id => { setSelectedId(null); setFirmaTargetId(id) }}
           guardando={guardando}
         />

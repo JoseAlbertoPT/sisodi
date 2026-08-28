@@ -6,11 +6,8 @@ import fs from "fs/promises"
 import { createHash } from "crypto"
 
 export interface FirmaPortal {
-  /** RFC del firmante */
   usuario: string
-  /** Rol del firmante (ej. "Elaboró", "Revisó") */
   rolFirmante: string | null
-  /** Nombre completo del firmante */
   responsable: string | null
   selloDigital: string | null
   estampadoTiempo: string | null
@@ -20,8 +17,8 @@ export interface FirmaPortal {
   rfcGEM: string | null
   urlValidacion: string | null
   firmadoEn?: string | Date | null
-  /** Cargo institucional (solo se usa en modo bypass / bd local) */
   cargo?: string | null
+  documento?: string | null
 }
 
 export interface AgregarConstanciaOpts {
@@ -35,15 +32,6 @@ const PAGE_W = 612
 const PAGE_H = 792
 const MARGIN = 42
 const FOOTER_RESERVE = 130
-// Textos de ejemplo para probar el campo DOCUMENTO en la tarjeta de firmante
-// (varían por firmante solo para comparar visualmente distintos títulos).
-const DOC_EJEMPLOS = [
-  "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS",
-  "JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS SECRETARÍAS, DEPENDENCIAS Y ORGANISMOS AUXILIARES",
-  "CARTA DESCRIPTIVA DE PRESTACIÓN DE SERVICIOS SECRETARÍAS, DEPENDENCIAS Y ORGANISMOS AUXILIARES",
-]
-// Columna izquierda (RFC/CERT/FIRMADO) vs. columna derecha (DOCUMENTO) en la tarjeta de firmante.
-// 140 le da espacio suficiente a un CERT. de 21 dígitos para no truncarse.
 const FIRMANTE_LEFT_COL_W = 140
 const FIRMANTE_COL_GAP = 8
 
@@ -54,13 +42,11 @@ const cTexto      = rgb(134/255, 133/255, 126/255)
 const cRule       = rgb(218/255, 215/255, 203/255)
 const cRuleSoft   = rgb(232/255, 229/255, 217/255)
 const cBlanco     = rgb(1, 1, 1)
-const cGris       = rgb(245/255, 244/255, 242/255) // --sem-bg-surface-low
+const cGris       = rgb(245/255, 244/255, 242/255)
 
-// Pares fondo-pastel / texto-saturado, igual que components/ui/badge.tsx y
-// components/ui/status-badge.tsx (los badges reales del sistema).
-const cSuccessBg  = rgb(210/255, 250/255, 210/255) // --sem-support-success-low
-const cSuccessTxt = rgb(28/255, 125/255, 41/255)   // --sem-support-success
-const cPrimario   = rgb(119/255, 51/255, 87/255)   // --sem-accent-primary
+const cSuccessBg  = rgb(210/255, 250/255, 210/255)
+const cSuccessTxt = rgb(28/255, 125/255, 41/255)
+const cPrimario   = rgb(119/255, 51/255, 87/255)
 
 interface DrawContext {
   pdfDoc: PDFDocument
@@ -72,7 +58,6 @@ interface DrawContext {
   marcaImage: Awaited<ReturnType<PDFDocument["embedPng"]>> | null
 }
 
-/* ── Utilidades de texto ── */
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
   if (!text) return []
@@ -101,10 +86,7 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
   return lines
 }
 
-// Mismo radio que rounded-md en los badges reales (components/ui/badge.tsx,
-// components/ui/status-badge.tsx): --radius (0.5rem) - 2px.
 const BADGE_RADIUS = 3
-// Mismo radio que rounded-xl en components/ui/card.tsx: --radius (0.5rem) + 4px.
 const CARD_RADIUS = 6
 
 function drawRoundedRect(
@@ -150,8 +132,6 @@ function getLogoBytes(): Promise<Buffer | null> {
   return logoBytesPromise
 }
 
-// Misma marca de agua que usan los demás PDFs del sistema (ver watermarkImage
-// en components/plantillas/PlantillaJustificacionServicios.tsx y las otras plantillas).
 let marcaBytesPromise: Promise<Buffer | null> | null = null
 
 function getMarcaMorelosBytes(): Promise<Buffer | null> {
@@ -163,7 +143,6 @@ function getMarcaMorelosBytes(): Promise<Buffer | null> {
   return marcaBytesPromise
 }
 
-// Twogether Sans es la tipografía --font-sans del sistema (public/fonts, ver app/layout.tsx).
 let sistemaFontsPromise: Promise<{ regular: Buffer; bold: Buffer }> | null = null
 
 function getSistemaFontBytes(): Promise<{ regular: Buffer; bold: Buffer }> {
@@ -185,11 +164,9 @@ export async function generarQRPng(text: string, size = 220): Promise<Buffer> {
   })
 }
 
-/* ── Watermark ── */
 
 function drawWatermark(page: PDFPage, marcaImage: Awaited<ReturnType<PDFDocument["embedPng"]>> | null): void {
   if (!marcaImage) return
-  // Mismo tamaño que watermarkImage en las plantillas (width 600 * scale 2.5).
   const size = 1500
   page.drawImage(marcaImage, {
     x: (PAGE_W - size) / 2, y: (PAGE_H - size) / 2,
@@ -202,7 +179,6 @@ function drawFondo(page: PDFPage): void {
   page.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: cBlanco })
 }
 
-/* ── Manejo de páginas ── */
 
 function nuevaPaginaConstancia(ctx: DrawContext, conTitulo: boolean): void {
   const page = ctx.pdfDoc.addPage([PAGE_W, PAGE_H])
@@ -229,8 +205,6 @@ function nuevaPaginaConstancia(ctx: DrawContext, conTitulo: boolean): void {
     ctx.y -= 14
   }
 }
-
-/* ── Ficha del documento (doc-card) ── */
 
 function drawDocCard(ctx: DrawContext, nombreArchivo: string, huella: string, total: number): void {
   const cardX = MARGIN
@@ -290,38 +264,37 @@ function drawDocCard(ctx: DrawContext, nombreArchivo: string, huella: string, to
   ctx.y -= cardH + 8
 }
 
-/* ── Tarjeta de firmante ── */
-
-function alturaFirmanteCard(firma: FirmaPortal, font: PDFFont, innerW: number): number {
-  const sealFontSize = 4
+function alturaFirmanteCard(firma: FirmaPortal, font: PDFFont, innerW: number, documento: string, scale = 1): number {
+  const sealFontSize = 4 * scale
   const lineGap = sealFontSize + 1
-  let h = 8
-  h += 14
+  let h = 8 * scale
+  h += 14 * scale
 
   const dlRows = [firma.usuario, firma.noCertificado, formatFecha(firma.estampadoTiempo || firma.firmadoEn)]
     .filter(Boolean).length
-  const leftColH = dlRows * 7
+  const leftColH = dlRows * 7 * scale
 
-  const docColW = innerW - FIRMANTE_LEFT_COL_W - FIRMANTE_COL_GAP
-  const maxDocLines = Math.max(...DOC_EJEMPLOS.map(t => wrapText(t, font, 5.5, docColW).length))
-  const docColH = 7 + maxDocLines * 6.5
+  const leftColWScaled = FIRMANTE_LEFT_COL_W * scale
+  const docColW = innerW - leftColWScaled - FIRMANTE_COL_GAP * scale
+  const docLines = wrapText(documento, font, 5.5 * scale, docColW).length
+  const docColH = 7 * scale + docLines * 6.5 * scale
 
   h += Math.max(leftColH, docColH)
-  h += 4
+  h += 4 * scale
   if (firma.selloDigital) {
-    h += 8
-    const lines = wrapText(firma.selloDigital, font, sealFontSize, innerW - 8)
-    h += lines.length * lineGap + 5
-    h += 2
+    h += 8 * scale
+    const lines = wrapText(firma.selloDigital, font, sealFontSize, innerW - 8 * scale)
+    h += lines.length * lineGap + 5 * scale
+    h += 2 * scale
   }
-  if (firma.rfcGEM || firma.noCertificadoGEM) h += 11
+  if (firma.rfcGEM || firma.noCertificadoGEM) h += 11 * scale
   if (firma.selloEstampadoTiempo) {
-    h += 8
-    const lines = wrapText(firma.selloEstampadoTiempo, font, sealFontSize, innerW - 8)
-    h += lines.length * lineGap + 5
-    h += 2
+    h += 8 * scale
+    const lines = wrapText(firma.selloEstampadoTiempo, font, sealFontSize, innerW - 8 * scale)
+    h += lines.length * lineGap + 5 * scale
+    h += 2 * scale
   }
-  h += 5
+  h += 5 * scale
   return h
 }
 
@@ -333,7 +306,9 @@ function drawFirmanteCard(
   y: number,
   w: number,
   h: number,
+  documento: string,
   topPad = 0,
+  scale = 1,
 ): void {
   const padX = 10
   const innerX = x + padX
@@ -345,72 +320,67 @@ function drawFirmanteCard(
 
   let cy = y - 12 - topPad
 
-  const numCenter = { x: innerX + 7, y: cy + 1 }
+  const numCenter = { x: innerX + 7 * scale, y: cy + 1 }
   ctx.page.drawCircle({
-    x: numCenter.x, y: numCenter.y, size: 6,
+    x: numCenter.x, y: numCenter.y, size: 6 * scale,
     color: cPrimario,
   })
   const numText = String(index + 1)
-  const numTW = ctx.fontBold.widthOfTextAtSize(numText, 6.5)
+  const numTW = ctx.fontBold.widthOfTextAtSize(numText, 6.5 * scale)
   ctx.page.drawText(numText, {
-    x: numCenter.x - numTW / 2, y: numCenter.y - 2,
-    size: 6.5, font: ctx.fontBold, color: cBlanco,
+    x: numCenter.x - numTW / 2, y: numCenter.y - 2 * scale,
+    size: 6.5 * scale, font: ctx.fontBold, color: cBlanco,
   })
 
   const nombre = (firma.responsable || firma.usuario || "Sin nombre").trim()
-  const nombreX = innerX + 18
-  const nombreTrunc = truncateToWidth(nombre, ctx.fontBold, 9, innerW - 18)
+  const nombreX = innerX + 18 * scale
+  const nombreTrunc = truncateToWidth(nombre, ctx.fontBold, 9 * scale, innerW - 18 * scale)
   ctx.page.drawText(nombreTrunc, {
-    x: nombreX, y: cy - 1, size: 9, font: ctx.fontBold, color: cVerde,
+    x: nombreX, y: cy - 1, size: 9 * scale, font: ctx.fontBold, color: cVerde,
   })
 
-  cy -= 14
+  cy -= 14 * scale
 
-  const leftColW = FIRMANTE_LEFT_COL_W
-  const dlLabelW = 32
+  const leftColW = FIRMANTE_LEFT_COL_W * scale
+  const dlLabelW = 32 * scale
   const dlValueX = innerX + dlLabelW
   const dlValueMaxW = leftColW - dlLabelW
   let leftCy = cy
   const drawDlRow = (label: string, value: string, valueColor = cTinta2) => {
-    ctx.page.drawText(label, { x: innerX, y: leftCy, size: 5, font: ctx.fontBold, color: cTexto })
-    ctx.page.drawText(truncateToWidth(value, ctx.font, 6.5, dlValueMaxW), {
-      x: dlValueX, y: leftCy, size: 6.5, font: ctx.font, color: valueColor,
+    ctx.page.drawText(label, { x: innerX, y: leftCy, size: 5 * scale, font: ctx.fontBold, color: cTexto })
+    ctx.page.drawText(truncateToWidth(value, ctx.font, 6.5 * scale, dlValueMaxW), {
+      x: dlValueX, y: leftCy, size: 6.5 * scale, font: ctx.font, color: valueColor,
     })
-    leftCy -= 7
+    leftCy -= 7 * scale
   }
   if (firma.usuario) drawDlRow("RFC", firma.usuario)
   if (firma.noCertificado) drawDlRow("CERT.", firma.noCertificado)
   const fechaFirma = formatFecha(firma.estampadoTiempo || firma.firmadoEn)
   if (fechaFirma) drawDlRow("FIRMADO", fechaFirma, cTinta)
 
-  // TODO: es texto de ejemplo (DOC_EJEMPLOS) para probar el layout; falta cablearlo
-  // al nombre real del documento cuando se defina de dónde sale ese dato por firmante.
-  const docColX = innerX + leftColW + FIRMANTE_COL_GAP
+  const docColX = innerX + leftColW + FIRMANTE_COL_GAP * scale
   const docColW = innerX + innerW - docColX
-  ctx.page.drawText("DOCUMENTO", { x: docColX, y: cy, size: 5, font: ctx.fontBold, color: cTexto })
-  let docCy = cy - 7
-  const docEjemplo = DOC_EJEMPLOS[index % DOC_EJEMPLOS.length]
-  const docLines = wrapText(docEjemplo, ctx.font, 5.5, docColW)
+  ctx.page.drawText("DOCUMENTO", { x: docColX, y: cy, size: 5 * scale, font: ctx.fontBold, color: cTexto })
+  let docCy = cy - 7 * scale
+  const docLines = wrapText(documento, ctx.font, 5.5 * scale, docColW)
   for (const ln of docLines) {
-    ctx.page.drawText(ln, { x: docColX, y: docCy, size: 5.5, font: ctx.font, color: cTinta2 })
-    docCy -= 6.5
+    ctx.page.drawText(ln, { x: docColX, y: docCy, size: 5.5 * scale, font: ctx.font, color: cTinta2 })
+    docCy -= 6.5 * scale
   }
-
   cy = Math.min(leftCy, docCy)
-
-  cy -= 2
+  cy -= 2 * scale
   ctx.page.drawLine({
     start: { x: innerX, y: cy + 2 },
     end:   { x: innerX + innerW, y: cy + 2 },
     thickness: 0.3, color: cRule, opacity: 0.5,
   })
-  cy -= 4
+  cy -= 4 * scale
 
   const drawSealHash = (label: string, hash: string) => {
-    ctx.page.drawText(label.toUpperCase(), { x: innerX, y: cy, size: 5.5, font: ctx.fontBold, color: cVerde })
-    cy -= 8
+    ctx.page.drawText(label.toUpperCase(), { x: innerX, y: cy, size: 5.5 * scale, font: ctx.fontBold, color: cVerde })
+    cy -= 8 * scale
 
-    const sealFontSize = 4
+    const sealFontSize = 4 * scale
     const lineGap = sealFontSize + 1
     const padInner = 3
     const lines = wrapText(hash, ctx.font, sealFontSize, innerW - padInner * 2)
@@ -436,10 +406,10 @@ function drawFirmanteCard(
     if (firma.rfcGEM) parts.push(`GEM: ${firma.rfcGEM}`)
     if (firma.noCertificadoGEM) parts.push(`Cert: ${firma.noCertificadoGEM}`)
     const line = parts.join("  ·  ")
-    ctx.page.drawText(truncateToWidth(line, ctx.font, 5.5, innerW), {
-      x: innerX, y: cy, size: 5.5, font: ctx.font, color: cTinta2,
+    ctx.page.drawText(truncateToWidth(line, ctx.font, 5.5 * scale, innerW), {
+      x: innerX, y: cy, size: 5.5 * scale, font: ctx.font, color: cTinta2,
     })
-    cy -= 9
+    cy -= 9 * scale
   }
 
   if (firma.selloEstampadoTiempo) {
@@ -447,20 +417,22 @@ function drawFirmanteCard(
   }
 }
 
-function drawFirmantesGrid(ctx: DrawContext, firmas: FirmaPortal[]): void {
+function drawFirmantesGrid(ctx: DrawContext, firmas: FirmaPortal[], nombreArchivo: string): void {
   const cols = firmas.length >= 2 ? 2 : 1
   const totalW = PAGE_W - MARGIN * 2
   const colGap = 10
   const cardW = cols === 2 ? (totalW - colGap) / 2 : totalW
   const padX = 14
   const innerW = cardW - padX * 2
+  // Con una sola tarjeta ocupando todo el ancho sobra espacio de sobra —
+  // se agranda tanto el texto (RFC, cert., sellos...) como la tarjeta en
+  // sí, en vez de solo darle más aire al alto con el mismo texto chico.
+  const scale = cols === 1 ? 1.4 : 1
 
   for (let i = 0; i < firmas.length; i += cols) {
     const fila = firmas.slice(i, i + cols)
-    // Con una sola tarjeta ocupando todo el ancho, el alto ajustado al
-    // contenido se ve chico/aplastado; se le da más aire.
-    const extraAlto = cols === 1 ? 40 : 0
-    const alturaFila = Math.max(...fila.map(f => alturaFirmanteCard(f, ctx.font, innerW))) + extraAlto
+    const extraAlto = cols === 1 ? 20 : 0
+    const alturaFila = Math.max(...fila.map(f => alturaFirmanteCard(f, ctx.font, innerW, f.documento ?? nombreArchivo, scale))) + extraAlto
 
     if (ctx.y - alturaFila < FOOTER_RESERVE) {
       nuevaPaginaConstancia(ctx, false)
@@ -468,7 +440,7 @@ function drawFirmantesGrid(ctx: DrawContext, firmas: FirmaPortal[]): void {
 
     fila.forEach((firma, k) => {
       const x = MARGIN + k * (cardW + colGap)
-      drawFirmanteCard(ctx, firma, i + k, x, ctx.y, cardW, alturaFila, extraAlto / 2)
+      drawFirmanteCard(ctx, firma, i + k, x, ctx.y, cardW, alturaFila, firma.documento ?? nombreArchivo, extraAlto / 2, scale)
     })
 
     ctx.y -= alturaFila + 10
@@ -607,7 +579,7 @@ export async function agregarConstanciaFirma(opts: AgregarConstanciaOpts): Promi
 
   drawDocCard(ctx, nombreArchivo, huella, firmas.length)
 
-  drawFirmantesGrid(ctx, firmas)
+  drawFirmantesGrid(ctx, firmas, nombreArchivo)
 
   drawValidacion(ctx, qrImage, urlValidacion)
 

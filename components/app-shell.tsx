@@ -135,7 +135,7 @@ export function AppShell() {
       case "mis-solicitudes":
         return <MisSolicitudesPage key={`${user?.id ?? "anon"}-${misSolicitudesRefreshKey}`} initialTab={misSolicitudesInitialTab} onEditSolicitud={handleEditSolicitud} />
       case "validacion-uefa":
-        return <ValidacionUefaPage />
+        return <ValidacionUefaPage onEditSolicitud={handleEditSolicitud} />
       case "bandeja-filtro1":
         return <BandejaFiltroPage key={`f1-${misSolicitudesRefreshKey}`} filtro={1} onOpenReview={handleOpenReview} onEditSolicitud={handleEditSolicitud} />
       case "bandeja-filtro2":

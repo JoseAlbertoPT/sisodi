@@ -96,6 +96,8 @@ export async function GET(req: NextRequest) {
         COALESCE(cj.folio_dictamen, s.folio_dictamen)  AS sol_folio_dictamen,
         COALESCE(cj.secretaria, s.secretaria)          AS sol_secretaria,
         COALESCE(cj.secretaria_txt_snapshot, s.secretaria_txt_snapshot) AS sol_secretaria_txt,
+        s.nivel_tabulador                              AS sol_nivel_tabulador,
+        s.categoria_tabulador                          AS sol_categoria_tabulador,
         (SELECT COUNT(*) FROM catalogo_solicitud cs2 WHERE cs2.catalogo_justificacion_id = cj.id) AS sol_count
       FROM catalogo_justificacion cj
       LEFT JOIN solicitud s ON s.id = cj.solicitud_id
@@ -141,6 +143,8 @@ export async function GET(req: NextRequest) {
         folio_dictamen:         r.sol_folio_dictamen,
         secretaria:             r.sol_secretaria,
         secretaria_txt_snapshot: r.sol_secretaria_txt,
+        nivel_tabulador:        r.sol_nivel_tabulador,
+        categoria_tabulador:    r.sol_categoria_tabulador,
       },
       _count: { catalogo_solicitudes: Number(r.sol_count ?? 0) },
     }))

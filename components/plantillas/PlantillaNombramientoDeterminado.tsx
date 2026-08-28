@@ -12,6 +12,7 @@ import fs from "fs";
 import React from "react";
 import { siglasSecretaria } from "@/lib/clave-dictamen";
 import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
+import { FauxBoldText } from "@/components/plantillas/faux-bold-text";
 
 // Mismo glifo de viñeta que la Carta Descriptiva (PlantillaCartaDescriptivaServicios):
 // Helvetica no tiene glifo para ❖ (U+2756), así que se registra esta fuente.
@@ -656,10 +657,10 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
 
           {data.formato === 'en_linea' && (
             <View style={{ marginTop: 20, marginBottom: 15, alignItems: 'center' }}>
-              <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+              <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</FauxBoldText>
               <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
               <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
-                a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+                a través de un certificado reconocido legalmente y tiene, en relación a la información firmada, un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
               </Text>
             </View>
           )}
@@ -873,10 +874,10 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           <View>
             {data.formato === 'en_linea' ? (
               <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
-                <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+                <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</FauxBoldText>
                 <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
                 <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
-                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada, un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
                 </Text>
               </View>
             ) : null}
@@ -984,10 +985,10 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           <View>
             {data.formato === 'en_linea' ? (
               <View style={{ marginBottom: 15, alignItems: 'center' }} wrap={false}>
-                <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+                <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</FauxBoldText>
                 <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
                 <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
-                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada, un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
                 </Text>
               </View>
             ) : null}

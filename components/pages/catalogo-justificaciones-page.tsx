@@ -89,6 +89,8 @@ interface CatalogoRecord {
     folio_dictamen: string | null
     secretaria: string | null
     secretaria_txt_snapshot: string | null
+    nivel_tabulador: string | null
+    categoria_tabulador: string | null
   }
   _count: { catalogo_solicitudes: number }
 }
@@ -99,6 +101,7 @@ interface AdminRecord extends CatalogoRecord {
     nueva_vigencia: string
     nuevo_numero_personas: number | null
     nuevos_numero_prestadores: number | null
+    nuevo_importe_bruto: string | null
     programa_anterior: string | null
     nuevo_programa_proyecto: string | null
     tipo: string
@@ -132,6 +135,15 @@ function fmtMoney(val: string | null | undefined) {
   const n = Number(val)
   if (isNaN(n)) return val
   return n.toLocaleString("es-MX", { style: "currency", currency: "MXN" })
+}
+// Igual que en Nueva Solicitud (components/pages/nueva-solicitud-page.tsx):
+// quita "$" y las comas de miles antes de parsear — parseFloat solo, sin
+// esto, corta en la primera coma ("$27,693.56" -> 27, no 27693.56).
+function parseMoney(str: string): number {
+  if (!str) return -1
+  const clean = str.replace(/[$,\s]/g, "")
+  const n = parseFloat(clean)
+  return isNaN(n) ? -1 : n
 }
 function entidadNombre(rec: CatalogoRecord) {
   return rec.solicitud.secretaria_txt_snapshot
@@ -229,6 +241,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       .catch(() => {})
   }, [user?.id])
   const progSigef = useProgramasSigef(solRec ? entidadNombre(solRec) : "")
+  const solImporteBrutoNum = solImporteBruto.trim() ? parseMoney(solImporteBruto) : null
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -326,7 +339,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         return
       }
     }
-
     setSolError(null)
     setSolFirmaCargo("")
     setSolFirmaCargoBloqueado(false)
@@ -361,6 +373,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         solPrograma.trim() !== "" && solPrograma.trim() !== (solRec.programa_proyecto ?? "").trim()
           ? solPrograma.trim()
           : null
+      const importeCambio =
+        solImporteBrutoNum !== null && solImporteBrutoNum >= 0 ? solImporteBrutoNum : null
       await fetch("/api/catalogo-justificaciones/solicitar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -370,6 +384,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           nueva_vigencia: `${vi} / ${vf}`,
           nuevo_numero_personas: npNum,
           nuevos_numero_prestadores: nprNum,
+          nuevo_importe_bruto: importeCambio,
           programa_anterior: programaCambio ? solRec.programa_proyecto : null,
           nuevo_programa_proyecto: programaCambio,
         }),
@@ -392,6 +407,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       else body.catalogoId = solRec.id
       if (np) body.numeroPersonas = np
       if (programaCambio) body.programaProyecto = programaCambio
+      if (importeCambio !== null) body.importeBruto = importeCambio
       const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -841,7 +857,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                   <Label className="text-sm font-medium">Importe Bruto</Label>
                   <Input
                     type="text"
-                    placeholder="$0.00"
+                    placeholder={solRec ? `$${solRec.importe_bruto ?? "0.00"}` : "$0.00"}
                     value={solImporteBruto}
                     onChange={(e) => setSolImporteBruto(e.target.value)}
                     disabled={solLoading}
@@ -1252,7 +1268,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
 
 
   const reutilizacionRows = (records: AdminRecord[]): (string | number)[][] => [
-    ["Folio de Dictamen", "Secretaría / Dependencia", "Programa / Proyecto", "Usuario", "Vigencia", "Núm. Prestadores", "Programa o Proyecto (movimiento)", "Creado"],
+    ["Folio de Dictamen", "Secretaría / Dependencia", "Programa / Proyecto", "Usuario", "Vigencia", "Núm. Prestadores", "Programa o Proyecto (movimiento)", "Importe Bruto (movimiento)", "Creado"],
     ...records.flatMap((rec) =>
       rec.catalogo_solicitudes.map((sol) => [
         fmt(folioSinSiglas(rec.solicitud.folio_dictamen)),
@@ -1262,6 +1278,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
         sol.nueva_vigencia,
         esCancelacion(sol) ? "—" : (sol.nuevo_numero_personas ?? sol.nuevos_numero_prestadores ?? "—"),
         sol.nuevo_programa_proyecto ?? rec.programa_proyecto ?? "—",
+        esCancelacion(sol) ? "—" : fmtMoney(sol.nuevo_importe_bruto ?? rec.importe_bruto ?? null),
         new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }),
       ]),
     ),
@@ -1556,11 +1573,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                     <table className="w-full table-fixed text-sm">
                       <colgroup>
                         {/* <col className="w-[13%]" /> */}
-                        <col className="w-[18%]" />
-                        <col className="w-[18%]" />
-                        <col className="w-[13%]" />
-                        <col className="w-[31%]" />
-                        <col className="w-[20%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[12%]" />
+                        <col className="w-[26%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[16%]" />
                       </colgroup>
                       <thead>
                         <tr className="bg-muted/30 border-b border-border">
@@ -1569,13 +1587,14 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                           <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
                           <th className="px-4 py-2.5 pr-10 text-left text-xs font-semibold text-muted-foreground">Núm. Prestadores</th>
                           <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Programa o Proyecto</th>
+                          <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Importe Bruto</th>
                           <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Creado</th>
                         </tr>
                       </thead>
                       <tbody>
                         {reutilizacionesVisibles.length === 0 && (
                           <tr className="empty-row">
-                            <td colSpan={5}>
+                            <td colSpan={6}>
                               <EmptyState icon={Inbox} title="Sin resultados" description="Ajusta los filtros para ver más resultados." />
                             </td>
                           </tr>
@@ -1598,6 +1617,9 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                             </td>
                             <td className="px-4 py-3 pr-6 text-xs text-muted-foreground break-words text-left">
                               {sol.nuevo_programa_proyecto ?? viewRec?.programa_proyecto ?? "—"}
+                            </td>
+                            <td className="px-4 py-3 pr-6 text-xs text-muted-foreground truncate text-left">
+                              {esCancelacion(sol) ? "—" : fmtMoney(sol.nuevo_importe_bruto ?? viewRec?.importe_bruto ?? null)}
                             </td>
                             <td className="px-4 py-3 pr-6 text-xs text-muted-foreground truncate text-left">
                               {new Date(sol.creado_en).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}

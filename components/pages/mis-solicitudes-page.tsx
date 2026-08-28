@@ -47,6 +47,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { AvanceSolicitud } from "@/components/solicitud-status-tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useRealtime } from "@/hooks/use-realtime"
 type UrgTab =
@@ -1350,7 +1351,7 @@ function DetalleView({
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-content-high">Historial de Solicitud</span>
                     <span className="text-[10px] text-content-low">
-                      {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""} registrado{sol.historial.length !== 1 ? "s" : ""}
+                      Folio {sol.folioJustificacion || sol.folio}
                     </span>
                   </div>
                   <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
@@ -1359,6 +1360,7 @@ function DetalleView({
                     </span>
                   </div>
                 </div>
+                <AvanceSolicitud estado={sol.estado} tipo={sol.tipo} />
                 <div className="bg-card px-4 py-3">
                   <HistorialTimeline entries={sol.historial} />
                 </div>

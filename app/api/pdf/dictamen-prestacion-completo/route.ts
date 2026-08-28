@@ -17,6 +17,7 @@ interface PdfOverrides {
   vigenciaFin?: string
   numeroPrestadores?: number
   programaProyecto?: string
+  importeBruto?: number
 }
 
 interface FirmaInput {
@@ -89,6 +90,7 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
       urlValidacion: portalRes?.urlValidacion ?? null,
       firmadoEn: ahora,
       cargo,
+      documento: "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS",
     };
   }
 
@@ -107,6 +109,7 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
     urlValidacion: `${(process.env.EFIRMA_PORTAL_URL ?? "https://firma-dev.morelos.gob.mx").replace(/\/$/, "")}/ValidacionFirma?uuid=${crypto.randomUUID()}`,
     firmadoEn: ahora,
     cargo,
+    documento: "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS",
   };
 }
 
@@ -232,6 +235,7 @@ export async function GET(req: NextRequest) {
   const np = searchParams.get("numeroPrestadores") ?? searchParams.get("numeroPersonas");
   if (np) overrides.numeroPrestadores = Number(np);
   const pp = searchParams.get("programaProyecto"); if (pp) overrides.programaProyecto = pp;
+  const ib = searchParams.get("importeBruto"); if (ib) overrides.importeBruto = Number(ib);
   return buildResponse(solicitudId, overrides, catalogoId);
 }
 
@@ -245,6 +249,7 @@ export async function POST(req: NextRequest) {
   const np = body?.numeroPrestadores ?? body?.numeroPersonas;
   if (np) overrides.numeroPrestadores = Number(np);
   if (body?.programaProyecto) overrides.programaProyecto = String(body.programaProyecto);
+  if (body?.importeBruto != null && body.importeBruto !== "") overrides.importeBruto = Number(body.importeBruto);
 
   // Reutilización desde Catálogo: firma electrónica inmediata de una sola
   // persona (quien reutiliza) — se agrega como página de Constancia de Firma

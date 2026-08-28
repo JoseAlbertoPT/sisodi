@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import React from "react";
 import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
+import { FauxBoldText } from "@/components/plantillas/faux-bold-text";
 
 const quetzalliPath = resolveQuetzalliSansPath();
 if (quetzalliPath) {
@@ -22,9 +23,6 @@ if (quetzalliPath) {
     ],
   });
 }
-// Solo existe el peso Thin de QuetzalliSans por ahora — se usa la misma
-// familia para "bold" (react-pdf no puede negritar sintéticamente); en
-// cuanto se agregue el peso Bold real, registrarlo aparte y usarlo aquí.
 const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
 const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
@@ -63,15 +61,11 @@ const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20fi
 const MARCA_MORELOS = fs.readFileSync(path.join(process.cwd(), "public/LOGO_MORELOS_V1.png"));
 const BANNER_COMPLETO = fs.readFileSync(path.join(process.cwd(), "public/banner-completo.png"));
 
-// Palabras que se mantienen en minúscula (salvo cuando son la primera palabra).
 const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",
   "en", "a", "al", "con", "por", "para",
 ]);
 
-// Convierte un texto (normalmente en MAYÚSCULAS) a formato tipo título en español.
-// Ej.: ÓRGANO DESCONCENTRADO DENOMINADO "HÁBITAT MORELOS"
-//   -> Órgano Desconcentrado Denominado "Hábitat Morelos"
 function toTitleCaseES(input: string): string {
   if (!input) return input;
   let wordIndex = 0;
@@ -236,11 +230,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  // Se fuerza Helvetica-Bold (no FONT_BOLD/QuetzalliSans): dentro de una caja
-  // de 12x12 con borde, la métrica de línea de QuetzalliSans es demasiado alta
-  // y Yoga descarta el glifo por completo — la "X" queda invisible aunque el
-  // régimen sí esté seleccionado.
-  checkText: { fontSize: 8, fontFamily: FONT_BOLD , letterSpacing: 0.6},
+  checkText: { fontSize: 8, fontFamily: "Helvetica-Bold" , letterSpacing: 0.6},
   checkLabel: { fontSize: 9, marginRight: 20 },
 
   fundamentoText: {
@@ -328,9 +318,6 @@ function parseDateParts(dateStr: string) {
   return { d: trimmed, m: "", y: "" };
 }
 
-// Textos largos (objeto de la contratación, fundamento legal, etc.) achican
-// letra y entrelineado para caber en menos renglones y no empujar el resto
-// del documento (NOTA, firma) a una hoja adicional.
 function tamanoTextoLargo(text: string | null | undefined): { fontSize: number; lineHeight: number } {
   const len = (text ?? "").length;
   if (len <= 150) return { fontSize: 9, lineHeight: 1.4 };
@@ -372,10 +359,10 @@ export function PlantillaDictamenPrestacionServicios({
             <Image src={LOGO_FINANZAS} style={s.logo} />
           </View>
           <View style={s.headerCol2}>
-            <Text style={s.headerTitle}>
+            <FauxBoldText style={s.headerTitle}>
               DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE
               SERVICIOS
-            </Text>
+            </FauxBoldText>
           </View>
           <View style={s.headerCol3}>
             <View style={s.folioBox}>
@@ -393,7 +380,8 @@ export function PlantillaDictamenPrestacionServicios({
         </View>
 
         <View style={s.fechaRow}>
-          <Text style={s.fechaText}>Fecha: {data.fecha}</Text>
+          <FauxBoldText style={s.fechaText}>Fecha : </FauxBoldText>
+          <FauxBoldText style={s.fechaText}>{data.fecha}</FauxBoldText>
         </View>
 
         <View style={s.fieldRow}>
@@ -526,20 +514,20 @@ export function PlantillaDictamenPrestacionServicios({
 
         {data.firmaNombre ? (
           <View wrap={false} style={{ marginTop: 4, alignItems: "center" }}>
-            <Text style={{ fontFamily: FONT_BOLD, fontSize: 8, textAlign: "center", marginBottom: 2 , letterSpacing: 0.6}}>
+            <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 8, textAlign: "center", marginBottom: 2 , letterSpacing: 0.6}}>
               ATENTAMENTE
-            </Text>
+            </FauxBoldText>
             <Text style={{ fontFamily: FONT_BOLD, fontSize: 7, textAlign: "center", marginBottom: 1, color: "#B00020" , letterSpacing: 0.6}}>
               DOCUMENTO FIRMADO ELECTRÓNICAMENTE
             </Text>
             <Text style={{ fontSize: 7, textAlign: "center", lineHeight: 1.25, maxWidth: "88%", marginBottom: 3 }}>
-              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada, un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
             </Text>
-            <Text style={{ fontFamily: FONT_BOLD, fontSize: 8, textAlign: "center" , letterSpacing: 0.6}}>
+            <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 8, textAlign: "center" , letterSpacing: 0.6}}>
               {data.firmaNombre}
-            </Text>
+            </FauxBoldText>
             {data.firmaCargo ? (
-              <Text style={{ fontFamily: FONT_BOLD, fontSize: 7, textAlign: "center" , letterSpacing: 0.6}}>{data.firmaCargo}</Text>
+              <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 7, textAlign: "center" , letterSpacing: 0.6}}>{data.firmaCargo}</FauxBoldText>
             ) : null}
           </View>
         ) : null}

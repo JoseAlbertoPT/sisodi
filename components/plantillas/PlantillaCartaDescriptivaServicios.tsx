@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import React from "react";
 import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
+import { FauxBoldText } from "@/components/plantillas/faux-bold-text";
 
 Font.register({
   family: "NotoSymbols",
@@ -27,9 +28,6 @@ if (quetzalliPath) {
     ],
   });
 }
-// Solo existe el peso Thin de QuetzalliSans por ahora — se usa la misma
-// familia para "bold" (react-pdf no puede negritar sintéticamente); en
-// cuanto se agregue el peso Bold real, registrarlo aparte y usarlo aquí.
 const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
 const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
@@ -244,10 +242,6 @@ function BulletItem({ text }: { text: string }) {
   );
 }
 
-// El numeral romano de cada actividad/responsabilidad ya viene incluido en
-// `text` (generado por buildRomanNumberedList en app/api/pdf/carta-descriptiva/
-// route.ts seg\u00fan la posici\u00f3n del \u00edtem) \u2014 este componente solo lo imprime,
-// nunca genera ni lee numerales del dato de origen.
 function RomanItem({ text }: { text: string }) {
   return (
     <View style={s.romanItem} wrap={false}>
@@ -256,10 +250,6 @@ function RomanItem({ text }: { text: string }) {
   );
 }
 
-/**
- * Título + primer item pegados en un solo bloque wrap=false, resto fluye.
- * Evita huérfanos: título nunca queda solo al final de página.
- */
 function SubSection({
   number,
   title,
@@ -286,8 +276,8 @@ function SubSection({
     <>
       <View wrap={false} minPresenceAhead={40}>
         <View style={s.subSectionRow}>
-          <Text style={s.subSectionNumber}>{number}</Text>
-          <Text style={s.subSectionTitle}>{title}</Text>
+          <FauxBoldText style={s.subSectionNumber}>{number}</FauxBoldText>
+          <FauxBoldText style={s.subSectionTitle}>{title}</FauxBoldText>
         </View>
         {FirstItem}
       </View>
@@ -318,10 +308,10 @@ function SubSubBullets({
   return (
     <>
       <View wrap={false} minPresenceAhead={30}>
-        <Text style={s.subSubTitle}>
-          <Text style={s.subSubNumber}>{number} </Text>
+        <FauxBoldText style={s.subSubTitle}>
+          <Text style={[s.subSubNumber, { fontFamily: "Helvetica-Bold" }]}>{number} </Text>
           {title}
-        </Text>
+        </FauxBoldText>
         {first !== undefined && <BulletItem text={first} />}
       </View>
       {rest.map((it, i) => (
@@ -351,12 +341,12 @@ export function PlantillaCartaDescriptivaServicios({
             <Image src={LOGO_FINANZAS} style={s.logo} />
           </View>
           <View style={s.headerCol2}>
-            <Text style={s.headerTitle}>
+            <FauxBoldText style={s.headerTitle}>
               CARTA DESCRIPTIVA DE PRESTACIÓN DE SERVICIOS
-            </Text>
-            <Text style={s.headerTitle}>
+            </FauxBoldText>
+            <FauxBoldText style={s.headerTitle}>
               SECRETARÍAS, DEPENDENCIAS Y ORGANISMOS AUXILIARES
-            </Text>
+            </FauxBoldText>
           </View>
           <View style={s.headerCol3}>
             <View style={s.claveBox}>
@@ -374,7 +364,8 @@ export function PlantillaCartaDescriptivaServicios({
         </View>
 
         <View style={s.fechaRow}>
-          <Text style={s.fechaText}>Fecha: {data.fecha}</Text>
+          <FauxBoldText style={s.fechaText}>Fecha : </FauxBoldText>
+          <FauxBoldText style={s.fechaText}>{data.fecha}</FauxBoldText>
         </View>
 
         <Text style={s.notaText}>
@@ -385,14 +376,14 @@ export function PlantillaCartaDescriptivaServicios({
         </Text>
 
         <View style={s.sectionTitleWrap} wrap={false} minPresenceAhead={80}>
-          <Text style={s.sectionTitle}>1. CARTA DESCRIPTIVA</Text>
+          <FauxBoldText style={s.sectionTitle}>1. CARTA DESCRIPTIVA</FauxBoldText>
         </View>
 
         {data.objetoContratacion.trim() !== "" && (
           <View wrap={false} minPresenceAhead={60}>
             <View style={s.subSectionRow}>
-              <Text style={s.subSectionNumber}>1.1</Text>
-              <Text style={s.subSectionTitle}>OBJETO DE LA CONTRATACIÓN:</Text>
+              <FauxBoldText style={s.subSectionNumber}>1.1</FauxBoldText>
+              <FauxBoldText style={s.subSectionTitle}>OBJETO DE LA CONTRATACIÓN:</FauxBoldText>
             </View>
             <Text style={s.paragraph}>{data.objetoContratacion}</Text>
           </View>
@@ -413,9 +404,9 @@ export function PlantillaCartaDescriptivaServicios({
         />
 
         <View style={s.sectionTitleWrap} wrap={false} minPresenceAhead={80}>
-          <Text style={s.sectionTitle}>
+          <FauxBoldText style={s.sectionTitle}>
             2. PERFIL DEL PRESTADOR DE SERVICIOS:
-          </Text>
+          </FauxBoldText>
         </View>
 
         <SubSection
@@ -430,10 +421,10 @@ export function PlantillaCartaDescriptivaServicios({
           data.competenciasSociales.length > 0 ||
           data.valores.length > 0) && (
           <View style={s.subSectionRow} wrap={false} minPresenceAhead={50}>
-            <Text style={s.subSectionNumber}>2.2</Text>
-            <Text style={s.subSectionTitle}>
+            <FauxBoldText style={s.subSectionNumber}>2.2</FauxBoldText>
+            <FauxBoldText style={s.subSectionTitle}>
               COMPETENCIAS DEL PRESTADOR DE SERVICIOS:
-            </Text>
+            </FauxBoldText>
           </View>
         )}
 

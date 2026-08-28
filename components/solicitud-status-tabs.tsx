@@ -98,6 +98,130 @@ function PanelHeader({
   )
 }
 
+/**
+ * Porcentajes de avance definidos por Eduardo Varela (27/08/2026) para la
+ * barra "Avance hacia el dictamen". El tramo de firmas sigue el orden real
+ * de firmantes de lib/firma-plantillas.ts (persona externa → UEFA → revisor
+ * → verificador → Emisión; Nombramiento Tiempo Determinado tiene dos
+ * firmantes externos en vez de uno, de ahí la etapa extra y que los
+ * porcentajes no caigan en múltiplos de 10).
+ */
+const AVANCE_SERVICIOS = [
+  { label: "Enviada a UEFA",               percent: 10 },
+  { label: "En revisión",                  percent: 20 },
+  { label: "En verificación",              percent: 30 },
+  { label: "En emisión",                   percent: 40 },
+  { label: "En firma por persona externa", percent: 50 },
+  { label: "En firma por UEFA",            percent: 60 },
+  { label: "En firma por revisor",         percent: 70 },
+  { label: "En firma por verificador",     percent: 80 },
+  { label: "En firma por Emisión",         percent: 90 },
+  { label: "Emitido",                      percent: 100 },
+] as const
+
+const AVANCE_TIEMPO_DETERMINADO = [
+  { label: "Enviada a UEFA",                   percent: 9 },
+  { label: "En revisión",                      percent: 18 },
+  { label: "En verificación",                  percent: 27 },
+  { label: "En emisión",                       percent: 36 },
+  { label: "En firma por persona externa",     percent: 45 },
+  { label: "En firma por persona externa dos", percent: 55 },
+  { label: "En firma por UEFA",                percent: 64 },
+  { label: "En firma por revisor",             percent: 73 },
+  { label: "En firma por verificador",         percent: 82 },
+  { label: "En firma por Emisión",             percent: 91 },
+  { label: "Emitido",                          percent: 100 },
+] as const
+
+function esTipoTiempoDeterminado(tipo: string | null | undefined): boolean {
+  return (tipo ?? "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .includes("nombramiento")
+}
+
+/**
+ * Ubica el estado actual de la solicitud dentro del embudo de firma.
+ * Nota: mientras el o los firmantes externos no han firmado, el estado ya
+ * está en "Pendiente Firma Justificacion" — igual que cuando le toca a UEFA
+ * (ver ESTADO_POR_BANDEJA_PENDIENTE en lib/firma-plantillas.ts) — así que
+ * ese estado no distingue "persona externa" de "UEFA" sin consultar
+ * firma_proceso.firmantes; por eso se ubica en el punto más temprano de ese
+ * tramo (persona externa) en vez de asumir que ya firmó.
+ */
+function avanceEtapaIndex(estado: string | null | undefined, esTD: boolean): number {
+  const n = (estado ?? "").toLowerCase().trim()
+
+  if (n === "emitido" || n === "rechazado") return esTD ? 10 : 9
+
+  if (
+    n === "en validacion justificaciones" || n === "enviada a validacion" ||
+    n === "enviada a validacion (uefa)" || n === "enviada a validacion uefa" ||
+    n === "observado por validacion" || n === "observada por validacion" ||
+    n === "observada por uefa" || n === "observado por uefa"
+  ) return 0 // Enviada a UEFA
+
+  if (
+    n === "pendiente do" || n === "enviado a do (recepcion)" ||
+    n === "en revision revisor" || n === "observado por revisor" || n === "observado do filtro 1" ||
+    n === "aceptado por revisor" || n === "aprobado por revisor"
+  ) return 1 // En revisión
+
+  if (n === "en verificacion final" || n === "observado por verificacion final" || n === "observado do filtro 2")
+    return 2 // En verificación
+
+  if (
+    n === "en revision emisor" || n === "en revision do filtro 3" ||
+    n === "observado por emisor" || n === "devuelta por do" || n === "observado do filtro 3" ||
+    n === "en proceso do" || n === "aprobado"
+  ) return 3 // En emisión
+
+  if (n === "pendiente firma justificacion") return 4 // persona(s) externa(s) — ver nota arriba
+
+  if (n === "pendiente firma revision") return esTD ? 7 : 6 // revisor
+
+  if (n === "pendiente firma verificacion") return esTD ? 8 : 7 // verificador
+
+  if (n === "pendiente firma emisor" || n === "pendiente firma dictamen") return esTD ? 9 : 8 // Emisión
+
+  return 0 // en captura / borrador / desconocido
+}
+
+/** Interpola de rojo (0%) a verde institucional (100%) según el avance. */
+function avanceColor(percent: number): string {
+  const t = Math.max(0, Math.min(100, percent)) / 100
+  const desde = { r: 200, g: 45, b: 45 }   // rojo
+  const hasta = { r: 75, g: 110, b: 51 }   // verde institucional (#4b6e33)
+  const r = Math.round(desde.r + (hasta.r - desde.r) * t)
+  const g = Math.round(desde.g + (hasta.g - desde.g) * t)
+  const b = Math.round(desde.b + (hasta.b - desde.b) * t)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+/** Barra "Avance hacia el dictamen", con etapas y % definidos por negocio (ver AVANCE_SERVICIOS/AVANCE_TIEMPO_DETERMINADO). */
+export function AvanceSolicitud({ estado, tipo }: { estado: string | null | undefined; tipo?: string | null }) {
+  const esTD = esTipoTiempoDeterminado(tipo)
+  const etapas = esTD ? AVANCE_TIEMPO_DETERMINADO : AVANCE_SERVICIOS
+  const etapaIndex = avanceEtapaIndex(estado, esTD)
+  const etapa = etapas[etapaIndex]
+  const color = avanceColor(etapa.percent)
+  return (
+    <div className="px-5 pt-4 pb-4 bg-white border-b border-border">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-content-medium">Avance hacia el dictamen</span>
+        <span className="text-lg font-bold" style={{ color }}>{etapa.percent}%</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-[var(--sem-bg-surface-high)] overflow-hidden">
+        <div
+          className="h-full rounded-full transition-[width,background-color] duration-300"
+          style={{ width: `${etapa.percent}%`, backgroundColor: color }}
+        />
+      </div>
+      <div className="mt-2 text-[11px] font-semibold" style={{ color }}>{etapa.label}</div>
+    </div>
+  )
+}
+
 /** Pestañas Historial / Bitácora / Observaciones con el diseño de "Mis Solicitudes". */
 export function StatusTabsList({
   value, onChange, obsCount,
@@ -129,8 +253,8 @@ export function StatusTabsList({
 }
 
 export function HistorialPanel({
-  entries, title = "Historial de Solicitud",
-}: { entries: HistorialEntryData[]; title?: string }) {
+  entries, title = "Historial de Solicitud", folio, estado, tipo,
+}: { entries: HistorialEntryData[]; title?: string; folio?: string | null; estado?: string | null; tipo?: string | null }) {
   const n = entries.length
   return (
     <div className="overflow-hidden rounded-xl border border-border shadow-md">
@@ -138,9 +262,10 @@ export function HistorialPanel({
         iconBg="bg-[#dfe6c3]"
         icon={<History className="h-5 w-5 text-[#2d331b]" />}
         title={title}
-        subtitle={`${n} evento${n !== 1 ? "s" : ""} registrado${n !== 1 ? "s" : ""}`}
+        subtitle={folio ? `Folio ${folio}` : `${n} evento${n !== 1 ? "s" : ""} registrado${n !== 1 ? "s" : ""}`}
         countLabel={`${n} evento${n !== 1 ? "s" : ""}`}
       />
+      {estado != null && <AvanceSolicitud estado={estado} tipo={tipo} />}
       <div className="bg-card px-4 py-3">
         <HistorialTimeline entries={entries} />
       </div>

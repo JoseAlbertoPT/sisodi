@@ -471,6 +471,7 @@ model catalogo_solicitud {
   nueva_vigencia             String                 @db.VarChar(200)
   nuevo_numero_personas      Int?
   nuevos_numero_prestadores  Int?
+  nuevo_importe_bruto        Decimal?               @db.Decimal(14, 2)
   tipo                       String                 @default("reutilizacion") @db.VarChar(20)
   // Solo para tipo = "programa": trazabilidad del cambio de Programa/Proyecto.
   programa_anterior          String?                @db.VarChar(500)

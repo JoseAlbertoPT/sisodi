@@ -15,6 +15,8 @@ import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
 import { claveParaPdf, siglasSecretaria, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import { stripLeadingRomanNumeral } from "@/lib/roman-list";
 import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
+import { stampPaginaPrincipal } from "@/lib/pdf-page-number-stamp";
+import { PDFDocument as PDFLibDocument } from "pdf-lib";
 import React from "react";
 
 // Actividades/responsabilidades traen su numeral romano de origen pegado al
@@ -37,6 +39,11 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
   return Buffer.concat(chunks);
+}
+
+async function pdfPageCount(bytes: Buffer | Uint8Array): Promise<number> {
+  const doc = await PDFLibDocument.load(bytes);
+  return doc.getPageCount();
 }
 
 function splitToArray(str: string | null | undefined): string[] {
@@ -89,6 +96,23 @@ function buildFirmaFicticia(firmante: any, uuid?: string | null): FirmaPortal {
     urlValidacion: `${portalUrl.replace(/\/$/, "")}/ValidacionFirma?uuid=${fakeUuid}`,
     firmadoEn: fechaFirma,
   };
+}
+
+// Cada firmante del proceso corresponde a una etapa fija (ver
+// lib/firma-plantillas.ts: PRESTACION_SERVICIOS/NOMBRAMIENTO_TIEMPO_DET) —
+// "Elaboró" y "Revisó" (bandeja "uefa" o sin bandeja, firmantes externos)
+// firman la sección de Justificación; "Revisó"/"Verificó"/"Emitió" (bandeja
+// "revision"/"validacion"/"emision") firman la sección de Dictamen. Esa
+// bandeja es lo único disponible para saber, en la Constancia de Firma
+// Electrónica, cuál de los dos documentos combinados firmó cada quien.
+function tituloDocumentoParaBandeja(bandeja: string | null | undefined, esNombramiento: boolean): string {
+  const esEtapaDictamen = bandeja === "revision" || bandeja === "validacion" || bandeja === "emision";
+  if (esEtapaDictamen) {
+    return "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS";
+  }
+  return esNombramiento
+    ? "JUSTIFICACIÓN PARA NOMBRAMIENTO POR TIEMPO DETERMINADO"
+    : "JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS SECRETARÍAS, DEPENDENCIAS Y ORGANISMOS AUXILIARES";
 }
 
 
@@ -293,7 +317,19 @@ async function buildJustificacionBufferDesdeCatalogo(
   const folioFilename = cj.folio_recepcion ?? cj.folio_justificacion ?? folio;
   const filename = `Justificacion_${folioFilename.replace(/\//g, "-")}.pdf`;
   const pdfStream = await renderToStream(pdfElement as any);
-  const pdfFinal = await streamToBuffer(pdfStream);
+  let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
+
+  try {
+    const soloJustificacionStream = await renderToStream(
+      React.createElement(PlantillaJustificacionServicios as React.FC<any>, {
+        data: { ...dataHonorarios, incluirPaginaDictamen: false },
+      }) as any,
+    );
+    const mainPageCount = await pdfPageCount(await streamToBuffer(soloJustificacionStream));
+    pdfFinal = await stampPaginaPrincipal(pdfFinal, mainPageCount);
+  } catch (errStamp) {
+    console.error("[pdf/justificacion catalogo] Error estampando número de página:", errStamp);
+  }
 
   return { buffer: pdfFinal, filename, sol: null };
 }
@@ -573,50 +609,88 @@ export async function buildJustificacionBuffer(
   const { data, folio, sol } = resuelto;
   const filename = `${resuelto.filename}.pdf`;
 
-  const pdfElement = resuelto.kind === "nombramiento"
-    ? React.createElement(PlantillaNombramientoDeterminado as React.FC<any>, { data })
-    : React.createElement(PlantillaJustificacionServicios as React.FC<any>, { data });
+  const plantilla = resuelto.kind === "nombramiento"
+    ? PlantillaNombramientoDeterminado as React.FC<any>
+    : PlantillaJustificacionServicios as React.FC<any>;
+  const pdfElement = React.createElement(plantilla, { data });
 
   const pdfStream = await renderToStream(pdfElement as any);
 
   let pdfFinal: Buffer | Uint8Array = await streamToBuffer(pdfStream);
+
+  // Cuántas páginas físicas ocupa SOLO la sección de Justificación, sin la
+  // sección de Dictamen embebida — necesario para estampar "Pág. X de Y" en
+  // el encabezado de esas páginas (ver lib/pdf-page-number-stamp.ts, el
+  // render prop de react-pdf ahí no funciona). Si no hay sección de Dictamen
+  // el conteo ya es el total; si sí la hay, un render aparte solo-Justificación
+  // da el corte exacto.
+  let mainPageCount: number;
+  if (!(data as any).incluirPaginaDictamen) {
+    mainPageCount = await pdfPageCount(pdfFinal);
+  } else {
+    const soloJustificacionStream = await renderToStream(
+      React.createElement(plantilla, { data: { ...data, incluirPaginaDictamen: false } }) as any,
+    );
+    mainPageCount = await pdfPageCount(await streamToBuffer(soloJustificacionStream));
+  }
+  // Total pre-constancia: es el "de N" que ya trae impreso (fijo, no se
+  // puede recalcular) la sección de Dictamen embebida — se usa el mismo
+  // número para que el encabezado de la sección de Justificación no
+  // muestre un total distinto al resto del documento.
+  const totalPageCountPreConstancia = await pdfPageCount(pdfFinal);
   const esFirmaElectronica = ((sol as any).modalidad_firma ?? "electronica") !== "autografa";
   if (!sinFirmas && esFirmaElectronica && incluirConstancia) try {
     const bypass = process.env.EFIRMA_BYPASS === "true";
 
+    // Se necesitan los `firma_firmante` (con su `bandeja`) en los dos modos,
+    // no solo bypass: es lo único que dice a qué documento del combinado
+    // (Justificación vs. Dictamen) corresponde cada firmante — ver
+    // tituloDocumentoParaBandeja más abajo.
     const firmaProceso = await prisma.firma_proceso.findUnique({
       where: { solicitud_id: Number(solicitudId) },
-      include: bypass
-        ? {
-            firmantes: {
-              orderBy: { orden: "asc" },
-              ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
-            },
-          }
-        : undefined,
+      include: {
+        firmantes: {
+          orderBy: { orden: "asc" },
+          ...(soloFirmanteId ? { where: { id: soloFirmanteId } } : {}),
+        },
+      },
     });
 
+    const esNombramiento = resuelto.kind === "nombramiento";
     let firmasPortal: FirmaPortal[] = [];
 
     if (bypass) {
       const dummyFirmantes = ((firmaProceso as any)?.firmantes ?? []).filter((f: any) => f.firmado);
-      firmasPortal = dummyFirmantes.map((f: any) => buildFirmaFicticia(f, firmaProceso?.uuid));
+      firmasPortal = dummyFirmantes.map((f: any) => ({
+        ...buildFirmaFicticia(f, firmaProceso?.uuid),
+        documento: tituloDocumentoParaBandeja(f.bandeja, esNombramiento),
+      }));
     } else if (firmaProceso?.proceso_id) {
       const estado: any = await efirmaClient.estado(firmaProceso.proceso_id);
+      // El portal regresa las firmas por RFC, no por id de firma_firmante —
+      // se hace match por RFC (mayúsculas, igual que se guarda) contra
+      // nuestros propios firmantes para saber su `bandeja`.
+      const firmantesPorRfc = new Map<string, any>(
+        ((firmaProceso as any)?.firmantes ?? []).map((f: any) => [(f.rfc ?? "").toUpperCase(), f]),
+      );
       firmasPortal = Array.isArray(estado?.firmas)
-        ? estado.firmas.map((f: any) => ({
-            usuario: f.usuario ?? "",
-            rolFirmante: f.rolFirmante ?? null,
-            responsable: f.responsable ?? null,
-            selloDigital: f.selloDigital ?? null,
-            estampadoTiempo: f.estampadoTiempo ?? null,
-            selloEstampadoTiempo: f.selloEstampadoTiempo ?? null,
-            noCertificado: f.noCertificado ?? null,
-            noCertificadoGEM: f.noCertificadoGEM ?? null,
-            rfcGEM: f.rfcGEM ?? null,
-            urlValidacion: f.urlValidacion ?? null,
-            firmadoEn: f.firmadoEn ?? null,
-          }))
+        ? estado.firmas.map((f: any) => {
+            const firmante = firmantesPorRfc.get((f.usuario ?? "").toUpperCase());
+            return {
+              usuario: f.usuario ?? "",
+              rolFirmante: f.rolFirmante ?? null,
+              responsable: f.responsable ?? null,
+              selloDigital: f.selloDigital ?? null,
+              estampadoTiempo: f.estampadoTiempo ?? null,
+              selloEstampadoTiempo: f.selloEstampadoTiempo ?? null,
+              noCertificado: f.noCertificado ?? null,
+              noCertificadoGEM: f.noCertificadoGEM ?? null,
+              rfcGEM: f.rfcGEM ?? null,
+              urlValidacion: f.urlValidacion ?? null,
+              firmadoEn: f.firmadoEn ?? null,
+              documento: tituloDocumentoParaBandeja(firmante?.bandeja, esNombramiento),
+            };
+          })
         : [];
     }
 
@@ -630,6 +704,12 @@ export async function buildJustificacionBuffer(
     }
   } catch (errFirma) {
     console.error("[pdf/justificacion] Error agregando constancia de firma:", errFirma);
+  }
+
+  try {
+    pdfFinal = await stampPaginaPrincipal(pdfFinal, mainPageCount, totalPageCountPreConstancia);
+  } catch (errStamp) {
+    console.error("[pdf/justificacion] Error estampando número de página:", errStamp);
   }
 
   return { buffer: pdfFinal, filename, sol };

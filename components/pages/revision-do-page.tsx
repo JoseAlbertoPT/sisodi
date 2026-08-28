@@ -2223,7 +2223,13 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
             )}
 
             {activeTab === "historial" && (
-              <HistorialPanel entries={solicitud.historial} title="Historial del Expediente" />
+              <HistorialPanel
+                entries={solicitud.historial}
+                title="Historial del Expediente"
+                folio={solicitud.folio ?? solicitud.folioJustificacion}
+                estado={solicitud.estado}
+                tipo={solicitud.tipo}
+              />
             )}
 
             {activeTab === "bitacora" && (

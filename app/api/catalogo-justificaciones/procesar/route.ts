@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
         denominacion:                trunc(original.denominacion, 200),
         vigencia_inicio:             nuevaInicio,
         vigencia_fin:                nuevaFin,
-        importe_bruto:               original.importe_bruto,
+        importe_bruto:               catSol.nuevo_importe_bruto ?? original.importe_bruto,
         es_renovacion:               true,
         folio_anterior:              original.folio_justificacion ?? original.folio_dictamen ?? null,
         nivel_tabulador:             original.nivel_tabulador,

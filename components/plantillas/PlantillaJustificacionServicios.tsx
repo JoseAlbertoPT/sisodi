@@ -13,6 +13,7 @@ import React from "react";
 import { toRoman } from "@/lib/roman-list";
 import { siglasSecretaria } from "@/lib/clave-dictamen";
 import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
+import { FauxBoldText } from "@/components/plantillas/faux-bold-text";
 
 Font.register({
   family: "NotoSymbols",
@@ -211,7 +212,7 @@ const s = StyleSheet.create({
     padding: 4,
     justifyContent: "center",
   },
-  pageBox: { flex: 1, paddingHorizontal: 4, paddingTop: 10, justifyContent: "flex-start" },
+  pageBox: { flex: 1, paddingHorizontal: 4, justifyContent: "center" },
   claveText: { fontSize: 8, textAlign: "center" },
 
   fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10, marginRight: -63 },
@@ -246,7 +247,7 @@ const s = StyleSheet.create({
   // de 12x12 con borde, la métrica de línea de QuetzalliSans es demasiado alta
   // y Yoga descarta el glifo por completo — la "X" queda invisible aunque el
   // régimen sí esté seleccionado.
-  checkText: { fontSize: 8, fontFamily: FONT_BOLD , letterSpacing: 0.6},
+  checkText: { fontSize: 8, fontFamily: "Helvetica-Bold" , letterSpacing: 0.6},
 
   vigenciaBoxWrap: { flexDirection: "row", alignItems: "flex-end" },
   vigCellColumn: { alignItems: "center", marginRight: 4 },
@@ -542,8 +543,8 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
             <Image src={LOGO_FINANZAS} style={s.logo} />
           </View>
           <View style={s.headerCol2}>
-            <Text style={s.headerTitle}>JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</Text>
-            <Text style={s.headerSubtitle}>SECRETARÍAS, DEPENDENCIAS Y ORGANISMOS AUXILIARES</Text>
+            <FauxBoldText style={s.headerTitle}>JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</FauxBoldText>
+            <FauxBoldText style={{ ...s.headerSubtitle, fontFamily: FONT_BOLD }}>SECRETARÍAS, DEPENDENCIAS Y ORGANISMOS AUXILIARES</FauxBoldText>
           </View>
           <View style={s.headerCol3}>
             <View style={s.claveBox}>
@@ -555,22 +556,20 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
         </View>
 
-
-
         <View style={s.fechaRow}>
-          <Text style={s.bold}>Fecha : </Text>
-          <Text style={{ minWidth: 150, textAlign: "center" }}>
+          <FauxBoldText style={s.bold}>Fecha : </FauxBoldText>
+          <FauxBoldText style={{ minWidth: 150, textAlign: "center" }}>
             {new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}
-          </Text>
+          </FauxBoldText>
         </View>
 
         <Text style={{ fontSize: 8, textAlign: "justify", lineHeight: 1.4, marginBottom: 10 }}>
           Nota: La presente Justificación de Prestación de Servicios es una referencia para la contratación de personas y deberá atender a criterios no discriminatorios.
         </Text>
 
-        <Text style={s.centeredTitle}>1.  JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</Text>
+        <FauxBoldText style={s.centeredTitle}>1.  JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS</FauxBoldText>
 
-        <Text style={s.sectionTitle}>1.1    DATOS GENERALES DE LA PRESTACIÓN DE SERVICIOS:</Text>
+        <FauxBoldText style={s.sectionTitle}>1.1    DATOS GENERALES DE LA PRESTACIÓN DE SERVICIOS:</FauxBoldText>
 
         <View style={s.row}>
           <Text style={s.marginLabel}>Régimen de Contratación:</Text>
@@ -643,12 +642,12 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         */}
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>1.2    OBJETO DE LA CONTRATACIÓN:</Text>
+          <FauxBoldText style={s.sectionTitle}>1.2    OBJETO DE LA CONTRATACIÓN:</FauxBoldText>
           <Text style={{ fontSize: 9, textAlign: "justify", lineHeight: 1.15, marginBottom: 8, marginLeft: 32 }}>{data.objetoContratacion}</Text>
         </View>
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>1.3    ACTIVIDADES DEL PRESTADOR DE SERVICIOS:</Text>
+          <FauxBoldText style={s.sectionTitle}>1.3    ACTIVIDADES DEL PRESTADOR DE SERVICIOS:</FauxBoldText>
           {data.actividades?.slice(0, 1).map((act, index) => (
             <View key={`act-${index}`} style={s.romanItem}>
               <Text style={s.romanText}>{toRoman(index + 1)}. {act}</Text>
@@ -662,7 +661,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>1.4    RESPONSABILIDADES DEL PRESTADOR DE SERVICIOS:</Text>
+          <FauxBoldText style={s.sectionTitle}>1.4    RESPONSABILIDADES DEL PRESTADOR DE SERVICIOS:</FauxBoldText>
           {data.responsabilidades?.slice(0, 1).map((resp, index) => (
             <View key={`resp-${index}`} style={s.romanItem}>
               <Text style={s.romanText}>{toRoman(index + 1)}. {resp}</Text>
@@ -676,10 +675,10 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={s.sectionTitle}>2  PERFIL A CUBRIR POR EL PRESTADOR DE SERVICIOS:</Text>
+          <FauxBoldText style={s.sectionTitle}>2  PERFIL A CUBRIR POR EL PRESTADOR DE SERVICIOS:</FauxBoldText>
           <Text style={{ marginBottom: 4, fontSize: 8 }}>(Se refiere a la escolaridad, competencias y experiencia, necesarios para la contratación)</Text>
 
-          <Text style={{ ...s.bold, marginBottom: 4 }}>2.1  ESCOLARIDAD MÍNIMA:</Text>
+          <FauxBoldText style={{ ...s.bold, marginBottom: 4 }}>2.1  ESCOLARIDAD MÍNIMA:</FauxBoldText>
           {data.perfil?.escolaridadMinima?.slice(0, 1).map((esc, i) => (
             <View key={`esc-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -695,8 +694,8 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.2  COMPETENCIAS DEL PRESTADOR DE SERVICIOS:</Text>
-          <Text style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.1  Competencias Administrativas:</Text>
+          <FauxBoldText style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.2  COMPETENCIAS DEL PRESTADOR DE SERVICIOS:</FauxBoldText>
+          <FauxBoldText style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.1  Competencias Administrativas:</FauxBoldText>
           {data.perfil?.competenciasAdministrativas?.slice(0, 1).map((comp, i) => (
             <View key={`ca-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -712,7 +711,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.2  Competencias Técnicas:</Text>
+          <FauxBoldText style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.2  Competencias Técnicas:</FauxBoldText>
           {data.perfil?.competenciasTecnicas?.slice(0, 1).map((comp, i) => (
             <View key={`ct-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -728,7 +727,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.3  Competencias Sociales:</Text>
+          <FauxBoldText style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.3  Competencias Sociales:</FauxBoldText>
           {data.perfil?.competenciasSociales?.slice(0, 1).map((comp, i) => (
             <View key={`cs-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -744,7 +743,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.4  valores:</Text>
+          <FauxBoldText style={{ ...s.bold, marginLeft: 48, marginTop: 6, marginBottom: 4 }}>2.2.4  valores:</FauxBoldText>
           {data.perfil?.valores?.slice(0, 1).map((val, i) => (
             <View key={`val-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -760,7 +759,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         ))}
 
         <View wrap={false}>
-          <Text style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.3  ÁREAS DE EXPERIENCIA DEL PRESTADOR DE SERVICIOS:</Text>
+          <FauxBoldText style={{ ...s.bold, marginTop: 6, marginBottom: 4 }}>2.3  ÁREAS DE EXPERIENCIA DEL PRESTADOR DE SERVICIOS:</FauxBoldText>
           {data.perfil?.areasExperiencia?.slice(0, 1).map((area, i) => (
             <View key={`ae-${i}`} style={s.bulletItemContainer}>
               <Text style={s.bulletSign}>{"❖"}</Text>
@@ -779,10 +778,10 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <View wrap={false} style={{ marginTop: 25 }}>
             {data.formato === 'en_linea' ? (
               <View style={{ marginBottom: 15, alignItems: 'center' }}>
-                <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+                <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</FauxBoldText>
                 <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
                 <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
-                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada, un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
                 </Text>
               </View>
             ) : null}
@@ -790,27 +789,27 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
             <View style={s.firmasWrapper} wrap={false}>
               <View style={s.firmaBox}>
                 <Text style={s.firmaLabel}>Elaboró</Text>
-                <Text style={s.firmaNombre}>{data.firmaElaboroNombre || ""}</Text>
+                <FauxBoldText style={s.firmaNombre}>{data.firmaElaboroNombre || ""}</FauxBoldText>
                 <View style={s.firmaLine}></View>
                 {data.firmaElaboroNombre && data.firmaElaboroCargo ? (
-                  <Text style={s.firmaDesc}>{data.firmaElaboroCargo}</Text>
+                  <FauxBoldText style={s.firmaDesc}>{data.firmaElaboroCargo}</FauxBoldText>
                 ) : (
                   <View>
-                    <Text style={s.firmaDesc}>Nombre y cargo de la</Text>
-                    <Text style={s.firmaDesc}>Persona Titular de la Unidad Administrativa u Organismo Auxiliar</Text>
+                    <FauxBoldText style={s.firmaDesc}>Nombre y cargo de la</FauxBoldText>
+                    <FauxBoldText style={s.firmaDesc}>Persona Titular de la Unidad Administrativa u Organismo Auxiliar</FauxBoldText>
                   </View>
                 )}
               </View>
               <View style={s.firmaBox}>
                 <Text style={s.firmaLabel}>Revisó</Text>
-                <Text style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</Text>
+                <FauxBoldText style={s.firmaNombre}>{data.firmaRevisoNombre || ""}</FauxBoldText>
                 <View style={s.firmaLine}></View>
                 {data.firmaRevisoNombre && data.firmaRevisoCargo ? (
-                  <Text style={s.firmaDesc}>{data.firmaRevisoCargo}</Text>
+                  <FauxBoldText style={s.firmaDesc}>{data.firmaRevisoCargo}</FauxBoldText>
                 ) : (
                   <View>
-                    <Text style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la</Text>
-                    <Text style={s.firmaDesc}>Unidad de Enlace Financiero Administrativo o Equivalente</Text>
+                    <FauxBoldText style={s.firmaDesc}>Nombre y cargo de la Persona Titular de la</FauxBoldText>
+                    <FauxBoldText style={s.firmaDesc}>Unidad de Enlace Financiero Administrativo o Equivalente</FauxBoldText>
                   </View>
                 )}
               </View>
@@ -833,7 +832,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
             <Image src={LOGO_FINANZAS} style={s.pdcLogo} />
           </View>
           <View style={s.pdcHeaderCol2}>
-            <Text style={s.pdcHeaderTitle}>{tituloFormatoDictamen.toUpperCase()}</Text>
+            <FauxBoldText style={s.pdcHeaderTitle}>{tituloFormatoDictamen.toUpperCase()}</FauxBoldText>
           </View>
           <View style={s.pdcHeaderCol3}>
             <View style={s.pdcFolioBox}>
@@ -849,7 +848,8 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
         </View>
 
         <View style={s.pdcFechaRow}>
-          <Text style={s.pdcFechaText}>Fecha: {data.fechaDictaminacion || ""}</Text>
+          <FauxBoldText style={s.pdcFechaText}>Fecha : </FauxBoldText>
+          <FauxBoldText style={s.pdcFechaText}>{data.fechaDictaminacion || ""}</FauxBoldText>
         </View>
 
         <View style={s.pdcFieldRow}>
@@ -939,10 +939,10 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <View wrap={false} style={{ marginTop: 20 }}>
             {data.formato === 'en_linea' ? (
               <View style={{ marginBottom: 15, alignItems: 'center' }}>
-                <Text style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</Text>
+                <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 10, textAlign: 'center', marginBottom: 4, letterSpacing: 0.6 }}>ATENTAMENTE</FauxBoldText>
                 <Text style={{ fontFamily: FONT_BOLD, fontSize: 9, textAlign: 'center', marginBottom: 2, color: '#B00020', letterSpacing: 0.6 }}>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</Text>
                 <Text style={{ fontSize: 8, textAlign: 'center', lineHeight: 1.4, maxWidth: '85%' }}>
-                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+                  a través de un certificado reconocido legalmente y tiene, en relación a la información firmada, un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
                 </Text>
               </View>
             ) : null}
@@ -952,36 +952,36 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
                 <Text style={s.firmaLabel}>Revisó</Text>
                 <View style={{ width: "100%", alignItems: "center" }}>
                   <View style={s.firmaLine}></View>
-                  <Text style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</Text>
-                  <Text style={s.firmaDesc}>
+                  <FauxBoldText style={s.firmaNombre}>{data.firmaDictRevisoNombre || ""}</FauxBoldText>
+                  <FauxBoldText style={s.firmaDesc}>
                     {data.firmaDictRevisoNombre && data.firmaDictRevisoCargo
                       ? data.firmaDictRevisoCargo
                       : "Nombre y cargo de la Persona responsable de la revisión de la Justificación"}
-                  </Text>
+                  </FauxBoldText>
                 </View>
               </View>
               <View style={s.firmaDictBox}>
                 <Text style={s.firmaLabel}>Verificó</Text>
                 <View style={{ width: "100%", alignItems: "center" }}>
                   <View style={s.firmaLine}></View>
-                  <Text style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</Text>
-                  <Text style={s.firmaDesc}>
+                  <FauxBoldText style={s.firmaNombre}>{data.firmaDictVerificoNombre || ""}</FauxBoldText>
+                  <FauxBoldText style={s.firmaDesc}>
                     {data.firmaDictVerificoNombre && data.firmaDictVerificoCargo
                       ? data.firmaDictVerificoCargo
                       : "Nombre y cargo de la Persona Titular de la Dirección de Análisis Normativo y Funcional"}
-                  </Text>
+                  </FauxBoldText>
                 </View>
               </View>
               <View style={s.firmaDictBoxLast}>
                 <Text style={s.firmaLabel}>Emitió</Text>
                 <View style={{ width: "100%", alignItems: "center" }}>
                   <View style={s.firmaLine}></View>
-                  <Text style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</Text>
-                  <Text style={s.firmaDesc}>
+                  <FauxBoldText style={s.firmaNombre}>{data.firmaDictEmitioNombre || ""}</FauxBoldText>
+                  <FauxBoldText style={s.firmaDesc}>
                     {data.firmaDictEmitioNombre && data.firmaDictEmitioCargo
                       ? data.firmaDictEmitioCargo
                       : "Nombre y cargo de la Persona Titular de la Dirección General de Desarrollo Organizacional"}
-                  </Text>
+                  </FauxBoldText>
                 </View>
               </View>
             </View>
