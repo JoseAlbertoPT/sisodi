@@ -11,8 +11,10 @@ import path from "path";
 import fs from "fs";
 import React from "react";
 import { siglasSecretaria } from "@/lib/clave-dictamen";
-import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
+import { resolveQuetzalliSansPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
 import { FauxBoldText } from "@/components/plantillas/faux-bold-text";
+
+registerPdfNoHyphenation();
 
 // Mismo glifo de viñeta que la Carta Descriptiva (PlantillaCartaDescriptivaServicios):
 // Helvetica no tiene glifo para ❖ (U+2756), así que se registra esta fuente.

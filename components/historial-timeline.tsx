@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, ChevronUp, UserCircle, Pencil, MoveRight, X } from "lucide-react"
+import { UserCircle, Pencil, MoveRight, X } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -10,7 +9,8 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog"
-
+import { useAuth } from "@/lib/auth-context"
+const ROLES_OCULTAN_OBSERVACIONES = ["Capturista", "UEFA"]
 export interface HistorialEntryData {
   fecha: string
   usuario: string
@@ -18,11 +18,7 @@ export interface HistorialEntryData {
   estadoNuevo: string
   comentario?: string | null
 }
-
-const VISIBLE_DEFAULT = 4
-
 type Tipo = "captura" | "normal" | "observacion" | "emision" | "edicion"
-
 function fmtFecha(v: string): string {
   if (!v) return "—"
   const d = new Date(v)
@@ -34,7 +30,6 @@ function fmtFecha(v: string): string {
   const min  = String(d.getMinutes()).padStart(2, "0")
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`
 }
-
 function parseDiff(comentario: string | null | undefined): { campo: string; de: string; a: string }[] | null {
   if (!comentario) return null
   try {
@@ -52,13 +47,10 @@ function getEvento(
   const n = (nuevo    ?? "").toLowerCase().trim()
   const a = (anterior ?? "").toLowerCase().trim()
 
-
   if (n === "modificada" || parseDiff(comentario) !== null)
     return { label: "Solicitud Modificada", desc: "", tipo: "edicion" }
-
   if (n === "en captura" || n === "borrador")
     return { label: "Solicitud Creada", desc: "registrada en el sistema", tipo: "captura" }
-
   if (n === "en validacion justificaciones" || n === "enviada a validacion") {
     if (!a || a === "en captura" || a === "borrador")
       return {
@@ -80,7 +72,6 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── Validación UEFA (alias) ───────────────────────────────────────────────
   if (n === "enviada a validacion (uefa)" || n === "enviada a validacion uefa")
     return {
       label: "Enviada a Validación UEFA",
@@ -95,7 +86,6 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── Pendiente DO / DGDO ───────────────────────────────────────────────────
   if (n === "pendiente do" || n === "enviado a do (recepcion)")
     return {
       label: "Recibida en DGDO",
@@ -103,7 +93,6 @@ function getEvento(
       tipo:  "normal",
     }
 
-  // ── Revisión por Revisor ──────────────────────────────────────────────────
   if (n === "en revision revisor") {
     if (a.includes("en revision revisor"))
       return {
@@ -139,7 +128,6 @@ function getEvento(
       tipo:  "normal",
     }
 
-  // ── ────────────────────────────────────────────────
   if (n === "pendiente firma justificacion")
     return {
       label: "En espera de firma — Justificación",
@@ -147,7 +135,6 @@ function getEvento(
       tipo:  "normal",
     }
 
-  // ── Verificación DGDO ──────────────────────────────────────────────────────
   if (n === "en verificacion final")
     return {
       label: "Recibida en Verificación DGDO",
@@ -162,7 +149,6 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── Revisión por Emisor ───────────────────────────────────────────────────
   if (n === "en revision emisor" || n === "en revision do filtro 3")
     return {
       label: "Recibida en Área de Emisión",
@@ -177,7 +163,6 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── Firmas ────────────────────────────────────────────────────────────────
   if (n === "pendiente firma dictamen")
     return {
       label: "En espera de firma — Dictamen",
@@ -198,7 +183,6 @@ function getEvento(
       desc:  "pendiente de firma de verificación",
       tipo:  "normal",
     }
-  // ── Emisión final ─────────────────────────────────────────────────────────
   if (n === "emitido")
     return {
       label: "Dictamen Emitido",
@@ -206,7 +190,6 @@ function getEvento(
       tipo:  "emision",
     }
 
-  // ── Rechazado ─────────────────────────────────────────────────────────────
   if (n === "rechazado")
     return {
       label: "Solicitud Rechazada",
@@ -214,7 +197,6 @@ function getEvento(
       tipo:  "observacion",
     }
 
-  // ── En proceso DO ─────────────────────────────────────────────────────────
   if (n === "en proceso do" || n === "aprobado")
     return {
       label: "En proceso DGDO",
@@ -238,7 +220,6 @@ function renombrarEstado(s: string | null | undefined): string {
 
 const VINO  = "#7D1128"
 const OLIVO = "#556b2f"
-
 function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de: string; a: string }[]; usuario: string; fecha: string }) {
   return (
     <Dialog>
@@ -249,8 +230,6 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
         </button>
       </DialogTrigger>
       <DialogContent showCloseButton={false} className="max-w-2xl p-0 gap-0 overflow-hidden rounded-2xl border border-border/50 shadow-2xl">
-
-        {/* Header */}
         <div className="relative flex items-center gap-4 bg-white px-6 py-5 border-b border-border/60">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-core-arena-60)]/10 border border-[var(--color-core-arena-60)]/20">
             <Pencil className="h-5 w-5 text-[var(--color-core-arena-60)]" />
@@ -279,13 +258,6 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
             <span className="sr-only">Cerrar</span>
           </DialogClose>
         </div>
-
-        {/* Lista de cambios */}
-        {/* overflow-y-auto nativo (no Radix ScrollArea): min-h-0 sigue siendo
-            necesario porque, como hijo flex de DialogContent (flex flex-col),
-            sin esto el navegador ignora max-h y el contenedor crece para
-            caber todo su contenido en vez de scrollear — el sobrante queda
-            cortado por el overflow-hidden del modal, sin forma de verlo. */}
         <div className="max-h-[65vh] min-h-0 overflow-y-auto bg-muted/20">
           <div className="flex flex-col divide-y divide-border/50">
             {cambios.map((c, i) => (
@@ -296,10 +268,7 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
                   </span>
                   <span className="text-[13px] font-bold text-foreground">{c.campo}</span>
                 </div>
-
                 <div className="grid grid-cols-[1fr_40px_1fr] items-start gap-3">
-
-                  {/* Antes */}
                   <div className="rounded-xl border shadow-sm px-4 py-3" style={{ backgroundColor: `${VINO}0F`, borderColor: `${VINO}35` }}>
                     <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: VINO }}>
                       <span className="inline-block h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: VINO }} />
@@ -315,15 +284,11 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
                       : <p className="text-[12px]" style={{ color: VINO }}>—</p>
                     }
                   </div>
-
-                  {/* Flecha */}
                   <div className="flex items-center justify-center pt-6">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F0EBE2] border border-[#D8CFC0] shadow-sm">
                       <MoveRight className="h-3.5 w-3.5 text-[#9A8E7A]" />
                     </div>
                   </div>
-
-                  {/* Después */}
                   <div className="rounded-xl border shadow-sm px-4 py-3" style={{ backgroundColor: `${OLIVO}0F`, borderColor: `${OLIVO}35` }}>
                     <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: OLIVO }}>
                       <span className="inline-block h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: OLIVO }} />
@@ -351,7 +316,6 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
   )
 }
 
-/* ── Dot icon for timeline ────────────────────────────────────────────────── */
 function TimelineDot({ tipo }: { tipo: Tipo }) {
   if (tipo === "emision")
     return (
@@ -373,32 +337,45 @@ function TimelineDot({ tipo }: { tipo: Tipo }) {
         </svg>
       </div>
     )
-  /* captura / normal */
   return (
     <img src="/Iconos1/step-check.svg" alt="" className="h-7 w-7 shrink-0" />
   )
 }
 
 export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }) {
-  const [expanded, setExpanded] = useState(false)
+  const { user } = useAuth()
+  const ocultaObservaciones = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
 
   if (!entries.length)
     return <p className="text-xs text-muted-foreground">Sin historial registrado.</p>
 
-  const reversed = [...entries].reverse().filter((e, i, arr) =>
-    i === 0 || e.estadoNuevo.toLowerCase().trim() !== arr[i - 1].estadoNuevo.toLowerCase().trim()
-      || e.estadoNuevo.toLowerCase().trim() === "modificada"
-  )
+  const conEvento = [...entries]
+    .reverse()
+    .map((entry) => ({ entry, evento: getEvento(entry.estadoAnterior, entry.estadoNuevo, entry.comentario) }))
+    .filter(({ evento }) => !(ocultaObservaciones && evento.tipo === "observacion"))
 
-  const showToggle = reversed.length > VISIBLE_DEFAULT
-  const visible = showToggle && !expanded ? reversed.slice(0, VISIBLE_DEFAULT) : reversed
+  const vistos = new Set<string>()
+  const reversed = conEvento.filter(({ entry }, i, arr) => {
+    const key = entry.estadoNuevo.toLowerCase().trim()
+    if (key === "modificada") return true
+    if (ocultaObservaciones) {
+      if (vistos.has(key)) return false
+      vistos.add(key)
+      return true
+    }
+
+    return i === 0 || key !== arr[i - 1].entry.estadoNuevo.toLowerCase().trim()
+  })
+
+  if (!reversed.length)
+    return <p className="text-xs text-muted-foreground">Sin historial registrado.</p>
 
   return (
-    <div className="flex flex-col">
-      {visible.map((entry, i) => {
-        const { label, tipo } = getEvento(entry.estadoAnterior, entry.estadoNuevo, entry.comentario)
+    <div className="flex flex-col max-h-[640px] overflow-y-auto pr-1">
+      {reversed.map(({ entry, evento }, i) => {
+        const { label, tipo } = evento
         const diff   = parseDiff(entry.comentario)
-        const isLast = i === visible.length - 1 && !showToggle
+        const isLast = i === reversed.length - 1
 
         const labelColor =
           tipo === "observacion" ? "text-[var(--sem-accent-primary)]"
@@ -412,7 +389,6 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
 
         return (
           <div key={i} className="flex gap-3">
-            {/* ── Left col: dot + vertical line ── */}
             <div className="flex flex-col items-center">
               <TimelineDot tipo={tipo} />
               {!isLast && <div className="w-px flex-1 bg-[var(--sem-border-md)] mt-1 mb-1 min-h-[20px]" />}
@@ -437,19 +413,6 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
           </div>
         )
       })}
-
-      {showToggle && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-1.5 text-[11px] text-secondary hover:text-secondary/80 font-medium mt-1 ml-9 transition-colors"
-        >
-          {expanded ? (
-            <><ChevronUp className="h-3 w-3" />Mostrar menos</>
-          ) : (
-            <><ChevronDown className="h-3 w-3" />Ver {reversed.length - VISIBLE_DEFAULT} entrada{reversed.length - VISIBLE_DEFAULT !== 1 ? "s" : ""} más</>
-          )}
-        </button>
-      )}
     </div>
   )
 }

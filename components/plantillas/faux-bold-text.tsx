@@ -16,10 +16,11 @@ import React from "react";
 // wrap. No hay una combinación de estilos que funcione para textos cortos
 // Y largos a la vez, así que se descartó por completo.
 //
-// En su lugar se usa Helvetica-Bold (fuente estándar de react-pdf, siempre
-// disponible, negrita real) solo para este texto — el resto del documento
-// sigue en QuetzalliSans. Es la única opción confiable sin un archivo de
-// fuente QuetzalliSans en negritas real.
+// Antes esto se resolvía cambiando a Helvetica-Bold (negrita real, pero una
+// tipografía completamente distinta a QuetzalliSans — se notaba a simple
+// vista que era otra fuente). Se prefirió mantener QuetzalliSans en todo el
+// documento y diferenciar el texto "bold" solo con separación de letras y un
+// tamaño ligeramente mayor — resalta sin mezclar tipografías.
 export function FauxBoldText({
   style,
   children,
@@ -27,5 +28,23 @@ export function FauxBoldText({
   style?: any;
   children: React.ReactNode;
 }) {
-  return <Text style={[style, { fontFamily: "Helvetica-Bold" }]}>{children}</Text>;
+  const merged = Object.assign({}, ...(Array.isArray(style) ? style : [style ?? {}]));
+  return (
+    <Text
+      style={[
+        style,
+        {
+          letterSpacing: (merged.letterSpacing ?? 0) + 0.5,
+          ...(merged.fontSize ? { fontSize: merged.fontSize + 0.5 } : {}),
+          // Negro puro explícito: si este texto queda dentro de un
+          // contenedor con un color heredado más claro, sin esto se vería
+          // gris en vez de negro. Ningún uso actual de FauxBoldText pide un
+          // color propio (rojo, gris, etc.), así que forzarlo es seguro.
+          color: "#000",
+        },
+      ]}
+    >
+      {children}
+    </Text>
+  );
 }

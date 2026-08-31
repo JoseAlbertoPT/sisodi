@@ -3,6 +3,9 @@
 import { History, Info, AlertTriangle } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { useAuth } from "@/lib/auth-context"
+
+const ROLES_VEN_AVANCE = ["Administrador", "Capturista", "UEFA"]
 
 export interface BitacoraEntry {
   seccion: string
@@ -187,22 +190,62 @@ function avanceEtapaIndex(estado: string | null | undefined, esTD: boolean): num
   return 0 // en captura / borrador / desconocido
 }
 
-/** Interpola de rojo (0%) a verde institucional (100%) según el avance. */
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const v = parseInt(hex.slice(1), 16)
+  return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 }
+}
+
+/**
+ * Degradado en 5 tonos (rojo → naranja → amarillo → verde → verde fuerte) en
+ * vez de un lerp de 2 puntos — con solo rojo→verde institucional el cambio
+ * entre tramos era casi imperceptible porque ambos extremos son colores
+ * apagados. Con 5 paradas cada 25% el cambio de tono es obvio en cada etapa.
+ */
+const AVANCE_COLOR_STOPS = [
+  { t: 0,    color: hexToRgb("#E53935") }, // rojo
+  { t: 0.25, color: hexToRgb("#FB8C00") }, // naranja
+  { t: 0.5,  color: hexToRgb("#FDD835") }, // amarillo
+  { t: 0.75, color: hexToRgb("#7CB342") }, // verde
+  { t: 1,    color: hexToRgb("#2E7D32") }, // verde fuerte
+]
+
 function avanceColor(percent: number): string {
   const t = Math.max(0, Math.min(100, percent)) / 100
-  const desde = { r: 200, g: 45, b: 45 }   // rojo
-  const hasta = { r: 75, g: 110, b: 51 }   // verde institucional (#4b6e33)
-  const r = Math.round(desde.r + (hasta.r - desde.r) * t)
-  const g = Math.round(desde.g + (hasta.g - desde.g) * t)
-  const b = Math.round(desde.b + (hasta.b - desde.b) * t)
+  let i = 0
+  while (i < AVANCE_COLOR_STOPS.length - 2 && t > AVANCE_COLOR_STOPS[i + 1].t) i++
+  const desde = AVANCE_COLOR_STOPS[i]
+  const hasta = AVANCE_COLOR_STOPS[i + 1]
+  const local = (t - desde.t) / (hasta.t - desde.t)
+  const r = Math.round(desde.color.r + (hasta.color.r - desde.color.r) * local)
+  const g = Math.round(desde.color.g + (hasta.color.g - desde.color.g) * local)
+  const b = Math.round(desde.color.b + (hasta.color.b - desde.color.b) * local)
   return `rgb(${r}, ${g}, ${b})`
 }
 
-/** Barra "Avance hacia el dictamen", con etapas y % definidos por negocio (ver AVANCE_SERVICIOS/AVANCE_TIEMPO_DETERMINADO). */
-export function AvanceSolicitud({ estado, tipo }: { estado: string | null | undefined; tipo?: string | null }) {
+/**
+ * Barra "Avance hacia el dictamen", con etapas y % definidos por negocio (ver
+ * AVANCE_SERVICIOS/AVANCE_TIEMPO_DETERMINADO).
+ *
+ * `historial` es opcional y, cuando se pasa, la barra usa el avance MÁXIMO
+ * alcanzado en todo el historial de estados en vez del estado actual: si una
+ * solicitud llegó a "En verificación" (30%) y luego la observan y regresa a
+ * "En revisión" (20%), la barra se queda en 30% en vez de retroceder — el
+ * trabajo ya hecho para llegar a esa etapa no se "deshace" visualmente solo
+ * porque el estado actual retrocedió.
+ */
+export function AvanceSolicitud({
+  estado, tipo, historial,
+}: {
+  estado: string | null | undefined
+  tipo?: string | null
+  historial?: { estadoNuevo: string }[]
+}) {
+  const { user } = useAuth()
+  if (!ROLES_VEN_AVANCE.includes((user as any)?.rol)) return null
   const esTD = esTipoTiempoDeterminado(tipo)
   const etapas = esTD ? AVANCE_TIEMPO_DETERMINADO : AVANCE_SERVICIOS
-  const etapaIndex = avanceEtapaIndex(estado, esTD)
+  const indices = [avanceEtapaIndex(estado, esTD), ...(historial ?? []).map(h => avanceEtapaIndex(h.estadoNuevo, esTD))]
+  const etapaIndex = Math.max(...indices)
   const etapa = etapas[etapaIndex]
   const color = avanceColor(etapa.percent)
   return (
@@ -265,7 +308,7 @@ export function HistorialPanel({
         subtitle={folio ? `Folio ${folio}` : `${n} evento${n !== 1 ? "s" : ""} registrado${n !== 1 ? "s" : ""}`}
         countLabel={`${n} evento${n !== 1 ? "s" : ""}`}
       />
-      {estado != null && <AvanceSolicitud estado={estado} tipo={tipo} />}
+      {estado != null && <AvanceSolicitud estado={estado} tipo={tipo} historial={entries} />}
       <div className="bg-card px-4 py-3">
         <HistorialTimeline entries={entries} />
       </div>

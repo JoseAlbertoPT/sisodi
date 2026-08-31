@@ -10,7 +10,9 @@ import {
 import path from "path";
 import fs from "fs";
 import React from "react";
-import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
+import { resolveQuetzalliSansPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
+
+registerPdfNoHyphenation();
 
 const quetzalliPath = resolveQuetzalliSansPath();
 if (quetzalliPath) {

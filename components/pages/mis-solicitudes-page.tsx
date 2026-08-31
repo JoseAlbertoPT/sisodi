@@ -1360,7 +1360,7 @@ function DetalleView({
                     </span>
                   </div>
                 </div>
-                <AvanceSolicitud estado={sol.estado} tipo={sol.tipo} />
+                <AvanceSolicitud estado={sol.estado} tipo={sol.tipo} historial={sol.historial} />
                 <div className="bg-card px-4 py-3">
                   <HistorialTimeline entries={sol.historial} />
                 </div>
@@ -1516,7 +1516,7 @@ export function MisSolicitudesPage({ onEditSolicitud, initialTab }: { onEditSoli
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
   const TABS: UrgTab[] = [
-    "Borradores", "En aprobación", "Observadas / Devueltas",
+    "Borradores", "En aprobación", "ObservDadas / Devueltas",
     "En proceso DGDO", "Todas",
   ]
   const validInitialTab = TABS.includes(initialTab as UrgTab) ? (initialTab as UrgTab) : "Todas"

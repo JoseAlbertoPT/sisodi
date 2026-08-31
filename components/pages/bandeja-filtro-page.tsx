@@ -1156,7 +1156,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                   <span className="text-[11px] font-semibold text-white/90">{historial.length} entrada{historial.length !== 1 ? "s" : ""}</span>
                 </div>
               </div>
-              <AvanceSolicitud estado={solicitud.estado} tipo={solicitud.tipo} />
+              <AvanceSolicitud estado={solicitud.estado} tipo={solicitud.tipo} historial={historial} />
               <div className="bg-card px-5 pt-4 pb-2">
                 <HistorialTimeline entries={historial} />
               </div>

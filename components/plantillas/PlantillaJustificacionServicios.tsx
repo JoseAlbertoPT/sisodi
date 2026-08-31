@@ -12,8 +12,10 @@ import fs from "fs";
 import React from "react";
 import { toRoman } from "@/lib/roman-list";
 import { siglasSecretaria } from "@/lib/clave-dictamen";
-import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
+import { resolveQuetzalliSansPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
 import { FauxBoldText } from "@/components/plantillas/faux-bold-text";
+
+registerPdfNoHyphenation();
 
 Font.register({
   family: "NotoSymbols",

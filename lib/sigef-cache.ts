@@ -102,13 +102,20 @@ export async function warmAllKnownDependencias(): Promise<void> {
       where: { parent_id: null, sigef_id_dependencia: { not: null } },
       select: { sigef_id_dependencia: true },
     })
-    await Promise.allSettled(
-      nodos
-        .map((n) => String(n.sigef_id_dependencia))
-        .map((id) =>
-          getProyectosCached(id).catch((e) => console.error("[sigef warmup]", id, e)),
-        ),
-    )
+    const ids = nodos.map((n) => String(n.sigef_id_dependencia))
+    const resultados = await Promise.allSettled(ids.map((id) => getProyectosCached(id)))
+
+    // Una línea con stack trace por dependencia ensucia el arranque sin
+    // aportar nada — todas fallan por la misma razón (SIGeF caído o
+    // inalcanzable desde esta red). Un resumen basta; el error completo ya
+    // quedó cacheado en `fallos` para quien lo necesite al consultar.
+    const fallidas = resultados.filter((r): r is PromiseRejectedResult => r.status === "rejected")
+    if (fallidas.length > 0) {
+      const motivo = fallidas[0]?.reason instanceof Error ? fallidas[0].reason.message : String(fallidas[0]?.reason)
+      console.error(
+        `[sigef warmup] ${fallidas.length}/${ids.length} dependencias fallaron al precalentar (ej: ${motivo})`,
+      )
+    }
   } catch (e) {
     console.error("[sigef warmup] no se pudo precalentar el caché", e)
   }
