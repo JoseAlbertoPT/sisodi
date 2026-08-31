@@ -215,7 +215,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   pageBox: { flex: 1, paddingHorizontal: 4, justifyContent: "center" },
-  claveText: { fontSize: 8, textAlign: "center" },
+  claveText: { fontFamily: FONT_REGULAR, fontSize: 8, textAlign: "center" },
 
   fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10, marginRight: -63 },
   centeredTitle: { fontFamily: FONT_BOLD, fontSize: 10, textAlign: "center", marginBottom: 12 , letterSpacing: 0.6},
@@ -394,9 +394,9 @@ const s = StyleSheet.create({
     borderBottomColor: "#000",
     minHeight: 34,
   },
-  pdcFolioText: { fontSize: 8, textAlign: "left" },
+  pdcFolioText: { fontFamily: FONT_REGULAR, fontSize: 8, textAlign: "left" },
   pdcPageBox: { padding: 4, justifyContent: "center", minHeight: 16 },
-  pdcPageText: { fontSize: 8, textAlign: "left" },
+  pdcPageText: { fontFamily: FONT_REGULAR, fontSize: 8, textAlign: "left" },
 
   pdcFechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 12 },
   pdcFechaText: { fontSize: 9 },

@@ -311,7 +311,7 @@ function SubSubBullets({
     <>
       <View wrap={false} minPresenceAhead={30}>
         <FauxBoldText style={s.subSubTitle}>
-          <Text style={[s.subSubNumber, { fontFamily: "Helvetica-Bold" }]}>{number} </Text>
+          <Text style={s.subSubNumber}>{number} </Text>
           {title}
         </FauxBoldText>
         {first !== undefined && <BulletItem text={first} />}

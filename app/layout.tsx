@@ -39,6 +39,19 @@ const twogetherSans = localFont({
   display: 'swap',
 });
 
+// Misma fuente que usan los PDFs generados (react-pdf, ver lib/pdf-fonts.ts)
+// — solo existe el peso Thin. Se expone como fuente web para que el portal
+// público de firma (components/firma-publica-client.tsx) se vea consistente
+// con el documento que se está firmando, en vez de usar TwogetherSans (la
+// tipografía del resto de la app).
+const quetzalliSans = localFont({
+  src: [
+    { path: '../public/fonts/QuetzalliSans-Thin.otf', weight: '100', style: 'normal' },
+  ],
+  variable: '--font-quetzalli-sans',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'Sistema de Emisión de Dictaminaciones Técnicas (SEDIT)',
   description: 'Sistema institucional de gestion y dictaminacion tecnica funcional',
@@ -57,7 +70,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className={`light ${karolSans.variable} ${twogetherSans.variable}`} style={{ colorScheme: 'light' }} suppressHydrationWarning>
+    <html lang="es" className={`light ${karolSans.variable} ${twogetherSans.variable} ${quetzalliSans.variable}`} style={{ colorScheme: 'light' }} suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/morelosdesign/morelos-ds@main/tokens/css/all.css" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/morelosdesign/morelos-ds@main/tokens/css/typography-compound.css" />

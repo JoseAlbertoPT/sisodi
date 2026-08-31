@@ -2,7 +2,7 @@
 
 import { History, Info, AlertTriangle } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { HistorialTimeline, ROLES_OCULTAN_OBSERVACIONES, type HistorialEntryData } from "@/components/historial-timeline"
 import { useAuth } from "@/lib/auth-context"
 
 const ROLES_VEN_AVANCE = ["Administrador", "Capturista", "UEFA"]
@@ -94,9 +94,11 @@ function PanelHeader({
         <span className="text-sm font-bold text-content-high">{title}</span>
         <span className="text-[10px] text-content-low">{subtitle}</span>
       </div>
-      <div className="ml-auto flex h-7 items-center rounded-full bg-[#e4e3d6] px-3">
-        <span className="text-[11px] font-semibold text-content-medium">{countLabel}</span>
-      </div>
+      {countLabel && (
+        <div className="ml-auto flex h-7 items-center rounded-full bg-[#e4e3d6] px-3">
+          <span className="text-[11px] font-semibold text-content-medium">{countLabel}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -298,6 +300,12 @@ export function StatusTabsList({
 export function HistorialPanel({
   entries, title = "Historial de Solicitud", folio, estado, tipo,
 }: { entries: HistorialEntryData[]; title?: string; folio?: string | null; estado?: string | null; tipo?: string | null }) {
+  const { user } = useAuth()
+  // Capturista/UEFA no ven las observaciones dentro del historial (ver
+  // HistorialTimeline) — mostrarles el conteo total de eventos aquí
+  // delataría que hay más eventos de los que ven, así que para ellos se
+  // oculta el número.
+  const ocultaConteo = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
   const n = entries.length
   return (
     <div className="overflow-hidden rounded-xl border border-border shadow-md">
@@ -305,8 +313,8 @@ export function HistorialPanel({
         iconBg="bg-[#dfe6c3]"
         icon={<History className="h-5 w-5 text-[#2d331b]" />}
         title={title}
-        subtitle={folio ? `Folio ${folio}` : `${n} evento${n !== 1 ? "s" : ""} registrado${n !== 1 ? "s" : ""}`}
-        countLabel={`${n} evento${n !== 1 ? "s" : ""}`}
+        subtitle={folio ? `Folio ${folio}` : ocultaConteo ? "Historial de la solicitud" : `${n} evento${n !== 1 ? "s" : ""} registrado${n !== 1 ? "s" : ""}`}
+        countLabel={ocultaConteo ? "" : `${n} evento${n !== 1 ? "s" : ""}`}
       />
       {estado != null && <AvanceSolicitud estado={estado} tipo={tipo} historial={entries} />}
       <div className="bg-card px-4 py-3">
@@ -354,7 +362,15 @@ export function ObservacionesPanel({
   todasObservaciones: ObservacionItem[]
   single?: { motivo: string; fecha?: string; usuario?: string } | null
 }) {
-  const count = todasObservaciones.length > 0 ? todasObservaciones.length : single ? 1 : 0
+  const { user } = useAuth()
+  // Capturista/UEFA solo deben ver la observación vigente (la más reciente
+  // dentro del ciclo actual), no el historial completo de observaciones ya
+  // resueltas — `todasObservaciones` viene en orden cronológico ascendente
+  // (ver orderBy fecha:"asc" en las rutas que arman este arreglo), así que
+  // la última posición es la actual.
+  const soloActual = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
+  const observacionesVisibles = soloActual ? todasObservaciones.slice(-1) : todasObservaciones
+  const count = observacionesVisibles.length > 0 ? observacionesVisibles.length : single ? 1 : 0
   return (
     <div className="overflow-hidden rounded-xl border border-border shadow-md">
       <PanelHeader
@@ -365,9 +381,9 @@ export function ObservacionesPanel({
         countLabel={`${count} obs.`}
       />
       <div className="bg-card p-4">
-        {todasObservaciones.length > 0 ? (
+        {observacionesVisibles.length > 0 ? (
           <div className="flex flex-col gap-2">
-            {todasObservaciones.map((obs, i) => (
+            {observacionesVisibles.map((obs, i) => (
               <div key={i} className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Verificacion Final/i, "Verificación DGDO")}</span>

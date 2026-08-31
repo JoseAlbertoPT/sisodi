@@ -1,4 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
+import { readFileSync } from "fs";
+import { resolveQuetzalliSansPath } from "@/lib/pdf-fonts";
 
 // El "Pág. X de Y" del encabezado de la página principal de Justificación
 // (components/plantillas/PlantillaJustificacionServicios.tsx, s.pageBox) usa
@@ -28,7 +31,18 @@ export async function stampPaginaPrincipal(
 ): Promise<Buffer> {
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const totalPageCount = totalPageCountOverride ?? pdfDoc.getPageCount();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  // El resto del documento usa QuetzalliSans (react-pdf) — sin esto, este
+  // texto estampado con pdf-lib se ve en Helvetica, una tipografía distinta
+  // a simple vista al lado del resto del encabezado.
+  const quetzalliPath = resolveQuetzalliSansPath();
+  let font;
+  if (quetzalliPath) {
+    pdfDoc.registerFontkit(fontkit);
+    font = await pdfDoc.embedFont(readFileSync(quetzalliPath), { subset: true });
+  } else {
+    font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  }
   const fontSize = 8;
   const pages = pdfDoc.getPages();
 

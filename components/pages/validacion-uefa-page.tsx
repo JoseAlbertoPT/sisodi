@@ -261,9 +261,10 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
   const histArr = item.historial_solicitud ?? []
   const lastResubmitIdx = histArr.reduce((last: number, h: any, idx: number) => {
     const n = (h.estado_historial_solicitud_estado_nuevo_idToestado?.nombre ?? "").toLowerCase()
-    return (n.includes("en validacion justificaciones") || n.includes("enviada a validacion") || n === "en captura")
-      ? idx
-      : last
+    const esResubmit =
+      n.includes("en validacion justificaciones") || n.includes("enviada a validacion") || n === "en captura" ||
+      (h.comentario ?? "").includes("Correcciones aplicadas y reenviado")
+    return esResubmit ? idx : last
   }, -1)
   const obsMap = new Map<string, { estado: string; fecha: string; usuario: string; comentario: string }>()
   histArr.forEach((h: any, idx: number) => {
@@ -747,13 +748,12 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
           <ReadOnlyField label="Vigencia Inicio"                      value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                     value={solicitud.vigenciaFin} />
           <ReadOnlyField label="Importe Neto"   value={solicitud.importeBruto} />
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Tabulador — Nivel y Categoría">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Nivel"     value={raw?.nivel_tabulador     ?? "—"} />
-          <ReadOnlyField label="Categoría" value={raw?.categoria_tabulador ?? "—"} />
+          {(raw?.nivel_tabulador || raw?.categoria_tabulador) && (
+            <ReadOnlyField
+              label="Nivel Catálogo"
+              value={raw?.nivel_tabulador && raw?.categoria_tabulador ? `${raw.nivel_tabulador}/${raw.categoria_tabulador}` : (raw?.nivel_tabulador ?? raw?.categoria_tabulador ?? "—")}
+            />
+          )}
         </div>
       </SectionCard>
 
@@ -1139,9 +1139,8 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud
                   size="sm"
                   className="gap-1.5"
                   onClick={() => setShowEditarConfirm(true)}
-                  disabled={guardando}
-                >
-                  Editar
+                  disabled={guardando} >
+                   Editar
                 </Button>
               )}
               <Button

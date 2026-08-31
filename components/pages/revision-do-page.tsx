@@ -608,6 +608,12 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
             <ReadOnlyField label="Vigencia Inicio"                  value={sol.vigenciaInicio} />
             <ReadOnlyField label="Vigencia Término"                 value={sol.vigenciaFin} />
             <ReadOnlyField label="Importe Neto"                     value={sol.importeBruto} />
+            {(raw?.nivel_tabulador || raw?.categoria_tabulador) && (
+              <ReadOnlyField
+                label="Nivel Catálogo"
+                value={raw?.nivel_tabulador && raw?.categoria_tabulador ? `${raw.nivel_tabulador}/${raw.categoria_tabulador}` : (raw?.nivel_tabulador ?? raw?.categoria_tabulador ?? "—")}
+              />
+            )}
           </>
         ) : (
           <>
@@ -699,14 +705,6 @@ function ExpedienteFiltro1({ sol, hidePerfil }: { sol: SolicitudDetalle; hidePer
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
-      {esNombramiento && (
-        <SectionCard title="II. Tabulador — Nivel y Categoría">
-          <div className="grid gap-4 md:grid-cols-2">
-            <ReadOnlyField label="Nivel"     value={raw?.nivel_tabulador ?? "—"} />
-            <ReadOnlyField label="Categoría" value={raw?.categoria_tabulador ?? "—"} />
-          </div>
-        </SectionCard>
-      )}
       <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
         <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
           {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
@@ -749,14 +747,6 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
-      {esNombramientoTD && (
-        <SectionCard title="II. Tabulador — Nivel y Categoría">
-          <div className="grid gap-4 md:grid-cols-2">
-            <ReadOnlyField label="Nivel"     value={raw?.nivel_tabulador ?? "—"} />
-            <ReadOnlyField label="Categoría" value={raw?.categoria_tabulador ?? "—"} />
-          </div>
-        </SectionCard>
-      )}
       <SectionCard title={esNombramientoTD ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
         <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
           {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
@@ -797,14 +787,6 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
   return (
     <div className="flex flex-col gap-4">
       <SeccionDatosGenerales sol={sol} />
-      {esNombramiento && (
-        <SectionCard title="II. Tabulador — Nivel y Categoría">
-          <div className="grid gap-4 md:grid-cols-2">
-            <ReadOnlyField label="Nivel"     value={raw?.nivel_tabulador ?? "—"} />
-            <ReadOnlyField label="Categoría" value={raw?.categoria_tabulador ?? "—"} />
-          </div>
-        </SectionCard>
-      )}
       <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
         <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
           {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}

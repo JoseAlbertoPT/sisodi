@@ -53,7 +53,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { PendientesFirmaPanel } from "@/components/pendientes-firma-panel"
 import { ESTADOS_VISIBLES_EMISION } from "@/components/seguimiento-general-view"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
-import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { HistorialTimeline, ROLES_OCULTAN_OBSERVACIONES, type HistorialEntryData } from "@/components/historial-timeline"
 import { AvanceSolicitud } from "@/components/solicitud-status-tabs"
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
@@ -371,6 +371,12 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
           <ReadOnlyField label="Vigencia Inicio"                       value={formatFecha(raw?.vigencia_inicio)} />
           <ReadOnlyField label="Vigencia Término"                      value={formatFecha(raw?.vigencia_fin)} />
           <ReadOnlyField label="Importe Bruto"                         value={raw?.importe_bruto != null ? `$${Number(raw.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"} />
+          {esNombramiento && (raw?.nivel_tabulador || raw?.categoria_tabulador) && (
+            <ReadOnlyField
+              label="Nivel Catálogo"
+              value={raw?.nivel_tabulador && raw?.categoria_tabulador ? `${raw.nivel_tabulador}/${raw.categoria_tabulador}` : (raw?.nivel_tabulador ?? raw?.categoria_tabulador ?? "—")}
+            />
+          )}
         </div>
       </SectionCard>
       <SectionCard title="I.1 Objeto de la Contratación">
@@ -387,14 +393,6 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
       <SectionCard title="I.3 Responsabilidades">
         <ListaItems items={Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : []} />
       </SectionCard>
-      {esNombramiento && (raw?.nivel_tabulador || raw?.categoria_tabulador) && (
-        <SectionCard title="Tabulador — Nivel y Categoría">
-          <div className="grid gap-4 md:grid-cols-2">
-            <ReadOnlyField label="Nivel de Tabulador"  value={raw?.nivel_tabulador ?? "—"} />
-            <ReadOnlyField label="Categoría Tabulador" value={raw?.categoria_tabulador ?? "—"} />
-          </div>
-        </SectionCard>
-      )}
       {esNombramiento && marcoNormativo.length > 0 && (
         <SectionCard title="V. Marco Normativo">
           <ListaItems items={marcoNormativo} />
@@ -894,6 +892,13 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         usuario:    h.usuario?.nombre ?? "Sistema",
         comentario: h.comentario as string,
       }))
+  // Capturista/UEFA solo ven la observación vigente (la más reciente), no
+  // el historial completo de observaciones ya resueltas dentro del ciclo
+  // actual — observacionesFiltro viene en orden ascendente, así que la
+  // última posición es la actual.
+  const observacionesVisibles = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
+    ? observacionesFiltro.slice(-1)
+    : observacionesFiltro
   const denominacion = raw?.denominacion || raw?.tipo_solicitud || solicitud.denominacion || solicitud.tipo || "—"
 
   const handleDescargarDictamenPrestacion = async () => {
@@ -1033,7 +1038,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             >
               <FileSearch className="h-4 w-4" />Revisión
             </button>
-            {observacionesFiltro.length > 0 && (
+            {observacionesVisibles.length > 0 && (
               <button
                 onClick={() => setActivePanel("observaciones")}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors relative ${
@@ -1044,7 +1049,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
               >
                 <AlertTriangle className="h-4 w-4" />Observaciones
                 <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white leading-none">
-                  {observacionesFiltro.length}
+                  {observacionesVisibles.length}
                 </span>
               </button>
             )}
@@ -1060,7 +1065,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             </button>
           </div>
 
-          {activePanel === "observaciones" && observacionesFiltro.length > 0 && (
+          {activePanel === "observaciones" && observacionesVisibles.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-border shadow-md">
               <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
@@ -1069,15 +1074,15 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-white">Observaciones</span>
                   <span className="text-[10px] text-white/60">
-                    {observacionesFiltro.length} observación{observacionesFiltro.length !== 1 ? "es" : ""}
+                    {observacionesVisibles.length} observación{observacionesVisibles.length !== 1 ? "es" : ""}
                   </span>
                 </div>
                 <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                  <span className="text-[11px] font-semibold text-white/90">{observacionesFiltro.length} obs.</span>
+                  <span className="text-[11px] font-semibold text-white/90">{observacionesVisibles.length} obs.</span>
                 </div>
               </div>
               <div className="bg-card p-4 flex flex-col gap-2">
-                {observacionesFiltro.map((obs, i) => (
+                {observacionesVisibles.map((obs, i) => (
                   <div key={i} className="rounded-lg border border-[var(--color-core-mora-20)]/20 bg-[var(--color-core-mora-20)]/[0.03] p-3 flex flex-col gap-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-semibold text-[var(--color-core-mora-20)]">{obs.estado.replace(/Verificacion Final/i, "Verificación DGDO")}</span>
@@ -1152,9 +1157,11 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                     Folio {solicitud.folioRecepcion ? folioFormateado : (solicitud.folioSolicitud ?? solicitud.id)}
                   </span>
                 </div>
-                <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
-                  <span className="text-[11px] font-semibold text-white/90">{historial.length} entrada{historial.length !== 1 ? "s" : ""}</span>
-                </div>
+                {!ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol) && (
+                  <div className="ml-auto flex h-7 items-center rounded-full bg-white/15 px-3">
+                    <span className="text-[11px] font-semibold text-white/90">{historial.length} entrada{historial.length !== 1 ? "s" : ""}</span>
+                  </div>
+                )}
               </div>
               <AvanceSolicitud estado={solicitud.estado} tipo={solicitud.tipo} historial={historial} />
               <div className="bg-card px-5 pt-4 pb-2">
@@ -1242,9 +1249,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
     setActionToast(prev => ({ key: (prev?.key ?? 0) + 1, variant, title, description }))
   }
 
-  // Regla 11: en los diálogos de acción (Aprobar, Observar, Asignar Revisor…)
-  // todavía no existe folio de recepción mientras el Revisor no apruebe, así
-  // que se identifica la solicitud con el folio de justificación mientras tanto.
+
   const folioParaModal = (id: string | null): string => {
     const sol = solicitudes.find(s => s.id === id)
     if (!sol) return ""
@@ -1307,15 +1312,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       .catch(() => {})
     return () => { aborted = true }
   }, [filtro, user])
-  // pendientesFirmaCount se llena exclusivamente vía onCountChange desde
-  // PendientesFirmaPanel (línea más abajo) — antes había un segundo useEffect
-  // aquí que volvía a pedir /api/firma-efirma/progreso con un criterio más
-  // estricto ("solo si es mi turno ahora mismo", en vez de "todo lo pendiente
-  // en esta bandeja"). Los dos `setPendientesFirmaCount` competían y el que
-  // resolviera último ganaba la carrera, así que el badge de "Pendiente de
-  // firma" a veces mostraba un número menor al de filas que realmente se ven
-  // en la tabla (ej. 5 en el badge con 11 filas visibles). Se quita el
-  // duplicado para que el badge y la tabla usen siempre el mismo conteo.
+
 
   const handleAprobar = useCallback(async (id: string, revisorId?: string) => {
     setGuardando(true)
@@ -1414,11 +1411,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
     finally { setGuardando(false) }
   }, [user])
 
-  // Independiente de `activeTab` (a diferencia de `filtered`) para que
-  // PendientesFirmaPanel pueda montarse siempre y reportar un conteo
-  // actualizado incluso cuando el usuario todavía no entra a la pestaña
-  // "Pendiente de firma" — si se ligaba a `filtered`/`activeTab`, el badge se
-  // quedaba con el último valor visto (o 0) hasta que se abría esa pestaña.
+
   const autografaPendientesFirma = useMemo(
     () => filtro === 3
       ? solicitudes.filter(s => classifySolicitud(s, filtro) === "pendientes_firma" && s._raw?.modalidad_firma === "autografa")
@@ -1432,11 +1425,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       pendientes_asignacion: 0, en_validacion: 0, pendientes_firma: 0,
       todas: 0, solicitudes: 0,
     }
-    // Para filtro 3 (Emisión), la pestaña "Todas" también excluye lo clasificado
-    // como "todas" (solicitudes ya emitidas/terminales que classifySolicitud usa
-    // como cajón de sastre) — ver el mismo filtro en `filtered` más abajo. Sin
-    // este exclude aquí, el badge contaba esas solicitudes terminales aunque la
-    // tabla nunca las muestra, mostrando un número mayor al de filas visibles.
+
     c.todas = solicitudes.filter(s => {
       const tab = classifySolicitud(s, filtro)
       return tab !== "pendientes_firma" && !(filtro === 3 && tab === "todas")
@@ -1446,11 +1435,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       if (tab !== "todas") c[tab]++
     })
     if (filtro === 3) c.nuevas = solicitudes.filter(s => classifySolicitud(s, filtro) !== "todas").length
-    // pendientesFirmaCount (de PendientesFirmaPanel/api/firma-efirma/progreso) solo
-    // cubre firma electrónica. Autógrafa (filtro 3) no tiene firma_firmante y se
-    // muestra como filas extra dentro de ese mismo panel (ver autografaPendientesFirma
-    // más abajo) — hay que sumarla aquí también o el badge se queda corto frente a lo
-    // que la pestaña realmente muestra.
+
     c.pendientes_firma = pendientesFirmaCount + autografaPendientesFirma.length
     c.solicitudes = solicitudesCount
     return c
@@ -1605,11 +1590,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         </Select>
       </div>
 
-      {/* Montado siempre (no solo cuando esta pestaña está activa) para que
-          onCountChange reporte un conteo actualizado desde el primer momento
-          — si solo se montaba al entrar a la pestaña, el badge se quedaba
-          pegado en el último valor visto (o 0) hasta que el usuario ya había
-          entrado ahí, justo el momento en el que el badge deja de servir. */}
+
       <div className={`rounded-2xl bg-background border border-border shadow-sm overflow-hidden ${activeTab === "pendientes_firma" ? "" : "hidden"}`}>
         <PendientesFirmaPanel
           filtro={filtro}
@@ -1674,8 +1655,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                           <div className="flex flex-col gap-1">
                             {(() => {
                               if (sol.folioRecepcion) return <span className="font-mono">{formatearFolio(sol.folioRecepcion)}</span>
-                              // Regla 11: mientras no exista folio de recepción (el Revisor aún
-                              // no aprueba), se muestra el folio de justificación como provisional.
                               const folioJust = folioJustificacionParaMostrar(sol._raw?.folio_justificacion as string | null | undefined)
                               return folioJust
                                 ? <span className="font-mono text-muted-foreground">{folioJust}</span>
@@ -1754,10 +1733,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                                 </Button>
                               )
                             ) : filtro === 3 && tab === "pendientes_firma" ? (
-                              // Autógrafa: "Ver" y "Subir" llevan al mismo detalle — al
-                              // estar en "Pendiente Firma Dictamen" (isAprobado), la
-                              // pestaña Emisión se auto-selecciona ahí y ya muestra el
-                              // panel de Descargar/Subir (ver revision-do-page.tsx).
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon" className="h-8 w-8 -ml-3">

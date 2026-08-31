@@ -1,6 +1,7 @@
 "use client"
 
-import { UserCircle, Pencil, MoveRight, X } from "lucide-react"
+import { useState } from "react"
+import { UserCircle, Pencil, MoveRight, X, AlertTriangle } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { useAuth } from "@/lib/auth-context"
-const ROLES_OCULTAN_OBSERVACIONES = ["Capturista", "UEFA"]
+export const ROLES_OCULTAN_OBSERVACIONES = ["Capturista", "UEFA"]
 export interface HistorialEntryData {
   fecha: string
   usuario: string
@@ -316,6 +317,79 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
   )
 }
 
+/** Mismo patrón que DiffDialog (botón que abre un modal), para que se pueda leer el texto de la observación en vez de solo saber que hubo una. */
+function ObservacionDialog({ texto, usuario, fecha }: { texto: string; usuario: string; fecha: string }) {
+  // `comentario` guarda varias observaciones juntas separadas por " | "
+  // (ver `app/api/filtro/route.ts`, accion === "observar") — se listan por
+  // separado en vez de mostrarlas pegadas en un solo párrafo.
+  const items = texto.split(" | ").map((t) => t.trim()).filter(Boolean)
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-[var(--sem-accent-primary)]/30 bg-[var(--sem-accent-primary)]/[0.08] px-2.5 py-1 text-[10px] font-semibold text-[var(--sem-accent-primary)] transition-all hover:bg-[var(--sem-accent-primary)]/[0.14] hover:border-[var(--sem-accent-primary)]/50 hover:shadow-sm">
+          <AlertTriangle className="h-2.5 w-2.5" />
+          Ver observación
+        </button>
+      </DialogTrigger>
+      <DialogContent
+        showCloseButton={false}
+        onDoubleClick={() => setOpen(false)}
+        className="max-w-lg p-0 gap-0 overflow-hidden rounded-2xl border border-border/50 shadow-2xl"
+      >
+        <div className="relative flex items-start gap-4 bg-white px-6 py-5 border-b border-border/60">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--sem-accent-primary)]/10 border border-[var(--sem-accent-primary)]/20">
+            <AlertTriangle className="h-5 w-5 text-[var(--sem-accent-primary)]" />
+          </div>
+          <div className="flex flex-col gap-1 min-w-0 flex-1">
+            <DialogHeader>
+              <DialogTitle className="text-[15px] font-bold text-foreground leading-none">
+                Observación
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+              <UserCircle className="h-3.5 w-3.5 shrink-0" />
+              <span className="font-semibold text-foreground/70">{usuario}</span>
+              <span className="text-border">·</span>
+              <span>{fecha}</span>
+            </div>
+          </div>
+          {items.length > 1 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--sem-accent-primary)]/10 px-3 py-1 text-[11px] font-semibold text-[var(--sem-accent-primary)] shrink-0">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--sem-accent-primary)] text-[9px] font-black text-white">
+                {items.length}
+              </span>
+              punto{items.length !== 1 ? "s" : ""}
+            </span>
+          )}
+          <DialogClose className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-all hover:bg-muted hover:text-foreground focus:outline-none">
+            <X className="h-3.5 w-3.5" />
+            <span className="sr-only">Cerrar</span>
+          </DialogClose>
+        </div>
+        <div className="max-h-[50vh] min-h-0 overflow-y-auto px-6 py-5 bg-muted/20">
+          <div className="flex flex-col gap-3">
+            {items.map((item, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-2.5 rounded-xl border border-[var(--sem-accent-primary)]/20 bg-[var(--sem-accent-primary)]/[0.05] shadow-sm px-4 py-3"
+              >
+                {items.length > 1 && (
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--sem-accent-primary)]/15 text-[10px] font-black text-[var(--sem-accent-primary)]">
+                    {i + 1}
+                  </span>
+                )}
+                <p className="text-[13px] leading-relaxed text-foreground whitespace-pre-wrap">{item}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function TimelineDot({ tipo }: { tipo: Tipo }) {
   if (tipo === "emision")
     return (
@@ -406,6 +480,11 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
                 {diff && (
                   <div className="mt-1">
                     <DiffDialog cambios={diff} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} />
+                  </div>
+                )}
+                {!diff && tipo === "observacion" && entry.comentario && (
+                  <div className="mt-1">
+                    <ObservacionDialog texto={entry.comentario} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} />
                   </div>
                 )}
               </div>

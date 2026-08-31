@@ -276,6 +276,7 @@
   --font-display: var(--font-karol-sans), sans-serif;
   --font-sans: var(--font-twogether-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+  --font-quetzalli: var(--font-quetzalli-sans), ui-sans-serif, system-ui, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

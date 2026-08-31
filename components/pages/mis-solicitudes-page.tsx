@@ -15,10 +15,12 @@ import { FilterTabs } from "@/components/ui/filter-tabs"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageLayout } from "@/components/page-layout"
 import {
+
   Eye, Edit3, FileCheck,
   History, FileText,
   ArrowLeft, AlertTriangle, Lock, Info, Inbox,
 } from "lucide-react"
+
 import { EmptyState } from "@/components/ui/empty-state"
 import { FileTypeIcon } from "@/components/ui/file-drop-zone"
 import {
@@ -26,10 +28,12 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip"
+
 import { useToast } from "@/hooks/use-toast"
 import { generateJustificacionPDF } from "@/lib/generate-justificacion-pdf"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
 import {
+
   isPeriodoVigente,
   isRegimenTipoCompatible,
   parseDateDMY,
@@ -42,14 +46,16 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
+
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
-import { HistorialTimeline, type HistorialEntryData } from "@/components/historial-timeline"
+import { HistorialTimeline, ROLES_OCULTAN_OBSERVACIONES, type HistorialEntryData } from "@/components/historial-timeline"
 import { AvanceSolicitud } from "@/components/solicitud-status-tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useRealtime } from "@/hooks/use-realtime"
+
 type UrgTab =
   | "Borradores"
   | "En aprobación"
@@ -666,12 +672,12 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                       value={solicitud.vigenciaFin} />
           <ReadOnlyField label="Importe Bruto"                          value={solicitud.importeBruto} />
-        </div>
-      </SectionCard>
-      <SectionCard title="Tabulador — Nivel y Categoría">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Nivel"     value={solicitud.nivelTabulador     || "—"} />
-          <ReadOnlyField label="Categoría" value={solicitud.categoriaTabulador || "—"} />
+          {(solicitud.nivelTabulador || solicitud.categoriaTabulador) && (
+            <ReadOnlyField
+              label="Nivel Catálogo"
+              value={solicitud.nivelTabulador && solicitud.categoriaTabulador ? `${solicitud.nivelTabulador}/${solicitud.categoriaTabulador}` : (solicitud.nivelTabulador || solicitud.categoriaTabulador || "—")}
+            />
+          )}
         </div>
       </SectionCard>
 
@@ -784,12 +790,12 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
           <ReadOnlyField label="Importe Neto"  value={solicitud.importeBruto} />
           <ReadOnlyField label="Vigencia Inicio"                       value={solicitud.vigenciaInicio} />
           <ReadOnlyField label="Vigencia Término"                      value={solicitud.vigenciaFin} />
-        </div>
-      </SectionCard>
-      <SectionCard num="II" title="Tabulador">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Nivel de Tabulador"  value={solicitud.nivelTabulador} />
-          <ReadOnlyField label="Categoría Tabulador" value={solicitud.categoriaTabulador} />
+          {(solicitud.nivelTabulador || solicitud.categoriaTabulador) && (
+            <ReadOnlyField
+              label="Nivel Catálogo"
+              value={solicitud.nivelTabulador && solicitud.categoriaTabulador ? `${solicitud.nivelTabulador}/${solicitud.categoriaTabulador}` : (solicitud.nivelTabulador || solicitud.categoriaTabulador || "—")}
+            />
+          )}
         </div>
       </SectionCard>
       <SectionCard num="III" title="Objeto del Nombramiento">
@@ -981,6 +987,13 @@ function DetalleView({
   const [rightTab, setRightTab] = useState<"historial" | "bitacora" | "observaciones">(
     hasObs ? "observaciones" : "historial"
   )
+  // Capturista/UEFA solo ven la observación vigente (la más reciente), no
+  // el historial completo de observaciones ya resueltas dentro del ciclo
+  // actual — sol.todasObservaciones viene en orden ascendente, así que la
+  // última posición es la actual.
+  const observacionesVisibles = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
+    ? sol.todasObservaciones.slice(-1)
+    : sol.todasObservaciones
 
   const regimenLabel = formatRegimen(sol.regimen)
   const periodoOptions =
@@ -991,15 +1004,15 @@ function DetalleView({
         : NOMBRAMIENTO_TD.map((r) => r.quincena)
 
   const handleDemoAction = (label: string) =>
-    toast({ title: "Demo", description: `Acción "${label}" solo disponible en producción.` })
+  toast({ title: "Demo", description: `Acción "${label}" solo disponible en producción.` })
 
   const handleReenviarClick = async () => {
-    if (!onReenviar) return
-    setGuardandoReenvio(true)
-    try {
-      await onReenviar(sol.id)
+  if (!onReenviar) return
+  setGuardandoReenvio(true)
+  try {
+  await onReenviar(sol.id)
     } finally {
-      setGuardandoReenvio(false)
+  setGuardandoReenvio(false)
     }
   }
   const handleEnviarValidacionClick = async () => {
@@ -1067,8 +1080,8 @@ function DetalleView({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack}
-            className="gap-1.5 text-muted-foreground hover:text-card-foreground">
-            <ArrowLeft className="h-4 w-4" />Volver a bandeja
+          className="gap-1.5 text-muted-foreground hover:text-card-foreground">
+          <ArrowLeft className="h-4 w-4" />Volver a bandeja
           </Button>
           <Separator orientation="vertical" className="h-6" />
           <FoliosCell sol={sol} />
@@ -1336,7 +1349,7 @@ function DetalleView({
                   <AlertTriangle className="h-4 w-4" />Observaciones
                   {hasObs && (
                     <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--sem-accent-primary)] px-1 text-[11px] font-normal text-white">
-                      {sol.todasObservaciones.length || 1}
+                      {observacionesVisibles.length || 1}
                     </span>
                   )}
                 </TabsTrigger>
@@ -1354,11 +1367,13 @@ function DetalleView({
                       Folio {sol.folioJustificacion || sol.folio}
                     </span>
                   </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
-                    <span className="text-[11px] font-semibold text-content-medium">
-                      {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
+                  {!ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol) && (
+                    <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
+                      <span className="text-[11px] font-semibold text-content-medium">
+                        {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <AvanceSolicitud estado={sol.estado} tipo={sol.tipo} historial={sol.historial} />
                 <div className="bg-card px-4 py-3">
@@ -1419,21 +1434,21 @@ function DetalleView({
                       })()}
                     </span>
                     <span className="text-[10px] text-content-low">
-                      {sol.todasObservaciones.length > 0
-                        ? `${sol.todasObservaciones.length} observación${sol.todasObservaciones.length !== 1 ? "es" : ""}`
+                      {observacionesVisibles.length > 0
+                        ? `${observacionesVisibles.length} observación${observacionesVisibles.length !== 1 ? "es" : ""}`
                         : sol.observacionMotivo ? "1 observación" : "Sin observaciones"}
                     </span>
                   </div>
                   <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
                     <span className="text-[11px] font-semibold text-content-medium">
-                      {sol.todasObservaciones.length > 0 ? sol.todasObservaciones.length : sol.observacionMotivo ? 1 : 0} obs.
+                      {observacionesVisibles.length > 0 ? observacionesVisibles.length : sol.observacionMotivo ? 1 : 0} obs.
                     </span>
                   </div>
                 </div>
                 <div className="bg-card p-4">
-                  {sol.todasObservaciones.length > 0 ? (
+                  {observacionesVisibles.length > 0 ? (
                     <div className="flex flex-col gap-2">
-                      {sol.todasObservaciones.map((obs, i) => (
+                      {observacionesVisibles.map((obs, i) => (
                         <div key={i} className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Verificacion Final/i, "Verificación DGDO")}</span>
