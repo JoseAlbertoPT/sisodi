@@ -987,10 +987,7 @@ function DetalleView({
   const [rightTab, setRightTab] = useState<"historial" | "bitacora" | "observaciones">(
     hasObs ? "observaciones" : "historial"
   )
-  // Capturista/UEFA solo ven la observación vigente (la más reciente), no
-  // el historial completo de observaciones ya resueltas dentro del ciclo
-  // actual — sol.todasObservaciones viene en orden ascendente, así que la
-  // última posición es la actual.
+
   const observacionesVisibles = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
     ? sol.todasObservaciones.slice(-1)
     : sol.todasObservaciones
@@ -1099,14 +1096,13 @@ function DetalleView({
                   ? onEditSolicitud(solToEditPayload(sol))
                   : handleDemoAction("Continuar captura")
                 }>
-                <Edit3 className="h-4 w-4" />{n === "borrador" || n === "en captura" ? "Continuar Captura" : "Editar"}
+                {n === "borrador" || n === "en captura" ? "Continuar Captura" : (<><Edit3 className="h-4 w-4" />Editar</>)}
               </Button>
               {(n === "borrador" || n === "en captura") && (
                 <Button size="sm" variant="vino"
                   disabled={!canSend || guardandoReenvio}
                   onClick={handleEnviarValidacionClick}
                   title={!canSend ? "Periodo fuera de tiempo o régimen incompatible" : ""}>
-                  <FileCheck className="h-4 w-4" />
                   {guardandoReenvio ? "Enviando..." : "Enviar a Validación"}
                 </Button>
               )}

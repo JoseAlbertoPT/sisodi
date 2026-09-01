@@ -107,10 +107,12 @@ interface UefaSolicitud {
   reingresoCount: number
   _raw?: any
 }
+
 const INICIALES_MES_MAP: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
   "05": "MY", "06": "JN", "07": "JL", "08": "AG",
   "09": "SE", "10": "OC", "11": "NO", "12": "DI",
+
 }
 
 function formatearFolio(folio: string | null | undefined): string {

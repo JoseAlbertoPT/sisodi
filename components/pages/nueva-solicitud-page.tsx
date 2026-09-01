@@ -372,29 +372,20 @@ function todayIso(): string {
   const d = String(now.getDate()).padStart(2, "0")
   return `${y}-${m}-${d}`
 }
-// Regla de vigencia: la fecha de término no puede exceder 6 meses desde el inicio
-// ni el 31 de diciembre del año en que se realiza la solicitud, lo que ocurra primero.
-// Implementación compartida en lib/vigencia.ts (usa date-fns para evitar el bug de
-// desbordamiento de mes de Date.setMonth en fechas de fin de mes).
+
 function getVigenciaFinLimiteIso(inicioIso: string): string | undefined {
   const inicio = isoToDate(inicioIso)
   if (!inicio) return undefined
   return dateToIso(calcularVigenciaMaxima(inicio))
 }
-// Acota `value` (ISO) dentro de [min, max] cuando esos límites existen — se usa
-// para que "hoy" no quede fuera del rango del periodo elegido (ej. capturar en
-// agosto un periodo de diciembre) tanto al inicializar como al mover los
-// límites del selector de fecha.
+
 function clampIso(value: string, min?: string, max?: string): string {
   let v = value
   if (min && v < min) v = min
   if (max && v > max) v = max
   return v
 }
-// Rango del periodo (mes para honorarios, quincena para asimilados/nombramiento)
-// calculado directamente del nombre del periodo + año — no depende de que el
-// calendario de recepción tenga fechaInicio/fechaFin capturadas (no se capturan
-// desde components/pages/calendario-page.tsx, solo limiteDO/limiteDGRH).
+
 function getRangoPeriodoIso(
   regimenPeriodo: "" | "honorarios" | "asimilados" | "nombramiento",
   periodoSeleccionado: string,
@@ -433,22 +424,24 @@ function esFolioValido(folio: string): boolean {
 
 function OficioUpload({
   vigenciaInicio, onFilesChange,
-  existingFiles,
+  existingFiles, files,
 }: {
   vigenciaInicio: string
   onFilesChange?: (files: File[]) => void
   existingFiles?: { id: number; nombre_archivo: string; ruta: string }[]
+  files?: File[]
 }) {
-  const [archivos, setArchivos] = useState<File[]>([])
+  const [archivosInternos, setArchivosInternos] = useState<File[]>([])
+  const archivos = files ?? archivosInternos
   const [error, setError] = useState<string | null>(null)
   const VALID_EXTS = ["pdf"]
-  const handleFilesChange = (files: File[]) => {
-    const filtered = files.filter((f) => {
+  const handleFilesChange = (newFiles: File[]) => {
+    const filtered = newFiles.filter((f) => {
       const ext = f.name.split(".").pop()?.toLowerCase() ?? ""
       return VALID_EXTS.includes(ext)
     })
-    setError(filtered.length < files.length ? "Solo se aceptan archivos PDF." : null)
-    setArchivos(filtered)
+    setError(filtered.length < newFiles.length ? "Solo se aceptan archivos PDF." : null)
+    setArchivosInternos(filtered)
     onFilesChange?.(filtered)
   }
 
@@ -598,7 +591,6 @@ function useExcelRows(historicos: { sheets: Record<string, HistoricoRow[]> }[]):
 }
 
 const TIPO_ACTIVIDAD_LABELS: Record<string, string> = {}
-
 const ACTIVIDADES_TIPO_LABELS = [
   "Actividades Administrativas",
   "Actividades Administrativas Contables",
@@ -687,7 +679,6 @@ function extraerTiposActividad(
   tipoAdmin?: "centralizada" | "paraestatal", secretaria?: string
 ): { value: string; label: string }[] {
     return useMemo(() => {
-
     if (!regimen) return []
     const key = tipoAdmin ? `${tipoAdmin}:${regimen}` : regimen
     const fallback = FALLBACK_TIPOS_ACTIVIDAD[key] ?? FALLBACK_TIPOS_ACTIVIDAD[regimen] ?? []
@@ -747,7 +738,9 @@ function useRowPrecarga(
 
 type TipoSolicitud = "" | "prestacion" | "nombramiento"
 type Step = "tipo" | "formulario"
-
+type SubStep = "datos" | "alcance" | "perfil"
+type StepValidity = { datos: boolean; alcance: boolean; perfil: boolean }
+type StepErrors = { alcance: boolean; perfil: boolean }
 type FolioExcel = {
   id:               string
   folioJustificacion: string
@@ -798,6 +791,7 @@ function syncLength(arr: string[], count: number): string[] {
 function DynamicList({
   label, items, onChange, max = 100, readonly = false,
   minRequired, nivelTabulador, forbiddenTexts, onBlurItem, matchCountLabel = false, rangeLabel = false,
+  onDupsChange,
   }: {
   label: string
   items: string[]
@@ -810,8 +804,8 @@ function DynamicList({
   onBlurItem?: (value: string) => string
   matchCountLabel?: boolean
   rangeLabel?: boolean
+  onDupsChange?: (hasDups: boolean) => void
   }) {
-
   const minEfectivo = useMemo(() => {
     if (minRequired !== undefined) return minRequired
     if (!nivelTabulador) return 5
@@ -834,6 +828,7 @@ function DynamicList({
     })
   }, [items, forbiddenTexts])
   const hasDups = dupFlags.some(Boolean)
+  useEffect(() => { onDupsChange?.(hasDups) }, [hasDups, onDupsChange])
   const itemRefs = useRef<(HTMLTextAreaElement | null)[]>([])
   const prevLengthRef = useRef(items.length)
   const internalAddRef = useRef(false)
@@ -941,43 +936,53 @@ function DynamicList({
         </button>
       )}
       {!readonly && (
-        <p className={`text-xs font-medium flex items-center gap-1 mt-0.5 ${hasDups ? "text-destructive" : belowMin ? "text-[#936901]" : "text-muted-foreground"}`}>
-          <AlertTriangle className="h-3 w-3 shrink-0" />
+        <p className={`text-xs font-medium flex items-center gap-1 mt-0.5 ${hasDups ? "text-destructive" : belowMin ? "text-[#936901]" : "text-emerald-600"}`}>
+          {hasDups || belowMin
+            ? <AlertTriangle className="h-3 w-3 shrink-0" />
+            : <CheckCircle2 className="h-3 w-3 shrink-0" />}
           {hasDups
             ? "Elimine los textos duplicados antes de continuar."
-            : rangeLabel
-              ? `Se requieren mínimo ${minEfectivo} y máximo ${maxEfectivo} elementos. Llevas ${filledCount}.`
-              : matchCountLabel
-                ? `Se requieren el mismo número, ${minEfectivo} elementos. Llevas ${filledCount}.`
-                : `Se requieren al menos ${minEfectivo} elementos. Llevas ${filledCount}.`}
+            : belowMin
+              ? (rangeLabel
+                  ? `Se requieren mínimo ${minEfectivo} y máximo ${maxEfectivo} elementos. Llevas ${filledCount}.`
+                  : matchCountLabel
+                    ? `Se requieren el mismo número, ${minEfectivo} elementos. Llevas ${filledCount}.`
+                    : `Se requieren al menos ${minEfectivo} elementos. Llevas ${filledCount}.`)
+              : (rangeLabel
+                  ? `Cumples con el rango requerido (${minEfectivo}-${maxEfectivo}).`
+                  : `Cumples con el mínimo requerido (${minEfectivo}).`)}
         </p>
       )}
     </div>
   )
 }
 
-function StepIndicator({ step, tipo, progreso = 0 }: { step: Step; tipo: TipoSolicitud; progreso?: number }) {
+function StepIndicator({ activeIndex, progreso = 0, invalidIndexes }: { activeIndex: number; progreso?: number; invalidIndexes?: Set<number> }) {
   const steps = [
-    { key: "tipo",       label: "Tipo de Solicitud" },
-    { key: "formulario", label: tipo === "prestacion" ? "Prestación de Servicios" : "Nombramiento" },
+    { key: "tipo",     label: "Tipo de Solicitud" },
+    { key: "datos",    label: "Datos Generales" },
+    { key: "alcance",  label: "Alcance de la Contratación" },
+    { key: "perfil",   label: "Perfil" },
   ]
-  const currentIndex = steps.findIndex((s) => s.key === step)
-
+  const currentIndex = activeIndex
   return (
     <div className="flex items-start w-full">
       {steps.map((s, i) => {
-        const isDone    = i < currentIndex
-        const isActive  = i === currentIndex
+        const isInvalid = invalidIndexes?.has(i) ?? false
+        const isDone    = i < currentIndex && !isInvalid
+        const isActive  = i === currentIndex && !isInvalid
 
-
-        const circleStyle: React.CSSProperties = isDone
+        const circleStyle: React.CSSProperties = isInvalid
+          ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#DC2626', border: '2px solid #DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
+          : isDone
           ? { width: 32, height: 32, flexShrink: 0, position: 'relative', zIndex: 1 }
           : isActive
           ? { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#773357', border: '2px solid #773357', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
           : { width: 32, height: 32, borderRadius: '50%', backgroundColor: '#ffffff', border: '2px solid #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1 }
 
-
-        const labelStyle: React.CSSProperties = isActive
+        const labelStyle: React.CSSProperties = isInvalid
+          ? { fontSize: 12, fontWeight: 700, color: '#DC2626', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
+          : isActive
           ? { fontSize: 12, fontWeight: 400, color: '#374151', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : isDone
           ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
@@ -992,8 +997,8 @@ function StepIndicator({ step, tipo, progreso = 0 }: { step: Step; tipo: TipoSol
                 <div style={{ position: 'absolute', inset: 0, backgroundColor: '#D1D5DB' }} />
                 <div style={{
                   position: 'absolute', top: 0, left: 0, bottom: 0,
-                  width: `${(currentIndex >= i ? 1 : Math.min(1, Math.max(0, progreso))) * 100}%`,
-                  backgroundColor: currentIndex >= i ? '#15803d' : '#773357',
+                  width: `${(currentIndex >= i ? 1 : i === currentIndex + 1 ? (isInvalid ? 1 : Math.min(1, Math.max(0, progreso))) : 0) * 100}%`,
+                  backgroundColor: currentIndex >= i ? '#15803d' : (i === currentIndex + 1 && isInvalid) ? '#DC2626' : '#773357',
                   transition: 'width 0.25s ease',
                 }} />
               </div>
@@ -1001,7 +1006,9 @@ function StepIndicator({ step, tipo, progreso = 0 }: { step: Step; tipo: TipoSol
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               <div style={circleStyle}>
-                {isDone ? (
+                {isInvalid ? (
+                  <AlertCircle className="h-4 w-4" style={{ color: '#ffffff' }} />
+                ) : isDone ? (
                   <img src="/Iconos1/step-check.svg" width={32} height={32} alt="paso completado" />
                 ) : (
                   <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? '#ffffff' : '#9CA3AF', lineHeight: 1 }}>
@@ -1364,10 +1371,11 @@ function getNumeroUA(secretaria: string, unidad: string): string {
 
 function FormularioPrestacion({
   prefilled, lockVigenciaOnly, regimenPeriodo = "", excelRows = [], esRenovacion = false,
-  datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
+  datosRenovacion, onFormChange, onArchivoChange, archivosActuales, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
   tipoAdministracionUsuario = "centralizada",
   initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin,
   permisoActivo = false,
+  subStep, onStepValidityChange, onStepErrorChange,
 }: {
   prefilled: boolean
   lockVigenciaOnly?: boolean
@@ -1377,6 +1385,7 @@ function FormularioPrestacion({
   datosRenovacion?: FolioExcel | null
   onFormChange: (data: Partial<FormularioData>) => void
   onArchivoChange?: (files: File[]) => void
+  archivosActuales?: File[]
   secretariaFija?: string | null
   unidadFija?: string | null
   claveReportePlazas?: string | null
@@ -1386,11 +1395,11 @@ function FormularioPrestacion({
   existingAdjuntos?: { id: number; nombre_archivo: string; ruta: string }[]
   periodoFechaInicio?: string
   periodoFechaFin?: string
-  // Habilitar Captura: cuando el usuario tiene un permiso especial activo para
-  // capturar en un periodo ya vencido (ej. enero, con el calendario cerrado),
-  // la vigencia debe poder capturarse dentro de ESE periodo aunque ya haya
-  // pasado — no tiene sentido forzar "hoy" como mínimo en ese caso.
+
   permisoActivo?: boolean
+  subStep?: SubStep
+  onStepValidityChange?: (v: StepValidity) => void
+  onStepErrorChange?: (v: StepErrors) => void
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState<"" | "objeto" | "actividades">("")
@@ -1448,11 +1457,7 @@ function FormularioPrestacion({
   const [numeroPrestadores, setNumeroPrestadores] = useState(
     datosRenovacion?.numPrestadores ?? initialData?.numeroPrestadores ?? (prefilled ? "3" : "")
   )
-  // "Hoy" puede caer fuera del periodo elegido — ya sea porque hay permiso de
-  // Habilitar Captura sobre un periodo vencido, o porque se eligió un periodo
-  // futuro (ej. capturar diciembre estando en agosto). En ambos casos el valor
-  // inicial debe acotarse al periodo, no quedarse en hoy, o el calendario abre
-  // mostrando un mes fuera de rango o la validación de envío queda bloqueada.
+
   const [vigenciaInicio, setVigenciaInicio] = useState(
     initialData?.vigenciaInicio ?? (permisoActivo
       ? (periodoFechaInicio ?? "")
@@ -1501,6 +1506,17 @@ function FormularioPrestacion({
       ? parseImporteBruto(datosRenovacion.importeBruto)
       : initialData?.importeBruto ?? (prefilled ? "45,000.00" : "")
   )
+
+  const { rangos: rangosTabuladorLimite } = useTabulador()
+  const rangosActivosLimite = useMemo(
+    () => rangosTabuladorLimite.filter((r) => secretariaAplica(r.secretarias, secretariaConfirmada || secretariaInput)),
+    [rangosTabuladorLimite, secretariaConfirmada, secretariaInput]
+  )
+  const limiteImporteBruto = useMemo(
+    () => rangosActivosLimite.length > 0 ? Math.max(...rangosActivosLimite.map((r) => r.max)) : null,
+    [rangosActivosLimite]
+  )
+  const excedeLimiteTabulador = limiteImporteBruto !== null && parseMoney(importeBruto) > limiteImporteBruto
   const [tipoImporte, setTipoImporte] = useState(initialData?.tipoImporte || "Mensual")
   const [actividades, setActividades] = useState<string[]>(
     datosRenovacion?.actividades
@@ -1598,13 +1614,24 @@ function FormularioPrestacion({
     const niv = nivelTabulador.trim().toUpperCase()
     const min = (niv === "105" || niv === "504") ? 7 : 5
     return {
-      I:   !!(urgSeleccionada && programaSeleccionado && regimenEfectivo && tipoActividadSeleccionado && numeroPrestadores && vigenciaInicio && vigenciaFin && importeBruto && nivelTabulador && categoriaTabulador),
+      I:   !!(urgSeleccionada && programaSeleccionado && regimenEfectivo && tipoActividadSeleccionado && numeroPrestadores && vigenciaInicio && vigenciaFin && importeBruto && nivelTabulador && categoriaTabulador) && !excedeLimiteTabulador,
       II:  !!(objeto?.trim()),
       III: actividades.filter(a => a.trim()).length >= min,
       IV:  responsabilidades.filter(r => r.trim()).length >= min,
       V:   escolaridad.some(e => e.trim()) && compAdm.some(c => c.trim()) && compTec.some(c => c.trim()) && compSoc.some(c => c.trim()) && valores.some(v => v.trim()) && areasExp.some(a => a.trim()),
     }
-  }, [urgSeleccionada, programaSeleccionado, regimenEfectivo, tipoActividadSeleccionado, numeroPrestadores, vigenciaInicio, vigenciaFin, importeBruto, nivelTabulador, categoriaTabulador, objeto, actividades, responsabilidades, escolaridad, compAdm, compTec, compSoc, valores, areasExp])
+  }, [urgSeleccionada, programaSeleccionado, regimenEfectivo, tipoActividadSeleccionado, numeroPrestadores, vigenciaInicio, vigenciaFin, importeBruto, nivelTabulador, categoriaTabulador, objeto, actividades, responsabilidades, escolaridad, compAdm, compTec, compSoc, valores, areasExp, excedeLimiteTabulador])
+
+  useEffect(() => {
+    onStepValidityChange?.({ datos: seccion.I, alcance: seccion.II && seccion.III && seccion.IV, perfil: seccion.V })
+  }, [seccion, onStepValidityChange])
+  const [actividadesDup, setActividadesDup] = useState(false)
+  const [responsabilidadesDup, setResponsabilidadesDup] = useState(false)
+  const [perfilDups, setPerfilDups] = useState<Record<string, boolean>>({})
+  const perfilHasDups = Object.values(perfilDups).some(Boolean)
+  useEffect(() => {
+    onStepErrorChange?.({ alcance: actividadesDup || responsabilidadesDup, perfil: perfilHasDups })
+  }, [actividadesDup, responsabilidadesDup, perfilHasDups, onStepErrorChange])
   const handleSecretariaConfirm = (valor: string) => {
     if (bloqueadoPorRenovacion) return
     setSecretariaInput(valor)
@@ -1666,10 +1693,7 @@ function FormularioPrestacion({
   const handleProgramaChange = (val: string) => {
     if (bloqueadoPorRenovacion) return
     setProgramaSeleccionado(val)
-    // No se borra tipoActividadSeleccionado: aunque las opciones de Tipo de
-    // Actividad se filtran por programa, `tiposActividad` (más abajo) ya
-    // conserva el valor guardado como opción extra aunque no esté en la
-    // lista recalculada — así solo cambia lo que el usuario tocó.
+
   }
   const handleRegimenChange = (val: string) => {
     if (bloqueadoPorRenovacion) return
@@ -1701,6 +1725,7 @@ function FormularioPrestacion({
           </div>
         </div>
       )}
+      {(!subStep || subStep === "datos") && (
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -1944,10 +1969,16 @@ function FormularioPrestacion({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
+                  className={`pl-7 ${excedeLimiteTabulador ? "border-destructive" : ""} ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
+              {excedeLimiteTabulador && limiteImporteBruto !== null && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  Superaste el límite del tabulador (máx. {formatMXN(limiteImporteBruto)}).
+                </p>
+              )}
             </div>
 
             <TabuladorNiveles
@@ -1971,18 +2002,9 @@ function FormularioPrestacion({
                 )}
               </Label>
               {(() => {
-                // Con permiso de Habilitar Captura activo, no se fuerza "hoy" como
-                // mínimo: se permite capturar dentro del periodo vencido autorizado.
-                // Sin permiso, el mínimo es "hoy" salvo que el periodo elegido sea
-                // futuro (ej. diciembre elegido en agosto), en cuyo caso el mínimo
-                // pasa a ser el inicio de ese periodo — nunca se sale del periodo
-                // (mes completo si es honorarios, quincena completa si es
-                // asimilados/nombramiento) por ninguno de los dos extremos.
+
                 const vigMin       = permisoActivo ? (periodoFechaInicio || undefined) : clampIso(todayIso(), periodoFechaInicio, periodoFechaFin)
                 const vigMaxInicio = periodoFechaFin || undefined
-                // El límite máximo de término es solo la regla de 6 meses / 31-dic
-                // (lib/vigencia.ts), igual que en catalogo-justificaciones-page.tsx.
-                // El periodo de recepción (calendario) no debe acotar la vigencia.
                 const vigMax = getVigenciaFinLimiteIso(vigenciaInicio)
                 const inicio31Dic = !!vigenciaInicio && esInicioSinRangoValido(isoToDate(vigenciaInicio)!)
                 const inicioError = !!vigenciaInicio && ((!!vigMin && vigenciaInicio < vigMin) || (!!vigMaxInicio && vigenciaInicio > vigMaxInicio) || inicio31Dic)
@@ -2030,12 +2052,15 @@ function FormularioPrestacion({
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal y Documentación de Soporte <span className="text-destructive"></span></Label>
-              <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} />
+              <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} files={archivosActuales} />
             </div>
           </div>
         </CardContent>
       </Card>
+      )}
 
+      {(!subStep || subStep === "alcance") && (
+      <>
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2094,6 +2119,7 @@ function FormularioPrestacion({
             nivelTabulador={nivelTabulador}
             max={7}
             forbiddenTexts={forbiddenTextsPS.actividades}
+            onDupsChange={setActividadesDup}
           />
         </CardContent>
       </Card>
@@ -2117,6 +2143,7 @@ function FormularioPrestacion({
             matchCountLabel
             max={7}
             forbiddenTexts={forbiddenTextsPS.responsabilidades}
+            onDupsChange={setResponsabilidadesDup}
           />
 
           <div className="flex flex-col items-start gap-1.5">
@@ -2126,6 +2153,10 @@ function FormularioPrestacion({
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
+
+      {(!subStep || subStep === "perfil") && (
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2180,23 +2211,29 @@ function FormularioPrestacion({
                 rangeLabel
                 max={5}
                 forbiddenTexts={forbiddenTextsPS[fKey]}
+                onDupsChange={(hasDups) => setPerfilDups((prev) => (prev[fKey] === hasDups ? prev : { ...prev, [fKey]: hasDups }))}
               />
             </div>
           ))}
         </CardContent>
       </Card>
+      )}
     </div>
   )
 }
 function FormularioNombramiento({
-  prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
+  prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, archivosActuales, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
   tipoAdministracionUsuario = "centralizada", initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin, regimenPeriodo = "",
   permisoActivo = false,
+  subStep, onStepValidityChange, onStepErrorChange,
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
   datosRenovacion?: FolioExcel | null
   onFormChange: (data: Partial<FormularioData>) => void
   onArchivoChange?: (files: File[]) => void
+  // Archivos ya seleccionados en esta sesión (viven en el componente padre que no
+  // se desmonta) — evita que se "pierdan" visualmente al navegar entre sub-pasos.
+  archivosActuales?: File[]
   secretariaFija?: string | null
   unidadFija?: string | null
   claveReportePlazas?: string | null
@@ -2209,6 +2246,10 @@ function FormularioNombramiento({
   regimenPeriodo?: string
   // Habilitar Captura: ver comentario en FormularioPrestacion.
   permisoActivo?: boolean
+  // Sin valor: se muestran todas las secciones en una sola página (modo edición/corrección).
+  subStep?: SubStep
+  onStepValidityChange?: (v: StepValidity) => void
+  onStepErrorChange?: (v: StepErrors) => void
 }) {
   const bloqueadoPorRenovacion = esRenovacion
   const [showFormulaModal, setShowFormulaModal] = useState<"" | "objeto" | "actividades">("")
@@ -2247,6 +2288,17 @@ function FormularioNombramiento({
   }, [])
   const [secretariaInput,      setSecretariaInput]      = useState(datosRenovacion?.secretaria ?? secretariaFija ?? initialData?.secretaria ?? (prefilled ? "Secretaria de Administracion" : ""))
   const [secretariaConfirmada, setSecretariaConfirmada] = useState(datosRenovacion?.secretaria ?? secretariaFija ?? initialData?.secretaria ?? (prefilled ? "Secretaria de Administracion" : ""))
+  // Ver comentario equivalente en FormularioPrestacion.
+  const { rangos: rangosTabuladorLimite } = useTabulador()
+  const rangosActivosLimite = useMemo(
+    () => rangosTabuladorLimite.filter((r) => secretariaAplica(r.secretarias, secretariaConfirmada || secretariaInput)),
+    [rangosTabuladorLimite, secretariaConfirmada, secretariaInput]
+  )
+  const limiteImporteBruto = useMemo(
+    () => rangosActivosLimite.length > 0 ? Math.max(...rangosActivosLimite.map((r) => r.max)) : null,
+    [rangosActivosLimite]
+  )
+  const excedeLimiteTabulador = limiteImporteBruto !== null && parseMoney(importeNeto) > limiteImporteBruto
   const [showSugerencias, setShowSugerencias] = useState(false)
   const [unidadAdscripcion, setUnidadAdscripcion] = useState(
     datosRenovacion?.unidadAdscripcion ?? initialData?.unidadAdministrativa ?? unidadFija ?? ""
@@ -2442,13 +2494,24 @@ function FormularioNombramiento({
     const niv = nivelTabulador.trim().toUpperCase()
     const min = (niv === "105" || niv === "504") ? 7 : 5
     return {
-      I:    !!(urgSeleccionada && programaInput && tipoActividadSeleccionado && numeroPrestadores && vigenciaInicio && vigenciaFin && importeNeto && nivelTabulador && categoriaTabulador && denominacion && puestoJefeInmediato),
+      I:    !!(urgSeleccionada && programaInput && tipoActividadSeleccionado && numeroPrestadores && vigenciaInicio && vigenciaFin && importeNeto && nivelTabulador && categoriaTabulador && denominacion && puestoJefeInmediato) && !excedeLimiteTabulador,
       II:   !!(objetoNombramiento?.trim()),
       III:  funciones.filter(a => a.trim()).length >= min,
       IV:   responsabilidades.filter(r => r.trim()).length >= min,
       VIII: escolaridad.some(e => e.trim()) && compAdm.some(c => c.trim()) && compTec.some(c => c.trim()) && compSoc.some(c => c.trim()) && valores.some(v => v.trim()) && areasExp.some(a => a.trim()),
     }
-  }, [urgSeleccionada, programaInput, tipoActividadSeleccionado, numeroPrestadores, vigenciaInicio, vigenciaFin, importeNeto, nivelTabulador, categoriaTabulador, denominacion, puestoJefeInmediato, objetoNombramiento, funciones, responsabilidades, escolaridad, compAdm, compTec, compSoc, valores, areasExp])
+  }, [urgSeleccionada, programaInput, tipoActividadSeleccionado, numeroPrestadores, vigenciaInicio, vigenciaFin, importeNeto, nivelTabulador, categoriaTabulador, denominacion, puestoJefeInmediato, objetoNombramiento, funciones, responsabilidades, escolaridad, compAdm, compTec, compSoc, valores, areasExp, excedeLimiteTabulador])
+
+  useEffect(() => {
+    onStepValidityChange?.({ datos: seccionNom.I, alcance: seccionNom.II && seccionNom.III && seccionNom.IV, perfil: seccionNom.VIII })
+  }, [seccionNom, onStepValidityChange])
+  const [actividadesDup, setActividadesDup] = useState(false)
+  const [responsabilidadesDup, setResponsabilidadesDup] = useState(false)
+  const [perfilDups, setPerfilDups] = useState<Record<string, boolean>>({})
+  const perfilHasDups = Object.values(perfilDups).some(Boolean)
+  useEffect(() => {
+    onStepErrorChange?.({ alcance: actividadesDup || responsabilidadesDup, perfil: perfilHasDups })
+  }, [actividadesDup, responsabilidadesDup, perfilHasDups, onStepErrorChange])
 
   return (
     <div className="flex flex-col gap-3">
@@ -2483,6 +2546,7 @@ function FormularioNombramiento({
         </div>
       )}
 
+      {(!subStep || subStep === "datos") && (
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -2739,10 +2803,16 @@ function FormularioNombramiento({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`pl-7 ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
+                  className={`pl-7 ${excedeLimiteTabulador ? "border-destructive" : ""} ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
+              {excedeLimiteTabulador && limiteImporteBruto !== null && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  Superaste el límite del tabulador (máx. {formatMXN(limiteImporteBruto)}).
+                </p>
+              )}
             </div>
 
             <TabuladorNiveles
@@ -2817,11 +2887,15 @@ function FormularioNombramiento({
 
             <div className="flex flex-col gap-2 md:col-span-2">
               <Label className="text-sm font-medium">Adjuntar Oficio de Suficiencia Presupuestal y Documentación de Soporte <span className="text-destructive">*</span></Label>
-              <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} />
+              <OficioUpload vigenciaInicio={vigenciaInicio} onFilesChange={onArchivoChange} existingFiles={existingAdjuntos} files={archivosActuales} />
             </div>
           </div>
         </CardContent>
       </Card>
+      )}
+
+      {(!subStep || subStep === "alcance") && (
+      <>
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="text-sm font-semibold text-card-foreground flex items-center gap-1.5">
@@ -2880,6 +2954,7 @@ function FormularioNombramiento({
             nivelTabulador={nivelTabulador}
             max={7}
             forbiddenTexts={forbiddenTextsNom.funciones}
+            onDupsChange={setActividadesDup}
           />
         </CardContent>
       </Card>
@@ -2902,6 +2977,7 @@ function FormularioNombramiento({
             matchCountLabel
             max={7}
             forbiddenTexts={forbiddenTextsNom.responsabilidades}
+            onDupsChange={setResponsabilidadesDup}
           />
           <div className="flex flex-col items-start gap-1.5">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#4b5563]">
@@ -3080,7 +3156,10 @@ function FormularioNombramiento({
           </RadioGroup>
         </CardContent>
       </Card>
+      </>
+      )}
 
+      {(!subStep || subStep === "perfil") && (
       <Card className="shadow-sm border-border">
         <CardHeader className="px-4 pt-3 pb-1">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
@@ -3134,11 +3213,13 @@ function FormularioNombramiento({
                 rangeLabel
                 max={5}
                 forbiddenTexts={forbiddenTextsNom[fKey]}
+                onDupsChange={(hasDups) => setPerfilDups((prev) => (prev[fKey] === hasDups ? prev : { ...prev, [fKey]: hasDups }))}
               />
             </div>
           ))}
         </CardContent>
       </Card>
+      )}
     </div>
   )
 }
@@ -3585,6 +3666,23 @@ export type EditSolicitudPayload = {
 
 export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoToBandeja }: { editSolicitud?: EditSolicitudPayload; onAfterSave?: () => void; onCancel?: () => void; onGoToBandeja?: () => void }) {
   const [step,                setStep]                = useState<Step>(editSolicitud ? "formulario" : "tipo")
+  const isEditMode = !!editSolicitud?.id
+  // Toda edición (Continuar Captura, corrección de observaciones, etc.) se ve
+  // y navega igual que "Nueva Solicitud": wizard de 4 pasos, arrancando en
+  // "Datos Generales" ya que el régimen/periodo quedaron fijados desde antes.
+  const usarWizard = true
+  // "Continuar Captura" retoma un Borrador/En Captura propio — ese es el
+  // único caso donde el botón final debe ser "Guardar Borrador"/"Enviar a
+  // Validación". Una corrección real (solicitud ya en el flujo de revisión:
+  // observada por UEFA/Revisor/DO/Verificación, etc.) debe guardar con
+  // "Guardar Cambios" (handleGuardarBorrador), que ya sabe reenviarla al
+  // estado correcto — NUNCA con "Enviar a Validación", que la regresaría
+  // de vuelta hasta "En Validacion Justificaciones" sin importar en qué
+  // etapa del flujo estuviera.
+  const esContinuarCaptura = isEditMode && ["borrador", "en captura"].includes((editSolicitud?.estado ?? "").toLowerCase())
+  const [subStep,             setSubStep]             = useState<SubStep>("datos")
+  const [stepValidity,        setStepValidity]        = useState<StepValidity>({ datos: false, alcance: false, perfil: false })
+  const [stepErrors,          setStepErrors]          = useState<StepErrors>({ alcance: false, perfil: false })
   const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")
   const [esRenovacion,        setEsRenovacion]        = useState<string>("")
   const [folioSeleccionado,   setFolioSeleccionado]   = useState<string>("")
@@ -3603,6 +3701,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
   const [folioBorradorGuardado, setFolioBorradorGuardado] = useState<string>("")
   const [formData, setFormData] = useState<Partial<FormularioData>>(editSolicitud?.formData ?? {})
   const [archivosAdjuntos, setArchivosAdjuntos] = useState<File[]>([])
+  const tieneOficio = archivosAdjuntos.length > 0 || (editSolicitud?.adjuntos?.length ?? 0) > 0
   const [excelUploading, setExcelUploading] = useState(false)
   const [excelError,     setExcelError]     = useState<string | null>(null)
   const excelInputRef = useRef<HTMLInputElement>(null)
@@ -3896,6 +3995,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       setPrefilled(false)
       setLockVigenciaOnly(false)
       setStep("formulario")
+      setSubStep("datos")
     }
   }
 
@@ -3911,11 +4011,20 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       setLockVigenciaOnly(false)
     }
     setStep("formulario")
+    setSubStep("datos")
   }
   const handleBack = useCallback(() => {
-    if (step === "formulario" && editSolicitud) { onCancel?.(); return }
-    if (step === "formulario") setStep("tipo")
-  }, [step, editSolicitud, onCancel])
+    if (step === "formulario" && !usarWizard) { onCancel?.(); return }
+    if (step === "formulario") {
+      if (subStep === "perfil") { setSubStep("alcance"); return }
+      if (subStep === "alcance") { setSubStep("datos"); return }
+      // subStep === "datos": si es "Continuar Captura" no hay paso "Tipo de
+      // Solicitud" al que volver (el régimen/periodo ya quedó fijo), se sale.
+      if (isEditMode) { onCancel?.(); return }
+      setStep("tipo")
+      return
+    }
+  }, [step, onCancel, isEditMode, subStep, usarWizard])
 
   const folioSeleccionadoData = folioSeleccionado
     ? foliosReales.find((f) => f.id === folioSeleccionado) : null
@@ -3927,7 +4036,6 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         const effectiveFormData = editSolicitud?.formData
           ? { ...editSolicitud.formData, ...formData }
           : formData
-        const tieneOficio = archivosAdjuntos.length > 0 || (editSolicitud?.adjuntos?.length ?? 0) > 0
         const faltantes = validarCamposCompletos(effectiveFormData, tipo, tieneOficio)
         if (faltantes.length > 0) {
           setErrorBorrador(`Campos obligatorios incompletos: ${faltantes.join(", ")}`)
@@ -4060,9 +4168,19 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
     setPrefilled(false); setLockVigenciaOnly(false); setDatosRenovacion(null)
     setRegimenPeriodo(""); setPeriodoSeleccionado("")
     setErrorEnvio(null); setErrorBorrador(null); setFormData({})
+    setSubStep("datos")
   }, [])
 
-  const isEditMode = !!editSolicitud?.id
+  // Un paso con error real (ej. duplicados) se sigue marcando en rojo aunque
+  // ya se haya avanzado más allá de él — no solo mientras está activo.
+  const invalidStepIndexes = useMemo(() => {
+    const s = new Set<number>()
+    if (step === "tipo" && periodoVencido) s.add(0)
+    if (stepErrors.alcance) s.add(2)
+    if (stepErrors.perfil) s.add(3)
+    return s
+  }, [step, periodoVencido, stepErrors])
+
   return (
     <div className="ns-select">
     <PageLayout
@@ -4100,10 +4218,14 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         primaryAction={{ label: "Volver a la solicitud", onClick: () => setErrorEnvio(null) }}
         onClose={() => setErrorEnvio(null)}
       />
-      {!isEditMode && (
+      {usarWizard && (
         <div className="py-2 -mx-4 px-4 -mt-3 mb-1">
           <div className="max-w-4xl mx-auto w-full flex justify-center">
-            <StepIndicator step={step} tipo={tipo} progreso={regimenPeriodo ? (periodoSeleccionado ? 1 : 0.5) : 0} />
+            <StepIndicator
+              activeIndex={step === "tipo" ? 0 : subStep === "datos" ? 1 : subStep === "alcance" ? 2 : 3}
+              progreso={step === "tipo" ? (regimenPeriodo ? (periodoSeleccionado ? 1 : 0.5) : 0) : 0}
+              invalidIndexes={invalidStepIndexes}
+            />
           </div>
         </div>
       )}
@@ -4474,7 +4596,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
 
    {step === "formulario" && (
      <>
-       {isEditMode ? null : (
+       {!usarWizard ? null : (
          <div className="flex flex-col gap-1.5">
            <div>
              <Button variant="default" size="sm" onClick={handleBack} className="gap-1.5">
@@ -4499,6 +4621,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               datosRenovacion={datosRenovacion}
               onFormChange={handleFormChange}
               onArchivoChange={setArchivosAdjuntos}
+              archivosActuales={archivosAdjuntos}
               secretariaFija={userSecretariaOriginal}
               unidadFija={userUAOriginal}
               claveReportePlazas={userClaveReporte}
@@ -4509,6 +4632,9 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               periodoFechaInicio={periodoRango?.inicio}
               periodoFechaFin={periodoRango?.fin}
               permisoActivo={!!permisoActivo}
+              subStep={usarWizard ? subStep : undefined}
+              onStepValidityChange={usarWizard ? setStepValidity : undefined}
+              onStepErrorChange={usarWizard ? setStepErrors : undefined}
             />
           ) : (
             <FormularioNombramiento
@@ -4518,6 +4644,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               datosRenovacion={datosRenovacion}
               onFormChange={handleFormChange}
               onArchivoChange={setArchivosAdjuntos}
+              archivosActuales={archivosAdjuntos}
               secretariaFija={userSecretariaOriginal}
               unidadFija={userUAOriginal}
               claveReportePlazas={userClaveReporte}
@@ -4529,6 +4656,9 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               periodoFechaFin={periodoRango?.fin}
               regimenPeriodo={regimenPeriodo}
               permisoActivo={!!permisoActivo}
+              subStep={usarWizard ? subStep : undefined}
+              onStepValidityChange={usarWizard ? setStepValidity : undefined}
+              onStepErrorChange={usarWizard ? setStepErrors : undefined}
             />
           )}
 
@@ -4553,10 +4683,28 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             const effectiveFormDataForValidation = editSolicitud?.formData
               ? { ...editSolicitud.formData, ...formData }
               : formData
-            const tieneOficio = archivosAdjuntos.length > 0 || (editSolicitud?.adjuntos?.length ?? 0) > 0
             const camposFaltantes = esRenovacion !== "si" ? validarCamposCompletos(effectiveFormDataForValidation, tipo, tieneOficio) : []
             const camposOk = camposFaltantes.length === 0
-            const canSend = (periodoStillValid || hasPermiso || isEditingBorrador) && !enviando && !guardandoBorrador && vigenciaOk && camposOk
+            const hasDupErrors = stepErrors.alcance || stepErrors.perfil
+            const canSend = (periodoStillValid || hasPermiso || isEditingBorrador) && !enviando && !guardandoBorrador && vigenciaOk && camposOk && !hasDupErrors
+
+            if (usarWizard && subStep !== "perfil") {
+              const puedeContinuar = subStep === "datos"
+                ? stepValidity.datos && tieneOficio
+                : stepValidity.alcance
+              return (
+                <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+                  <Button variant="default" onClick={handleBack}>
+                    <ArrowLeft className="mr-1.5 h-4 w-4" />Anterior
+                  </Button>
+                  <Button className="min-w-[160px]" variant="primary"
+                    disabled={!puedeContinuar}
+                    onClick={() => setSubStep(subStep === "datos" ? "alcance" : "perfil")}>
+                    Continuar<ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Button>
+                </div>
+              )
+            }
 
             return (
               <div className="flex flex-col gap-3">
@@ -4587,12 +4735,20 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     </span>
                   </div>
                 )}
+                {hasDupErrors && !enviando && !guardandoBorrador && (
+                  <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-l-[#DC2626] bg-[#FFF5F5] px-4 py-3">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-[#DC2626] mt-0.5" />
+                    <span className="text-sm text-[#374151]">
+                      Hay textos duplicados sin corregir en {stepErrors.alcance && stepErrors.perfil ? "Alcance de la Contratación y Perfil" : stepErrors.alcance ? "Alcance de la Contratación" : "Perfil"}. Corrígelos antes de enviar.
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
                   <Button variant="default" onClick={handleBack} disabled={enviando || guardandoBorrador}>
                     Anterior
                   </Button>
                   <div className="flex items-center gap-3">
-                    {isEditingBorrador ? (
+                    {isEditMode && !esContinuarCaptura ? (
                       <Button className="min-w-[160px]" variant="primary"
                         disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}>
                         {guardandoBorrador
