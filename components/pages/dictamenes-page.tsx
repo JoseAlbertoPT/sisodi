@@ -585,7 +585,7 @@ export function DictamenesPage() {
 
                       <td className="px-4 py-3 text-muted-foreground text-xs">
                         {d.fechaEmision
-                          ? (() => { const [y,m,dd] = d.fechaEmision!.split("-").map(Number); return new Date(y,m-1,dd).toLocaleDateString("es-MX") })()
+                          ? (() => { const [y,m,dd] = d.fechaEmision!.slice(0, 10).split("-").map(Number); return new Date(y,m-1,dd).toLocaleDateString("es-MX") })()
                           : "—"}
                       </td>
 

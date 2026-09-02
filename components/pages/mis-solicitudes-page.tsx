@@ -12,13 +12,13 @@ import { SearchInput, SEARCH_INPUT_MAX_W_SM } from "@/components/ui/search-input
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { Separator } from "@/components/ui/separator"
 import { FilterTabs } from "@/components/ui/filter-tabs"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageLayout } from "@/components/page-layout"
 import {
 
   Eye, Edit3, FileCheck,
-  History, FileText,
-  ArrowLeft, AlertTriangle, Lock, Info, Inbox,
+  FileText,
+  ArrowLeft, AlertTriangle, Lock, Inbox,
+  PanelRightOpen, PanelRightClose,
 } from "lucide-react"
 
 import { EmptyState } from "@/components/ui/empty-state"
@@ -211,6 +211,11 @@ function FoliosCell({ sol }: { sol: UrgSolicitud }) {
           {value}
         </span>
       ))}
+      {sol.fecha && (
+        <span className="text-[10px] text-muted-foreground/70">
+          {sol.fecha}
+        </span>
+      )}
     </div>
   )
 }
@@ -657,30 +662,29 @@ function ParsedObservacion({ comentario, borderColor = "orange" }: { comentario:
   )
 }
 
-function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
+function ExpedientePrestacion({ solicitud, wide = true }: { solicitud: UrgSolicitud; wide?: boolean }) {
   return (
     <div className="flex flex-col gap-4">
       <SectionCard num="I" title="Datos Generales">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Secretaría / Dependencia / Organismo"   value={solicitud.secretaria} />
-          <ReadOnlyField label="Unidad Administrativa de Adscripción"   value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
-          <ReadOnlyField label="Unidad Responsable del Gasto"           value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
-          <ReadOnlyField label="Número de Prestadores de Servicios"     value={solicitud.numeroPrestadores} />
-          <ReadOnlyField label="Programa o Proyecto"                    value={applyTextRules(solicitud.programaProyecto)} />
-          <ReadOnlyField label="Tipo de Actividad"                      value={applyTextRules(solicitud.tipoActividades)} />
-          <ReadOnlyField label="Régimen de Contratación"                value={formatRegimen(solicitud.regimen)} />
-          <ReadOnlyField label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
-          <ReadOnlyField label="Vigencia Término"                       value={solicitud.vigenciaFin} />
-          <ReadOnlyField label="Importe Bruto"                          value={solicitud.importeBruto} />
+        <div className={`grid gap-4 ${wide ? "md:grid-cols-3 xl:grid-cols-5" : "md:grid-cols-2"}`}>
+          <ReadOnlyField bold={false} label="Secretaría / Dependencia / Organismo"   value={solicitud.secretaria} />
+          <ReadOnlyField bold={false} label="Unidad Administrativa de Adscripción"   value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
+          <ReadOnlyField bold={false} label="Unidad Responsable del Gasto"           value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
+          <ReadOnlyField bold={false} label="Número de Prestadores de Servicios"     value={solicitud.numeroPrestadores} />
+          <ReadOnlyField bold={false} label="Programa o Proyecto"                    value={applyTextRules(solicitud.programaProyecto)} />
+          <ReadOnlyField bold={false} label="Tipo de Actividad"                      value={applyTextRules(solicitud.tipoActividades)} />
+          <ReadOnlyField bold={false} label="Régimen de Contratación"                value={formatRegimen(solicitud.regimen)} />
+          <ReadOnlyField bold={false} label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
+          <ReadOnlyField bold={false} label="Vigencia Término"                       value={solicitud.vigenciaFin} />
+          <ReadOnlyField bold={false} label="Importe Bruto"                          value={solicitud.importeBruto} />
           {(solicitud.nivelTabulador || solicitud.categoriaTabulador) && (
-            <ReadOnlyField
+            <ReadOnlyField bold={false}
               label="Nivel Catálogo"
               value={solicitud.nivelTabulador && solicitud.categoriaTabulador ? `${solicitud.nivelTabulador}/${solicitud.categoriaTabulador}` : (solicitud.nivelTabulador || solicitud.categoriaTabulador || "—")}
             />
           )}
         </div>
       </SectionCard>
-
       <SectionCard num="II" title="Objeto de la Contratación">
         <div className="grid gap-4">
           <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
@@ -689,7 +693,6 @@ function ExpedientePrestacion({ solicitud }: { solicitud: UrgSolicitud }) {
       <SectionCard num="III" title="Actividades a Realizar">
         <ReadOnlyList label="Actividades" value={solicitud.actividades} />
       </SectionCard>
-
       <SectionCard num="IV" title="Responsabilidades">
         <ReadOnlyList label="Responsabilidades" value={solicitud.responsabilidades} />
       </SectionCard>
@@ -772,26 +775,26 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
   )
 }
 
-function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
+function ExpedienteNombramiento({ solicitud, wide = true }: { solicitud: UrgSolicitud; wide?: boolean }) {
   return (
     <div className="flex flex-col gap-4">
       <SectionCard num="I" title="Datos Generales">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Secretaría / Dependencia / Organismo"  value={solicitud.secretaria} />
-          <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
-          <ReadOnlyField label="Unidad Responsable del Gasto"          value={solicitud.unidadResponsable} />
-          <ReadOnlyField label="Programa o Proyecto"                   value={applyTextRules(solicitud.programaProyecto)} />
-          <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(solicitud.regimen)} />
-          <ReadOnlyField label="Denominación del Nombramiento"         value={applyTextRules(solicitud.denominacion)} />
-          <ReadOnlyField label="Puesto del Jefe Inmediato"             value={applyTextRules(solicitud.puestoJefeInmediato)} />
-          <ReadOnlyField label="Tipo de Actividad"                   value={applyTextRules(solicitud.tipoActividades)} />
-          <ReadOnlyField label="Número de Personas a Contratar"        value={solicitud.numeroPrestadores} />
-          <ReadOnlyField label="Tipo de Pago"    value={solicitud.tipoImporte || "Mensual"} />
-          <ReadOnlyField label="Importe Neto"  value={solicitud.importeBruto} />
-          <ReadOnlyField label="Vigencia Inicio"                       value={solicitud.vigenciaInicio} />
-          <ReadOnlyField label="Vigencia Término"                      value={solicitud.vigenciaFin} />
+        <div className={`grid gap-4 ${wide ? "md:grid-cols-3 xl:grid-cols-5" : "md:grid-cols-2"}`}>
+          <ReadOnlyField bold={false} label="Secretaría / Dependencia / Organismo"  value={solicitud.secretaria} />
+          <ReadOnlyField bold={false} label="Unidad Administrativa de Adscripción"  value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
+          <ReadOnlyField bold={false} label="Unidad Responsable del Gasto"          value={solicitud.unidadResponsable} />
+          <ReadOnlyField bold={false} label="Programa o Proyecto"                   value={applyTextRules(solicitud.programaProyecto)} />
+          <ReadOnlyField bold={false} label="Régimen de Contratación"               value={formatRegimen(solicitud.regimen)} />
+          <ReadOnlyField bold={false} label="Denominación del Nombramiento"         value={applyTextRules(solicitud.denominacion)} />
+          <ReadOnlyField bold={false} label="Puesto del Jefe Inmediato"             value={applyTextRules(solicitud.puestoJefeInmediato)} />
+          <ReadOnlyField bold={false} label="Tipo de Actividad"                   value={applyTextRules(solicitud.tipoActividades)} />
+          <ReadOnlyField bold={false} label="Número de Personas a Contratar"        value={solicitud.numeroPrestadores} />
+          <ReadOnlyField bold={false} label="Tipo de Pago"    value={solicitud.tipoImporte || "Mensual"} />
+          <ReadOnlyField bold={false} label="Importe Neto"  value={solicitud.importeBruto} />
+          <ReadOnlyField bold={false} label="Vigencia Inicio"                       value={solicitud.vigenciaInicio} />
+          <ReadOnlyField bold={false} label="Vigencia Término"                      value={solicitud.vigenciaFin} />
           {(solicitud.nivelTabulador || solicitud.categoriaTabulador) && (
-            <ReadOnlyField
+            <ReadOnlyField bold={false}
               label="Nivel Catálogo"
               value={solicitud.nivelTabulador && solicitud.categoriaTabulador ? `${solicitud.nivelTabulador}/${solicitud.categoriaTabulador}` : (solicitud.nivelTabulador || solicitud.categoriaTabulador || "—")}
             />
@@ -817,7 +820,7 @@ function ExpedienteNombramiento({ solicitud }: { solicitud: UrgSolicitud }) {
       </SectionCard>
       {solicitud.resguardoActivos && (
         <SectionCard num="VIII" title="Resguardo Personalizado de Activos">
-          <ReadOnlyField label="Resguardo de Activos" value={solicitud.resguardoActivos === "si" ? "Sí" : solicitud.resguardoActivos === "no" ? "No" : solicitud.resguardoActivos} />
+          <ReadOnlyField bold={false} label="Resguardo de Activos" value={solicitud.resguardoActivos === "si" ? "Sí" : solicitud.resguardoActivos === "no" ? "No" : solicitud.resguardoActivos} />
         </SectionCard>
       )}
       <SectionCard num="IX" title="Perfil">
@@ -987,6 +990,7 @@ function DetalleView({
   const [rightTab, setRightTab] = useState<"historial" | "bitacora" | "observaciones">(
     hasObs ? "observaciones" : "historial"
   )
+  const [historialAbierto, setHistorialAbierto] = useState(false)
 
   const observacionesVisibles = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
     ? sol.todasObservaciones.slice(-1)
@@ -1122,6 +1126,12 @@ function DetalleView({
               <Lock className="h-3 w-3" />Solo lectura
             </Badge>
           )}
+          <Button size="sm" variant="default" className="gap-1.5 px-3"
+            onClick={() => setHistorialAbierto((v) => !v)}>
+            {historialAbierto
+              ? <><PanelRightClose className="h-4 w-4" />Ocultar historial</>
+              : <><PanelRightOpen className="h-4 w-4" />Ver Historial</>}
+          </Button>
         </div>
       </div>
 
@@ -1322,152 +1332,124 @@ function DetalleView({
           </span>
         </div>
       )}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
-        <ScrollArea className="h-[calc(100vh-220px)]">
-          <div className="flex flex-col gap-4 pr-4">
-            {sol.tipo === "Prestacion de Servicios"
-              ? <ExpedientePrestacion solicitud={sol} />
-              : <ExpedienteNombramiento solicitud={sol} />}
-          </div>
-        </ScrollArea>
+      <div className="flex flex-col gap-4 lg:flex-row flex-1 min-h-0">
+        <div className="min-w-0 flex-1 max-w-7xl mx-auto">
+          <ScrollArea className="h-[calc(100vh-220px)]">
+            <div className="flex flex-col gap-4">
+              {sol.tipo === "Prestacion de Servicios"
+                ? <ExpedientePrestacion solicitud={sol} wide={!historialAbierto} />
+                : <ExpedienteNombramiento solicitud={sol} wide={!historialAbierto} />}
+            </div>
+          </ScrollArea>
+        </div>
 
-        <ScrollArea className="h-[calc(100vh-220px)]">
-          <div className="flex flex-col gap-4 pr-4">
-            <Tabs value={rightTab} onValueChange={(v) => setRightTab(v as "historial" | "bitacora" | "observaciones")}>
-              <TabsList className="w-full">
-                <TabsTrigger value="historial" className="flex-1">
-                  <History className="h-4 w-4" />Historial
-                </TabsTrigger>
-                <TabsTrigger value="bitacora" className="flex-1">
-                  <Info className="h-4 w-4" />Bitácora
-                </TabsTrigger>
-                <TabsTrigger value="observaciones" className="flex-1 relative">
-                  <AlertTriangle className="h-4 w-4" />Observaciones
-                  {hasObs && (
-                    <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--sem-accent-primary)] px-1 text-[11px] font-normal text-white">
-                      {observacionesVisibles.length || 1}
-                    </span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            {rightTab === "historial" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#dfe6c3] shadow-sm">
-                    <History className="h-5 w-5 text-[#2d331b]" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-content-high">Historial de Solicitud</span>
-                    <span className="text-[10px] text-content-low">
-                      Folio {sol.folioJustificacion || sol.folio}
-                    </span>
-                  </div>
-                  {!ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol) && (
-                    <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
-                      <span className="text-[11px] font-semibold text-content-medium">
-                        {sol.historial.length} evento{sol.historial.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <AvanceSolicitud estado={sol.estado} tipo={sol.tipo} historial={sol.historial} />
-                <div className="bg-card px-4 py-3">
-                  <HistorialTimeline entries={sol.historial} />
-                </div>
-              </div>
-            )}
-
-            {rightTab === "bitacora" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ffefb6] shadow-sm">
-                    <Info className="h-5 w-5 text-[#936901]" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-content-high">Bitácora de Captura</span>
-                    <span className="text-[10px] text-content-low">
-                      {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} eventos registrados
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
-                    <span className="text-[11px] font-semibold text-content-medium">
-                      {sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)} evento{sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0) !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Timeline */}
-                <div className="bg-card px-5 pt-4 pb-2">
-                  <HistorialTimeline
-                    entries={sol.bitacora.flatMap((entry) =>
-                      entry.eventos.map((ev) => ({
-                        fecha: ev.fecha,
-                        usuario: ev.usuario,
-                        estadoAnterior: null,
-                        estadoNuevo: ev.descripcion.replace("Archivo cargado: ", ""),
-                        comentario: null,
-                      } satisfies HistorialEntryData))
-                    )}
-                  />
-                </div>
-              </div>
-            )}
-
-            {rightTab === "observaciones" && (
-              <div className="overflow-hidden rounded-xl border border-border shadow-md">
-                <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-border">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--sem-support-error-low)] shadow-sm">
-                    <AlertTriangle className="h-5 w-5 text-[var(--sem-support-on-error-low)]" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-content-high">
-                      {(() => {
-                        const obs = getObservador(sol.estado)
-                        if (!obs) return "Observaciones"
-                        const tipo = obs === "Validación UEFA" || obs === "Verificación DGDO" ? "Observación" : "Devolución"
-                        return `${tipo} — ${obs}`
+        <div
+          className={`overflow-hidden transition-[width,opacity] duration-300 ease-in-out ${
+            historialAbierto ? "w-full opacity-100 lg:w-1/2" : "w-0 opacity-0"
+          }`}
+        >
+          <ScrollArea className="h-[calc(100vh-220px)]">
+            <div className="flex flex-col gap-3 pr-4 min-w-[320px]">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <FilterTabs
+                  value={rightTab}
+                  onValueChange={(v) => setRightTab(v as "historial" | "bitacora" | "observaciones")}
+                  items={[
+                    { value: "historial", label: "Historial" },
+                    { value: "bitacora", label: "Bitácora" },
+                    { value: "observaciones", label: "Observaciones", count: hasObs ? (observacionesVisibles.length || 1) : undefined },
+                  ]}
+                />
+                <div className="ml-auto flex items-center gap-3">
+                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                    {rightTab === "historial" &&
+                      `Folio ${sol.folioJustificacion || sol.folio} · ${sol.historial.length} evento${sol.historial.length !== 1 ? "s" : ""}`}
+                    {rightTab === "bitacora" &&
+                      (() => {
+                        const total = sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)
+                        return `${total} evento${total !== 1 ? "s" : ""} registrados`
                       })()}
-                    </span>
-                    <span className="text-[10px] text-content-low">
-                      {observacionesVisibles.length > 0
+                    {rightTab === "observaciones" &&
+                      (observacionesVisibles.length > 0
                         ? `${observacionesVisibles.length} observación${observacionesVisibles.length !== 1 ? "es" : ""}`
-                        : sol.observacionMotivo ? "1 observación" : "Sin observaciones"}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex h-7 items-center rounded-full bg-[var(--sem-bg-surface-high)] px-3">
-                    <span className="text-[11px] font-semibold text-content-medium">
-                      {observacionesVisibles.length > 0 ? observacionesVisibles.length : sol.observacionMotivo ? 1 : 0} obs.
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-card p-4">
-                  {observacionesVisibles.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {observacionesVisibles.map((obs, i) => (
-                        <div key={i} className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Verificacion Final/i, "Verificación DGDO")}</span>
-                            <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
-                          </div>
-                          <DevolucionObs comentario={obs.comentario} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : sol.observacionMotivo ? (
-                    <div className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
-                      {sol.observacionFecha && <span className="text-[10px] text-muted-foreground">{sol.observacionFecha}</span>}
-                      {sol.observacionUsuario && <span className="text-[10px] text-muted-foreground">Por: {sol.observacionUsuario}</span>}
-                      <DevolucionObs comentario={sol.observacionMotivo} />
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
-                  )}
+                        : sol.observacionMotivo ? "1 observación" : "Sin observaciones")}
+                  </span>
+                  <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-card-foreground"
+                    title="Cerrar panel" aria-label="Cerrar panel"
+                    onClick={() => setHistorialAbierto(false)}>
+                    <PanelRightClose className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-            )}
-          </div>
-        </ScrollArea>
+
+              {rightTab === "historial" && (
+                <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                  <AvanceSolicitud estado={sol.estado} tipo={sol.tipo} historial={sol.historial} compact />
+                  <div className="bg-card px-4 py-3">
+                    <HistorialTimeline entries={sol.historial} variant="alerta" />
+                  </div>
+                </div>
+              )}
+
+              {rightTab === "bitacora" && (
+                <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                  <div className="bg-card px-5 pt-4 pb-3">
+                    <HistorialTimeline
+                      entries={sol.bitacora.flatMap((entry) =>
+                        entry.eventos.map((ev) => ({
+                          fecha: ev.fecha,
+                          usuario: ev.usuario,
+                          estadoAnterior: null,
+                          estadoNuevo: ev.descripcion.replace("Archivo cargado: ", ""),
+                          comentario: null,
+                        } satisfies HistorialEntryData))
+                      )}
+                      variant="alerta"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {rightTab === "observaciones" && (
+                <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                  <div className="bg-card p-4 flex flex-col gap-3">
+                    {(() => {
+                      const obs = getObservador(sol.estado)
+                      if (!obs) return null
+                      const tipo = obs === "Validación UEFA" || obs === "Verificación DGDO" ? "Observación" : "Devolución"
+                      return (
+                        <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">
+                          {tipo} — {obs}
+                        </span>
+                      )
+                    })()}
+                    {observacionesVisibles.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {observacionesVisibles.map((obs, i) => (
+                          <div key={i} className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-semibold text-[var(--sem-support-on-error-low)]">{obs.estado.replace(/Verificacion Final/i, "Verificación DGDO")}</span>
+                              <span className="text-[10px] text-muted-foreground">{obs.fecha} — {obs.usuario}</span>
+                            </div>
+                            <DevolucionObs comentario={obs.comentario} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : sol.observacionMotivo ? (
+                      <div className="rounded-lg border border-[var(--sem-support-on-error-low)]/20 bg-[var(--sem-support-on-error-low)]/[0.03] p-3 flex flex-col gap-1">
+                        {sol.observacionFecha && <span className="text-[10px] text-muted-foreground">{sol.observacionFecha}</span>}
+                        {sol.observacionUsuario && <span className="text-[10px] text-muted-foreground">Por: {sol.observacionUsuario}</span>}
+                        <DevolucionObs comentario={sol.observacionMotivo} />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </div>
     </div>
   )

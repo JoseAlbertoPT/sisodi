@@ -236,11 +236,13 @@ function avanceColor(percent: number): string {
  * porque el estado actual retrocedió.
  */
 export function AvanceSolicitud({
-  estado, tipo, historial,
+  estado, tipo, historial, compact,
 }: {
   estado: string | null | undefined
   tipo?: string | null
   historial?: { estadoNuevo: string }[]
+  /** Layout de una sola fila `[estado] —— barra —— [%]` en vez de las 3 líneas apiladas por defecto. */
+  compact?: boolean
 }) {
   const { user } = useAuth()
   if (!ROLES_VEN_AVANCE.includes((user as any)?.rol)) return null
@@ -250,6 +252,22 @@ export function AvanceSolicitud({
   const etapaIndex = Math.max(...indices)
   const etapa = etapas[etapaIndex]
   const color = avanceColor(etapa.percent)
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-border">
+        <span className="text-[11px] font-semibold shrink-0" style={{ color }}>{etapa.label}</span>
+        <div className="h-1.5 flex-1 rounded-full bg-[var(--sem-bg-surface-high)] overflow-hidden">
+          <div
+            className="h-full rounded-full transition-[width,background-color] duration-300"
+            style={{ width: `${etapa.percent}%`, backgroundColor: color }}
+          />
+        </div>
+        <span className="text-xs font-bold shrink-0" style={{ color }}>{etapa.percent}%</span>
+      </div>
+    )
+  }
+
   return (
     <div className="px-5 pt-4 pb-4 bg-white border-b border-border">
       <div className="flex items-center justify-between mb-2">

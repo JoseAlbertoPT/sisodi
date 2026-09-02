@@ -27,7 +27,7 @@ import {
   AlertTriangle, ArrowLeft, FileCheck,
   Loader2, Printer, Stamp, Lock,
   Shield, FileSignature, X, Eye,
-  MoreHorizontal,
+  MoreHorizontal, PanelRightOpen, PanelRightClose,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -719,7 +719,7 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
   )
 }
 
-function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
+function ExpedienteGenerico({ solicitud, wide = true }: { solicitud: UefaSolicitud; wide?: boolean }) {
   const raw = solicitud._raw
   const folioDictamenMostrar = solicitud.numeroDictamen
     ?? (solicitud.folioDictamen ? formatearFolio(solicitud.folioDictamen) : null)
@@ -732,26 +732,27 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
   return (
     <div className="flex flex-col gap-4">
       <SectionCard num="I" title="Datos Generales">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Secretaría / Dependencia / Organismo" value={solicitud.secretaria} />
-          <ReadOnlyField label="Unidad Administrativa de Adscripción" value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
-          <ReadOnlyField label="Unidad Responsable del Gasto"         value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
-          <ReadOnlyField label="Programa o Proyecto"                  value={applyTextRules(solicitud.programaProyecto)} />
-          <ReadOnlyField label="Régimen de Contratación"              value={formatRegimen(solicitud.regimen)} />
+        <div className={`grid gap-4 ${wide ? "md:grid-cols-3 xl:grid-cols-5" : "md:grid-cols-2"}`}>
+          <ReadOnlyField bold={false} label="Secretaría / Dependencia / Organismo" value={solicitud.secretaria} />
+          <ReadOnlyField bold={false} label="Unidad Administrativa de Adscripción" value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
+          <ReadOnlyField bold={false} label="Unidad Responsable del Gasto"         value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
+          <ReadOnlyField bold={false} label="Programa o Proyecto"                  value={applyTextRules(solicitud.programaProyecto)} />
+          <ReadOnlyField bold={false} label="Régimen de Contratación"              value={formatRegimen(solicitud.regimen)} />
           {esNombramiento && (
-            <ReadOnlyField label="Denominación del Nombramiento"      value={applyTextRules(solicitud.denominacion)} />
+            <ReadOnlyField bold={false} label="Denominación del Nombramiento"      value={applyTextRules(solicitud.denominacion)} />
           )}
           {esNombramiento && (
-            <ReadOnlyField label="Puesto del Jefe Inmediato"          value={applyTextRules(raw?.puesto_jefe_inmediato ?? "—")} />
+            <ReadOnlyField bold={false} label="Puesto del Jefe Inmediato"          value={applyTextRules(raw?.puesto_jefe_inmediato ?? "—")} />
           )}
-          <ReadOnlyField label="Número de Prestadores de Servicio"    value={solicitud.numeroPrestadores} />
-          <ReadOnlyField label="Tipo de Actividad"                value={applyTextRules(solicitud.tipoActividades)} />
-          <ReadOnlyField label="Tipo de Pago"    value={raw?.tipo_importe || "Mensual"} />
-          <ReadOnlyField label="Vigencia Inicio"                      value={solicitud.vigenciaInicio} />
-          <ReadOnlyField label="Vigencia Término"                     value={solicitud.vigenciaFin} />
-          <ReadOnlyField label="Importe Neto"   value={solicitud.importeBruto} />
+          <ReadOnlyField bold={false} label="Número de Prestadores de Servicio"    value={solicitud.numeroPrestadores} />
+          <ReadOnlyField bold={false} label="Tipo de Actividad"                value={applyTextRules(solicitud.tipoActividades)} />
+          <ReadOnlyField bold={false} label="Tipo de Pago"    value={raw?.tipo_importe || "Mensual"} />
+          <ReadOnlyField bold={false} label="Vigencia Inicio"                      value={solicitud.vigenciaInicio} />
+          <ReadOnlyField bold={false} label="Vigencia Término"                     value={solicitud.vigenciaFin} />
+          <ReadOnlyField bold={false} label="Importe Neto"   value={solicitud.importeBruto} />
           {(raw?.nivel_tabulador || raw?.categoria_tabulador) && (
             <ReadOnlyField
+              bold={false}
               label="Nivel Catálogo"
               value={raw?.nivel_tabulador && raw?.categoria_tabulador ? `${raw.nivel_tabulador}/${raw.categoria_tabulador}` : (raw?.nivel_tabulador ?? raw?.categoria_tabulador ?? "—")}
             />
@@ -792,14 +793,14 @@ function ExpedienteGenerico({ solicitud }: { solicitud: UefaSolicitud }) {
 
       {esNombramiento && resguardoActivos && (
         <SectionCard title="VII. Resguardo Personalizado de Activos">
-          <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos} />
+          <ReadOnlyField bold={false} label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos} />
         </SectionCard>
       )}
 
       <SectionCard title="Perfil Requerido">
         <div className="flex items-start gap-4">
           <div className="flex flex-col gap-4 flex-1">
-            <ReadOnlyField   label="Escolaridad Mínima"          value={formatEscolaridad(solicitud.escolaridad)} />
+            <ReadOnlyField   bold={false} label="Escolaridad Mínima"          value={formatEscolaridad(solicitud.escolaridad)} />
             <PerfilListField label="Competencias Técnicas"        value={solicitud.compTec} />
             <PerfilListField label="Valores"                      value={solicitud.valores} />
           </div>
@@ -1089,6 +1090,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud
   const [rightTab, setRightTab] = useState<"historial" | "observaciones">(
     tieneObsActivas ? "observaciones" : "historial"
   )
+  const [historialAbierto, setHistorialAbierto] = useState(false)
   const isEnProceso        = tab === "En Proceso"
 
   const folioDictamenMostrar = solicitud.numeroDictamen
@@ -1195,6 +1197,12 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud
               <Lock className="h-3 w-3" />Solo lectura
             </Badge>
           )}
+          <Button size="sm" variant="default" className="gap-1.5 px-3"
+            onClick={() => setHistorialAbierto((v) => !v)}>
+            {historialAbierto
+              ? <><PanelRightClose className="h-4 w-4" />Ocultar Historial</>
+              : <><PanelRightOpen className="h-4 w-4" />Ver historial</>}
+          </Button>
         </div>
       </div>
 
@@ -1243,70 +1251,85 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 flex-1 min-h-0">
-        <ScrollArea className="h-[calc(100vh-220px)]">
-          <div className="flex flex-col gap-4 pr-4">
-            <ExpedienteGenerico solicitud={solicitud} />
-          </div>
-        </ScrollArea>
-
-        <ScrollArea className="h-[calc(100vh-220px)]">
-          <div className="flex flex-col gap-4 pr-4">
-            <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1">
-              <button
-                onClick={() => setRightTab("historial")}
-                className={`flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
-                  rightTab === "historial"
-                    ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
-                    : "text-muted-foreground hover:text-card-foreground"
-                }`}
-              >
-                <History className="h-4 w-4" />Historial
-              </button>
-              <button
-                onClick={() => setRightTab("observaciones")}
-                className={`relative flex-1 rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
-                  rightTab === "observaciones"
-                    ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
-                    : "text-muted-foreground hover:text-card-foreground"
-                }`}
-              >
-                <AlertTriangle className="h-4 w-4" />Observaciones
-                {tieneObsActivas && (
-                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white">
-                    {solicitud.todasObservaciones.length}
-                  </span>
-                )}
-              </button>
+      <div className="flex flex-col gap-4 lg:flex-row flex-1 min-h-0">
+        <div className="min-w-0 flex-1 max-w-7xl mx-auto">
+          <ScrollArea className="h-[calc(100vh-220px)]">
+            <div className="flex flex-col gap-4">
+              <ExpedienteGenerico solicitud={solicitud} wide={!historialAbierto} />
             </div>
+          </ScrollArea>
+        </div>
 
-            {rightTab === "historial" && (
-              <HistorialPanel
-                entries={solicitud.historial}
-                title="Historial de Estatus"
-                folio={solicitud.folio}
-                estado={solicitud.estado}
-                tipo={solicitud.tipo}
-              />
-            )}
+        <div
+          className={`overflow-hidden transition-[width,opacity] duration-300 ease-in-out ${
+            historialAbierto ? "w-full opacity-100 lg:w-1/2" : "w-0 opacity-0"
+          }`}
+        >
+          <ScrollArea className="h-[calc(100vh-220px)]">
+            <div className="flex flex-col gap-4 pr-4 min-w-[320px]">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1">
+                  <button
+                    onClick={() => setRightTab("historial")}
+                    className={`rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                      rightTab === "historial"
+                        ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
+                        : "text-muted-foreground hover:text-card-foreground"
+                    }`}
+                  >
+                    <History className="h-4 w-4" />Historial
+                  </button>
+                  <button
+                    onClick={() => setRightTab("observaciones")}
+                    className={`relative rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                      rightTab === "observaciones"
+                        ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
+                        : "text-muted-foreground hover:text-card-foreground"
+                    }`}
+                  >
+                    <AlertTriangle className="h-4 w-4" />Observaciones
+                    {tieneObsActivas && (
+                      <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white">
+                        {solicitud.todasObservaciones.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+                <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-card-foreground"
+                  title="Cerrar panel" aria-label="Cerrar panel"
+                  onClick={() => setHistorialAbierto(false)}>
+                  <PanelRightClose className="h-4 w-4" />
+                </Button>
+              </div>
 
-            {rightTab === "observaciones" && (
-              <ObservacionesPanel
-                title={
-                  isObservada
-                    ? "Observación de Validación UEFA"
-                    : isDevuelta
-                      ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
-                      : "Observaciones"
-                }
-                todasObservaciones={solicitud.todasObservaciones}
-                single={(isObservada || isDevuelta) && solicitud.observacionesUefa
-                  ? { motivo: solicitud.observacionesUefa, fecha: solicitud.fechaObservacion, usuario: solicitud.observadoPor }
-                  : null}
-              />
-            )}
-          </div>
-        </ScrollArea>
+              {rightTab === "historial" && (
+                <HistorialPanel
+                  entries={solicitud.historial}
+                  title="Historial de Estatus"
+                  folio={solicitud.folio}
+                  estado={solicitud.estado}
+                  tipo={solicitud.tipo}
+                />
+              )}
+
+              {rightTab === "observaciones" && (
+                <ObservacionesPanel
+                  title={
+                    isObservada
+                      ? "Observación de Validación UEFA"
+                      : isDevuelta
+                        ? `Devolución — ${getDevolucionLabel(solicitud.estado)}`
+                        : "Observaciones"
+                  }
+                  todasObservaciones={solicitud.todasObservaciones}
+                  single={(isObservada || isDevuelta) && solicitud.observacionesUefa
+                    ? { motivo: solicitud.observacionesUefa, fecha: solicitud.fechaObservacion, usuario: solicitud.observadoPor }
+                    : null}
+                />
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </div>
 
       <ConfirmAlertDialog

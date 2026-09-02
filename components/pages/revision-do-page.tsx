@@ -393,11 +393,11 @@ function getSlaSubtitle(dias: number | null) {
 function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) {
   const bg = diasRestantes === null ? "#64748b" : diasRestantes <= 7 ? C_ROSA_VINO : diasRestantes <= 15 ? C_AMARILLO : C_VERDE_ESTADO
   return (
-    <div className="flex items-center gap-2 rounded-lg px-4 py-2.5" style={{ backgroundColor: bg, color: "#FFFFFF" }}>
-      <Clock className="h-5 w-5" />
-      <div className="flex flex-col">
-        <span className="text-sm font-semibold">{getSlaLabel(diasRestantes)}</span>
-        <span className="text-[10px] opacity-75">{getSlaSubtitle(diasRestantes)}</span>
+    <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: bg, color: "#FFFFFF" }}>
+      <Clock className="h-3.5 w-3.5 shrink-0" />
+      <div className="flex flex-col leading-tight">
+        <span className="text-xs font-semibold">{getSlaLabel(diasRestantes)}</span>
+        <span className="text-[9px] opacity-75">{getSlaSubtitle(diasRestantes)}</span>
       </div>
     </div>
   )

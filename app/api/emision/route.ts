@@ -150,8 +150,8 @@ export async function GET(req: NextRequest) {
         folioDictamen,
         folioRecepcion,
         fechaEmision:
-          sol.dictamen?.fecha_emision?.toISOString() ??
-          (sol as any).fecha_emision?.toISOString() ??
+          sol.dictamen?.fecha_emision?.toISOString().slice(0, 10) ??
+          (sol as any).fecha_emision?.toISOString().slice(0, 10) ??
           null,
         tipoFirma:      sol.dictamen?.tipo_firma ?? null,
         archivoPdf:     sol.dictamen?.archivo_pdf ?? null,

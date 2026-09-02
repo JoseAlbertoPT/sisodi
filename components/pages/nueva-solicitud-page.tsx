@@ -234,11 +234,9 @@ function norm(str: string): string {
     .replace(/\s+/g, " ")
     .trim()
 }
-
 function fmtClave(c: string): string {
   return c.replace(/\./g, " ").trim()
 }
-
 function getCell(row: HistoricoRow, colTarget: string): string {
   const exact = row[colTarget]
   if (exact != null) return String(exact).trim()
@@ -327,7 +325,6 @@ function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecr
       }
     }
   }
-
 return getFallback(secretaria)
 }
 function parseImporteBruto(raw: string): string {
@@ -372,20 +369,17 @@ function todayIso(): string {
   const d = String(now.getDate()).padStart(2, "0")
   return `${y}-${m}-${d}`
 }
-
 function getVigenciaFinLimiteIso(inicioIso: string): string | undefined {
   const inicio = isoToDate(inicioIso)
   if (!inicio) return undefined
   return dateToIso(calcularVigenciaMaxima(inicio))
 }
-
 function clampIso(value: string, min?: string, max?: string): string {
   let v = value
   if (min && v < min) v = min
   if (max && v > max) v = max
   return v
 }
-
 function getRangoPeriodoIso(
   regimenPeriodo: "" | "honorarios" | "asimilados" | "nombramiento",
   periodoSeleccionado: string,
@@ -987,11 +981,8 @@ function StepIndicator({ activeIndex, progreso = 0, invalidIndexes }: { activeIn
           : isDone
           ? { fontSize: 12, fontWeight: 400, color: '#6B7280', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
           : { fontSize: 12, fontWeight: 400, color: '#9CA3AF', textAlign: 'center', maxWidth: 120, lineHeight: 1.3 }
-
         return (
           <div key={s.key} className="flex flex-1 flex-col items-center" style={{ position: 'relative' }}>
-
-
             {i > 0 && (
               <div style={{ position: 'absolute', top: 16, left: '-50%', width: '100%', height: 2, zIndex: 0 }}>
                 <div style={{ position: 'absolute', inset: 0, backgroundColor: '#D1D5DB' }} />
@@ -1003,7 +994,6 @@ function StepIndicator({ activeIndex, progreso = 0, invalidIndexes }: { activeIn
                 }} />
               </div>
             )}
-
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               <div style={circleStyle}>
                 {isInvalid ? (
@@ -1096,9 +1086,7 @@ function TagInput({
     </div>
   )
 }
-
 type TabuladorEntry = { nivel: string; categoria: string }
-
 function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSeleccionadoChange, secretaria, initialNivel, initialCategoria }: {
   nivelCategoria?: string; importeBruto?: string; readonly?: boolean
   onSeleccionadoChange?: (nivel: string, categoria: string) => void
@@ -1154,7 +1142,6 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
     : coincidencias.length === 0
       ? "Sin coincidencias en el tabulador"
       : "Seleccione el nivel"
-
   return (
     <div className="flex flex-col gap-1.5">
       <Label className="text-sm font-medium flex items-center gap-1.5">
@@ -1226,7 +1213,6 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
             <X className="h-4 w-4" />
           </button>
         </div>
-
         <div className="px-6 py-6 flex flex-col gap-3">
           <p className="text-sm text-[#374151]">
             Este apartado deberá contar con <strong>validación previa por la UEF</strong> o su equivalente antes de su envío.
@@ -1235,7 +1221,6 @@ function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; on
             La información registrada será <strong>responsabilidad de la persona titular</strong> de la Unidad de Enlace Financiero Administrativo o equivalente.
           </p>
         </div>
-
         <div className="flex justify-end px-6 py-4" style={{ borderTop: "1px solid #E5E7EB" }}>
           <button
             type="button"
@@ -1289,7 +1274,6 @@ const FORMULA_LLENADO_CONTENIDO = {
     ],
   },
 } as const
-
 function FormulaLlenadoModal({ tipo, onClose }: { tipo: "objeto" | "actividades"; onClose: () => void }) {
   const { formula, titulo, descripcion, filas } = FORMULA_LLENADO_CONTENIDO[tipo]
   return (
@@ -1299,7 +1283,6 @@ function FormulaLlenadoModal({ tipo, onClose }: { tipo: "objeto" | "actividades"
         className="relative z-10 w-full bg-white flex flex-col overflow-hidden"
         style={{ maxWidth: 760, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
       >
-        {/* ── Header ── */}
         <div className="flex items-start justify-between px-6 py-5">
           <div className="flex flex-col gap-1.5">
             <Info className="h-7 w-7 text-[#2e3b2b]" strokeWidth={1.75} />
@@ -1312,11 +1295,7 @@ function FormulaLlenadoModal({ tipo, onClose }: { tipo: "objeto" | "actividades"
             <X className="h-4 w-4" />
           </button>
         </div>
-
-
         <div style={{ borderBottom: "1px solid #E5E7EB" }} />
-
-
         <div className="overflow-auto px-6 py-4" style={{ maxHeight: "65vh" }}>
           <p className="text-center font-bold italic text-xs mb-3" style={{ color: "#2e3b2b" }}>
             {formula}

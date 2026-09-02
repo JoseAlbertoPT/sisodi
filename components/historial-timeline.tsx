@@ -318,17 +318,19 @@ function DiffDialog({ cambios, usuario, fecha }: { cambios: { campo: string; de:
 }
 
 /** Mismo patrón que DiffDialog (botón que abre un modal), para que se pueda leer el texto de la observación en vez de solo saber que hubo una. */
-function ObservacionDialog({ texto, usuario, fecha }: { texto: string; usuario: string; fecha: string }) {
+function ObservacionDialog({ texto, usuario, fecha, alerta }: { texto: string; usuario: string; fecha: string; alerta?: boolean }) {
   // `comentario` guarda varias observaciones juntas separadas por " | "
   // (ver `app/api/filtro/route.ts`, accion === "observar") — se listan por
   // separado en vez de mostrarlas pegadas en un solo párrafo.
   const items = texto.split(" | ").map((t) => t.trim()).filter(Boolean)
   const [open, setOpen] = useState(false)
+  const c = alerta ? "var(--sem-support-on-error-low)" : "var(--sem-accent-primary)"
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-[var(--sem-accent-primary)]/30 bg-[var(--sem-accent-primary)]/[0.08] px-2.5 py-1 text-[10px] font-semibold text-[var(--sem-accent-primary)] transition-all hover:bg-[var(--sem-accent-primary)]/[0.14] hover:border-[var(--sem-accent-primary)]/50 hover:shadow-sm">
+        <button className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[10px] font-semibold transition-all hover:shadow-sm"
+          style={{ borderColor: `${c}4d`, backgroundColor: `${c}14`, color: c }}>
           <AlertTriangle className="h-2.5 w-2.5" />
           Ver observación
         </button>
@@ -339,8 +341,8 @@ function ObservacionDialog({ texto, usuario, fecha }: { texto: string; usuario: 
         className="max-w-lg p-0 gap-0 overflow-hidden rounded-2xl border border-border/50 shadow-2xl"
       >
         <div className="relative flex items-start gap-4 bg-white px-6 py-5 border-b border-border/60">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--sem-accent-primary)]/10 border border-[var(--sem-accent-primary)]/20">
-            <AlertTriangle className="h-5 w-5 text-[var(--sem-accent-primary)]" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border" style={{ backgroundColor: `${c}1a`, borderColor: `${c}33` }}>
+            <AlertTriangle className="h-5 w-5" style={{ color: c }} />
           </div>
           <div className="flex flex-col gap-1 min-w-0 flex-1">
             <DialogHeader>
@@ -356,8 +358,8 @@ function ObservacionDialog({ texto, usuario, fecha }: { texto: string; usuario: 
             </div>
           </div>
           {items.length > 1 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--sem-accent-primary)]/10 px-3 py-1 text-[11px] font-semibold text-[var(--sem-accent-primary)] shrink-0">
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--sem-accent-primary)] text-[9px] font-black text-white">
+            <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold shrink-0" style={{ backgroundColor: `${c}1a`, color: c }}>
+              <span className="flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black text-white" style={{ backgroundColor: c }}>
                 {items.length}
               </span>
               punto{items.length !== 1 ? "s" : ""}
@@ -373,10 +375,11 @@ function ObservacionDialog({ texto, usuario, fecha }: { texto: string; usuario: 
             {items.map((item, i) => (
               <div
                 key={i}
-                className="flex items-start gap-2.5 rounded-xl border border-[var(--sem-accent-primary)]/20 bg-[var(--sem-accent-primary)]/[0.05] shadow-sm px-4 py-3"
+                className="flex items-start gap-2.5 rounded-xl border shadow-sm px-4 py-3"
+                style={{ borderColor: `${c}33`, backgroundColor: `${c}0d` }}
               >
                 {items.length > 1 && (
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--sem-accent-primary)]/15 text-[10px] font-black text-[var(--sem-accent-primary)]">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black" style={{ backgroundColor: `${c}26`, color: c }}>
                     {i + 1}
                   </span>
                 )}
@@ -390,19 +393,21 @@ function ObservacionDialog({ texto, usuario, fecha }: { texto: string; usuario: 
   )
 }
 
-function TimelineDot({ tipo }: { tipo: Tipo }) {
+function TimelineDot({ tipo, alerta }: { tipo: Tipo; alerta?: boolean }) {
   if (tipo === "emision")
     return (
       <img src="/Iconos1/step-check.svg" alt="" className="h-7 w-7 shrink-0" />
     )
-  if (tipo === "observacion")
+  if (tipo === "observacion") {
+    const bg = alerta ? "bg-[var(--sem-support-on-error-low)] ring-[var(--sem-support-on-error-low)]/15" : "bg-[var(--sem-accent-primary)] ring-[var(--sem-accent-primary)]/15"
     return (
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--sem-accent-primary)] ring-4 ring-[var(--sem-accent-primary)]/15">
+      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-4 ${bg}`}>
         <svg className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </div>
     )
+  }
   if (tipo === "edicion")
     return (
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E8DCC8] ring-4 ring-[#C4A882]/15">
@@ -416,8 +421,9 @@ function TimelineDot({ tipo }: { tipo: Tipo }) {
   )
 }
 
-export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }) {
+export function HistorialTimeline({ entries, variant = "default" }: { entries: HistorialEntryData[]; variant?: "default" | "alerta" }) {
   const { user } = useAuth()
+  const alerta = variant === "alerta"
   const ocultaObservaciones = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
 
   if (!entries.length)
@@ -452,19 +458,22 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
         const isLast = i === reversed.length - 1
 
         const labelColor =
-          tipo === "observacion" ? "text-[var(--sem-accent-primary)]"
+          tipo === "observacion" ? (alerta ? "text-[var(--sem-support-on-error-low)]" : "text-[var(--sem-accent-primary)]")
           : tipo === "edicion"    ? "text-[#8B6F47]"
           : "text-[#2D3B2D]"
 
         const rowBg =
-          tipo === "observacion" ? "bg-[var(--sem-accent-primary)]/[0.06] border border-[var(--sem-accent-primary)]/20 rounded-lg px-3 py-2"
+          tipo === "observacion"
+            ? (alerta
+                ? "bg-[var(--sem-support-error-low)] border border-[var(--sem-support-on-error-low)]/20 rounded-lg px-3 py-2"
+                : "bg-[var(--sem-accent-primary)]/[0.06] border border-[var(--sem-accent-primary)]/20 rounded-lg px-3 py-2")
           : tipo === "edicion"    ? "bg-[#F5EFE3] border border-[#C4A882]/30 rounded-lg px-3 py-2"
           : "px-3 py-2"
 
         return (
           <div key={i} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <TimelineDot tipo={tipo} />
+              <TimelineDot tipo={tipo} alerta={alerta} />
               {!isLast && <div className="w-px flex-1 bg-[var(--sem-border-md)] mt-1 mb-1 min-h-[20px]" />}
             </div>
 
@@ -484,7 +493,7 @@ export function HistorialTimeline({ entries }: { entries: HistorialEntryData[] }
                 )}
                 {!diff && tipo === "observacion" && entry.comentario && (
                   <div className="mt-1">
-                    <ObservacionDialog texto={entry.comentario} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} />
+                    <ObservacionDialog texto={entry.comentario} usuario={entry.usuario} fecha={fmtFecha(entry.fecha)} alerta={alerta} />
                   </div>
                 )}
               </div>
