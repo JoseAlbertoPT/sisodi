@@ -820,7 +820,7 @@ function ExpedienteGenerico({ solicitud, wide = true }: { solicitud: UefaSolicit
                 <FileTypeIcon name={adj.nombre_archivo} size="sm" />
                 <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
                 {adj.ruta && (
-                  <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
+                  <Button variant="default" size="sm" className="gap-1.5 shrink-0"
                     onClick={() => window.open(adj.ruta, "_blank")}>
                     Ver
                   </Button>
@@ -1726,6 +1726,7 @@ export function ValidacionUefaPage({ onEditSolicitud }: { onEditSolicitud?: (pay
             </div>
           </div>
       )}
+
       <TablePagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
 
       <ConfirmAlertDialog

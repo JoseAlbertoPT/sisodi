@@ -734,7 +734,7 @@ type TipoSolicitud = "" | "prestacion" | "nombramiento"
 type Step = "tipo" | "formulario"
 type SubStep = "datos" | "alcance" | "perfil"
 type StepValidity = { datos: boolean; alcance: boolean; perfil: boolean }
-type StepErrors = { alcance: boolean; perfil: boolean }
+type StepErrors = { datos: boolean; alcance: boolean; perfil: boolean }
 type FolioExcel = {
   id:               string
   folioJustificacion: string
@@ -1609,8 +1609,8 @@ function FormularioPrestacion({
   const [perfilDups, setPerfilDups] = useState<Record<string, boolean>>({})
   const perfilHasDups = Object.values(perfilDups).some(Boolean)
   useEffect(() => {
-    onStepErrorChange?.({ alcance: actividadesDup || responsabilidadesDup, perfil: perfilHasDups })
-  }, [actividadesDup, responsabilidadesDup, perfilHasDups, onStepErrorChange])
+    onStepErrorChange?.({ datos: excedeLimiteTabulador, alcance: actividadesDup || responsabilidadesDup, perfil: perfilHasDups })
+  }, [excedeLimiteTabulador, actividadesDup, responsabilidadesDup, perfilHasDups, onStepErrorChange])
   const handleSecretariaConfirm = (valor: string) => {
     if (bloqueadoPorRenovacion) return
     setSecretariaInput(valor)
@@ -1948,12 +1948,12 @@ function FormularioPrestacion({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteBruto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`pl-7 ${excedeLimiteTabulador ? "border-destructive" : ""} ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
+                  className={`pl-7 ${excedeLimiteTabulador ? "border-[#D32F2F] bg-[#FDEDED] focus-visible:ring-[#D32F2F]" : ""} ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
               {excedeLimiteTabulador && limiteImporteBruto !== null && (
-                <p className="text-xs text-destructive flex items-center gap-1">
+                <p className="text-xs flex items-center gap-1" style={{ color: "#D32F2F" }}>
                   <AlertCircle className="h-3 w-3 shrink-0" />
                   Superaste el límite del tabulador (máx. {formatMXN(limiteImporteBruto)}).
                 </p>
@@ -2489,8 +2489,8 @@ function FormularioNombramiento({
   const [perfilDups, setPerfilDups] = useState<Record<string, boolean>>({})
   const perfilHasDups = Object.values(perfilDups).some(Boolean)
   useEffect(() => {
-    onStepErrorChange?.({ alcance: actividadesDup || responsabilidadesDup, perfil: perfilHasDups })
-  }, [actividadesDup, responsabilidadesDup, perfilHasDups, onStepErrorChange])
+    onStepErrorChange?.({ datos: excedeLimiteTabulador, alcance: actividadesDup || responsabilidadesDup, perfil: perfilHasDups })
+  }, [excedeLimiteTabulador, actividadesDup, responsabilidadesDup, perfilHasDups, onStepErrorChange])
 
   return (
     <div className="flex flex-col gap-3">
@@ -2782,12 +2782,12 @@ function FormularioNombramiento({
                   onBlur={(e) => { if (!bloqueadoPorRenovacion) setImporteNeto(parseImporteBruto(e.target.value)) }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className={`pl-7 ${excedeLimiteTabulador ? "border-destructive" : ""} ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
+                  className={`pl-7 ${excedeLimiteTabulador ? "border-[#D32F2F] bg-[#FDEDED] focus-visible:ring-[#D32F2F]" : ""} ${bloqueadoPorRenovacion ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
                   readOnly={bloqueadoPorRenovacion}
                 />
               </div>
               {excedeLimiteTabulador && limiteImporteBruto !== null && (
-                <p className="text-xs text-destructive flex items-center gap-1">
+                <p className="text-xs flex items-center gap-1" style={{ color: "#D32F2F" }}>
                   <AlertCircle className="h-3 w-3 shrink-0" />
                   Superaste el límite del tabulador (máx. {formatMXN(limiteImporteBruto)}).
                 </p>
@@ -3661,7 +3661,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
   const esContinuarCaptura = isEditMode && ["borrador", "en captura"].includes((editSolicitud?.estado ?? "").toLowerCase())
   const [subStep,             setSubStep]             = useState<SubStep>("datos")
   const [stepValidity,        setStepValidity]        = useState<StepValidity>({ datos: false, alcance: false, perfil: false })
-  const [stepErrors,          setStepErrors]          = useState<StepErrors>({ alcance: false, perfil: false })
+  const [stepErrors,          setStepErrors]          = useState<StepErrors>({ datos: false, alcance: false, perfil: false })
   const [tipo,                setTipo]                = useState<TipoSolicitud>(editSolicitud?.tipo ?? "")
   const [esRenovacion,        setEsRenovacion]        = useState<string>("")
   const [folioSeleccionado,   setFolioSeleccionado]   = useState<string>("")
@@ -4155,6 +4155,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
   const invalidStepIndexes = useMemo(() => {
     const s = new Set<number>()
     if (step === "tipo" && periodoVencido) s.add(0)
+    if (stepErrors.datos) s.add(1)
     if (stepErrors.alcance) s.add(2)
     if (stepErrors.perfil) s.add(3)
     return s

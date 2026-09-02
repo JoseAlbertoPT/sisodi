@@ -25,7 +25,7 @@ import {
 
   ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle, RotateCcw,
   History, MessageSquare, ClipboardCheck, MinusCircle,
-  ChevronDown, ChevronRight, Send, Download, Lock, Stamp,
+  ChevronDown, ChevronRight, Send, Lock, Stamp,
   Users, Shield, Loader2, GraduationCap, Brain, Wrench, Heart, Star, Briefcase,
   UserCheck, Pencil, X,
 
@@ -679,9 +679,9 @@ function SeccionDocumentosAdjuntos({ raw }: { raw: any }) {
                 <p className="text-xs text-muted-foreground">{adj.tipo ?? "PDF"} — {formatFecha(adj.fecha_subida)}</p>
               </div>
               {adj.ruta && (
-                <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
+                <Button variant="default" size="sm" className="gap-1.5 shrink-0"
                   onClick={() => window.open(adj.ruta, "_blank")}>
-                  <Download className="h-3.5 w-3.5" />Ver
+                  Ver
                 </Button>
               )}
             </div>

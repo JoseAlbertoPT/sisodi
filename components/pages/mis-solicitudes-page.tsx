@@ -226,7 +226,6 @@ function ordinalRegreso(n: number): string {
   if (n === 3) return "3er Regreso"
   return `${n}° Regreso`
 }
-
 function getFolioHeader(_tab: UrgTab): string {
   return "Folios"
 }

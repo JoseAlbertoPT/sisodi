@@ -429,7 +429,7 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
                 <FileTypeIcon name={adj.nombre_archivo} size="sm" />
                 <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
                 {adj.ruta && (
-                  <Button variant="outline" size="sm" className="gap-1.5 shrink-0"
+                  <Button variant="default" size="sm" className="gap-1.5 shrink-0"
                     onClick={() => window.open(adj.ruta, "_blank")}>
                     Ver
                   </Button>
@@ -1248,7 +1248,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   const showToast = (variant: "success" | "error", title: string, description?: string) => {
     setActionToast(prev => ({ key: (prev?.key ?? 0) + 1, variant, title, description }))
   }
-
 
   const folioParaModal = (id: string | null): string => {
     const sol = solicitudes.find(s => s.id === id)
