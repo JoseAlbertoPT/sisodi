@@ -5,6 +5,7 @@ import { applyTextRules, applyTextRulesArray } from "@/lib/utils"
 import { useRealtime } from "@/hooks/use-realtime"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { FilterTabs } from "@/components/ui/filter-tabs"
 import { ReadOnlyField } from "@/components/ui/readonly-field"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageLayout } from "@/components/page-layout"
 import {
 
-  ArrowLeft, Clock, FileText, AlertCircle, CheckCircle2, XCircle, RotateCcw,
+  ArrowLeft, FileText, AlertCircle, CheckCircle2, XCircle, RotateCcw,
   History, MessageSquare, ClipboardCheck, MinusCircle,
   ChevronDown, ChevronRight, Send, Lock, Stamp,
   Users, Shield, Loader2, GraduationCap, Brain, Wrench, Heart, Star, Briefcase,
@@ -42,7 +43,7 @@ import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { type HistorialEntryData } from "@/components/historial-timeline"
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
 import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
-import { C_VERDE_ESTADO, C_ROSA_VINO, C_AMARILLO } from "@/components/ui/status-badge"
+import { StatusBadge, estadoBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AMARILLO } from "@/components/ui/status-badge"
 import { HistorialPanel, BitacoraPanel, ObservacionesPanel, type BitacoraEntry } from "@/components/solicitud-status-tabs"
 const COLOR_SI        = "#6E795A"
 const COLOR_SI_TEXT   = "#283c2a"
@@ -384,25 +385,6 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
   }
 }
 
-function getSlaSubtitle(dias: number | null) {
-  if (dias === null) return "Sin información de periodo"
-  if (dias <= 0) return "El periodo ya cerró"
-  return "días restantes al cierre"
-}
-
-function SlaIndicatorLarge({ diasRestantes }: { diasRestantes: number | null }) {
-  const bg = diasRestantes === null ? "#64748b" : diasRestantes <= 7 ? C_ROSA_VINO : diasRestantes <= 15 ? C_AMARILLO : C_VERDE_ESTADO
-  return (
-    <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5" style={{ backgroundColor: bg, color: "#FFFFFF" }}>
-      <Clock className="h-3.5 w-3.5 shrink-0" />
-      <div className="flex flex-col leading-tight">
-        <span className="text-xs font-semibold">{getSlaLabel(diasRestantes)}</span>
-        <span className="text-[9px] opacity-75">{getSlaSubtitle(diasRestantes)}</span>
-      </div>
-    </div>
-  )
-}
-
 function ObservacionChecklist({ comentario }: { comentario: string }) {
   const lineas = comentario.split("\n").filter(Boolean)
   const itemsChecklist = lineas.filter(l => /^\d+\.\s.+::/.test(l))
@@ -466,6 +448,17 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
     </Card>
   )
 }
+
+function FieldSection({ title, children, first = false }: { title: string; children: React.ReactNode; first?: boolean }) {
+  return (
+    <div className={first ? "flex flex-col gap-6" : "flex flex-col gap-6 mt-8 border-t border-border pt-8"}>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-accent-primary">{title}</h4>
+      <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">{children}</div>
+    </div>
+  )
+}
+
+type ExpedienteTab = "datos" | "alcance" | "perfil"
 
 function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
   const condiciones = [
@@ -532,7 +525,7 @@ function ReadOnlyList({ items }: { items: string[] }) {
       style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
     >
       {items.map((item, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm text-card-foreground min-w-0">
+        <li key={i} className="flex items-start gap-2 text-sm font-light text-card-foreground min-w-0">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-[10px] font-medium text-secondary mt-0.5">
             {i + 1}
           </span>
@@ -568,7 +561,7 @@ function PerfilList({ value }: { value: string }) {
   return (
     <ul className="flex flex-col gap-1">
       {items.map((item, i) => (
-        <li key={i} className="flex gap-2 text-sm text-card-foreground">
+        <li key={i} className="flex gap-2 text-sm font-light text-card-foreground">
           <span className="shrink-0 text-muted-foreground">•</span>
           <span>{applyTextRules(item)}</span>
         </li>
@@ -591,25 +584,33 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
   const esNombramiento = (sol.tipo ?? "").toLowerCase().includes("nombramiento")
     || (raw?.tipo_solicitud ?? "").toLowerCase().includes("nombramiento")
   return (
-    <SectionCard num="I" title="Datos Generales">
-      <div className="grid gap-4 md:grid-cols-2">
-        <ReadOnlyField label="Secretaría / Dependencia / Organismo" value={sol.secretaria} />
-        <ReadOnlyField label="Unidad Administrativa de Adscripción" value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
-        <ReadOnlyField label="Unidad Responsable del Gasto"         value={getNombreForClave(raw?.unidad_responsable ?? "") || raw?.nombre_unidad_responsable || raw?.unidad_responsable_nombre || raw?.unidad_responsable || "—"} />
+    <>
+      <FieldSection title="Adscripción" first>
+        <ReadOnlyField accent label="Secretaría / Dependencia / Organismo" value={sol.secretaria} />
+        <ReadOnlyField accent label="Unidad Administrativa de Adscripción" value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
+        <ReadOnlyField accent label="Unidad Responsable del Gasto"         value={getNombreForClave(raw?.unidad_responsable ?? "") || raw?.nombre_unidad_responsable || raw?.unidad_responsable_nombre || raw?.unidad_responsable || "—"} />
+        <ReadOnlyField accent label="Programa o Proyecto"                  value={applyTextRules(raw?.programa_proyecto ?? "—")} />
         {esNombramiento ? (
           <>
-            <ReadOnlyField label="Programa o Proyecto"              value={applyTextRules(raw?.programa_proyecto ?? "—")} />
-            <ReadOnlyField label="Denominación del Nombramiento"    value={applyTextRules(sol.denominacion)} />
-            <ReadOnlyField label="Puesto del Jefe Inmediato"        value={applyTextRules(raw?.puesto_jefe_inmediato ?? "—")} />
-            <ReadOnlyField label="Tipo de Actividad"              value={applyTextRules(raw?.tipo_actividades ?? "—")} />
-            <ReadOnlyField label="Régimen de Contratación"          value={formatRegimen(sol.regimen)} />
-            <ReadOnlyField label="Número de Personas a Contratar"   value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
-            <ReadOnlyField label="Tipo de Pago"                     value={raw?.tipo_importe || "Mensual"} />
-            <ReadOnlyField label="Vigencia Inicio"                  value={sol.vigenciaInicio} />
-            <ReadOnlyField label="Vigencia Término"                 value={sol.vigenciaFin} />
-            <ReadOnlyField label="Importe Neto"                     value={sol.importeBruto} />
+            <ReadOnlyField accent label="Denominación del Nombramiento"    value={applyTextRules(sol.denominacion)} />
+            <ReadOnlyField accent label="Puesto del Jefe Inmediato"        value={applyTextRules(raw?.puesto_jefe_inmediato ?? "—")} />
+            <ReadOnlyField accent label="Tipo de Actividad"                value={applyTextRules(raw?.tipo_actividades ?? "—")} />
+            <ReadOnlyField accent label="Régimen de Contratación"          value={formatRegimen(sol.regimen)} />
+          </>
+        ) : (
+          <ReadOnlyField accent label="Tipo de Actividad"                value={applyTextRules(sol.tipoActividades)} />
+        )}
+      </FieldSection>
+      <FieldSection title="Condiciones de la Contratación">
+        {esNombramiento ? (
+          <>
+            <ReadOnlyField accent label="Número de Personas a Contratar"   value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
+            <ReadOnlyField accent label="Vigencia"                        value={`${sol.vigenciaInicio} — ${sol.vigenciaFin}`} />
+            <ReadOnlyField accent label="Tipo de Pago"                     value={raw?.tipo_importe || "Mensual"} />
+            <ReadOnlyField accent label="Importe Neto"                     value={sol.importeBruto} />
             {(raw?.nivel_tabulador || raw?.categoria_tabulador) && (
               <ReadOnlyField
+                accent
                 label="Nivel Catálogo"
                 value={raw?.nivel_tabulador && raw?.categoria_tabulador ? `${raw.nivel_tabulador}/${raw.categoria_tabulador}` : (raw?.nivel_tabulador ?? raw?.categoria_tabulador ?? "—")}
               />
@@ -617,17 +618,17 @@ function SeccionDatosGenerales({ sol }: { sol: SolicitudDetalle }) {
           </>
         ) : (
           <>
-            <ReadOnlyField label="Número de Prestadores de Servicios" value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
-            <ReadOnlyField label="Programa o Proyecto"                value={applyTextRules(raw?.programa_proyecto ?? "—")} />
-            <ReadOnlyField label="Tipo de Actividad"                value={applyTextRules(sol.tipoActividades)} />
-            <ReadOnlyField label="Régimen de Contratación"            value={formatRegimen(sol.regimen)} />
-            <ReadOnlyField label="Vigencia Inicio"                    value={sol.vigenciaInicio} />
-            <ReadOnlyField label="Vigencia Término"                   value={sol.vigenciaFin} />
-            <ReadOnlyField label="Importe Bruto"                      value={sol.importeBruto} />
+            <ReadOnlyField accent label="Número de Prestadores de Servicios" value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
+            <ReadOnlyField accent label="Vigencia"                          value={`${sol.vigenciaInicio} — ${sol.vigenciaFin}`} />
+            <ReadOnlyField accent label="Importe Bruto"                      value={sol.importeBruto} />
+            <ReadOnlyField accent label="Régimen de Contratación"            value={formatRegimen(sol.regimen)} />
           </>
         )}
+      </FieldSection>
+      <div className="mt-8 border-t border-border pt-8">
+        <SeccionDocumentosAdjuntos raw={raw} />
       </div>
-    </SectionCard>
+    </>
   )
 }
 function SeccionRenovacion({ sol }: { sol: SolicitudDetalle }) {
@@ -653,7 +654,7 @@ function SeccionPerfil({ raw }: { raw: any }) {
     <SectionCard num="II" title="Perfil Requerido">
       <div className="flex items-start gap-4">
         <div className="flex flex-col gap-4 flex-1">
-          <ReadOnlyField   label="Escolaridad Mínima"         value={formatEscolaridad(raw?.escolaridad)} />
+          <ReadOnlyField bold={false} label="Escolaridad Mínima"         value={formatEscolaridad(raw?.escolaridad)} />
           <PerfilListField label="Competencias Técnicas"       value={raw?.comp_tec ?? "—"} />
           <PerfilListField label="Valores"                     value={raw?.valores ?? "—"} />
         </div>
@@ -694,44 +695,88 @@ function SeccionDocumentosAdjuntos({ raw }: { raw: any }) {
   )
 }
 
+function ExpedienteAlcanceYPerfil({ raw, hidePerfil, objetoTitle, actividadesTitle, responsabilidadesTitle, esNombramiento, actividades, responsabilidades, marcoNormativo, resguardoActivos, tab }: {
+  raw: any
+  hidePerfil?: boolean
+  objetoTitle: string
+  actividadesTitle: string
+  responsabilidadesTitle: string
+  esNombramiento: boolean
+  actividades: string[]
+  responsabilidades: string[]
+  marcoNormativo: string[]
+  resguardoActivos: string | null | undefined
+  tab: ExpedienteTab
+}) {
+  return (
+    <>
+      {tab === "alcance" && (
+        <div className="flex flex-col gap-4">
+          <SectionCard title={objetoTitle}>
+            <p className="scroll-thin text-sm font-light text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
+              {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
+            </p>
+          </SectionCard>
+          <SectionCard title={actividadesTitle}>
+            {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
+          </SectionCard>
+          <SectionCard title={responsabilidadesTitle}>
+            {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
+          </SectionCard>
+          {esNombramiento && (
+            <>
+              <SectionCard title="VI. Marco Normativo">
+                {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
+              </SectionCard>
+              <SectionCard title="VII. Condiciones y Riesgos">
+                <SeccionCondicionesRiesgos raw={raw} />
+              </SectionCard>
+              <SectionCard title="VIII. Resguardo Personalizado de Activos">
+                <ReadOnlyField bold={false} label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
+              </SectionCard>
+            </>
+          )}
+        </div>
+      )}
+      {tab === "perfil" && (
+        <div className="flex flex-col gap-4">
+          {hidePerfil ? <SeccionDocumentosAdjuntos raw={raw} /> : <SeccionPerfil raw={raw} />}
+        </div>
+      )}
+    </>
+  )
+}
+
 function ExpedienteFiltro1({ sol, hidePerfil }: { sol: SolicitudDetalle; hidePerfil?: boolean }) {
   const raw = sol._raw
   const actividades: string[]        = Array.isArray(raw?.actividades)        ? raw.actividades.filter(Boolean)        : []
   const responsabilidades: string[]  = Array.isArray(raw?.responsabilidades)   ? raw.responsabilidades.filter(Boolean)   : []
   const marcoNormativo: string[]     = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
-  const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
   const resguardoActivos             = raw?.resguardo_activos as string | null | undefined
   const esNombramiento = (sol.regimen ?? "").toLowerCase().includes("nombramiento")
+  const [tab, setTab] = useState<ExpedienteTab>("datos")
   return (
-    <div className="flex flex-col gap-4">
-      <SeccionDatosGenerales sol={sol} />
-      <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
-        <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
-          {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
-        </p>
-      </SectionCard>
-      <SectionCard title={esNombramiento ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}>
-        {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
-      </SectionCard>
-      <SectionCard title={esNombramiento ? "V. Responsabilidades" : "I.3 Responsabilidades"}>
-        {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
-      </SectionCard>
-      {esNombramiento && (
-        <>
-          <SectionCard title="VI. Marco Normativo">
-            {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
-          </SectionCard>
-          <SectionCard title="VII. Condiciones y Riesgos">
-            <SeccionCondicionesRiesgos raw={raw} />
-          </SectionCard>
-          <SectionCard title="VIII. Resguardo Personalizado de Activos">
-            <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
-          </SectionCard>
-        </>
-      )}
-      <SeccionPerfil raw={raw} />
-      <SeccionDocumentosAdjuntos raw={raw} />
-    </div>
+    <Card className="shadow-sm border-border min-h-[calc(100vh-220px)]">
+      <CardHeader className="border-b">
+        <FilterTabs value={tab} onValueChange={(v) => setTab(v as ExpedienteTab)} items={[
+          { value: "datos", label: "Datos Generales" },
+          { value: "alcance", label: "Alcance de la Contratación" },
+          { value: "perfil", label: hidePerfil ? "Documentos" : "Perfil" },
+        ]} />
+      </CardHeader>
+      <CardContent>
+        {tab === "datos" && <SeccionDatosGenerales sol={sol} />}
+        <ExpedienteAlcanceYPerfil
+          raw={raw} hidePerfil={hidePerfil} tab={tab}
+          esNombramiento={esNombramiento}
+          objetoTitle={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}
+          actividadesTitle={esNombramiento ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}
+          responsabilidadesTitle={esNombramiento ? "V. Responsabilidades" : "I.3 Responsabilidades"}
+          actividades={actividades} responsabilidades={responsabilidades}
+          marcoNormativo={marcoNormativo} resguardoActivos={resguardoActivos}
+        />
+      </CardContent>
+    </Card>
   )
 }
 
@@ -740,40 +785,32 @@ function ExpedienteFiltro2({ sol }: { sol: SolicitudDetalle }) {
   const actividades: string[]        = Array.isArray(raw?.actividades)        ? raw.actividades.filter(Boolean)        : []
   const responsabilidades: string[]  = Array.isArray(raw?.responsabilidades)   ? raw.responsabilidades.filter(Boolean)   : []
   const marcoNormativo: string[]     = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
-  const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
   const resguardoActivos             = raw?.resguardo_activos as string | null | undefined
   const regimenNorm      = (sol.regimen ?? "").toLowerCase()
   const esNombramientoTD = regimenNorm.includes("nombramiento") || regimenNorm.includes("tiempo determinado")
+  const [tab, setTab] = useState<ExpedienteTab>("datos")
   return (
-    <div className="flex flex-col gap-4">
-      <SeccionDatosGenerales sol={sol} />
-      <SectionCard title={esNombramientoTD ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
-        <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
-          {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
-        </p>
-      </SectionCard>
-      <SectionCard title={esNombramientoTD ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}>
-        {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
-      </SectionCard>
-      <SectionCard title={esNombramientoTD ? "V. Responsabilidades" : "I.3 Responsabilidades"}>
-        {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
-      </SectionCard>
-      {esNombramientoTD && (
-        <>
-          <SectionCard title="VI. Marco Normativo">
-            {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
-          </SectionCard>
-          <SectionCard title="VII. Condiciones y Riesgos">
-            <SeccionCondicionesRiesgos raw={raw} />
-          </SectionCard>
-          <SectionCard title="VIII. Resguardo Personalizado de Activos">
-            <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
-          </SectionCard>
-        </>
-      )}
-      <SeccionPerfil raw={raw} />
-      <SeccionDocumentosAdjuntos raw={raw} />
-    </div>
+    <Card className="shadow-sm border-border min-h-[calc(100vh-220px)]">
+      <CardHeader className="border-b">
+        <FilterTabs value={tab} onValueChange={(v) => setTab(v as ExpedienteTab)} items={[
+          { value: "datos", label: "Datos Generales" },
+          { value: "alcance", label: "Alcance de la Contratación" },
+          { value: "perfil", label: "Perfil" },
+        ]} />
+      </CardHeader>
+      <CardContent>
+        {tab === "datos" && <SeccionDatosGenerales sol={sol} />}
+        <ExpedienteAlcanceYPerfil
+          raw={raw} tab={tab}
+          esNombramiento={esNombramientoTD}
+          objetoTitle={esNombramientoTD ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}
+          actividadesTitle={esNombramientoTD ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}
+          responsabilidadesTitle={esNombramientoTD ? "V. Responsabilidades" : "I.3 Responsabilidades"}
+          actividades={actividades} responsabilidades={responsabilidades}
+          marcoNormativo={marcoNormativo} resguardoActivos={resguardoActivos}
+        />
+      </CardContent>
+    </Card>
   )
 }
 function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
@@ -781,39 +818,31 @@ function ExpedienteFiltro3({ sol }: { sol: SolicitudDetalle }) {
   const actividades: string[]        = Array.isArray(raw?.actividades)        ? raw.actividades.filter(Boolean)        : []
   const responsabilidades: string[]  = Array.isArray(raw?.responsabilidades)   ? raw.responsabilidades.filter(Boolean)   : []
   const marcoNormativo: string[]     = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
-  const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
   const resguardoActivos             = raw?.resguardo_activos as string | null | undefined
   const esNombramiento = (sol.regimen ?? "").toLowerCase().includes("nombramiento")
+  const [tab, setTab] = useState<ExpedienteTab>("datos")
   return (
-    <div className="flex flex-col gap-4">
-      <SeccionDatosGenerales sol={sol} />
-      <SectionCard title={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}>
-        <p className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}>
-          {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
-        </p>
-      </SectionCard>
-      <SectionCard title={esNombramiento ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}>
-        {actividades.length > 0 ? <ReadOnlyList items={actividades} /> : <p className="text-sm text-muted-foreground">—</p>}
-      </SectionCard>
-      <SectionCard title={esNombramiento ? "V. Responsabilidades" : "I.3 Responsabilidades"}>
-        {responsabilidades.length > 0 ? <ReadOnlyList items={responsabilidades} /> : <p className="text-sm text-muted-foreground">—</p>}
-      </SectionCard>
-      {esNombramiento && (
-        <>
-          <SectionCard title="VI. Marco Normativo">
-            {marcoNormativo.length > 0 ? <ReadOnlyList items={marcoNormativo} /> : <p className="text-sm text-muted-foreground">—</p>}
-          </SectionCard>
-          <SectionCard title="VII. Condiciones y Riesgos">
-            <SeccionCondicionesRiesgos raw={raw} />
-          </SectionCard>
-          <SectionCard title="VIII. Resguardo Personalizado de Activos">
-            <ReadOnlyField label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos || "—"} />
-          </SectionCard>
-        </>
-      )}
-      <SeccionPerfil raw={raw} />
-      <SeccionDocumentosAdjuntos raw={raw} />
-    </div>
+    <Card className="shadow-sm border-border min-h-[calc(100vh-220px)]">
+      <CardHeader className="border-b">
+        <FilterTabs value={tab} onValueChange={(v) => setTab(v as ExpedienteTab)} items={[
+          { value: "datos", label: "Datos Generales" },
+          { value: "alcance", label: "Alcance de la Contratación" },
+          { value: "perfil", label: "Perfil" },
+        ]} />
+      </CardHeader>
+      <CardContent>
+        {tab === "datos" && <SeccionDatosGenerales sol={sol} />}
+        <ExpedienteAlcanceYPerfil
+          raw={raw} tab={tab}
+          esNombramiento={esNombramiento}
+          objetoTitle={esNombramiento ? "III. Objeto del Nombramiento" : "I.1 Objeto de la Contratación"}
+          actividadesTitle={esNombramiento ? "IV. Actividades a Realizar" : "I.2 Actividades a Realizar"}
+          responsabilidadesTitle={esNombramiento ? "V. Responsabilidades" : "I.3 Responsabilidades"}
+          actividades={actividades} responsabilidades={responsabilidades}
+          marcoNormativo={marcoNormativo} resguardoActivos={resguardoActivos}
+        />
+      </CardContent>
+    </Card>
   )
 }
 function FolioRecepcionCard({
@@ -1692,15 +1721,17 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                     : <span className="text-muted-foreground font-normal text-base">Sin Folio de Recepción</span>
                 )}
               </h2>
-              <Badge className="bg-primary/15 text-primary border-0 text-xs">{solicitud.estado}</Badge>
+              {estadoBadge(solicitud.estado)}
+              {!isEmitido && solicitud.slaRestante != null && (
+                <StatusBadge
+                  label={solicitud.slaRestante <= 0 ? "Cierre alcanzado" : `${solicitud.slaRestante} ${solicitud.slaRestante === 1 ? "día" : "días"} al cierre`}
+                  color={solicitud.slaRestante <= 0 ? C_ROSA_VINO : C_VERDE_ESTADO}
+                  bgColor={solicitud.slaRestante <= 0 ? C_ROSA_VINO_BG : C_VERDE_ESTADO_BG}
+                />
+              )}
               {isEmitido && (
                 <Badge className="bg-primary text-primary-foreground border-0 text-xs gap-1">
                   <Lock className="h-3 w-3" />Emitido
-                </Badge>
-              )}
-              {solicitud.folio && (
-                <Badge className="bg-primary/15 text-primary border-0 text-xs gap-1">
-                  <FileText className="h-3 w-3" />Rec. {solicitud.folio}
                 </Badge>
               )}
               {isEmitido && folioDictamenResuelto && (
@@ -1724,13 +1755,12 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
             Descargar Justificación
           </Button>
           {onEditSolicitud && enTurno && (
-            <Button variant="default" size="sm" className="gap-1.5"
+            <Button variant="vino" size="sm" className="gap-1.5"
               onClick={() => setShowEditarConfirm(true)}
             >
               Editar
             </Button>
           )}
-          {!isEmitido && <SlaIndicatorLarge diasRestantes={solicitud.slaRestante} />}
         </div>
       </div>
 
@@ -1742,38 +1772,40 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
             {filtro === 3 && <ExpedienteFiltro3 sol={solicitud} />}
           </div>
         </ScrollArea>
-        <ScrollArea className="h-[calc(100vh-220px)]">
-          <div className="flex flex-col gap-4 pr-4">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActiveTab)}>
-              <TabsList className="w-full">
-                {!isEmitido && !ocultarRevisionTrasAprobar && (
-                  <TabsTrigger value="review" className="flex-1">
-                    <ClipboardCheck className="h-4 w-4" />Revisión
-                  </TabsTrigger>
-                )}
-                {showEmisionTab && (
-                  <TabsTrigger value="emision" className="flex-1">
-                    <Stamp className="h-4 w-4" />Emisión
-                  </TabsTrigger>
-                )}
-                {solicitud.observacionesTodas.length > 0 && (
-                  <TabsTrigger value="observaciones" className="flex-1 relative">
-                    <AlertCircle className="h-4 w-4" />Observaciones
+        <div className="flex flex-col gap-4 h-[calc(100vh-220px)]">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActiveTab)}>
+            <TabsList className="w-full">
+              {!isEmitido && !ocultarRevisionTrasAprobar && (
+                <TabsTrigger value="review" className="flex-1">
+                  <ClipboardCheck className="h-4 w-4" />Revisión
+                </TabsTrigger>
+              )}
+              {showEmisionTab && (
+                <TabsTrigger value="emision" className="flex-1">
+                  <Stamp className="h-4 w-4" />Emisión
+                </TabsTrigger>
+              )}
+              {solicitud.observacionesTodas.length > 0 && (
+                <TabsTrigger value="observaciones" className="flex-1 relative">
+                  <AlertCircle className="h-4 w-4" />Observaciones
 <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] px-1 text-[11px] font-normal text-white">
-                      {solicitud.observacionesTodas.length}
-                    </span>
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="historial" className="flex-1">
-                  <History className="h-4 w-4" />Historial
+                    {solicitud.observacionesTodas.length}
+                  </span>
                 </TabsTrigger>
-                <TabsTrigger value="bitacora" className="flex-1">
-                  <FileText className="h-4 w-4" />Bitácora
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+              )}
+              <TabsTrigger value="historial" className="flex-1">
+                <History className="h-4 w-4" />Historial
+              </TabsTrigger>
+              <TabsTrigger value="bitacora" className="flex-1">
+                <FileText className="h-4 w-4" />Bitácora
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
+          <div className="flex-1 min-h-0">
             {activeTab === "review" && !isEmitido && !ocultarRevisionTrasAprobar && (
+              <ScrollArea className="h-full">
+              <div className="flex flex-col gap-4 pr-4">
               <>
                 {filtro !== 3 && (
                   <>
@@ -1804,15 +1836,15 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                                 <ClipboardCheck className="h-4 w-4 text-secondary" />
                                 <span className="text-sm font-semibold text-card-foreground">Checklist Normativo — Revisor</span>
                               </div>
-                              <Badge variant="outline" className="text-xs font-mono">{checklistStats.total} items</Badge>
+                              {/* <Badge variant="outline" className="text-xs font-mono">{checklistStats.total} items</Badge> */}
                             </div>
                             <div className="flex items-center gap-3 mb-3">
                               <span className="text-sm font-medium text-card-foreground">
                                 {checklistStats.completed} de {checklistStats.total} verificaciones completas
                               </span>
-                              <Badge className={`text-[10px] border-0 ${checklistStats.hasNo ? "bg-destructive/10 text-destructive" : checklistStats.allDone ? "bg-secondary/10 text-secondary" : "bg-muted text-muted-foreground"}`}>
+                              {/* <Badge className={`text-[10px] border-0 ${checklistStats.hasNo ? "bg-destructive/10 text-destructive" : checklistStats.allDone ? "bg-secondary/10 text-secondary" : "bg-muted text-muted-foreground"}`}>
                                 {checklistStats.hasNo ? `${checklistStats.noCount} observación(es)` : checklistStats.allDone ? "Completo" : "En progreso"}
-                              </Badge>
+                              </Badge> */}
                             </div>
                             <div className="h-2 w-full rounded-full bg-muted">
                               <div
@@ -2060,10 +2092,14 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                   </Card>
                 )}
               </>
+              </div>
+              </ScrollArea>
             )}
 
             {activeTab === "emision" && (
-              isEmitido ? (
+              <ScrollArea className="h-full">
+              <div className="flex flex-col gap-4 pr-4">
+              {isEmitido ? (
                 <Card className="shadow-sm border-primary border-2 bg-primary/5">
                   <CardContent className="flex items-center gap-3 p-4">
                     <Lock className="h-6 w-6 text-primary" />
@@ -2194,7 +2230,9 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
                     </CardContent>
                   </Card>
                 </div>
-              )
+              )}
+              </div>
+              </ScrollArea>
             )}
 
             {activeTab === "observaciones" && (
@@ -2207,7 +2245,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
             {activeTab === "historial" && (
               <HistorialPanel
                 entries={solicitud.historial}
-                title="Historial del Expediente"
+                title="Historial de Estatus"
                 folio={solicitud.folio ?? solicitud.folioJustificacion}
                 estado={solicitud.estado}
                 tipo={solicitud.tipo}
@@ -2218,7 +2256,7 @@ export function RevisionDOPage({ solicitudId, filtro, onBack, onEditSolicitud }:
               <BitacoraPanel bitacora={bitacora} />
             )}
           </div>
-        </ScrollArea>
+        </div>
       </div>
     </div>
 

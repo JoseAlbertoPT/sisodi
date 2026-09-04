@@ -2,6 +2,7 @@
 
 import { History, Info, AlertTriangle } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { HistorialTimeline, ROLES_OCULTAN_OBSERVACIONES, type HistorialEntryData } from "@/components/historial-timeline"
 import { useAuth } from "@/lib/auth-context"
 
@@ -80,7 +81,7 @@ export function DevolucionObs({ comentario }: { comentario: string }) {
   )
 }
 
-function PanelHeader({
+export function PanelHeader({
   iconBg, icon, title, subtitle, countLabel,
 }: {
   iconBg: string; icon: React.ReactNode; title: React.ReactNode; subtitle: string; countLabel: string
@@ -91,7 +92,7 @@ function PanelHeader({
         {icon}
       </div>
       <div className="flex flex-col">
-        <span className="text-sm font-bold text-content-high">{title}</span>
+        <span className="text-xs font-bold text-content-high">{title}</span>
         <span className="text-[10px] text-content-low">{subtitle}</span>
       </div>
       {countLabel && (
@@ -326,7 +327,7 @@ export function HistorialPanel({
   const ocultaConteo = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
   const n = entries.length
   return (
-    <div className="overflow-hidden rounded-xl border border-border shadow-md">
+    <ScrollArea className="h-full rounded-xl border border-border shadow-md">
       <PanelHeader
         iconBg="bg-[#dfe6c3]"
         icon={<History className="h-5 w-5 text-[#2d331b]" />}
@@ -338,7 +339,7 @@ export function HistorialPanel({
       <div className="bg-card px-4 py-3">
         <HistorialTimeline entries={entries} />
       </div>
-    </div>
+    </ScrollArea>
   )
 }
 
@@ -356,7 +357,7 @@ export function BitacoraPanel({
     }))
   )
   return (
-    <div className="overflow-hidden rounded-xl border border-border shadow-md">
+    <ScrollArea className="h-full rounded-xl border border-border shadow-md">
       <PanelHeader
         iconBg="bg-[#ffefb6]"
         icon={<Info className="h-5 w-5 text-[#936901]" />}
@@ -369,7 +370,7 @@ export function BitacoraPanel({
           ? <HistorialTimeline entries={entries} />
           : <p className="text-sm text-muted-foreground pb-2">Sin eventos registrados.</p>}
       </div>
-    </div>
+    </ScrollArea>
   )
 }
 
@@ -390,7 +391,7 @@ export function ObservacionesPanel({
   const observacionesVisibles = soloActual ? todasObservaciones.slice(-1) : todasObservaciones
   const count = observacionesVisibles.length > 0 ? observacionesVisibles.length : single ? 1 : 0
   return (
-    <div className="overflow-hidden rounded-xl border border-border shadow-md">
+    <ScrollArea className="h-full rounded-xl border border-border shadow-md">
       <PanelHeader
         iconBg="bg-[var(--sem-support-error-low)]"
         icon={<AlertTriangle className="h-5 w-5 text-[var(--sem-support-on-error-low)]" />}
@@ -421,6 +422,6 @@ export function ObservacionesPanel({
           <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
         )}
       </div>
-    </div>
+    </ScrollArea>
   )
 }

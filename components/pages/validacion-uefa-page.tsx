@@ -614,6 +614,15 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
   )
 }
 
+function FieldSection({ title, children, first = false }: { title: string; children: React.ReactNode; first?: boolean }) {
+  return (
+    <div className={first ? "flex flex-col gap-6" : "flex flex-col gap-6 mt-8 border-t border-border pt-8"}>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-accent-primary">{title}</h4>
+      <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">{children}</div>
+    </div>
+  )
+}
+
 function parseListField(text: string | null | undefined): string[] {
   if (!text || text === "—") return []
   return text.split(/[\n\r•·]+/).map(s => s.trim()).filter(Boolean)
@@ -628,7 +637,7 @@ function PerfilListField({ label, value }: { label: string; value: string | null
       ) : (
         <ul className="flex flex-col gap-0.5">
           {items.map((item, i) => (
-            <li key={i} className="flex gap-2 text-sm text-card-foreground">
+            <li key={i} className="flex gap-2 text-sm font-light text-card-foreground">
               <span className="shrink-0 text-muted-foreground">•</span>
               <span>{applyTextRules(item)}</span>
             </li>
@@ -648,7 +657,7 @@ function ListaItems({ items }: { items: string[] }) {
       style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
     >
       {validItems.map((item, i) => (
-        <li key={i} className="flex gap-2 text-sm text-card-foreground min-w-0">
+        <li key={i} className="flex gap-2 text-sm font-light text-card-foreground min-w-0">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary mt-0.5">
             {i + 1}
           </span>
@@ -719,6 +728,8 @@ function SeccionCondicionesRiesgos({ raw }: { raw: any }) {
   )
 }
 
+type ExpedienteTab = "datos" | "alcance" | "perfil"
+
 function ExpedienteGenerico({ solicitud, wide = true }: { solicitud: UefaSolicitud; wide?: boolean }) {
   const raw = solicitud._raw
   const folioDictamenMostrar = solicitud.numeroDictamen
@@ -728,111 +739,135 @@ function ExpedienteGenerico({ solicitud, wide = true }: { solicitud: UefaSolicit
   const marcoNormativo   = Array.isArray(raw?.marco_normativo)     ? raw.marco_normativo.filter(Boolean)     : []
   const condRiesgos      = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
   const resguardoActivos = raw?.resguardo_activos ?? ""
+  const [tab, setTab] = useState<ExpedienteTab>("datos")
 
   return (
-    <div className="flex flex-col gap-4">
-      <SectionCard num="I" title="Datos Generales">
-        <div className={`grid gap-4 ${wide ? "md:grid-cols-3 xl:grid-cols-5" : "md:grid-cols-2"}`}>
-          <ReadOnlyField bold={false} label="Secretaría / Dependencia / Organismo" value={solicitud.secretaria} />
-          <ReadOnlyField bold={false} label="Unidad Administrativa de Adscripción" value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
-          <ReadOnlyField bold={false} label="Unidad Responsable del Gasto"         value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
-          <ReadOnlyField bold={false} label="Programa o Proyecto"                  value={applyTextRules(solicitud.programaProyecto)} />
-          <ReadOnlyField bold={false} label="Régimen de Contratación"              value={formatRegimen(solicitud.regimen)} />
-          {esNombramiento && (
-            <ReadOnlyField bold={false} label="Denominación del Nombramiento"      value={applyTextRules(solicitud.denominacion)} />
-          )}
-          {esNombramiento && (
-            <ReadOnlyField bold={false} label="Puesto del Jefe Inmediato"          value={applyTextRules(raw?.puesto_jefe_inmediato ?? "—")} />
-          )}
-          <ReadOnlyField bold={false} label="Número de Prestadores de Servicio"    value={solicitud.numeroPrestadores} />
-          <ReadOnlyField bold={false} label="Tipo de Actividad"                value={applyTextRules(solicitud.tipoActividades)} />
-          <ReadOnlyField bold={false} label="Tipo de Pago"    value={raw?.tipo_importe || "Mensual"} />
-          <ReadOnlyField bold={false} label="Vigencia Inicio"                      value={solicitud.vigenciaInicio} />
-          <ReadOnlyField bold={false} label="Vigencia Término"                     value={solicitud.vigenciaFin} />
-          <ReadOnlyField bold={false} label="Importe Neto"   value={solicitud.importeBruto} />
-          {(raw?.nivel_tabulador || raw?.categoria_tabulador) && (
-            <ReadOnlyField
-              bold={false}
-              label="Nivel Catálogo"
-              value={raw?.nivel_tabulador && raw?.categoria_tabulador ? `${raw.nivel_tabulador}/${raw.categoria_tabulador}` : (raw?.nivel_tabulador ?? raw?.categoria_tabulador ?? "—")}
-            />
-          )}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="I.1 Objeto de la Contratación">
-        <p
-          className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap"
-          style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
-        >
-          {solicitud.objeto && solicitud.objeto !== "—"
-            ? applyTextRules(solicitud.objeto)
-            : <span className="text-muted-foreground">—</span>}
-        </p>
-      </SectionCard>
-
-      <SectionCard title="I.2 Actividades a Realizar">
-        <ListaItems items={solicitud.actividades} />
-      </SectionCard>
-
-      <SectionCard title="I.3 Responsabilidades">
-        <ListaItems items={solicitud.responsabilidades} />
-      </SectionCard>
-
-      {esNombramiento && marcoNormativo.length > 0 && (
-        <SectionCard title="V. Marco Normativo">
-          <ListaItems items={marcoNormativo} />
-        </SectionCard>
-      )}
-
-      {esNombramiento && (
-        <SectionCard title="VI. Condiciones y Riesgos">
-          <SeccionCondicionesRiesgos raw={raw} />
-        </SectionCard>
-      )}
-
-      {esNombramiento && resguardoActivos && (
-        <SectionCard title="VII. Resguardo Personalizado de Activos">
-          <ReadOnlyField bold={false} label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos} />
-        </SectionCard>
-      )}
-
-      <SectionCard title="Perfil Requerido">
-        <div className="flex items-start gap-4">
-          <div className="flex flex-col gap-4 flex-1">
-            <ReadOnlyField   bold={false} label="Escolaridad Mínima"          value={formatEscolaridad(solicitud.escolaridad)} />
-            <PerfilListField label="Competencias Técnicas"        value={solicitud.compTec} />
-            <PerfilListField label="Valores"                      value={solicitud.valores} />
-          </div>
-          <div className="flex flex-col gap-4 flex-1">
-            <PerfilListField label="Competencias Administrativas" value={solicitud.compAdm} />
-            <PerfilListField label="Competencias Sociales"        value={solicitud.compSoc} />
-            <PerfilListField label="Áreas de Experiencia"         value={solicitud.areasExp} />
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
-        {raw?.adjunto?.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {raw.adjunto.map((adj: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-                <FileTypeIcon name={adj.nombre_archivo} size="sm" />
-                <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
-                {adj.ruta && (
-                  <Button variant="default" size="sm" className="gap-1.5 shrink-0"
-                    onClick={() => window.open(adj.ruta, "_blank")}>
-                    Ver
-                  </Button>
+    <Card className="shadow-sm border-border min-h-[calc(100vh-220px)]">
+      <CardHeader className="border-b">
+        <FilterTabs
+          value={tab}
+          onValueChange={(v) => setTab(v as ExpedienteTab)}
+          items={[
+            { value: "datos", label: "Datos Generales" },
+            { value: "alcance", label: "Alcance de la Contratación" },
+            { value: "perfil", label: "Perfil" },
+          ]}
+        />
+      </CardHeader>
+      <CardContent>
+        {tab === "datos" && (
+          <>
+            <FieldSection title="Adscripción" first>
+              <ReadOnlyField accent label="Secretaría / Dependencia / Organismo" value={solicitud.secretaria} />
+              <ReadOnlyField accent label="Unidad Administrativa de Adscripción" value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
+              <ReadOnlyField accent label="Unidad Responsable del Gasto"         value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
+              <ReadOnlyField accent label="Programa o Proyecto"                  value={applyTextRules(solicitud.programaProyecto)} />
+              {esNombramiento && (
+                <ReadOnlyField accent label="Denominación del Nombramiento"      value={applyTextRules(solicitud.denominacion)} />
+              )}
+              {esNombramiento && (
+                <ReadOnlyField accent label="Puesto del Jefe Inmediato"          value={applyTextRules(raw?.puesto_jefe_inmediato ?? "—")} />
+              )}
+              <ReadOnlyField accent label="Tipo de Actividad"                value={applyTextRules(solicitud.tipoActividades)} />
+            </FieldSection>
+            <FieldSection title="Condiciones de la Contratación">
+              <ReadOnlyField accent label="Número de Prestadores de Servicio"    value={solicitud.numeroPrestadores} />
+              <ReadOnlyField accent label="Vigencia"                            value={`${solicitud.vigenciaInicio} — ${solicitud.vigenciaFin}`} />
+              <ReadOnlyField accent label="Tipo de Pago"    value={raw?.tipo_importe || "Mensual"} />
+              <ReadOnlyField accent label="Importe Neto"   value={solicitud.importeBruto} />
+              {(raw?.nivel_tabulador || raw?.categoria_tabulador) && (
+                <ReadOnlyField
+                  accent
+                  label="Nivel Catálogo"
+                  value={raw?.nivel_tabulador && raw?.categoria_tabulador ? `${raw.nivel_tabulador}/${raw.categoria_tabulador}` : (raw?.nivel_tabulador ?? raw?.categoria_tabulador ?? "—")}
+                />
+              )}
+              <ReadOnlyField accent label="Régimen de Contratación"              value={formatRegimen(solicitud.regimen)} />
+            </FieldSection>
+            <div className="mt-8 border-t border-border pt-8">
+              <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
+                {raw?.adjunto?.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {raw.adjunto.map((adj: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
+                        <FileTypeIcon name={adj.nombre_archivo} size="sm" />
+                        <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
+                        {adj.ruta && (
+                          <Button variant="default" size="sm" className="gap-1.5 shrink-0"
+                            onClick={() => window.open(adj.ruta, "_blank")}>
+                            Ver
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
                 )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
+              </SectionCard>
+            </div>
+          </>
         )}
-      </SectionCard>
-    </div>
+        {tab === "alcance" && (
+          <div className="flex flex-col gap-4">
+            <SectionCard title="I.1 Objeto de la Contratación">
+              <p
+                className="scroll-thin text-sm font-light text-card-foreground leading-relaxed whitespace-pre-wrap"
+                style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
+              >
+                {solicitud.objeto && solicitud.objeto !== "—"
+                  ? applyTextRules(solicitud.objeto)
+                  : <span className="text-muted-foreground">—</span>}
+              </p>
+            </SectionCard>
+
+            <SectionCard title="I.2 Actividades a Realizar">
+              <ListaItems items={solicitud.actividades} />
+            </SectionCard>
+
+            <SectionCard title="I.3 Responsabilidades">
+              <ListaItems items={solicitud.responsabilidades} />
+            </SectionCard>
+
+            {esNombramiento && marcoNormativo.length > 0 && (
+              <SectionCard title="V. Marco Normativo">
+                <ListaItems items={marcoNormativo} />
+              </SectionCard>
+            )}
+
+            {esNombramiento && (
+              <SectionCard title="VI. Condiciones y Riesgos">
+                <SeccionCondicionesRiesgos raw={raw} />
+              </SectionCard>
+            )}
+
+            {esNombramiento && resguardoActivos && (
+              <SectionCard title="VII. Resguardo Personalizado de Activos">
+                <ReadOnlyField bold={false} label="Resguardo de Activos" value={resguardoActivos === "si" ? "Sí" : resguardoActivos === "no" ? "No" : resguardoActivos} />
+              </SectionCard>
+            )}
+          </div>
+        )}
+        {tab === "perfil" && (
+          <div className="flex flex-col gap-4">
+            <SectionCard title="Perfil Requerido">
+              <div className="flex items-start gap-4">
+                <div className="flex flex-col gap-4 flex-1">
+                  <ReadOnlyField   bold={false} label="Escolaridad Mínima"          value={formatEscolaridad(solicitud.escolaridad)} />
+                  <PerfilListField label="Competencias Técnicas"        value={solicitud.compTec} />
+                  <PerfilListField label="Valores"                      value={solicitud.valores} />
+                </div>
+                <div className="flex flex-col gap-4 flex-1">
+                  <PerfilListField label="Competencias Administrativas" value={solicitud.compAdm} />
+                  <PerfilListField label="Competencias Sociales"        value={solicitud.compSoc} />
+                  <PerfilListField label="Áreas de Experiencia"         value={solicitud.areasExp} />
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -1130,42 +1165,53 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud
           <Button
             variant="default"
             size="sm"
-            className="gap-1.5"
+            className="gap-1.5 rounded-full"
             onClick={() => setShowDescargarConfirm(true)}
           >
             Descargar Justificación
           </Button>
+          {isNueva && onEditSolicitud && (
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setShowEditarConfirm(true)}
+              disabled={guardando} >
+               Editar
+            </Button>
+          )}
           {isNueva && (
-            <>
-              {onEditSolicitud && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => setShowEditarConfirm(true)}
-                  disabled={guardando} >
-                   Editar
-                </Button>
-              )}
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => onObservar(solicitud.id)}
-                disabled={guardando}
-              >
-                Observar
-              </Button>
-              <Button
-                onClick={() => setShowAprobarConfirm(true)}
-                disabled={guardando}
-                variant="primary"
-                className="gap-1.5"
-                size="sm"
-              >
-                {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
-                Aprobar
-              </Button>
-            </>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => onObservar(solicitud.id)}
+              disabled={guardando}
+            >
+              Observar
+            </Button>
+          )}
+          {isObservada && (
+            <Badge variant="outline" className="gap-1.5 text-muted-foreground py-1.5 px-3">
+              <Lock className="h-3 w-3" />Solo lectura
+            </Badge>
+          )}
+          <Button size="sm" variant="default" className="gap-1.5 px-3"
+            onClick={() => setHistorialAbierto((v) => !v)}>
+            {historialAbierto
+              ? <><PanelRightClose className="h-4 w-4" />Ocultar Historial</>
+              : <><PanelRightOpen className="h-4 w-4" />Ver historial</>}
+          </Button>
+          {isNueva && (
+            <Button
+              onClick={() => setShowAprobarConfirm(true)}
+              disabled={guardando}
+              variant="vino"
+              className="gap-1.5"
+              size="sm"
+            >
+              {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
+              Aprobar
+            </Button>
           )}
           {isPendienteFirma && (
             <Button
@@ -1180,29 +1226,15 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud
             </Button>
           )}
           {isEmitida && (
-            <>
-              <Button
-                size="sm"
-                onClick={() => setShowDictamen(true)}
-                className="gap-1.5 rounded-2xl font-medium hover:opacity-90"
-                style={{ backgroundColor: "#722F37", color: "var(--sem-bg-base)", border: "1px solid #5a252c" }}
-              >
-                <FileCheck className="h-4 w-4" />Ver Dictamen
-              </Button>
-
-            </>
+            <Button
+              size="sm"
+              onClick={() => setShowDictamen(true)}
+              className="gap-1.5 rounded-2xl font-medium hover:opacity-90"
+              style={{ backgroundColor: "#722F37", color: "var(--sem-bg-base)", border: "1px solid #5a252c" }}
+            >
+              <FileCheck className="h-4 w-4" />Ver Dictamen
+            </Button>
           )}
-          {isObservada && (
-            <Badge variant="outline" className="gap-1.5 text-muted-foreground py-1.5 px-3">
-              <Lock className="h-3 w-3" />Solo lectura
-            </Badge>
-          )}
-          <Button size="sm" variant="default" className="gap-1.5 px-3"
-            onClick={() => setHistorialAbierto((v) => !v)}>
-            {historialAbierto
-              ? <><PanelRightClose className="h-4 w-4" />Ocultar Historial</>
-              : <><PanelRightOpen className="h-4 w-4" />Ver historial</>}
-          </Button>
         </div>
       </div>
 
@@ -1265,43 +1297,43 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud
             historialAbierto ? "w-full opacity-100 lg:w-1/2" : "w-0 opacity-0"
           }`}
         >
-          <ScrollArea className="h-[calc(100vh-220px)]">
-            <div className="flex flex-col gap-4 pr-4 min-w-[320px]">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1">
-                  <button
-                    onClick={() => setRightTab("historial")}
-                    className={`rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
-                      rightTab === "historial"
-                        ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
-                        : "text-muted-foreground hover:text-card-foreground"
-                    }`}
-                  >
-                    <History className="h-4 w-4" />Historial
-                  </button>
-                  <button
-                    onClick={() => setRightTab("observaciones")}
-                    className={`relative rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
-                      rightTab === "observaciones"
-                        ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
-                        : "text-muted-foreground hover:text-card-foreground"
-                    }`}
-                  >
-                    <AlertTriangle className="h-4 w-4" />Observaciones
-                    {tieneObsActivas && (
-                      <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white">
-                        {solicitud.todasObservaciones.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-                <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-card-foreground"
-                  title="Cerrar panel" aria-label="Cerrar panel"
-                  onClick={() => setHistorialAbierto(false)}>
-                  <PanelRightClose className="h-4 w-4" />
-                </Button>
+          <div className="flex flex-col gap-4 h-[calc(100vh-220px)] min-w-[320px]">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/60 p-1">
+                <button
+                  onClick={() => setRightTab("historial")}
+                  className={`rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                    rightTab === "historial"
+                      ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
+                      : "text-muted-foreground hover:text-card-foreground"
+                  }`}
+                >
+                  <History className="h-4 w-4" />Historial
+                </button>
+                <button
+                  onClick={() => setRightTab("observaciones")}
+                  className={`relative rounded-xl px-5 py-2 text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                    rightTab === "observaciones"
+                      ? "bg-card shadow-sm text-[var(--color-core-bosque-30)]"
+                      : "text-muted-foreground hover:text-card-foreground"
+                  }`}
+                >
+                  <AlertTriangle className="h-4 w-4" />Observaciones
+                  {tieneObsActivas && (
+                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-core-mora-20)] text-[9px] font-bold text-white">
+                      {solicitud.todasObservaciones.length}
+                    </span>
+                  )}
+                </button>
               </div>
+              <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-card-foreground"
+                title="Cerrar panel" aria-label="Cerrar panel"
+                onClick={() => setHistorialAbierto(false)}>
+                <PanelRightClose className="h-4 w-4" />
+              </Button>
+            </div>
 
+            <div className="flex-1 min-h-0">
               {rightTab === "historial" && (
                 <HistorialPanel
                   entries={solicitud.historial}
@@ -1328,7 +1360,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud
                 />
               )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </div>
 
@@ -1637,7 +1669,7 @@ export function ValidacionUefaPage({ onEditSolicitud }: { onEditSolicitud?: (pay
                     const usaFolioRecepcion  = !!folioRecepcion
                     const folioPrincipal     = folioRecepcion ?? sol.folioJustificacion
                     const folioSecundario    = usaFolioRecepcion && folioRecepcion
-                      ? (solTab === "Emitidas" && folioDictamenLabel ? folioDictamenLabel : null)
+                      ? (solTab === "Emitidas" && folioDictamenLabel ? folioDictamenLabel : sol.folioJustificacion)
                       : null
 
                     return (

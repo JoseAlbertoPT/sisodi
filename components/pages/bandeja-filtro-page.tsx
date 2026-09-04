@@ -16,7 +16,6 @@ import {
   C_AMARILLO, C_AMARILLO_BG,
   C_VERDE_ESTADO, C_VERDE_ESTADO_BG,
 
-
 } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -182,7 +181,6 @@ function classifyDO(s: FiltroSolicitud): TabKey {
   const n = s.estado.toLowerCase()
   if (n === "pendiente do" || n.includes("en revision revisor")) return "pendientes_asignacion"
   if (n === "pendiente firma dictamen" || n === "pendiente firma verificacion") return "pendientes_firma"
-
   if (
     n.includes("observado por emisor") ||
     n.includes("observado por verificacion final") ||
@@ -195,6 +193,7 @@ function classifyDO(s: FiltroSolicitud): TabKey {
   ) return "en_validacion"
   return "todas"
 }
+
 function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   if (filtro === 2) return classifyDO(s)
   const estadoEnRevision = getEstadoEnRevision(filtro)
@@ -208,12 +207,14 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
     if (estadoNorm === "aceptado por revisor" || estadoNorm === "aprobado por revisor") return "revision"
     if (estadoNorm === estadoEnRevision.toLowerCase()) return "nuevas"
   }
+
   if (filtro === 3) {
     if (estadoNorm === "pendiente firma dictamen" || estadoNorm === "pendiente firma emisor") return "pendientes_firma"
     if (estadoNorm === estadoEnRevision.toLowerCase()) {
       if (filtro === 3) return "revision"
       return (s.openedInFiltro[filtro] || !!s.folioDictamen) ? "revision" : "nuevas"
     }
+
     const preEmisor = new Set([
       "pendiente do",
       "en revision revisor",
@@ -227,6 +228,7 @@ function classifySolicitud(s: FiltroSolicitud, filtro: 1 | 2 | 3): TabKey {
   }
   return "todas"
 }
+
 function getSlaColor(dias: number | null): string {
   if (dias === null) return "#64748b"
   if (dias <= 0)  return C_ROSA_VINO
@@ -234,6 +236,7 @@ function getSlaColor(dias: number | null): string {
   if (dias <= 15) return C_AMARILLO
   return C_VERDE_ESTADO
 }
+
 function getSlaBgColor(dias: number | null): string {
   if (dias === null) return "#64748b18"
   if (dias <= 0)  return C_ROSA_VINO_BG
@@ -307,6 +310,39 @@ function SectionCard({ num, title, icon, children, defaultOpen = true }: {
     </Card>
   )
 }
+
+function SectionTabs({
+  value, onChange, items,
+}: { value: string; onChange: (v: string) => void; items: { value: string; label: string }[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {items.map((it) => (
+        <button
+          key={it.value}
+          type="button"
+          onClick={() => onChange(it.value)}
+          className={
+            value === it.value
+              ? "rounded-md border border-accent-primary px-3 py-1.5 text-sm font-semibold text-accent-primary"
+              : "rounded-md border border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-card-foreground"
+          }
+        >
+          {it.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function FieldSection({ title, children, first = false }: { title: string; children: React.ReactNode; first?: boolean }) {
+  return (
+    <div className={first ? "flex flex-col gap-4" : "flex flex-col gap-4 mt-5 border-t border-border pt-5"}>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-accent-primary">{title}</h4>
+      <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">{children}</div>
+    </div>
+  )
+}
+
 function parseListField(text: string | null | undefined): string[] {
   if (!text || text === "—") return []
   return text.split(/[\n\r•·]+/).map(s => s.trim()).filter(Boolean)
@@ -321,7 +357,7 @@ function PerfilListField({ label, value }: { label: string; value: string | null
       ) : (
         <ul className="flex flex-col gap-0.5">
           {items.map((item, i) => (
-            <li key={i} className="flex gap-2 text-sm text-card-foreground">
+            <li key={i} className="flex gap-2 text-sm font-light text-card-foreground">
               <span className="shrink-0 text-muted-foreground">•</span>
               <span>{applyTextRules(item)}</span>
             </li>
@@ -332,7 +368,6 @@ function PerfilListField({ label, value }: { label: string; value: string | null
   )
 }
 
-
 function ListaItems({ items }: { items: string[] }) {
   const validItems = (items ?? []).filter(Boolean)
   if (validItems.length === 0) return <span className="text-sm text-muted-foreground">—</span>
@@ -342,7 +377,7 @@ function ListaItems({ items }: { items: string[] }) {
       style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
     >
       {validItems.map((item, i) => (
-        <li key={i} className="flex gap-2 text-sm text-card-foreground min-w-0">
+        <li key={i} className="flex gap-2 text-sm font-light text-card-foreground min-w-0">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary mt-0.5">
             {i + 1}
           </span>
@@ -353,95 +388,128 @@ function ListaItems({ items }: { items: string[] }) {
   )
 }
 
+type ExpedienteTab = "datos" | "alcance" | "perfil"
+function DocumentosAdjuntosCard({ raw }: { raw: any }) {
+  return (
+    <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
+      {raw?.adjunto?.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {(raw.adjunto as any[]).map((adj, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
+              <FileTypeIcon name={adj.nombre_archivo} size="sm" />
+              <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
+              {adj.ruta && (
+                <Button variant="default" size="sm" className="gap-1.5 shrink-0"
+                  onClick={() => window.open(adj.ruta, "_blank")}>
+                  Ver
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
+      )}
+    </SectionCard>
+  )
+}
+
 function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolean }) {
   const esNombramiento = (raw?.regimen ?? raw?.tipo_solicitud ?? "").toLowerCase().includes("nombramiento")
   const marcoNormativo: string[] = Array.isArray(raw?.marco_normativo) ? raw.marco_normativo.filter(Boolean) : []
   const condicionesRiesgos: string[] = Array.isArray(raw?.condiciones_riesgos) ? raw.condiciones_riesgos.filter(Boolean) : []
+  const [tab, setTab] = useState<ExpedienteTab>("datos")
+  const tabItems = [
+    { value: "datos", label: "Datos Generales" },
+    { value: "alcance", label: "Alcance de la Contratación" },
+    { value: "perfil", label: hidePerfil ? "Documentos" : "Perfil" },
+  ]
   return (
-    <div className="flex flex-col gap-4">
-      <SectionCard num="I" title="Datos Generales">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ReadOnlyField label="Secretaría / Dependencia / Organismo"  value={raw?.secretaria ?? "—"} />
-          <ReadOnlyField label="Unidad Administrativa de Adscripción"  value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
-          <ReadOnlyField label="Unidad Responsable del Gasto"          value={getNombreForClave(raw?.unidad_responsable ?? "") || raw?.nombre_unidad_responsable || raw?.unidad_responsable_nombre || raw?.unidad_responsable || "—"} />
-          <ReadOnlyField label="Régimen de Contratación"               value={formatRegimen(raw?.regimen)} />
-          <ReadOnlyField label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
-          <ReadOnlyField label="Programa o Proyecto"                   value={applyTextRules(raw?.programa_proyecto ?? "—")} />
-          <ReadOnlyField label="Tipo de Actividades"                   value={applyTextRules(raw?.tipo_actividades ?? "—")} />
-          <ReadOnlyField label="Vigencia Inicio"                       value={formatFecha(raw?.vigencia_inicio)} />
-          <ReadOnlyField label="Vigencia Término"                      value={formatFecha(raw?.vigencia_fin)} />
-          <ReadOnlyField label="Importe Bruto"                         value={raw?.importe_bruto != null ? `$${Number(raw.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"} />
-          {esNombramiento && (raw?.nivel_tabulador || raw?.categoria_tabulador) && (
-            <ReadOnlyField
-              label="Nivel Catálogo"
-              value={raw?.nivel_tabulador && raw?.categoria_tabulador ? `${raw.nivel_tabulador}/${raw.categoria_tabulador}` : (raw?.nivel_tabulador ?? raw?.categoria_tabulador ?? "—")}
-            />
-          )}
-        </div>
-      </SectionCard>
-      <SectionCard title="I.1 Objeto de la Contratación">
-        <p
-          className="scroll-thin text-sm text-card-foreground leading-relaxed whitespace-pre-wrap"
-          style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
-        >
-          {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
-        </p>
-      </SectionCard>
-      <SectionCard title="I.2 Actividades a Realizar">
-        <ListaItems items={Array.isArray(raw?.actividades) ? raw.actividades : []} />
-      </SectionCard>
-      <SectionCard title="I.3 Responsabilidades">
-        <ListaItems items={Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : []} />
-      </SectionCard>
-      {esNombramiento && marcoNormativo.length > 0 && (
-        <SectionCard title="V. Marco Normativo">
-          <ListaItems items={marcoNormativo} />
-        </SectionCard>
-      )}
-      {esNombramiento && condicionesRiesgos.length > 0 && (
-        <SectionCard title="VI. Condiciones y Riesgos">
-          <ListaItems items={condicionesRiesgos} />
-        </SectionCard>
-      )}
-      {esNombramiento && raw?.resguardo_activos && (
-        <SectionCard title="VII. Resguardo Personalizado de Activos">
-          <ReadOnlyField label="Resguardo de Activos" value={raw.resguardo_activos === "si" ? "Sí" : raw.resguardo_activos === "no" ? "No" : raw.resguardo_activos} />
-        </SectionCard>
-      )}
-      {!hidePerfil && (
-        <SectionCard num="II" title="Perfil">
-          <div className="grid gap-4 md:grid-cols-2">
-            <ReadOnlyField label="Escolaridad Mínima"            value={formatEscolaridad(raw?.escolaridad)} />
-            <PerfilListField label="Competencias Administrativas"  value={raw?.comp_adm} />
-            <PerfilListField label="Competencias Técnicas"         value={raw?.comp_tec} />
-            <PerfilListField label="Competencias Socioemocionales" value={raw?.comp_soc} />
-            <PerfilListField label="Valores"                       value={raw?.valores} />
-            <PerfilListField label="Áreas de Experiencia"          value={raw?.areas_exp} />
-          </div>
-        </SectionCard>
-      )}
-
-      <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
-        {raw?.adjunto?.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {(raw.adjunto as any[]).map((adj, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
-                <FileTypeIcon name={adj.nombre_archivo} size="sm" />
-                <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
-                {adj.ruta && (
-                  <Button variant="default" size="sm" className="gap-1.5 shrink-0"
-                    onClick={() => window.open(adj.ruta, "_blank")}>
-                    Ver
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Sin documentos adjuntos.</p>
+    <Card className={`shadow-sm border-border ${tab === "datos" ? "" : "min-h-[calc(100vh-220px)]"}`}>
+      <CardHeader className="border-b">
+        <SectionTabs
+          value={tab}
+          onChange={(v) => setTab(v as ExpedienteTab)}
+          items={tabItems}
+        />
+      </CardHeader>
+      <CardContent>
+        {tab === "datos" && (
+          <>
+            <FieldSection title="Adscripción" first>
+              <ReadOnlyField accent label="Secretaría / Dependencia / Organismo"  value={raw?.secretaria ?? "—"} />
+              <ReadOnlyField accent label="Unidad Administrativa de Adscripción"  value={formatClave(raw?.unidad_administrativa ?? raw?.clave_unidad_administrativa ?? "") || "—"} />
+              <ReadOnlyField accent label="Unidad Responsable del Gasto"          value={getNombreForClave(raw?.unidad_responsable ?? "") || raw?.nombre_unidad_responsable || raw?.unidad_responsable_nombre || raw?.unidad_responsable || "—"} />
+              <ReadOnlyField accent label="Programa o Proyecto"                   value={applyTextRules(raw?.programa_proyecto ?? "—")} />
+              <ReadOnlyField accent label="Tipo de Actividades"                   value={applyTextRules(raw?.tipo_actividades ?? "—")} />
+            </FieldSection>
+            <FieldSection title="Condiciones de la Contratación">
+              <ReadOnlyField accent label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
+              <ReadOnlyField accent label="Vigencia"                             value={`${formatFecha(raw?.vigencia_inicio)} — ${formatFecha(raw?.vigencia_fin)}`} />
+              <ReadOnlyField accent label="Importe Bruto"                        value={raw?.importe_bruto != null ? `$${Number(raw.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"} />
+              {esNombramiento && (raw?.nivel_tabulador || raw?.categoria_tabulador) && (
+                <ReadOnlyField
+                  accent
+                  label="Nivel Catálogo"
+                  value={raw?.nivel_tabulador && raw?.categoria_tabulador ? `${raw.nivel_tabulador}/${raw.categoria_tabulador}` : (raw?.nivel_tabulador ?? raw?.categoria_tabulador ?? "—")}
+                />
+              )}
+              <ReadOnlyField accent label="Régimen de Contratación"               value={formatRegimen(raw?.regimen)} />
+            </FieldSection>
+          </>
         )}
-      </SectionCard>
-    </div>
+        {tab === "alcance" && (
+          <div className="flex flex-col gap-4">
+            <SectionCard title="I.1 Objeto de la Contratación">
+              <p
+                className="scroll-thin text-sm font-light text-card-foreground leading-relaxed whitespace-pre-wrap"
+                style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden", paddingRight: "4px" }}
+              >
+                {raw?.objeto ? applyTextRules(raw.objeto) : <span className="text-muted-foreground">—</span>}
+              </p>
+            </SectionCard>
+            <SectionCard title="I.2 Actividades a Realizar">
+              <ListaItems items={Array.isArray(raw?.actividades) ? raw.actividades : []} />
+            </SectionCard>
+            <SectionCard title="I.3 Responsabilidades">
+              <ListaItems items={Array.isArray(raw?.responsabilidades) ? raw.responsabilidades : []} />
+            </SectionCard>
+            {esNombramiento && marcoNormativo.length > 0 && (
+              <SectionCard title="V. Marco Normativo">
+                <ListaItems items={marcoNormativo} />
+              </SectionCard>
+            )}
+            {esNombramiento && condicionesRiesgos.length > 0 && (
+              <SectionCard title="VI. Condiciones y Riesgos">
+                <ListaItems items={condicionesRiesgos} />
+              </SectionCard>
+            )}
+            {esNombramiento && raw?.resguardo_activos && (
+              <SectionCard title="VII. Resguardo Personalizado de Activos">
+                <ReadOnlyField bold={false} label="Resguardo de Activos" value={raw.resguardo_activos === "si" ? "Sí" : raw.resguardo_activos === "no" ? "No" : raw.resguardo_activos} />
+              </SectionCard>
+            )}
+          </div>
+        )}
+        {tab === "perfil" && (
+          <div className="flex flex-col gap-4">
+            {!hidePerfil && (
+              <SectionCard title="Perfil">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <ReadOnlyField bold={false} label="Escolaridad Mínima"            value={formatEscolaridad(raw?.escolaridad)} />
+                  <PerfilListField label="Competencias Administrativas"  value={raw?.comp_adm} />
+                  <PerfilListField label="Competencias Técnicas"         value={raw?.comp_tec} />
+                  <PerfilListField label="Competencias Socioemocionales" value={raw?.comp_soc} />
+                  <PerfilListField label="Valores"                       value={raw?.valores} />
+                  <PerfilListField label="Áreas de Experiencia"          value={raw?.areas_exp} />
+                </div>
+              </SectionCard>
+            )}
+            <DocumentosAdjuntosCard raw={raw} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLabel }: {
@@ -460,6 +528,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, description, confirmLab
     />
   )
 }
+
 function ObservarModal({ open, onClose, onConfirm, folio }: {
   open: boolean; onClose: () => void; onConfirm: (obs: string) => void; folio: string
 }) {
@@ -684,7 +753,9 @@ function AsignarRevisorModal({ open, onClose, onConfirm, folio, guardando }: {
       </DialogContent>
     </Dialog>
   )
+
 }
+
 const MESES_DICT = [
   { value: "01", label: "ENERO(01)" }, { value: "02", label: "FEBRERO(02)" },
   { value: "03", label: "MARZO(03)" }, { value: "04", label: "ABRIL(04)" },
@@ -994,7 +1065,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             disabled={guardando || !puedeAccionar}
             className="gap-1.5"
             size="sm"
-            variant="primary"
+            variant="vino"
             >
             {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
             {labelAprobar}
@@ -1066,13 +1137,13 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           </div>
 
           {activePanel === "observaciones" && observacionesVisibles.length > 0 && (
-            <div className="overflow-hidden rounded-xl border border-border shadow-md">
+            <div className="overflow-hidden rounded-xl border border-border shadow-md min-h-[calc(100vh-220px)]">
               <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #3a1020 0%, #5c1a30 100%)" }}>
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
                   <AlertTriangle className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold text-white">Observaciones</span>
+                  <span className="text-xs font-bold text-white">Observaciones</span>
                   <span className="text-[10px] text-white/60">
                     {observacionesVisibles.length} observación{observacionesVisibles.length !== 1 ? "es" : ""}
                   </span>
@@ -1096,7 +1167,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           )}
 
           {activePanel === "revision" && (
-            <Card className="shadow-sm border-border">
+            <Card className="shadow-sm border-border min-h-[calc(100vh-220px)]">
               <CardContent className="pt-4 flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Folio de Recepción</span>
@@ -1146,13 +1217,13 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
           )}
 
           {activePanel === "historial" && (
-            <div className="overflow-hidden rounded-xl border border-border shadow-md sticky top-4">
+            <div className="overflow-hidden rounded-xl border border-border shadow-md sticky top-4 min-h-[calc(100vh-220px)]">
               <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1f2d1a 0%, #2e4226 100%)" }}>
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 shadow-inner">
                   <Clock className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold text-white">Historial de Estatus</span>
+                  <span className="text-xs font-bold text-white">Historial de Estatus</span>
                   <span className="text-[10px] text-white/60">
                     Folio {solicitud.folioRecepcion ? folioFormateado : (solicitud.folioSolicitud ?? solicitud.id)}
                   </span>
@@ -1187,6 +1258,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         title="¿Descargar justificación en PDF?"
         description={`Se descargará el PDF de la justificación ${folioFormateado}.`}
         confirmLabel="Sí, descargar"
+
       />
       <ObservarModal
         open={showObservarModal}
@@ -1651,10 +1723,19 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
                         </td>
 
                         <td className="px-4 py-3 font-medium text-card-foreground">
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-0.5">
                             {(() => {
-                              if (sol.folioRecepcion) return <span className="font-mono">{formatearFolio(sol.folioRecepcion)}</span>
                               const folioJust = folioJustificacionParaMostrar(sol._raw?.folio_justificacion as string | null | undefined)
+                              if (sol.folioRecepcion) {
+                                return (
+                                  <>
+                                    <span className="font-mono">{formatearFolio(sol.folioRecepcion)}</span>
+                                    {folioJust && (
+                                      <span className="text-[11px] text-muted-foreground">{folioJust}</span>
+                                    )}
+                                  </>
+                                )
+                              }
                               return folioJust
                                 ? <span className="font-mono text-muted-foreground">{folioJust}</span>
                                 : <span className="text-muted-foreground italic text-xs">Sin asignar</span>

@@ -18,7 +18,7 @@ import {
   Eye, Edit3, FileCheck,
   FileText,
   ArrowLeft, AlertTriangle, Lock, Inbox,
-  PanelRightOpen, PanelRightClose,
+  PanelRightOpen, PanelRightClose, History, Info,
 } from "lucide-react"
 
 import { EmptyState } from "@/components/ui/empty-state"
@@ -52,7 +52,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { HistorialTimeline, ROLES_OCULTAN_OBSERVACIONES, type HistorialEntryData } from "@/components/historial-timeline"
-import { AvanceSolicitud } from "@/components/solicitud-status-tabs"
+import { AvanceSolicitud, PanelHeader } from "@/components/solicitud-status-tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useRealtime } from "@/hooks/use-realtime"
 
@@ -188,6 +188,7 @@ interface UrgSolicitud {
 function FoliosCell({ sol }: { sol: UrgSolicitud }) {
   const efectivaTab = getTab(sol.estado)
   const entries: { label: string; value: string; highlight?: boolean }[] = []
+  let subValue: string | undefined
   if (efectivaTab === "Borradores") {
     entries.push({ label: "Borrador", value: "—", highlight: false })
   } else if (sol.folioRecepcion) {
@@ -196,6 +197,7 @@ function FoliosCell({ sol }: { sol: UrgSolicitud }) {
       value: formatFolioRecepcion(sol.folioRecepcion),
       highlight: true,
     })
+    subValue = sol.folioJustificacion ?? sol.id
   } else {
     entries.push({
       label: "Justificación",
@@ -211,9 +213,9 @@ function FoliosCell({ sol }: { sol: UrgSolicitud }) {
           {value}
         </span>
       ))}
-      {sol.fecha && (
+      {subValue && (
         <span className="text-[10px] text-muted-foreground/70">
-          {sol.fecha}
+          {subValue}
         </span>
       )}
     </div>
@@ -485,21 +487,32 @@ function SectionCard({
   )
 }
 
+function FieldSection({ title, children, first = false }: { title: string; children: React.ReactNode; first?: boolean }) {
+  return (
+    <div className={first ? "flex flex-col gap-6" : "flex flex-col gap-6 mt-8 border-t border-border pt-8"}>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-accent-primary">{title}</h4>
+      <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">{children}</div>
+    </div>
+  )
+}
+
 function toList(val: string | string[]): string[] {
   if (Array.isArray(val)) return val.filter(Boolean)
   if (!val) return []
   return val.split(/[\n\r•·]+/).map((s) => s.trim()).filter(Boolean)
 }
-function ReadOnlyList({ label, value, sub, noScroll }: { label: string; value: string | string[]; sub?: string; noScroll?: boolean }) {
+function ReadOnlyList({ label, value, sub, noScroll, bullet }: { label: string; value: string | string[]; sub?: string; noScroll?: boolean; bullet?: boolean }) {
   const items = toList(value)
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        {sub && (
-          <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
-        )}
-        <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-      </div>
+      {(sub || label) && (
+        <div className="flex items-center gap-2">
+          {sub && (
+            <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 shrink-0">{sub}</span>
+          )}
+          {label && <span className="text-xs font-semibold text-muted-foreground">{label}</span>}
+        </div>
+      )}
       {items.length === 0 ? (
         <span className="text-sm text-muted-foreground italic px-3">—</span>
       ) : (
@@ -509,10 +522,16 @@ function ReadOnlyList({ label, value, sub, noScroll }: { label: string; value: s
         >
           {items.map((item, idx) => (
             <div key={idx} className="flex items-start gap-2 rounded-lg px-3 py-1 min-w-0">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
-                {idx + 1}
-              </span>
-              <span className="text-sm text-card-foreground" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{applyTextRules(item)}</span>
+              {bullet ? (
+                <span className="flex h-6 w-3 shrink-0 items-center justify-center text-muted-foreground" aria-hidden="true">
+                  •
+                </span>
+              ) : (
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-medium text-secondary">
+                  {idx + 1}
+                </span>
+              )}
+              <span className="text-sm font-light text-card-foreground" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>{applyTextRules(item)}</span>
             </div>
           ))}
         </div>
@@ -523,9 +542,9 @@ function ReadOnlyList({ label, value, sub, noScroll }: { label: string; value: s
 function ReadOnlyTextarea({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1 col-span-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
+      {label && <span className="text-xs text-muted-foreground">{label}</span>}
       {value
-        ? <p className="scroll-thin text-sm text-card-foreground whitespace-pre-line leading-relaxed border border-border rounded-md px-3 py-2 bg-muted/30" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden" }}>{applyTextRules(value)}</p>
+        ? <p className="scroll-thin text-sm font-light text-card-foreground whitespace-pre-line leading-relaxed border border-border rounded-md px-3 py-2 bg-muted/30" style={{ maxHeight: "300px", overflowY: "auto", overflowX: "hidden" }}>{applyTextRules(value)}</p>
         : <span className="text-sm text-muted-foreground italic">—</span>}
     </div>
   )
@@ -661,59 +680,86 @@ function ParsedObservacion({ comentario, borderColor = "orange" }: { comentario:
   )
 }
 
+type ExpedienteTab = "datos" | "alcance" | "perfil"
 function ExpedientePrestacion({ solicitud, wide = true }: { solicitud: UrgSolicitud; wide?: boolean }) {
+  const [tab, setTab] = useState<ExpedienteTab>("datos")
   return (
-    <div className="flex flex-col gap-4">
-      <SectionCard num="I" title="Datos Generales">
-        <div className={`grid gap-4 ${wide ? "md:grid-cols-3 xl:grid-cols-5" : "md:grid-cols-2"}`}>
-          <ReadOnlyField bold={false} label="Secretaría / Dependencia / Organismo"   value={solicitud.secretaria} />
-          <ReadOnlyField bold={false} label="Unidad Administrativa de Adscripción"   value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
-          <ReadOnlyField bold={false} label="Unidad Responsable del Gasto"           value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
-          <ReadOnlyField bold={false} label="Número de Prestadores de Servicios"     value={solicitud.numeroPrestadores} />
-          <ReadOnlyField bold={false} label="Programa o Proyecto"                    value={applyTextRules(solicitud.programaProyecto)} />
-          <ReadOnlyField bold={false} label="Tipo de Actividad"                      value={applyTextRules(solicitud.tipoActividades)} />
-          <ReadOnlyField bold={false} label="Régimen de Contratación"                value={formatRegimen(solicitud.regimen)} />
-          <ReadOnlyField bold={false} label="Vigencia Inicio"                        value={solicitud.vigenciaInicio} />
-          <ReadOnlyField bold={false} label="Vigencia Término"                       value={solicitud.vigenciaFin} />
-          <ReadOnlyField bold={false} label="Importe Bruto"                          value={solicitud.importeBruto} />
-          {(solicitud.nivelTabulador || solicitud.categoriaTabulador) && (
-            <ReadOnlyField bold={false}
-              label="Nivel Catálogo"
-              value={solicitud.nivelTabulador && solicitud.categoriaTabulador ? `${solicitud.nivelTabulador}/${solicitud.categoriaTabulador}` : (solicitud.nivelTabulador || solicitud.categoriaTabulador || "—")}
-            />
-          )}
-        </div>
-      </SectionCard>
-      <SectionCard num="II" title="Objeto de la Contratación">
-        <div className="grid gap-4">
-          <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
-        </div>
-      </SectionCard>
-      <SectionCard num="III" title="Actividades a Realizar">
-        <ReadOnlyList label="Actividades" value={solicitud.actividades} />
-      </SectionCard>
-      <SectionCard num="IV" title="Responsabilidades">
-        <ReadOnlyList label="Responsabilidades" value={solicitud.responsabilidades} />
-      </SectionCard>
-
-      <SectionCard num="V" title="Perfil">
-        <div className="flex items-start gap-4">
-          <div className="flex flex-col gap-4 flex-1">
-            <ReadOnlyList noScroll label="Escolaridad Mínima"                      value={solicitud.escolaridad} />
-            <ReadOnlyList noScroll sub="II.2" label="Competencias Técnicas"       value={solicitud.compTec} />
-            <ReadOnlyList noScroll label="Valores"                                 value={solicitud.valores} />
+    <Card className="shadow-sm border-border min-h-[calc(100vh-220px)]">
+      <CardHeader className="border-b">
+        <FilterTabs
+          value={tab}
+          onValueChange={(v) => setTab(v as ExpedienteTab)}
+          items={[
+            { value: "datos", label: "Datos Generales" },
+            { value: "alcance", label: "Alcance de la Contratación" },
+            { value: "perfil", label: "Perfil" },
+          ]}
+        />
+      </CardHeader>
+      <CardContent>
+        {tab === "datos" && (
+          <>
+            <FieldSection title="Adscripción" first>
+              <ReadOnlyField accent label="Secretaría / Dependencia / Organismo"   value={solicitud.secretaria} />
+              <ReadOnlyField accent label="Unidad Administrativa de Adscripción"   value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
+              <ReadOnlyField accent label="Unidad Responsable del Gasto"           value={getNombreForClave(solicitud.unidadResponsable) || solicitud.unidadResponsable} />
+              <ReadOnlyField accent label="Programa o Proyecto"                    value={applyTextRules(solicitud.programaProyecto)} />
+              <ReadOnlyField accent label="Tipo de Actividad"                      value={applyTextRules(solicitud.tipoActividades)} />
+            </FieldSection>
+            <FieldSection title="Condiciones de la Contratación">
+              <ReadOnlyField accent label="Número de Prestadores de Servicios"     value={solicitud.numeroPrestadores} />
+              <ReadOnlyField accent label="Vigencia"                               value={`${solicitud.vigenciaInicio} — ${solicitud.vigenciaFin}`} />
+              <ReadOnlyField accent label="Importe Bruto"                         value={solicitud.importeBruto} />
+              {(solicitud.nivelTabulador || solicitud.categoriaTabulador) && (
+                <ReadOnlyField accent
+                  label="Nivel Catálogo"
+                  value={solicitud.nivelTabulador && solicitud.categoriaTabulador ? `${solicitud.nivelTabulador}/${solicitud.categoriaTabulador}` : (solicitud.nivelTabulador || solicitud.categoriaTabulador || "—")}
+                />
+              )}
+              <ReadOnlyField accent label="Régimen de Contratación"                value={formatRegimen(solicitud.regimen)} />
+            </FieldSection>
+            <div className="mt-8 border-t border-border pt-8">
+              <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
+                <AdjuntosSection adjuntos={solicitud.adjuntos} />
+              </SectionCard>
+            </div>
+          </>
+        )}
+        {tab === "alcance" && (
+          <div className="flex flex-col gap-4">
+            <SectionCard num="II" title="Objeto de la Contratación">
+              <div className="grid gap-4">
+                <ReadOnlyTextarea label="" value={solicitud.objeto} />
+              </div>
+            </SectionCard>
+            <SectionCard num="III" title="Actividades a Realizar">
+              <ReadOnlyList label="" value={solicitud.actividades} />
+            </SectionCard>
+            <SectionCard num="IV" title="Responsabilidades">
+              <ReadOnlyList label="" value={solicitud.responsabilidades} />
+            </SectionCard>
           </div>
-          <div className="flex flex-col gap-4 flex-1">
-            <ReadOnlyList noScroll sub="II.1" label="Competencias Administrativas" value={solicitud.compAdm} />
-            <ReadOnlyList noScroll sub="II.3" label="Competencias Sociales"        value={solicitud.compSoc} />
-            <ReadOnlyList noScroll label="Áreas de Experiencia"                    value={solicitud.areasExp} />
+        )}
+        {tab === "perfil" && (
+          <div className="flex flex-col gap-4">
+            <SectionCard num="V" title="Perfil">
+              <div className="flex items-start gap-4">
+                <div className="flex flex-col gap-4 flex-1">
+                  <ReadOnlyList bullet noScroll label="Escolaridad Mínima"                      value={solicitud.escolaridad} />
+                  <ReadOnlyList bullet noScroll sub="II.2" label="Competencias Técnicas"       value={solicitud.compTec} />
+                  <ReadOnlyList bullet noScroll label="Valores"                                 value={solicitud.valores} />
+                </div>
+                <div className="flex flex-col gap-4 flex-1">
+                  <ReadOnlyList bullet noScroll sub="II.1" label="Competencias Administrativas" value={solicitud.compAdm} />
+                  <ReadOnlyList bullet noScroll sub="II.3" label="Competencias Sociales"        value={solicitud.compSoc} />
+                  <ReadOnlyList bullet noScroll label="Áreas de Experiencia"                    value={solicitud.areasExp} />
+                </div>
+              </div>
+            </SectionCard>
           </div>
-        </div>
-      </SectionCard>
-      <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
-        <AdjuntosSection bitacora={solicitud.bitacora} />
-      </SectionCard>
-    </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
@@ -775,79 +821,102 @@ function SeccionCondicionesRiesgos({ solicitud }: { solicitud: UrgSolicitud }) {
 }
 
 function ExpedienteNombramiento({ solicitud, wide = true }: { solicitud: UrgSolicitud; wide?: boolean }) {
+  const [tab, setTab] = useState<ExpedienteTab>("datos")
   return (
-    <div className="flex flex-col gap-4">
-      <SectionCard num="I" title="Datos Generales">
-        <div className={`grid gap-4 ${wide ? "md:grid-cols-3 xl:grid-cols-5" : "md:grid-cols-2"}`}>
-          <ReadOnlyField bold={false} label="Secretaría / Dependencia / Organismo"  value={solicitud.secretaria} />
-          <ReadOnlyField bold={false} label="Unidad Administrativa de Adscripción"  value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
-          <ReadOnlyField bold={false} label="Unidad Responsable del Gasto"          value={solicitud.unidadResponsable} />
-          <ReadOnlyField bold={false} label="Programa o Proyecto"                   value={applyTextRules(solicitud.programaProyecto)} />
-          <ReadOnlyField bold={false} label="Régimen de Contratación"               value={formatRegimen(solicitud.regimen)} />
-          <ReadOnlyField bold={false} label="Denominación del Nombramiento"         value={applyTextRules(solicitud.denominacion)} />
-          <ReadOnlyField bold={false} label="Puesto del Jefe Inmediato"             value={applyTextRules(solicitud.puestoJefeInmediato)} />
-          <ReadOnlyField bold={false} label="Tipo de Actividad"                   value={applyTextRules(solicitud.tipoActividades)} />
-          <ReadOnlyField bold={false} label="Número de Personas a Contratar"        value={solicitud.numeroPrestadores} />
-          <ReadOnlyField bold={false} label="Tipo de Pago"    value={solicitud.tipoImporte || "Mensual"} />
-          <ReadOnlyField bold={false} label="Importe Neto"  value={solicitud.importeBruto} />
-          <ReadOnlyField bold={false} label="Vigencia Inicio"                       value={solicitud.vigenciaInicio} />
-          <ReadOnlyField bold={false} label="Vigencia Término"                      value={solicitud.vigenciaFin} />
-          {(solicitud.nivelTabulador || solicitud.categoriaTabulador) && (
-            <ReadOnlyField bold={false}
-              label="Nivel Catálogo"
-              value={solicitud.nivelTabulador && solicitud.categoriaTabulador ? `${solicitud.nivelTabulador}/${solicitud.categoriaTabulador}` : (solicitud.nivelTabulador || solicitud.categoriaTabulador || "—")}
-            />
-          )}
-        </div>
-      </SectionCard>
-      <SectionCard num="III" title="Objeto del Nombramiento">
-        <ReadOnlyTextarea label="Objeto" value={solicitud.objeto} />
-      </SectionCard>
-      <SectionCard num="IV" title="Actividades a Realizar">
-        <ReadOnlyList label="Actividades" value={solicitud.actividades} />
-      </SectionCard>
-      <SectionCard num="V" title="Responsabilidades">
-        <ReadOnlyList label="Responsabilidades" value={solicitud.responsabilidades} />
-      </SectionCard>
-      {solicitud.marcoNormativo.length > 0 && (
-        <SectionCard num="VI" title="Marco Normativo">
-          <ReadOnlyList label="" value={solicitud.marcoNormativo} />
-        </SectionCard>
-      )}
-      <SectionCard num="VII" title="Condiciones y Riesgos">
-        <SeccionCondicionesRiesgos solicitud={solicitud} />
-      </SectionCard>
-      {solicitud.resguardoActivos && (
-        <SectionCard num="VIII" title="Resguardo Personalizado de Activos">
-          <ReadOnlyField bold={false} label="Resguardo de Activos" value={solicitud.resguardoActivos === "si" ? "Sí" : solicitud.resguardoActivos === "no" ? "No" : solicitud.resguardoActivos} />
-        </SectionCard>
-      )}
-      <SectionCard num="IX" title="Perfil">
-        <div className="flex items-start gap-4">
-          <div className="flex flex-col gap-4 flex-1">
-            <ReadOnlyList noScroll label="Escolaridad Mínima"                       value={solicitud.escolaridad} />
-            <ReadOnlyList noScroll sub="VIII.2" label="Competencias Técnicas"      value={solicitud.compTec} />
-            <ReadOnlyList noScroll label="Valores"                                  value={solicitud.valores} />
+    <Card className="shadow-sm border-border min-h-[calc(100vh-220px)]">
+      <CardHeader className="border-b">
+        <FilterTabs
+          value={tab}
+          onValueChange={(v) => setTab(v as ExpedienteTab)}
+          items={[
+            { value: "datos", label: "Datos Generales" },
+            { value: "alcance", label: "Alcance de la Contratación" },
+            { value: "perfil", label: "Perfil" },
+          ]}
+        />
+      </CardHeader>
+      <CardContent>
+        {tab === "datos" && (
+          <>
+            <FieldSection title="Adscripción" first>
+              <ReadOnlyField accent label="Secretaría / Dependencia / Organismo"  value={solicitud.secretaria} />
+              <ReadOnlyField accent label="Unidad Administrativa de Adscripción"  value={formatClave(solicitud.unidadAdministrativa) || solicitud.unidadAdministrativa} />
+              <ReadOnlyField accent label="Unidad Responsable del Gasto"          value={solicitud.unidadResponsable} />
+              <ReadOnlyField accent label="Programa o Proyecto"                   value={applyTextRules(solicitud.programaProyecto)} />
+              <ReadOnlyField accent label="Denominación del Nombramiento"         value={applyTextRules(solicitud.denominacion)} />
+              <ReadOnlyField accent label="Puesto del Jefe Inmediato"             value={applyTextRules(solicitud.puestoJefeInmediato)} />
+              <ReadOnlyField accent label="Tipo de Actividad"                     value={applyTextRules(solicitud.tipoActividades)} />
+              <ReadOnlyField accent label="Régimen de Contratación"               value={formatRegimen(solicitud.regimen)} />
+            </FieldSection>
+            <FieldSection title="Condiciones de la Contratación">
+              <ReadOnlyField accent label="Número de Personas a Contratar"        value={solicitud.numeroPrestadores} />
+              <ReadOnlyField accent label="Vigencia"                              value={`${solicitud.vigenciaInicio} — ${solicitud.vigenciaFin}`} />
+              <ReadOnlyField accent label="Tipo de Pago"                         value={solicitud.tipoImporte || "Mensual"} />
+              <ReadOnlyField accent label="Importe Neto"                        value={solicitud.importeBruto} />
+              {(solicitud.nivelTabulador || solicitud.categoriaTabulador) && (
+                <ReadOnlyField accent
+                  label="Nivel Catálogo"
+                  value={solicitud.nivelTabulador && solicitud.categoriaTabulador ? `${solicitud.nivelTabulador}/${solicitud.categoriaTabulador}` : (solicitud.nivelTabulador || solicitud.categoriaTabulador || "—")}
+                />
+              )}
+            </FieldSection>
+            <div className="mt-8 border-t border-border pt-8">
+              <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
+                <AdjuntosSection adjuntos={solicitud.adjuntos} />
+              </SectionCard>
+            </div>
+          </>
+        )}
+        {tab === "alcance" && (
+          <div className="flex flex-col gap-4">
+            <SectionCard num="III" title="Objeto del Nombramiento">
+              <ReadOnlyTextarea label="" value={solicitud.objeto} />
+            </SectionCard>
+            <SectionCard num="IV" title="Actividades a Realizar">
+              <ReadOnlyList label="" value={solicitud.actividades} />
+            </SectionCard>
+            <SectionCard num="V" title="Responsabilidades">
+              <ReadOnlyList label="" value={solicitud.responsabilidades} />
+            </SectionCard>
+            {solicitud.marcoNormativo.length > 0 && (
+              <SectionCard num="VI" title="Marco Normativo">
+                <ReadOnlyList label="" value={solicitud.marcoNormativo} />
+              </SectionCard>
+            )}
+            <SectionCard num="VII" title="Condiciones y Riesgos">
+              <SeccionCondicionesRiesgos solicitud={solicitud} />
+            </SectionCard>
+            {solicitud.resguardoActivos && (
+              <SectionCard num="VIII" title="Resguardo Personalizado de Activos">
+                <ReadOnlyField bold={false} label="Resguardo de Activos" value={solicitud.resguardoActivos === "si" ? "Sí" : solicitud.resguardoActivos === "no" ? "No" : solicitud.resguardoActivos} />
+              </SectionCard>
+            )}
           </div>
-          <div className="flex flex-col gap-4 flex-1">
-            <ReadOnlyList noScroll sub="VIII.1" label="Competencias Administrativas" value={solicitud.compAdm} />
-            <ReadOnlyList noScroll sub="VIII.3" label="Competencias Sociales"        value={solicitud.compSoc} />
-            <ReadOnlyList noScroll label="Áreas de Experiencia"                      value={solicitud.areasExp} />
+        )}
+        {tab === "perfil" && (
+          <div className="flex flex-col gap-4">
+            <SectionCard num="IX" title="Perfil">
+              <div className="flex items-start gap-4">
+                <div className="flex flex-col gap-4 flex-1">
+                  <ReadOnlyList bullet noScroll label="Escolaridad Mínima"                       value={solicitud.escolaridad} />
+                  <ReadOnlyList bullet noScroll sub="VIII.2" label="Competencias Técnicas"      value={solicitud.compTec} />
+                  <ReadOnlyList bullet noScroll label="Valores"                                  value={solicitud.valores} />
+                </div>
+                <div className="flex flex-col gap-4 flex-1">
+                  <ReadOnlyList bullet noScroll sub="VIII.1" label="Competencias Administrativas" value={solicitud.compAdm} />
+                  <ReadOnlyList bullet noScroll sub="VIII.3" label="Competencias Sociales"        value={solicitud.compSoc} />
+                  <ReadOnlyList bullet noScroll label="Áreas de Experiencia"                      value={solicitud.areasExp} />
+                </div>
+              </div>
+            </SectionCard>
           </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Documentos Adjuntos" icon={<FileText className="h-4 w-4 text-secondary" />}>
-        <AdjuntosSection bitacora={solicitud.bitacora} />
-      </SectionCard>
-    </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
-function AdjuntosSection({ bitacora }: { bitacora: BitacoraEntry[] }) {
-  const adjuntosSection = bitacora.find((b) =>
-    b.seccion.toLowerCase().includes("adjunto")
-  )
-  if (!adjuntosSection || adjuntosSection.eventos.length === 0) {
+function AdjuntosSection({ adjuntos }: { adjuntos: { id: number; nombre_archivo: string; ruta: string }[] }) {
+  if (!adjuntos || adjuntos.length === 0) {
     return (
       <p className="text-sm text-muted-foreground italic">
         Sin documentos adjuntos registrados.
@@ -856,21 +925,21 @@ function AdjuntosSection({ bitacora }: { bitacora: BitacoraEntry[] }) {
   }
   return (
     <ul className="flex flex-col gap-2">
-      {adjuntosSection.eventos.map((ev, i) => (
-        <li key={i} className="flex items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
-          <FileTypeIcon name={ev.descripcion.replace("Archivo cargado: ", "")} size="sm" />
-          <div className="flex flex-col">
-            <span className="text-sm text-card-foreground">
-              {ev.descripcion.replace("Archivo cargado: ", "")}
-            </span>
-            <span className="text-[10px] text-muted-foreground">{ev.fecha}</span>
-          </div>
+      {adjuntos.map((adj) => (
+        <li key={adj.id} className="flex items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+          <FileTypeIcon name={adj.nombre_archivo} size="sm" />
+          <span className="flex-1 text-sm text-card-foreground truncate">{adj.nombre_archivo}</span>
+          {adj.ruta && (
+            <Button variant="default" size="sm" className="gap-1.5 shrink-0"
+              onClick={() => window.open(adj.ruta, "_blank")}>
+              Ver
+            </Button>
+          )}
         </li>
       ))}
     </ul>
   )
 }
-
 
 function solToEditPayload(sol: UrgSolicitud): EditSolicitudPayload {
   const tipo: EditSolicitudPayload["tipo"] =
@@ -1084,53 +1153,65 @@ function DetalleView({
           <ArrowLeft className="h-4 w-4" />Volver a bandeja
           </Button>
           <Separator orientation="vertical" className="h-6" />
-          <FoliosCell sol={sol} />
-          {estadoBadge(sol.estado)}
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-lg font-bold text-card-foreground">
+                {n === "borrador" || n === "en captura"
+                  ? "Borrador"
+                  : sol.folioRecepcion
+                    ? formatFolioRecepcion(sol.folioRecepcion)
+                    : (sol.folioJustificacion || sol.folio)}
+              </span>
+              {estadoBadge(sol.estado)}
+              {sol.slaRestante != null && (
+                <StatusBadge
+                  label={sol.slaRestante <= 0 ? "Cierre alcanzado" : `${sol.slaRestante} ${sol.slaRestante === 1 ? "día" : "días"} al cierre`}
+                  color={sol.slaRestante <= 0 ? C_ROSA_VINO : C_VERDE_ESTADO}
+                  bgColor={sol.slaRestante <= 0 ? C_ROSA_VINO_BG : C_VERDE_ESTADO_BG}
+                />
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground">{regimenLabel} — {sol.secretaria}</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant={n === "borrador" || n === "en captura" ? "default" : "vino"} className="gap-1.5 rounded-full"
-            onClick={() => setShowDescargarConfirm(true)}>
-           Descargar Justificación
-          </Button>
           {canEdit && !periodoConfirmado && (
-            <>
-              <Button size="sm" variant="default"
-                onClick={() => onEditSolicitud
-                  ? onEditSolicitud(solToEditPayload(sol))
-                  : handleDemoAction("Continuar captura")
-                }>
-                {n === "borrador" || n === "en captura" ? "Continuar Captura" : (<><Edit3 className="h-4 w-4" />Editar</>)}
-              </Button>
-              {(n === "borrador" || n === "en captura") && (
-                <Button size="sm" variant="vino"
-                  disabled={!canSend || guardandoReenvio}
-                  onClick={handleEnviarValidacionClick}
-                  title={!canSend ? "Periodo fuera de tiempo o régimen incompatible" : ""}>
-                  {guardandoReenvio ? "Enviando..." : "Enviar a Validación"}
-                </Button>
-              )}
-            </>
+            <Button size="sm" variant="default"
+              onClick={() => onEditSolicitud
+                ? onEditSolicitud(solToEditPayload(sol))
+                : handleDemoAction("Continuar captura")
+              }>
+              {n === "borrador" || n === "en captura" ? "Continuar Captura" : (<><Edit3 className="h-4 w-4" />Editar</>)}
+            </Button>
           )}
           {periodoConfirmado && (
             <Badge className="gap-1.5 bg-blue-100 text-blue-800 border-0">
               <FileCheck className="h-3 w-3" />Enviada a Validación
             </Badge>
           )}
-          {isEmitido && (
-            <>
-            </>
-          )}
           {isReadOnly && (
             <Badge variant="outline" className="gap-1.5 text-muted-foreground py-1.5 px-3">
               <Lock className="h-3 w-3" />Solo lectura
             </Badge>
           )}
-          <Button size="sm" variant="default" className="gap-1.5 px-3"
+          <Button size="sm" variant="default" className="gap-1.5 px-4"
             onClick={() => setHistorialAbierto((v) => !v)}>
             {historialAbierto
               ? <><PanelRightClose className="h-4 w-4" />Ocultar historial</>
               : <><PanelRightOpen className="h-4 w-4" />Ver Historial</>}
           </Button>
+          <Button size="sm" variant={n === "borrador" || n === "en captura" ? "default" : "vino"} className="gap-1.5 rounded-full"
+            onClick={() => setShowDescargarConfirm(true)}>
+           Descargar Justificación
+          </Button>
+          {canEdit && !periodoConfirmado && (n === "borrador" || n === "en captura") && (
+            <Button size="sm" variant="vino"
+              disabled={!canSend || guardandoReenvio}
+              onClick={handleEnviarValidacionClick}
+              title={!canSend ? "Periodo fuera de tiempo o régimen incompatible" : ""}>
+              {guardandoReenvio ? "Enviando..." : "Enviar a Validación"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1207,6 +1288,10 @@ function DetalleView({
                     </SelectContent>
                   </Select>
                 </div>
+                <Button variant="default" size="sm"
+                  onClick={() => { setEditingPeriodo(false); setNewPeriodo(sol.periodoAplicacion) }}>
+                  Cancelar
+                </Button>
                 <Button variant="vino" size="sm"
                   disabled={newPeriodo === sol.periodoAplicacion || (
                     !checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente &&
@@ -1214,10 +1299,6 @@ function DetalleView({
                   )}
                   onClick={handleUpdatePeriodo}>
                   Actualizar
-                </Button>
-                <Button variant="default" size="sm"
-                  onClick={() => { setEditingPeriodo(false); setNewPeriodo(sol.periodoAplicacion) }}>
-                  Cancelar
                 </Button>
               </div>
             </CardContent>
@@ -1298,6 +1379,10 @@ function DetalleView({
                       </SelectContent>
                     </Select>
                   </div>
+                  <Button variant="default" size="sm"
+                    onClick={() => { setEditingPeriodo(false); setNewPeriodo(sol.periodoAplicacion) }}>
+                    Cancelar
+                  </Button>
                   <Button variant="vino" size="sm"
                     disabled={newPeriodo === sol.periodoAplicacion || (
                       !checkVigenteFromCal(cal, sol.regimen, newPeriodo).vigente &&
@@ -1305,10 +1390,6 @@ function DetalleView({
                     )}
                     onClick={handleUpdatePeriodo}>
                     Actualizar
-                  </Button>
-                  <Button variant="default" size="sm"
-                    onClick={() => { setEditingPeriodo(false); setNewPeriodo(sol.periodoAplicacion) }}>
-                    Cancelar
                   </Button>
                 </div>
                 {permisoDisponible && newPeriodo === permisoDisponible.periodo && (
@@ -1347,51 +1428,70 @@ function DetalleView({
             historialAbierto ? "w-full opacity-100 lg:w-1/2" : "w-0 opacity-0"
           }`}
         >
-          <ScrollArea className="h-[calc(100vh-220px)]">
-            <div className="flex flex-col gap-3 pr-4 min-w-[320px]">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <FilterTabs
-                  value={rightTab}
-                  onValueChange={(v) => setRightTab(v as "historial" | "bitacora" | "observaciones")}
-                  items={[
-                    { value: "historial", label: "Historial" },
-                    { value: "bitacora", label: "Bitácora" },
-                    { value: "observaciones", label: "Observaciones", count: hasObs ? (observacionesVisibles.length || 1) : undefined },
-                  ]}
-                />
-                <div className="ml-auto flex items-center gap-3">
-                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                    {rightTab === "historial" &&
-                      `Folio ${sol.folioJustificacion || sol.folio} · ${sol.historial.length} evento${sol.historial.length !== 1 ? "s" : ""}`}
-                    {rightTab === "bitacora" &&
-                      (() => {
-                        const total = sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)
-                        return `${total} evento${total !== 1 ? "s" : ""} registrados`
-                      })()}
-                    {rightTab === "observaciones" &&
-                      (observacionesVisibles.length > 0
-                        ? `${observacionesVisibles.length} observación${observacionesVisibles.length !== 1 ? "es" : ""}`
-                        : sol.observacionMotivo ? "1 observación" : "Sin observaciones")}
-                  </span>
-                  <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-card-foreground"
-                    title="Cerrar panel" aria-label="Cerrar panel"
-                    onClick={() => setHistorialAbierto(false)}>
-                    <PanelRightClose className="h-4 w-4" />
-                  </Button>
-                </div>
+          <div className="flex flex-col gap-3 h-[calc(100vh-220px)] min-w-[320px]">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <FilterTabs
+                value={rightTab}
+                onValueChange={(v) => setRightTab(v as "historial" | "bitacora" | "observaciones")}
+                items={[
+                  { value: "historial", label: "Historial" },
+                  { value: "bitacora", label: "Bitácora" },
+                  { value: "observaciones", label: "Observaciones", count: hasObs ? (observacionesVisibles.length || 1) : undefined },
+                ]}
+              />
+              <div className="ml-auto flex items-center gap-3">
+                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                  {rightTab === "historial" &&
+                    `Folio ${sol.folioJustificacion || sol.folio} · ${sol.historial.length} evento${sol.historial.length !== 1 ? "s" : ""}`}
+                  {rightTab === "bitacora" &&
+                    (() => {
+                      const total = sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)
+                      return `${total} evento${total !== 1 ? "s" : ""} registrados`
+                    })()}
+                  {rightTab === "observaciones" &&
+                    (observacionesVisibles.length > 0
+                      ? `${observacionesVisibles.length} observación${observacionesVisibles.length !== 1 ? "es" : ""}`
+                      : sol.observacionMotivo ? "1 observación" : "Sin observaciones")}
+                </span>
+                <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-card-foreground"
+                  title="Cerrar panel" aria-label="Cerrar panel"
+                  onClick={() => setHistorialAbierto(false)}>
+                  <PanelRightClose className="h-4 w-4" />
+                </Button>
               </div>
+            </div>
 
+            <div className="flex-1 min-h-0">
               {rightTab === "historial" && (
-                <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <ScrollArea className="h-full rounded-xl border border-border shadow-md">
+                  <PanelHeader
+                    iconBg="bg-[#dfe6c3]"
+                    icon={<History className="h-5 w-5 text-[#2d331b]" />}
+                    title="Historial de Estatus"
+                    subtitle={`Folio ${sol.folioJustificacion || sol.folio}`}
+                    countLabel={ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol) ? "" : `${sol.historial.length} evento${sol.historial.length !== 1 ? "s" : ""}`}
+                  />
                   <AvanceSolicitud estado={sol.estado} tipo={sol.tipo} historial={sol.historial} compact />
                   <div className="bg-card px-4 py-3">
                     <HistorialTimeline entries={sol.historial} variant="alerta" />
                   </div>
-                </div>
+                </ScrollArea>
               )}
 
               {rightTab === "bitacora" && (
-                <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <ScrollArea className="h-full rounded-xl border border-border shadow-md">
+                  {(() => {
+                    const totalBitacora = sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)
+                    return (
+                      <PanelHeader
+                        iconBg="bg-[#ffefb6]"
+                        icon={<Info className="h-5 w-5 text-[#936901]" />}
+                        title="Bitácora de Captura"
+                        subtitle={`${totalBitacora} evento${totalBitacora !== 1 ? "s" : ""} registrado${totalBitacora !== 1 ? "s" : ""}`}
+                        countLabel={`${totalBitacora} evento${totalBitacora !== 1 ? "s" : ""}`}
+                      />
+                    )
+                  })()}
                   <div className="bg-card px-5 pt-4 pb-3">
                     <HistorialTimeline
                       entries={sol.bitacora.flatMap((entry) =>
@@ -1406,11 +1506,23 @@ function DetalleView({
                       variant="alerta"
                     />
                   </div>
-                </div>
+                </ScrollArea>
               )}
 
               {rightTab === "observaciones" && (
-                <div className="overflow-hidden rounded-xl border border-border shadow-md">
+                <ScrollArea className="h-full rounded-xl border border-border shadow-md">
+                  {(() => {
+                    const countObs = observacionesVisibles.length > 0 ? observacionesVisibles.length : sol.observacionMotivo ? 1 : 0
+                    return (
+                      <PanelHeader
+                        iconBg="bg-[var(--sem-support-error-low)]"
+                        icon={<AlertTriangle className="h-5 w-5 text-[var(--sem-support-on-error-low)]" />}
+                        title="Observaciones"
+                        subtitle={countObs > 0 ? `${countObs} observación${countObs !== 1 ? "es" : ""}` : "Sin observaciones"}
+                        countLabel={`${countObs} obs.`}
+                      />
+                    )
+                  })()}
                   <div className="bg-card p-4 flex flex-col gap-3">
                     {(() => {
                       const obs = getObservador(sol.estado)
@@ -1444,10 +1556,10 @@ function DetalleView({
                       <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
                     )}
                   </div>
-                </div>
+                </ScrollArea>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </div>
     </div>
@@ -1459,15 +1571,12 @@ type CalData = {
   asimilados:   { quincena: string; limiteDO: string }[]
   nombramiento: { quincena: string; limiteDO: string }[]
 }
-
 const MESES_NOMBRE = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
-
 function normalizarPeriodoANombre(periodo: string): string {
   const m = periodo.match(/^(\d+)\/\d{4}$/)
   if (m) return MESES_NOMBRE[parseInt(m[1], 10) - 1] ?? periodo
   return periodo
 }
-
 function checkVigenteFromCal(
   cal: CalData,
   regimen: RegimenPeriodo,
