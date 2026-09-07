@@ -30,6 +30,7 @@ interface AuthContextType {
 }
 
 export const AUTH_KEY = "sdtf_user"
+const LAST_ACTIVITY_KEY = "sdtf_last_activity"
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!(data as User).mustChangePassword) {
         setUser(data as User)
         sessionStorage.setItem("sdtf_just_logged_in", "1")
+        localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()))
       }
       return { mustChangePassword: (data as User).mustChangePassword }
     } catch {
@@ -92,24 +94,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) setUser({ ...user, mustChangePassword: false })
   }
 
-  const logout = useCallback(() => setUser(null), [])
+  const logout = useCallback(() => {
+    setUser(null)
+    try { localStorage.removeItem(LAST_ACTIVITY_KEY) } catch { /* noop */ }
+  }, [])
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!user) return
 
-    const reset = () => {
+    const schedule = (remainingMs: number) => {
       if (timerRef.current) clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(logout, IDLE_MS)
+      timerRef.current = setTimeout(logout, Math.max(remainingMs, 0))
+    }
+
+    // No basta con reprogramar setTimeout: se pausa cuando el equipo se
+    // suspende o la pestaña queda mucho tiempo en segundo plano, así que al
+    // "despertar" seguía teniendo el hueco completo de 1h por delante sin
+    // importar cuántos días reales hubieran pasado. Por eso se compara contra
+    // una marca de tiempo real guardada en localStorage (compartida entre
+    // pestañas) cada vez que la pestaña vuelve a estar activa.
+    const verificarInactividad = () => {
+      const ultima = Number(localStorage.getItem(LAST_ACTIVITY_KEY)) || Date.now()
+      const transcurrido = Date.now() - ultima
+      if (transcurrido >= IDLE_MS) { logout(); return }
+      schedule(IDLE_MS - transcurrido)
+    }
+
+    const marcarActividad = () => {
+      localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()))
+      schedule(IDLE_MS)
     }
 
     const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"] as const
-    events.forEach((e) => window.addEventListener(e, reset, { passive: true }))
-    reset()
+    events.forEach((e) => window.addEventListener(e, marcarActividad, { passive: true }))
+    document.addEventListener("visibilitychange", verificarInactividad)
+    window.addEventListener("focus", verificarInactividad)
+
+    verificarInactividad()
 
     return () => {
-      events.forEach((e) => window.removeEventListener(e, reset))
+      events.forEach((e) => window.removeEventListener(e, marcarActividad))
+      document.removeEventListener("visibilitychange", verificarInactividad)
+      window.removeEventListener("focus", verificarInactividad)
       if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [user, logout])
