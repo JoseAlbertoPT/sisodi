@@ -203,7 +203,7 @@ function rawToEditPayload(sol: SolicitudDetalle): EditSolicitudPayload {
     valores:                 raw?.valores ?? "",
     areasExp:                raw?.areas_exp ?? "",
   }
-  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, estado: sol.estado, estadoSiguienteTrasSave: getEstadoSiguienteTrasSave(sol.estado), formData, adjuntos: (raw?.adjunto ?? []).map((a: any) => ({ id: a.id, nombre_archivo: a.nombre_archivo, ruta: a.ruta })) }
+  return { id: String(sol.id), tipo, regimen, periodo: sol.periodo, estado: sol.estado, estadoSiguienteTrasSave: getEstadoSiguienteTrasSave(sol.estado), formData, adjuntos: (raw?.adjunto ?? []).map((a: any) => ({ id: a.id, nombre_archivo: a.nombre_archivo, ruta: `/api/adjunto/${a.id}/descargar` })) }
 }
 interface ChecklistItem { key: string; num: number; label: string }
 const CHECKLIST_16: ChecklistItem[] = [
@@ -681,7 +681,7 @@ function SeccionDocumentosAdjuntos({ raw }: { raw: any }) {
               </div>
               {adj.ruta && (
                 <Button variant="default" size="sm" className="gap-1.5 shrink-0"
-                  onClick={() => window.open(adj.ruta, "_blank")}>
+                  onClick={() => window.open(`/api/adjunto/${adj.id}/descargar`, "_blank")}>
                   Ver
                 </Button>
               )}

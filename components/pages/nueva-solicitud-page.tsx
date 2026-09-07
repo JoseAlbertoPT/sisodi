@@ -428,6 +428,8 @@ function OficioUpload({
   const [archivosInternos, setArchivosInternos] = useState<File[]>([])
   const archivos = files ?? archivosInternos
   const [error, setError] = useState<string | null>(null)
+  const [eliminados, setEliminados] = useState<Set<number>>(new Set())
+  const [eliminandoId, setEliminandoId] = useState<number | null>(null)
   const VALID_EXTS = ["pdf"]
   const handleFilesChange = (newFiles: File[]) => {
     const filtered = newFiles.filter((f) => {
@@ -438,13 +440,36 @@ function OficioUpload({
     setArchivosInternos(filtered)
     onFilesChange?.(filtered)
   }
+  const handleEliminarExistente = async (id: number) => {
+    setEliminandoId(id)
+    try {
+      const res = await fetch(`/api/adjunto?id=${id}`, { method: "DELETE" })
+      const json = await res.json()
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "No se pudo eliminar el archivo")
+        return
+      }
+      setEliminados((prev) => new Set(prev).add(id))
+    } catch {
+      setError("Error de conexión al eliminar")
+    } finally {
+      setEliminandoId(null)
+    }
+  }
+  const existingFilesVisibles = (existingFiles ?? []).filter((adj) => !eliminados.has(adj.id))
 
   return (
     <div className="flex flex-col gap-1.5">
-      {existingFiles && existingFiles.length > 0 && (
+      {existingFilesVisibles.length > 0 && (
         <div className="flex flex-col gap-1.5 mb-1">
-          {existingFiles.map((adj) => (
-            <UploadedFileRow key={adj.id} nombre={adj.nombre_archivo} ruta={adj.ruta} />
+          {existingFilesVisibles.map((adj) => (
+            <UploadedFileRow
+              key={adj.id}
+              nombre={adj.nombre_archivo}
+              ruta={adj.ruta}
+              onRemove={() => handleEliminarExistente(adj.id)}
+              removing={eliminandoId === adj.id}
+            />
           ))}
           <p className="text-xs text-muted-foreground">Para agregar o reemplazar archivos, cargue nuevos:</p>
         </div>
@@ -4025,6 +4050,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
       const usuarioId = (user as any)?.id ?? (user as any)?.uuid ?? null
       if (!usuarioId) { setErrorBorrador("No se pudo identificar al usuario."); setGuardandoBorrador(false); return }
 
+      let solicitudIdParaAdjuntos: number | undefined
+
       if (editSolicitud?.id) {
         const campos = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: false, esRenovacion, folioSeleccionado, formData, tipoAdministracion: user?.tipoAdministracion })
         const historialDiff = editSolicitud.formData ? computeDiff(editSolicitud.formData, formData) : []
@@ -4035,6 +4062,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         })
         const json = await res.json()
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al actualizar el borrador."); setGuardandoBorrador(false); return }
+        solicitudIdParaAdjuntos = Number(editSolicitud.id)
         setFolioBorradorGuardado(json.data?.folio_recepcion ?? json.data?.folio_justificacion ?? editSolicitud.id)
         const estadoOrig = (editSolicitud.estado ?? "").toLowerCase()
         const nuevoEstadoTrasCorreccion = (() => {
@@ -4068,8 +4096,21 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         const res = await fetchConTimeout("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         const json = await res.json()
         if (!res.ok || !json.ok) { setErrorBorrador(json.error ?? "Error al guardar el borrador."); setGuardandoBorrador(false); return }
+        solicitudIdParaAdjuntos = json.data?.id
         setFolioBorradorGuardado(json.folio ?? json.data?.folio_recepcion ?? "")
       }
+
+      if (archivosAdjuntos.length > 0 && solicitudIdParaAdjuntos) {
+        try {
+          await Promise.all(archivosAdjuntos.map((file) => {
+            const fd = new FormData()
+            fd.append("file", file)
+            fd.append("solicitudId", String(solicitudIdParaAdjuntos))
+            return fetchConTimeout("/api/adjunto", { method: "POST", body: fd }, 60_000)
+          }))
+        } catch { }
+      }
+
       setBorradorGuardado(true)
     } catch { setErrorBorrador("Error de conexión.") } finally { setGuardandoBorrador(false) }
   }, [user, tipo, regimenPeriodo, esRenovacion, folioSeleccionado, formData, editSolicitud, archivosAdjuntos])

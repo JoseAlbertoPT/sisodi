@@ -212,7 +212,7 @@ export function FirmaAutografaPanel({
                     <FileTypeIcon name={firma?.archivo_firmado?.split("/").pop() ?? "archivo.pdf"} size="sm" />
                   </div>
                   <span className="flex-1 truncate text-sm font-medium text-gray-800 leading-snug">{firma?.archivo_firmado?.split("/").pop()}</span>
-                  <a href={firma?.archivo_firmado ?? "#"} target="_blank" rel="noopener" className="text-xs font-medium text-[#773357] hover:underline shrink-0">Ver</a>
+                  <a href={`/api/firma-efirma/autografa/descargar?solicitudId=${solicitudId}`} target="_blank" rel="noopener" className="text-xs font-medium text-[#773357] hover:underline shrink-0">Ver</a>
                   <button
                     type="button"
                     onClick={handleClear}

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { writeFile, unlink } from "fs/promises"
-import path from "path"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { s3Upload, s3Delete } from "@/lib/s3"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -79,22 +78,21 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     const safeName = `sellado_${etapa}_${solicitudId}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`
-    const relPath = `/uploads/${safeName}`
-    const fullPath = path.join(process.cwd(), "public", "uploads", safeName)
+    const key = `sellados/${safeName}`
 
-    await writeFile(fullPath, buffer)
+    await s3Upload(key, buffer, "application/pdf")
 
     const data = await prisma.documento_sellado.upsert({
       where: { solicitud_id_etapa: { solicitud_id: solicitudId, etapa } },
       create: {
         solicitud_id: solicitudId,
         etapa,
-        archivo: relPath,
+        archivo: key,
         nombre_original: file.name,
         uploaded_by: usuarioId || null,
       },
       update: {
-        archivo: relPath,
+        archivo: key,
         nombre_original: file.name,
         uploaded_by: usuarioId || null,
         uploaded_at: new Date(),
@@ -102,11 +100,8 @@ export async function POST(req: NextRequest) {
       include: { uploader: { select: { id: true, nombre: true } } },
     })
 
-    if (previo?.archivo && previo.archivo !== relPath) {
-      try {
-        await unlink(path.join(process.cwd(), "public", previo.archivo.replace(/^\//, "")))
-      } catch {
-      }
+    if (previo?.archivo && previo.archivo !== key) {
+      await s3Delete(previo.archivo)
     }
 
     broadcastUpdate(ALL_APARTADOS)
@@ -141,10 +136,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.documento_sellado.delete({
       where: { solicitud_id_etapa: { solicitud_id: solicitudId, etapa } },
     })
-    try {
-      await unlink(path.join(process.cwd(), "public", existente.archivo.replace(/^\//, "")))
-    } catch {
-    }
+    await s3Delete(existente.archivo)
 
     return NextResponse.json({ ok: true })
   } catch (error: any) {

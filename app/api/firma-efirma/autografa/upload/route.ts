@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { writeFile, mkdir } from "fs/promises"
-import path from "path"
 import { prisma } from "@/lib/prisma"
+import { s3Upload } from "@/lib/s3"
 
 const MAX_SIZE = 15 * 1024 * 1024
 
@@ -32,18 +31,15 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const dir = path.join(process.cwd(), "public", "uploads", "firmado")
-    await mkdir(dir, { recursive: true })
     const filename = `${solicitudId}_${Date.now()}.pdf`
-    const fullPath = path.join(dir, filename)
-    await writeFile(fullPath, buffer)
-    const publicPath = `/uploads/firmado/${filename}`
+    const key = `firmas-autografas/${filename}`
+    await s3Upload(key, buffer, "application/pdf")
 
     const firma = await prisma.firma_proceso.upsert({
       where: { solicitud_id: solicitudId },
       update: {
         tipo: "autografa",
-        archivo_firmado: publicPath,
+        archivo_firmado: key,
         estado: "completado",
         firmados: 1,
         fecha_completado: new Date(),
@@ -51,7 +47,7 @@ export async function POST(req: NextRequest) {
       create: {
         solicitud_id: solicitudId,
         tipo: "autografa",
-        archivo_firmado: publicPath,
+        archivo_firmado: key,
         estado: "completado",
         firmados: 1,
         total_firmantes: 1,

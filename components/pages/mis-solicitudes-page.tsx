@@ -454,7 +454,7 @@ function mapApiItem(item: any): UrgSolicitud {
     adjuntos: (item.adjuntos ?? []).map((a: any) => ({
       id:             a.id,
       nombre_archivo: a.nombre_archivo,
-      ruta:           a.ruta,
+      ruta:           `/api/adjunto/${a.id}/descargar`,
     })),
   }
 }

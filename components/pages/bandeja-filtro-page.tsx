@@ -400,7 +400,7 @@ function DocumentosAdjuntosCard({ raw }: { raw: any }) {
               <span className="flex-1 text-sm font-medium text-card-foreground truncate">{adj.nombre_archivo}</span>
               {adj.ruta && (
                 <Button variant="default" size="sm" className="gap-1.5 shrink-0"
-                  onClick={() => window.open(adj.ruta, "_blank")}>
+                  onClick={() => window.open(`/api/adjunto/${adj.id}/descargar`, "_blank")}>
                   Ver
                 </Button>
               )}
@@ -818,7 +818,7 @@ function rawToEditPayload(solicitud: FiltroSolicitud): EditSolicitudPayload {
     periodo: solicitud.periodo ?? "",
     estado: solicitud.estado,
     estadoSiguienteTrasSave: getEstadoSig(solicitud.estado),
-    adjuntos: (raw.adjunto ?? []).map((a: any) => ({ id: a.id, nombre_archivo: a.nombre_archivo, ruta: a.ruta })),
+    adjuntos: (raw.adjunto ?? []).map((a: any) => ({ id: a.id, nombre_archivo: a.nombre_archivo, ruta: `/api/adjunto/${a.id}/descargar` })),
     formData: {
       secretaria:              raw.secretaria ?? "",
       unidadAdministrativa:    raw.clave_unidad_administrativa ?? raw.unidad_administrativa ?? "",
