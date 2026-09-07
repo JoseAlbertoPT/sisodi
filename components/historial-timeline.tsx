@@ -451,7 +451,7 @@ export function HistorialTimeline({ entries, variant = "default" }: { entries: H
     return <p className="text-xs text-muted-foreground">Sin historial registrado.</p>
 
   return (
-    <div className="flex flex-col max-h-[640px] overflow-y-auto pr-1">
+    <div className="flex flex-col">
       {reversed.map(({ entry, evento }, i) => {
         const { label, tipo } = evento
         const diff   = parseDiff(entry.comentario)

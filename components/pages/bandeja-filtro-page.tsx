@@ -99,6 +99,7 @@ const FILTRO_STAGE_LABELS: Record<number, string> = {
   2: "Verificación DGDO",
   3: "Emisión",
 }
+
 const MESES = [
   { value: "01", label: "Enero" }, { value: "02", label: "Febrero" },
   { value: "03", label: "Marzo" }, { value: "04", label: "Abril" },
@@ -107,7 +108,6 @@ const MESES = [
   { value: "09", label: "Septiembre" }, { value: "10", label: "Octubre" },
   { value: "11", label: "Noviembre" }, { value: "12", label: "Diciembre" },
 ]
-
 const INICIALES_MES_MAP: Record<string, string> = {
   "01": "EN", "02": "FE", "03": "MR", "04": "AB",
   "05": "MY", "06": "JN", "07": "JL", "08": "AG",
