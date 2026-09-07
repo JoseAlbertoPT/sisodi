@@ -166,6 +166,7 @@ export async function POST(req: NextRequest) {
         puedeAdministrarCatalogo(usuario.id),
         puedeConsultarCatalogo(usuario.id),
       ])
+      await prisma.usuario.update({ where: { id: usuario.id }, data: { ultima_actividad: new Date() } })
 
       return NextResponse.json({
         id:                  usuario.id,
@@ -184,6 +185,16 @@ export async function POST(req: NextRequest) {
         catalogoConsulta,
       })
     }
+    if (action === "heartbeat") {
+      const { usuarioId } = body
+      if (!usuarioId) return err("usuarioId requerido")
+      await prisma.usuario.updateMany({
+        where: { id: usuarioId },
+        data:  { ultima_actividad: new Date() },
+      })
+      return NextResponse.json({ ok: true })
+    }
+
     if (action === "change-password") {
       const { rfc, nuevaPassword } = body
       if (!rfc || !nuevaPassword) return err("Datos incompletos")

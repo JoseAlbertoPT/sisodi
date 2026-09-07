@@ -810,7 +810,7 @@ function syncLength(arr: string[], count: number): string[] {
 function DynamicList({
   label, items, onChange, max = 100, readonly = false,
   minRequired, nivelTabulador, forbiddenTexts, onBlurItem, matchCountLabel = false, rangeLabel = false,
-  onDupsChange,
+  onDupsChange, onFocusItem,
   }: {
   label: string
   items: string[]
@@ -824,6 +824,8 @@ function DynamicList({
   matchCountLabel?: boolean
   rangeLabel?: boolean
   onDupsChange?: (hasDups: boolean) => void
+  /** Se dispara al enfocar (clic) cualquier item — antes de escribir. */
+  onFocusItem?: () => void
   }) {
   const minEfectivo = useMemo(() => {
     if (minRequired !== undefined) return minRequired
@@ -900,6 +902,7 @@ function DynamicList({
                   const el = e.currentTarget
                   el.style.height = "auto"; el.style.height = el.scrollHeight + "px"
                 }}
+                onFocus={onFocusItem}
                 onBlur={() => {
                   if (onBlurItem && item.trim()) {
                     const transformed = onBlurItem(item)
@@ -2079,6 +2082,12 @@ function FormularioPrestacion({
         <CardContent className="px-4 pb-3 pt-0">
           <Textarea
             value={objeto}
+            onFocus={() => {
+              if (!bloqueadoPorRenovacion && !formulaObjetoShown) {
+                setShowFormulaModal("objeto")
+                setFormulaObjetoShown(true)
+              }
+            }}
             onChange={(e) => {
               if (!bloqueadoPorRenovacion) {
                 if (!formulaObjetoShown && objeto === "" && e.target.value.length > 0) {
@@ -2108,6 +2117,12 @@ function FormularioPrestacion({
         <CardContent className="px-4 pb-3 pt-0">
           <DynamicList
             label="" items={actividades}
+            onFocusItem={() => {
+              if (!formulaActividadesShown) {
+                setShowFormulaModal("actividades")
+                setFormulaActividadesShown(true)
+              }
+            }}
             onChange={(newItems) => {
               if (!formulaActividadesShown) {
                 const itemAdded = newItems.length > actividades.length
@@ -2914,6 +2929,12 @@ function FormularioNombramiento({
         <CardContent className="px-4 pb-3 pt-0">
           <Textarea
             value={objetoNombramiento}
+            onFocus={() => {
+              if (!bloqueadoPorRenovacion && !formulaObjetoShown) {
+                setShowFormulaModal("objeto")
+                setFormulaObjetoShown(true)
+              }
+            }}
             onChange={(e) => {
               if (!bloqueadoPorRenovacion) {
                 if (!formulaObjetoShown && objetoNombramiento === "" && e.target.value.length > 0) {
@@ -2943,6 +2964,12 @@ function FormularioNombramiento({
         <CardContent className="px-4 pb-3 pt-0">
           <DynamicList
             label="" items={funciones}
+            onFocusItem={() => {
+              if (!formulaActividadesShown) {
+                setShowFormulaModal("actividades")
+                setFormulaActividadesShown(true)
+              }
+            }}
             onChange={(newItems) => {
               if (!formulaActividadesShown) {
                 const itemAdded = newItems.length > funciones.length

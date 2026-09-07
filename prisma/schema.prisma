@@ -322,6 +322,12 @@ model usuario {
   intentos_fallidos     Int                   @default(0)
   bloqueado_hasta       DateTime?             @db.Timestamp(6)
   nivel_bloqueo         Int                   @default(0)
+  // Cierre de sesión por inactividad (backstop en servidor, ver
+  // lib/validar-sesion.ts): se actualiza en login y en cada heartbeat que
+  // manda el cliente mientras hay actividad real (lib/auth-context.tsx). Si
+  // pasa más de 1h sin refrescarse, checkSesionUsuario rechaza la sesión
+  // aunque el navegador nunca haya llamado a logout().
+  ultima_actividad      DateTime?             @default(now()) @db.Timestamp(6)
   codigo_recuperacion    codigo_recuperacion?
   catalogo_solicitudes   catalogo_solicitud[]
   documentos_sellados    documento_sellado[]   @relation("documento_sellado_uploader")

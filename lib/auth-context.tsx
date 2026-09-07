@@ -122,9 +122,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       schedule(IDLE_MS - transcurrido)
     }
 
+    // Respaldo en servidor (ver lib/validar-sesion.ts): el navegador puede
+    // fallar en detectar la inactividad (pestaña congelada, equipo
+    // suspendido), así que cada actividad real también refresca
+    // `usuario.ultima_actividad` en la BD — con throttle para no mandar un
+    // heartbeat en cada mousemove.
+    let ultimoHeartbeat = 0
+    const enviarHeartbeat = () => {
+      const ahora = Date.now()
+      if (ahora - ultimoHeartbeat < 60_000) return
+      ultimoHeartbeat = ahora
+      fetch("/api/auth?action=heartbeat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuarioId: user.id }),
+      }).catch(() => { /* noop: si falla, el próximo evento reintenta */ })
+    }
+
     const marcarActividad = () => {
       localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()))
       schedule(IDLE_MS)
+      enviarHeartbeat()
     }
 
     const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"] as const
