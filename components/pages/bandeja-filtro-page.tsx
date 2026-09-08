@@ -1591,7 +1591,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       onBack={() => { setSelectedId(null); setSuccessMsg(null) }}
     />
   )
-
   if (selectedSolicitud) return (
     <DetalleView
       solicitud={selectedSolicitud}

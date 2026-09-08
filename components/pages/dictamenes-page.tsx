@@ -547,14 +547,14 @@ export function DictamenesPage() {
                     <th className="px-4 py-3 text-left font-semibold">Denominación</th>
                     <th className="px-4 py-3 text-left font-semibold">Fecha Dict.</th>
                     <th className="px-4 py-3 text-left font-semibold">Modalidad</th>
-                    <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Destinatarios</th>
+                    {/* <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Destinatarios</th> */}
                     <th className="px-4 py-3 font-semibold text-center whitespace-nowrap">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr className="empty-row">
-                      <td colSpan={9}>
+                      <td colSpan={8}>
                         <EmptyState icon={Inbox} title="No se encontraron dictámenes" description="Ajusta los filtros para ver más resultados." />
                       </td>
                     </tr>
@@ -597,7 +597,7 @@ export function DictamenesPage() {
                         />
                       </td>
 
-                      <td className="px-4 py-3">
+                      {/* <td className="px-4 py-3">
                         {d.destinatarios.length > 0 ? (
                           <div className="flex flex-wrap gap-1 max-w-40">
                             {d.destinatarios.slice(0, 2).map((dest, i) => (
@@ -614,7 +614,7 @@ export function DictamenesPage() {
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
-                      </td>
+                      </td> */}
 
                       <td className="px-4 py-3 text-center">
                         <div className="flex justify-center">
