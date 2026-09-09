@@ -1283,11 +1283,11 @@ const FORMULA_LLENADO_CONTENIDO = {
     titulo: "OBJETO DE CONTRATACIÓN",
     descripcion: "Redactar de manera específica el motivo por el cual se realizará la contratación, especificando la necesidad de la misma.",
     filas: [
-      { elemento: "Verbo – Infinitivo",                      ejemplo: "Brindar" },
-      { elemento: "Actividad – ¿Qué hace?",                  ejemplo: "Apoyo técnico-jurídico en el análisis y atención de los asuntos competencia de la Subprocuraduría de Consultoría y Normativa." },
-      { elemento: "¿Cómo lo hace? / ¿En qué se basa?",       ejemplo: "Mediante la investigación, estudio e interpretación de la legislación y normatividad vigente aplicable, la elaboración de proyectos de opiniones jurídicas, la revisión de instrumentos jurídicos, así como la integración, control y seguimiento de expedientes y la actualización de disposiciones legales," },
-      { elemento: "Con la Finalidad ¿Para qué lo hace?",     ejemplo: "Con la finalidad de fortalecer la gestión y atención de los asuntos jurídicos de la Subprocuraduría." },
-      { elemento: "Alcance/ ¿Dónde aplica sus funciones?",   ejemplo: "Coadyuvando a que las actuaciones de la Secretaría de Administración y Finanzas se realicen con apego al marco jurídico vigente aplicable." },
+      { elemento: "Verbo Infinitivo",                        ejemplo: "Proporcionar" },
+      { elemento: "Actividad – ¿Qué hace?",                  ejemplo: "Intervención jurídica a mujeres, niñas y adolescentes en situación de riesgo o violencia que acudan a los módulos de atención ubicados en los municipios de Cuernavaca y Emiliano Zapata, así como en la comunidad indígena de Cuentepec, perteneciente al municipio de Temixco y la comunidad indígena de Tetelcingo perteneciente al municipio de Cuautla." },
+      { elemento: "Mediante o a través de ¿Cómo lo hace? / ¿En qué se basa?", ejemplo: "Mediante la orientación, asesoría y acompañamiento jurídico conforme a las necesidades identificadas en cada caso." },
+      { elemento: "Con la finalidad de ¿Para qué lo hace?", ejemplo: "Con la finalidad de contribuir a la protección de sus derechos, facilitar el acceso a la justicia y fortalecer su capacidad para la toma de decisiones informadas frente a situaciones de violencia." },
+      { elemento: "Alcance ¿Dónde aplica sus funciones? (El alcance no necesariamente debe ubicarse al final; únicamente se requiere hacer referencia a este en el objeto de la contratación)", ejemplo: "mujeres, niñas y adolescentes en situación de riesgo o violencia que acudan a los módulos de atención ubicados en los municipios de Cuernavaca y Emiliano Zapata, así como en la comunidad indígena de Cuentepec, perteneciente al municipio de Temixco y la comunidad indígena de Tetelcingo perteneciente al municipio de Cuautla." },
     ],
   },
   actividades: {
@@ -1295,10 +1295,10 @@ const FORMULA_LLENADO_CONTENIDO = {
     titulo: "ACTIVIDADES A REALIZAR",
     descripcion: "Enuncia las actividades específicas que realizará el prestador de servicios.",
     filas: [
-      { elemento: "Verbo – Infinitivo",                  ejemplo: "Auxiliar" },
-      { elemento: "Actividad – ¿Qué hace?",              ejemplo: "En la revisión preliminar de convenios, contratos, acuerdos y demás instrumentos jurídicos sometidos a consideración de la Subprocuraduría." },
-      { elemento: "Mediante o ¿A través de qué?",        ejemplo: "Mediante el análisis de su estructura, la verificación de la fundamentación jurídica, la congruencia con la normatividad aplicable y cotejo con formatos o modelos institucionales preestablecidos." },
-      { elemento: "Con la Finalidad ¿Para qué lo hace?", ejemplo: "Con la finalidad de apoyar en la integración de instrumentos jurídicos que fortalezcan la seguridad y certeza jurídica de los actos administrativos y contractuales de la Secretaría de Administración y Finanzas." },
+      { elemento: "Verbo Infinitivo",                    ejemplo: "Mantener" },
+      { elemento: "Actividad – ¿Qué hace?",              ejemplo: "Actualizada la plataforma del Banco Nacional de Datos e Información sobre Casos de Violencia contra las Mujeres (BANAVIM)." },
+      { elemento: "Mediante o a través de ¿Cómo lo hace? / ¿En qué se basa?", ejemplo: "Mediante el registro de las atenciones, seguimientos y canalizaciones realizadas a mujeres víctimas de violencia." },
+      { elemento: "Con la Finalidad ¿Para qué lo hace?", ejemplo: "Con la finalidad de contar con información actualizada y confiable que permita dar seguimiento a la atención otorgada." },
     ],
   },
 } as const
@@ -1339,7 +1339,7 @@ function FormulaLlenadoModal({ tipo, onClose }: { tipo: "objeto" | "actividades"
                 </tr>
                 {filas.map((fila, i) => (
                   <tr key={i} className="border-b border-border/50 last:border-b-0">
-                    <td className="align-top text-center px-4 py-3 bg-muted/30 text-muted-foreground border-r border-border/50 w-56 whitespace-normal">
+                    <td className="align-top text-center px-4 py-3 bg-muted/30 text-muted-foreground border-r border-border/50 w-72 whitespace-normal text-pretty">
                       {fila.elemento}
                     </td>
                     <td className="align-top leading-relaxed px-4 py-3 text-card-foreground">
