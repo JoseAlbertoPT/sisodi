@@ -217,7 +217,7 @@ const s = StyleSheet.create({
   pageBox: { flex: 1, paddingHorizontal: 4, justifyContent: "center" },
   claveText: { fontFamily: FONT_REGULAR, fontSize: 8, textAlign: "center" },
 
-  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10, marginRight: -63 },
+  fechaRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 10, marginRight: -18 },
   centeredTitle: { fontFamily: FONT_BOLD, fontSize: 10, textAlign: "center", marginBottom: 12 , letterSpacing: 0.6},
   sectionTitle: { fontFamily: FONT_BOLD, fontSize: 10, marginBottom: 4, marginTop: 10 , letterSpacing: 0.6},
 

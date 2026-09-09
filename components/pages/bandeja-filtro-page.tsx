@@ -963,10 +963,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         usuario:    h.usuario?.nombre ?? "Sistema",
         comentario: h.comentario as string,
       }))
-  // Capturista/UEFA solo ven la observación vigente (la más reciente), no
-  // el historial completo de observaciones ya resueltas dentro del ciclo
-  // actual — observacionesFiltro viene en orden ascendente, así que la
-  // última posición es la actual.
+
   const observacionesVisibles = ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol)
     ? observacionesFiltro.slice(-1)
     : observacionesFiltro
@@ -990,7 +987,6 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
       setDescargandoCartaDescriptiva(false)
     }
   }
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -999,7 +995,8 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
             variant="ghost" size="sm" onClick={onBack}
             className="gap-1.5"
           >
-            <ArrowLeft className="h-4 w-4" />Volver a bandeja
+          <ArrowLeft className="h-4 w-4" />Volver a bandeja
+
           </Button>
           <Separator orientation="vertical" className="h-6" />
           <div>
@@ -1097,7 +1094,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
         <div className="lg:col-span-2 flex flex-col gap-4">
           <ExpedienteCompleto raw={raw} hidePerfil={filtro === 1} />
         </div>
-        <div className="lg:col-span-1 flex flex-col gap-4">
+           <div className="lg:col-span-1 flex flex-col gap-4">
           <div className="flex rounded-lg border border-border overflow-hidden">
             <button
               onClick={() => setActivePanel("revision")}
@@ -1482,7 +1479,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
     finally { setGuardando(false) }
   }, [user])
 
-
   const autografaPendientesFirma = useMemo(
     () => filtro === 3
       ? solicitudes.filter(s => classifySolicitud(s, filtro) === "pendientes_firma" && s._raw?.modalidad_firma === "autografa")
@@ -1593,7 +1589,7 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
   )
   if (selectedSolicitud) return (
     <DetalleView
-      solicitud={selectedSolicitud}
+        solicitud={selectedSolicitud}
       filtro={filtro}
       onBack={() => setSelectedId(null)}
       onAprobar={handleAprobar}
@@ -1602,7 +1598,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
       guardando={guardando}
     />
   )
-
   return (
     <>
     {actionToast && (
@@ -1616,7 +1611,6 @@ export function BandejaFiltroPage({ filtro, onOpenReview, onEditSolicitud }: Ban
         ? "Verifica y asigna las solicitudes, realizando el segundo filtro de revisión y observaciones."
         : "Gestiona la emisión de las solicitudes, realizando la dictaminación final y la generación de dictámenes u opiniones técnicas."}
     >
-
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="flex items-center gap-3 py-3">

@@ -1,7 +1,7 @@
 "use client"
 import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from "react"
 
-const IDLE_MS = 60 * 60 * 1000
+const IDLE_MS = 30 * 60 * 1000
 
 interface User {
   id: string
