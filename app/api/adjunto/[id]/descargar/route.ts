@@ -16,11 +16,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const buffer = await s3Download(adjunto.ruta)
+    // Latin-1 (0-255) exige el fallback ASCII para el header; el nombre real
+    // se conserva vía filename* (RFC 5987) para que el navegador lo use.
+    const asciiName = adjunto.nombre_archivo.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "'")
+    const encodedName = encodeURIComponent(adjunto.nombre_archivo)
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type": adjunto.tipo || "application/octet-stream",
-        "Content-Disposition": `inline; filename="${adjunto.nombre_archivo}"`,
+        "Content-Disposition": `inline; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
         "Cache-Control": "no-store, private",
       },
     })

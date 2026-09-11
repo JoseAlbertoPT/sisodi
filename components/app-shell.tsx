@@ -18,6 +18,7 @@ import { ValidacionUefaPage } from "@/components/pages/validacion-uefa-page"
 import { EntidadesPage } from "@/components/pages/entidades-page"
 import { CatalogoJustificacionesPage } from "@/components/pages/catalogo-justificaciones-page"
 import { ProgresoFirmadoPage } from "@/components/pages/progreso-firmado-page"
+import { AcercaDePage } from "@/components/pages/acerca-de-page"
 import { WelcomePage } from "@/components/welcome-splash"
 import { SidebarContext } from '@/context/sidebar-context';
 
@@ -167,6 +168,8 @@ export function AppShell() {
         return <EntidadesPage />
       case "perfil":
         return <PerfilPage />
+      case "acerca-de":
+        return <AcercaDePage />
       default:
         return <DashboardPage onNavigate={setCurrentPage} onOpenReview={handleOpenReview} />
     }

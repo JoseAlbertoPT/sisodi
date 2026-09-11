@@ -6,9 +6,6 @@ import {
 } from "@aws-sdk/client-s3"
 import type { Readable } from "stream"
 
-// S3-compatible self-hosted (dev-s3.morelos.gob.mx), por eso `endpoint` es
-// configurable y se usa forcePathStyle (los endpoints no-AWS normalmente no
-// soportan el estilo virtual-hosted).
 const s3 = new S3Client({
   region: process.env.AWS_DEFAULT_REGION || "us-east-1",
   endpoint: process.env.AWS_ENDPOINT || undefined,

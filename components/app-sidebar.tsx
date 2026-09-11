@@ -23,6 +23,7 @@ import {
   FileOutput,
   Menu as MenuIcon,
   LogOut,
+  Info,
   X,
 } from "lucide-react"
 import {
@@ -53,6 +54,7 @@ export type PageKey =
   | "dependencia"
   | "dependencias"
   | "perfil"
+  | "acerca-de"
 
 interface SidebarProps {
   currentPage: PageKey
@@ -200,7 +202,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
     return () => { cancelled = true }
   }, [user?.rol, user?.id, retryCount])
 
-  const INTERNAL_PAGES = useMemo(() => new Set(["revision-do", "progreso-firmado", "perfil", "nueva-solicitud"]), [])
+  const INTERNAL_PAGES = useMemo(() => new Set(["revision-do", "progreso-firmado", "perfil", "nueva-solicitud", "acerca-de"]), [])
   useEffect(() => {
     if (menusLoading || !menuTree) return
     const availableKeys = new Set(collectLeafNodes(menuTree).filter((n) => n.key && n.route !== null).map((n) => n.key!))
@@ -300,31 +302,66 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
           )}
         </nav>
 
-        <div className="shrink-0 border-t border-border-low px-2 py-2">
+        <div className="shrink-0 border-t border-border-low px-2 py-2 flex flex-col gap-1">
           {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setConfirmLogout(true)}
-                  className="flex w-9 h-9 mx-auto items-center justify-center rounded-xl text-content-low hover:bg-reactive-surface-hover transition-colors"
-                  aria-label="Cerrar sesión"
-                >
-                  <LogOut className="h-[18px] w-[18px]" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Cerrar sesión</TooltipContent>
-            </Tooltip>
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("acerca-de")}
+                    className={cn(
+                      "flex w-9 h-9 mx-auto justify-center items-center rounded-xl transition-colors",
+                      currentPage === "acerca-de"
+                        ? "bg-bg-base text-content-high shadow-sm"
+                        : "text-content-low hover:bg-reactive-surface-hover"
+                    )}
+                    aria-label="Acerca de"
+                  >
+                    <Info className="h-[18px] w-[18px]" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Acerca de</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmLogout(true)}
+                    className="flex w-9 h-9 mx-auto items-center justify-center rounded-xl text-content-low hover:bg-reactive-surface-hover transition-colors"
+                    aria-label="Cerrar sesión"
+                  >
+                    <LogOut className="h-[18px] w-[18px]" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Cerrar sesión</TooltipContent>
+              </Tooltip>
+            </>
           ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmLogout(true)}
-              className="flex w-full items-center gap-6 px-3 py-2.5 rounded-xl text-content-low hover:bg-reactive-surface-hover transition-colors font-sans text-[14px] font-normal leading-[120%]"
-              aria-label="Cerrar sesión"
-            >
-              <LogOut className="h-[18px] w-[18px] shrink-0" />
-              <span>Cerrar sesión</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => onNavigate("acerca-de")}
+                className={cn(
+                  "flex w-full items-center gap-6 rounded-xl px-3 py-2.5 transition-colors text-left font-sans text-[14px] font-normal leading-[120%]",
+                  currentPage === "acerca-de"
+                    ? "bg-bg-base text-content-high shadow-sm"
+                    : "text-content-low hover:bg-reactive-surface-hover"
+                )}
+              >
+                <Info className="h-[18px] w-[18px] shrink-0" />
+                <span>Acerca de</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmLogout(true)}
+                className="flex w-full items-center gap-6 px-3 py-2.5 rounded-xl text-content-low hover:bg-reactive-surface-hover transition-colors font-sans text-[14px] font-normal leading-[120%]"
+                aria-label="Cerrar sesión"
+              >
+                <LogOut className="h-[18px] w-[18px] shrink-0" />
+                <span>Cerrar sesión</span>
+              </button>
+            </>
           )}
         </div>
       </aside>

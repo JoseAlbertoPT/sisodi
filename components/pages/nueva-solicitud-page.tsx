@@ -824,7 +824,6 @@ function DynamicList({
   matchCountLabel?: boolean
   rangeLabel?: boolean
   onDupsChange?: (hasDups: boolean) => void
-  /** Se dispara al enfocar (clic) cualquier item — antes de escribir. */
   onFocusItem?: () => void
   }) {
   const minEfectivo = useMemo(() => {
