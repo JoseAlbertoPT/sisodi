@@ -305,7 +305,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
         <div className="shrink-0 border-t border-border-low px-2 py-2 flex flex-col gap-1">
           {collapsed ? (
             <>
-              <Tooltip>
+              {/* <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
@@ -322,7 +322,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">Acerca de</TooltipContent>
-              </Tooltip>
+              </Tooltip> */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -339,7 +339,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
             </>
           ) : (
             <>
-              <button
+              {/* <button
                 type="button"
                 onClick={() => onNavigate("acerca-de")}
                 className={cn(
@@ -351,7 +351,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
               >
                 <Info className="h-[18px] w-[18px] shrink-0" />
                 <span>Acerca de</span>
-              </button>
+              </button> */}
               <button
                 type="button"
                 onClick={() => setConfirmLogout(true)}
