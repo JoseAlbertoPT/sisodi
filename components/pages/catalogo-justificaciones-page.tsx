@@ -56,6 +56,8 @@ import { COL_LEGACY, SHEET_NAME_LEGACY } from "@/lib/importar-catalogo-excel"
 import { folioSinSiglas } from "@/lib/clave-dictamen"
 import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
 import { useProgramasSigef } from "@/hooks/use-programas-sigef"
+import { useTabulador } from "@/hooks/use-tabulador"
+import { secretariaAplica } from "@/lib/tabulador"
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
   loading: () => (
@@ -242,6 +244,22 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   }, [user?.id])
   const progSigef = useProgramasSigef(solRec ? entidadNombre(solRec) : "")
   const solImporteBrutoNum = solImporteBruto.trim() ? parseMoney(solImporteBruto) : null
+  const { rangos: rangosTabuladorSol } = useTabulador()
+  // Rango del tabulador (min/max) del nivel/categoría con el que ya quedó
+  // registrada la solicitud original — la reutilización no puede salirse de
+  // ese rango (ej. Nivel 107 A: $22,155.06 a $24,369.40).
+  const rangoTabuladorSol = useMemo(() => {
+    if (!solRec?.solicitud.nivel_tabulador) return null
+    return rangosTabuladorSol.find((r) =>
+      r.nivel === solRec.solicitud.nivel_tabulador
+      && (solRec.solicitud.categoria_tabulador ? r.categoria === solRec.solicitud.categoria_tabulador : true)
+      && secretariaAplica(r.secretarias, entidadNombre(solRec))
+    ) ?? null
+  }, [rangosTabuladorSol, solRec])
+  const importeFueraDeRango =
+    rangoTabuladorSol !== null
+    && solImporteBrutoNum !== null
+    && (solImporteBrutoNum > rangoTabuladorSol.max || solImporteBrutoNum < rangoTabuladorSol.min)
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -338,6 +356,13 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         setSolError(`El número de prestadores no puede exceder ${maxPrestadores} para esta secretaría`)
         return
       }
+    }
+    if (importeFueraDeRango && rangoTabuladorSol) {
+      setSolError(
+        `El importe bruto debe estar entre ${fmtMoney(String(rangoTabuladorSol.min))} y ${fmtMoney(String(rangoTabuladorSol.max))} `
+        + `(rango del Tabulador para Nivel ${rangoTabuladorSol.nivel} ${rangoTabuladorSol.categoria})`
+      )
+      return
     }
     setSolError(null)
     setSolFirmaCargo("")
@@ -854,15 +879,32 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium">Importe Bruto</Label>
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    Importe Bruto
+                    {rangoTabuladorSol && (
+                      <span className="font-normal text-muted-foreground">
+                        (rango tabulador: {fmtMoney(String(rangoTabuladorSol.min))} a {fmtMoney(String(rangoTabuladorSol.max))})
+                      </span>
+                    )}
+                  </Label>
                   <Input
                     type="text"
                     placeholder={solRec ? `$${solRec.importe_bruto ?? "0.00"}` : "$0.00"}
                     value={solImporteBruto}
                     onChange={(e) => setSolImporteBruto(e.target.value)}
                     disabled={solLoading}
-                    className="bg-background"
+                    className={
+                      importeFueraDeRango
+                        ? "bg-background border-destructive focus-visible:border-destructive"
+                        : "bg-background"
+                    }
                   />
+                  {importeFueraDeRango && rangoTabuladorSol && (
+                    <div className="flex items-center gap-2 text-xs text-destructive">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      Debe estar entre {fmtMoney(String(rangoTabuladorSol.min))} y {fmtMoney(String(rangoTabuladorSol.max))} según el Tabulador
+                    </div>
+                  )}
                 </div>
                 {!canFirmarCatalogo && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">

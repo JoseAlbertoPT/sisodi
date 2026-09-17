@@ -17,7 +17,6 @@ const s3 = new S3Client({
 })
 
 const BUCKET = process.env.AWS_BUCKET!
-
 export async function s3Upload(key: string, body: Buffer, contentType?: string): Promise<void> {
   await s3.send(new PutObjectCommand({
     Bucket: BUCKET,
@@ -39,6 +38,5 @@ export async function s3Delete(key: string): Promise<void> {
   try {
     await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }))
   } catch {
-    // el objeto puede ya no existir (p.ej. reemplazo previo) — no es error fatal
   }
 }
