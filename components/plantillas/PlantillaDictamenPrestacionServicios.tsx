@@ -462,7 +462,7 @@ export function PlantillaDictamenPrestacionServicios({
           <Text style={s.fieldValue}>{data.numeroPrestadores}</Text>
         </View>
 
-        <View style={s.vigenciaRow}>
+        <View style={s.vigenciaRow} wrap={false}>
           <Text style={s.fieldLabel}>Vigencia del Dictamen:</Text>
           <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
             <View style={s.vigCellColumn}>

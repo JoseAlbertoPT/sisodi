@@ -14,6 +14,7 @@ import { calcularVigenciaMaxima, esInicioSinRangoValido, MENSAJE_INICIO_31_DIC }
 import { InfoTooltip } from "@/components/ui/info-tooltip"
 import { TOOLTIPS } from "@/lib/tooltips-textos"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -210,6 +211,9 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     d.setHours(0, 0, 0, 0)
     return d
   }, [])
+  const [terminosRec, setTerminosRec]         = useState<CatalogoRecord | null>(null)
+  const [showTerminos, setShowTerminos]       = useState(false)
+  const [terminosAceptados, setTerminosAceptados] = useState(false)
   const [solRec, setSolRec]       = useState<CatalogoRecord | null>(null)
   const [showSol, setShowSol]     = useState(false)
   const [solVigInicio, setSolVigInicio]     = useState<Date | undefined>(undefined)
@@ -327,6 +331,18 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     if (solVigFin && solVigFin > calcularVigenciaMaxima(solVigInicio ?? todayStart)) setSolVigFin(undefined)
   }, [solVigInicio])
   const openView = (rec: CatalogoRecord) => { setViewRec(rec); setShowView(true) }
+  const openTerminos = (rec: CatalogoRecord) => {
+    setTerminosRec(rec)
+    setTerminosAceptados(false)
+    setShowTerminos(true)
+  }
+
+  const handleAceptarTerminos = () => {
+    if (!terminosAceptados || !terminosRec) return
+    setShowTerminos(false)
+    openSol(terminosRec)
+  }
+
   const openSol  = (rec: CatalogoRecord) => {
     setSolRec(rec)
     setSolVigInicio(todayStart)
@@ -599,7 +615,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
 
-                          <DropdownMenuItem onClick={() => openSol(rec)}>
+                          <DropdownMenuItem onClick={() => openTerminos(rec)}>
                             <Send className="h-4 w-4" /> Reutilizar
                           </DropdownMenuItem>
                           {/* <DropdownMenuItem onClick={() => openCan(rec)}>
@@ -667,7 +683,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                           <DropdownMenuItem onClick={() => openView(rec)}>
                             <Eye className="h-4 w-4" /> Ver
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openSol(rec)}>
+                          <DropdownMenuItem onClick={() => openTerminos(rec)}>
                             <Send className="h-4 w-4" /> Reutilizar
                           </DropdownMenuItem>
                           {/* <DropdownMenuItem onClick={() => openCan(rec)}>
@@ -734,7 +750,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
             <Button
               variant="vino"
               className="rounded-full h-10 px-6 font-normal shadow-sm"
-              onClick={() => { if (viewRec) { setShowView(false); openSol(viewRec) } }}
+              onClick={() => { if (viewRec) { setShowView(false); openTerminos(viewRec) } }}
             >
               Solicitar
             </Button>
@@ -1110,6 +1126,43 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           )}
         </DialogContent>
       </Dialog>
+      <Dialog open={showTerminos} onOpenChange={(v) => { setShowTerminos(v); if (!v) setTerminosRec(null) }}>
+        <DialogContent className="max-w-lg bg-white p-0 gap-0 overflow-hidden">
+          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
+            <DialogTitle className="ds-title-md text-content-high">
+              Términos y condiciones
+            </DialogTitle>
+          </div>
+          <div className="flex flex-col gap-4 px-6 py-5">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Antes de reutilizar este registro del catálogo, lee y acepta los términos y condiciones aplicables a la generación de una nueva solicitud a partir de esta justificación.
+            </p>
+            <div className="rounded-lg border border-[var(--sem-border-md)] bg-[#f9f8f5] px-4 py-3 max-h-48 overflow-y-auto text-sm text-content-high leading-relaxed">
+              <strong>Nota:</strong> Previamente al elegir la Carta Descriptiva que considere alineada a las necesidades de contratación de personas prestadores de servicios profesionales, deberá contar con el oficio de suficiencia presupuestal correspondiente.
+            </div>
+            <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <Checkbox
+                checked={terminosAceptados}
+                onCheckedChange={(v) => setTerminosAceptados(v === true)}
+                className="mt-0.5 shrink-0"
+              />
+              <span className="text-sm text-content-high">
+                He leído y acepto los <span className="font-medium text-[var(--sem-accent-primary)]">términos y condiciones</span>
+              </span>
+            </label>
+          </div>
+          <div className="flex items-center justify-center gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
+            <Button
+              variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm"
+              onClick={handleAceptarTerminos}
+              disabled={!terminosAceptados}
+            >
+              Aceptar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1308,7 +1361,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     ]),
   ]
 
-
   const reutilizacionRows = (records: AdminRecord[]): (string | number)[][] => [
     ["Folio de Dictamen", "Secretaría / Dependencia", "Programa / Proyecto", "Usuario", "Vigencia", "Núm. Prestadores", "Programa o Proyecto (movimiento)", "Importe Bruto (movimiento)", "Creado"],
     ...records.flatMap((rec) =>
@@ -1365,8 +1417,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     XLSX.utils.book_append_sheet(wb, ws, SHEET_NAME_LEGACY)
     XLSX.writeFile(wb, "plantilla-catalogo-justificaciones.xlsx", { bookType: "xlsx", type: "binary" })
   }
-
-
 
   const norm = (s: string | null | undefined) =>
     (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
@@ -1436,10 +1486,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <FileSpreadsheet className="h-4 w-4" />
           Reporte general
         </Button>
-        {/* Comentado a pedido: la función de importar Excel al catálogo (diálogo,
-            vista previa, plantilla descargable) ya está lista, pero todavía no
-            se pidió como funcionalidad activa. Se deja el botón comentado en
-            vez de borrar el resto — solo hay que descomentarlo cuando se pida.
         <Button
           variant="vino"
           className="gap-1.5 shrink-0"
@@ -1448,7 +1494,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <Upload className="h-4 w-4" />
           Importar Excel al catálogo
         </Button>
-        */}
+
         {/* Comentado a pedido: el reporte "General" ya separa por hojas
             (General + Con Movimientos), así que esta opción de menú quedó
             redundante. Se deja el handler por si se reactiva.
@@ -1624,7 +1670,6 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                       </colgroup>
                       <thead>
                         <tr className="bg-muted/30 border-b border-border">
-                          {/* <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Tipo</th> */}
                           <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Usuario</th>
                           <th className="px-4 py-2.5 pr-6 text-left text-xs font-semibold text-muted-foreground">Vigencia</th>
                           <th className="px-4 py-2.5 pr-10 text-left text-xs font-semibold text-muted-foreground">Núm. Prestadores</th>

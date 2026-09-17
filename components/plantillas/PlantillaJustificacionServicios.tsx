@@ -32,9 +32,7 @@ if (quetzalliPath) {
     ],
   });
 }
-// Solo existe el peso Thin de QuetzalliSans por ahora — se usa la misma
-// familia para "bold" (react-pdf no puede negritar sintéticamente); en
-// cuanto se agregue el peso Bold real, registrarlo aparte y usarlo aquí.
+
 const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
 const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
@@ -102,18 +100,8 @@ export interface JustificacionData {
   fechaDictaminacion?: string;
   ocultarFirmas?: boolean;
   clave?: string;
-  // Folio de dictamen "limpio" (sin siglas), para la caja "Folio:" de la página
-  // del Dictamen/Opinión. Puede llevar el consecutivo de reutilización pegado
-  // (ej. "08/08/2026-2") cuando esta justificación nació de una reutilización
-  // del catálogo; a diferencia de `clave`/"Justificación:", que nunca lo lleva.
-  // Si no se manda, se deriva de `clave` quitándole las siglas (compatibilidad).
   folio?: string;
   notaDictamen?: string;
-  // La página del Dictamen/Opinión Técnica Funcional solo tiene sentido una vez
-  // que ese dictamen realmente existe (solicitud.dictamen emitido). Antes de eso
-  // (Mis Solicitudes, Validación UEFA, Revisión, Validación) la descarga de
-  // "Justificación" debe traer solo la página 1. Por defecto true para no romper
-  // llamadores existentes (firma, catálogo histórico) que sí siempre la esperan.
   incluirPaginaDictamen?: boolean;
 }
 
@@ -221,10 +209,7 @@ const s = StyleSheet.create({
   centeredTitle: { fontFamily: FONT_BOLD, fontSize: 10, textAlign: "center", marginBottom: 12 , letterSpacing: 0.6},
   sectionTitle: { fontFamily: FONT_BOLD, fontSize: 10, marginBottom: 4, marginTop: 10 , letterSpacing: 0.6},
 
-  // flex-start (no flex-end): si el valor es largo y hace wrap a 2 renglones
-  // (p. ej. Programa o Proyecto), la etiqueta debe alinearse con el PRIMER
-  // renglón del valor, no con el último — si no, la etiqueta queda más abajo
-  // que donde empieza el texto, como "rota" respecto al primer renglón.
+
   row: { flexDirection: "row", marginBottom: 8, alignItems: "flex-start", marginLeft: 32 },
   bold: { fontFamily: FONT_BOLD , letterSpacing: 0.6},
   numLabel: { width: 15, fontFamily: FONT_REGULAR, fontSize: 9 },
@@ -245,10 +230,6 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  // Se fuerza Helvetica-Bold (no FONT_BOLD/QuetzalliSans): dentro de una caja
-  // de 12x12 con borde, la métrica de línea de QuetzalliSans es demasiado alta
-  // y Yoga descarta el glifo por completo — la "X" queda invisible aunque el
-  // régimen sí esté seleccionado.
   checkText: { fontSize: 8, fontFamily: "Helvetica-Bold" , letterSpacing: 0.6},
 
   vigenciaBoxWrap: { flexDirection: "row", alignItems: "flex-end" },
@@ -598,11 +579,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={s.valueText}>{data.importeBruto}</Text>
         </View>
 
-        {/* Texto en línea (un solo <Text> con hijos anidados), no fila flex:
-            "Programa o Proyecto" suele ser largo y necesitar 2 renglones —
-            con flexDirection:"row" el renglón que rebasa puede dibujarse
-            arriba de la fila en vez de abajo (bug de wrap de react-pdf). Con
-            <Text> anidado, el wrap es el mismo que el de un párrafo normal. */}
+
         <Text style={{ fontSize: 9, marginLeft: 32, marginBottom: 8 }}>
           <Text style={{ ...s.marginLabel, marginRight: 0 }}>Programa o Proyecto:  </Text>
           <Text style={s.valueText}>{data.programaProyecto}</Text>
@@ -918,7 +895,7 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           <Text style={s.pdcFieldValue}>{data.numeroPrestadores}</Text>
         </View>
 
-        <View style={s.pdcVigenciaRow}>
+        <View style={s.pdcVigenciaRow} wrap={false}>
           <Text style={s.pdcFieldLabel}>Vigencia del Dictamen:</Text>
           <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
             <View style={s.pdcVigCellColumn}><Text style={s.pdcVigCellLabel}>Día</Text><View style={s.pdcVigCellBorder}><Text style={s.pdcVigCellValue}>{inD.d}</Text></View></View>

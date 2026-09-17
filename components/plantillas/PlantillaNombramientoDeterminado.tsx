@@ -578,7 +578,7 @@ export function PlantillaNombramientoDeterminado({ data }: { data: Justificacion
           </View>
         </View>
 
-        <View style={{ ...s.row, alignItems: "flex-end", marginTop: 5 }}>
+        <View style={{ ...s.row, alignItems: "flex-end", marginTop: 5 }} wrap={false}>
           <Text style={s.numLabel}>12.</Text>
           <Text style={s.marginLabel}>Vigencia (inicio-término):</Text>
           <View style={s.vigenciaBoxWrap}>
