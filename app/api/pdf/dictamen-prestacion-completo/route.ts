@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { buildCartaDescriptivaBuffer } from "../carta-descriptiva/route";
 import { buildDictamenPrestacionBuffer } from "../dictamen-prestacion/route";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
-import { firmaDatosEx } from "@/lib/firma-oficio-client";
+import { firmaDatosEx, fechaDocumentoHoy } from "@/lib/firma-oficio-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import { puedeFirmarCatalogo } from "@/lib/api-guard";
 
@@ -76,9 +76,8 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
       clavePrivada: input.clavePrivada,
       fraseClavePrivada: input.fraseClavePrivada,
       folioDocumento: input.folio,
-      // yyyy-MM-dd, no ISO-8601 con hora/zona (ver comentario equivalente en
-      // app/api/firma-efirma/firmar-interno/route.ts).
-      fechaDocumento: ahora.toISOString().slice(0, 10),
+      // DD/MM/YYYY, no ISO (ver fechaDocumentoHoy en lib/firma-oficio-client.ts).
+      fechaDocumento: fechaDocumentoHoy(ahora),
       contenido: `Reutilización de Catálogo — Folio ${input.folio} — ${rfc} — ${ahora.toISOString()}`,
       destinatario: { nombreCompleto: usuario.nombre ?? rfc, rfc },
     });

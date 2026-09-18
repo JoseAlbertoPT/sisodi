@@ -65,6 +65,18 @@ export interface FirmaDatosExResultado {
   nanoid: string | null
 }
 
+// El servicio espera fechaDocumento como DD/MM/YYYY, no ISO — confirmado
+// contra efirma-portal1 (src/lib/efirma-api.ts:getFechaDocumento y su propia
+// documentación de API), que es el cliente que sí firma con éxito. Mandar
+// YYYY-MM-DD es una causa probable de codigoRespuesta 5000 ("Ocurrió un
+// incidente"): un parser de fecha viejo del lado del servicio truena con
+// una excepción no controlada ante el formato inesperado.
+export function fechaDocumentoHoy(d: Date = new Date()): string {
+  const dd = String(d.getDate()).padStart(2, "0")
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  return `${dd}/${mm}/${d.getFullYear()}`
+}
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -77,9 +89,19 @@ function xmlTag(name: string, value: string | number | undefined | null): string
   return `<${name}>${escapeXml(String(value))}</${name}>`
 }
 
+// A diferencia de xmlTag, nunca omite el elemento (lo deja vacío si no hay
+// valor) — así arma el sobre el cliente SOAP de referencia (efirma-portal1,
+// que sí firma con éxito contra este mismo servicio), y algunos parsers
+// Axis/JAX-WS de document/literal son estrictos con la secuencia de
+// elementos aunque el XSD los marque opcionales.
+function xmlTagAlways(name: string, value: string | number | undefined | null): string {
+  if (value === undefined || value === null || value === "") return `<${name}></${name}>`
+  return `<${name}>${escapeXml(String(value))}</${name}>`
+}
+
 function buildEnvelope(input: FirmaDatosExInput): string {
   const destinatarioXml = input.destinatario?.nombreCompleto
-    ? `<destinatario>${xmlTag("nombreCompleto", input.destinatario.nombreCompleto)}${xmlTag("rfc", input.destinatario.rfc)}${xmlTag("curp", input.destinatario.curp)}</destinatario>`
+    ? `<destinatario>${xmlTag("nombreCompleto", input.destinatario.nombreCompleto)}${xmlTagAlways("rfc", input.destinatario.rfc)}${xmlTagAlways("curp", input.destinatario.curp)}</destinatario>`
     : ""
 
   // Orden de campos igual al de la secuencia declarada en el XSD — algunos
@@ -91,10 +113,15 @@ function buildEnvelope(input: FirmaDatosExInput): string {
     xmlTag("fechaDocumento", input.fechaDocumento) +
     xmlTag("contenido", input.contenido) +
     destinatarioXml +
-    xmlTag("uuid", input.uuid) +
+    xmlTagAlways("uuid", input.uuid) +
     `</DatosFirma>`
 
+  // La declaración XML con encoding explícito es necesaria: contenido y
+  // destinatario.nombreCompleto llevan acentos/guiones largos, y sin esto
+  // el parser del lado del servicio puede asumir un charset distinto a
+  // UTF-8 (confirmado contra el cliente de referencia, que sí la incluye).
   return (
+    `<?xml version="1.0" encoding="UTF-8"?>` +
     `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://servicioweb/">` +
     `<soapenv:Header/>` +
     `<soapenv:Body>` +
@@ -169,8 +196,13 @@ export async function firmaDatosEx(input: FirmaDatosExInput): Promise<FirmaDatos
     throw new Error(`WSFirmaOficio respondió HTTP ${res.status}: ${text.slice(0, 500)}`)
   }
   const resultado = parseRespuesta(text)
-  if (resultado.codigoRespuesta !== 0) {
-    console.error("[firma-oficio-client] codigoRespuesta != 0. Request:", envelopeRedactado(input), "\nRaw response:", text)
+  // El servicio usa 0 y 2000 como códigos de éxito (confirmado contra
+  // efirma-portal1/src/lib/soap-client.ts, que trata ambos como isSuccess) —
+  // solo 0 estaba contemplado aquí, así que una firma real exitosa con
+  // codigoRespuesta 2000 se trataba como error y se perdía el sello.
+  const CODIGOS_EXITO = [0, 2000]
+  if (!CODIGOS_EXITO.includes(resultado.codigoRespuesta)) {
+    console.error("[firma-oficio-client] codigoRespuesta de error. Request:", envelopeRedactado(input), "\nRaw response:", text)
     throw new Error(`WSFirmaOficio respondió código ${resultado.codigoRespuesta}: ${resultado.mensaje ?? "sin mensaje"}`)
   }
   return resultado

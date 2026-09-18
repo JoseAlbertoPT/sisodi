@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createHash } from "crypto"
 import { prisma } from "@/lib/prisma"
-import { firmaDatosEx } from "@/lib/firma-oficio-client"
+import { firmaDatosEx, fechaDocumentoHoy } from "@/lib/firma-oficio-client"
 import { s3Download } from "@/lib/s3"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { ESTADO_POR_BANDEJA_PENDIENTE } from "@/lib/firma-plantillas"
@@ -47,7 +47,7 @@ async function firmarConWsFirmaOficio(opts: {
     clavePrivada: opts.clavePrivada,
     fraseClavePrivada: opts.fraseClavePrivada,
     folioDocumento: opts.folio,
-    fechaDocumento: new Date().toISOString().slice(0, 10),
+    fechaDocumento: fechaDocumentoHoy(),
     contenido,
     destinatario: { nombreCompleto: opts.nombreFirmante, rfc: opts.usuarioRfc },
     uuid: opts.uuidWsFirma ?? undefined,
