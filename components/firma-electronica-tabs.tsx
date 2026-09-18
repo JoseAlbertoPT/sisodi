@@ -668,7 +668,11 @@ function VerificarExternoDialog({
             <>
               <div className="flex flex-col gap-1.5 max-w-xs mx-auto w-full">
                 <Label className="text-sm">Nombre completo</Label>
-                <Input value={nombre} onChange={e => setNombre(e.target.value)} className="h-8 text-sm" />
+                {/* No editable: el nombre debe coincidir con el capturado al
+                    firmar (viene del .cer del firmante externo) — permitir
+                    editarlo aquí rompería la relación entre el registro y la
+                    identidad que realmente firmó. Solo el cargo es editable. */}
+                <Input value={nombre} readOnly className="h-8 text-sm bg-muted cursor-not-allowed" />
               </div>
               <div className="flex flex-col gap-1.5 max-w-xs mx-auto w-full">
                 <Label className="text-sm">Cargo / Puesto</Label>
