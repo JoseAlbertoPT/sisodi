@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createHash } from "crypto"
 import { prisma } from "@/lib/prisma"
-import { efirmaClient, firmadosCount, normalizarEstado } from "@/lib/efirma-client"
+import { firmaDatosEx } from "@/lib/firma-oficio-client"
+import { s3Download } from "@/lib/s3"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { checkSesionUsuario } from "@/lib/validar-sesion"
 import { ESTADO_POR_BANDEJA_PENDIENTE } from "@/lib/firma-plantillas"
@@ -8,9 +10,53 @@ import { puedeFirmarVerificacion } from "@/lib/api-guard"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
+const FIRMA_S3_PREFIX = "firma-efirma"
+
 const norm = (s: string) => s.normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "").toLowerCase().trim()
 
 const BYPASS = process.env.EFIRMA_BYPASS === "true"
+
+// El uuid del PDF en S3 (nuestra key interna) es distinto del uuid del
+// "documento multifirma" que WSFirmaOficio genera y regresa en la primera
+// firma real — hay que reenviar ESE (guardado en firma_proceso.uuid_ws_firma)
+// en las firmas siguientes, o el servicio responde codigoRespuesta 1027
+// ("El documento no existe o no pertenece a multifirma"). En la primera firma
+// del proceso uuidWsFirma todavía es null: se manda sin uuid y el servicio
+// asigna uno, que se guarda para las firmas siguientes (ver POST más abajo).
+async function firmarConWsFirmaOficio(opts: {
+  uuidS3: string
+  uuidWsFirma: string | null
+  folio: string
+  usuarioRfc: string
+  nombreFirmante: string
+  certificado: string
+  clavePrivada: string
+  fraseClavePrivada: string
+}) {
+  // "contenido" se manda como texto corto (folio + huella SHA-256 del PDF),
+  // no el PDF completo en base64 — mandar el documento entero (~cientos de KB
+  // dentro de un solo campo XML) hacía tronar el servicio con codigoRespuesta
+  // 5000 ("Ocurrió un incidente"), un Axis/JAX-WS viejo probablemente sin
+  // límite de tamaño de mensaje bien manejado. La huella sigue ligando la
+  // firma al documento exacto sin mandar el archivo.
+  const pdfBuffer = await s3Download(`${FIRMA_S3_PREFIX}/${opts.uuidS3}.pdf`)
+  const huella = createHash("sha256").update(pdfBuffer).digest("hex")
+  const contenido = `Folio ${opts.folio} — SHA-256 ${huella} — ${opts.usuarioRfc} — ${new Date().toISOString()}`
+  // A pesar de que el XSD marca fechaDocumento y destinatario como
+  // opcionales (minOccurs="0"), el servicio responde codigoRespuesta 1000
+  // ("Todos los parámetros son requeridos, excepto CURP y RFC") si se
+  // omiten — solo CURP y RFC dentro de destinatario son realmente opcionales.
+  return firmaDatosEx({
+    certificado: opts.certificado,
+    clavePrivada: opts.clavePrivada,
+    fraseClavePrivada: opts.fraseClavePrivada,
+    folioDocumento: opts.folio,
+    fechaDocumento: new Date().toISOString().slice(0, 10),
+    contenido,
+    destinatario: { nombreCompleto: opts.nombreFirmante, rfc: opts.usuarioRfc },
+    uuid: opts.uuidWsFirma ?? undefined,
+  })
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -105,17 +151,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Tu usuario no tiene RFC registrado. Contacta al administrador." }, { status: 400 })
     }
 
-    const portalRes = BYPASS
-      ? { firma: { responsable: usuarioEfectivo?.nombre ?? null }, estado: "iniciado", bypass: true }
-      : await efirmaClient.firmar({
-          procesoId: firmante.firma_proceso.proceso_id,
-          usuario: rfcUsuario.toUpperCase(),
-          certificado,
-          clavePrivada,
-          fraseClavePrivada,
+    let sello: Awaited<ReturnType<typeof firmaDatosEx>> | null = null
+    if (!BYPASS) {
+      const solicitudMeta = await prisma.solicitud.findUnique({
+        where: { id: firmante.firma_proceso.solicitud_id },
+        select: { folio_recepcion: true, folio_justificacion: true },
+      })
+      const folio = solicitudMeta?.folio_recepcion ?? solicitudMeta?.folio_justificacion ?? String(firmante.firma_proceso.solicitud_id)
+      sello = await firmarConWsFirmaOficio({
+        uuidS3: firmante.firma_proceso.uuid!,
+        uuidWsFirma: firmante.firma_proceso.uuid_ws_firma ?? null,
+        folio,
+        usuarioRfc: rfcUsuario.toUpperCase(),
+        nombreFirmante: usuarioEfectivo?.nombre ?? rfcUsuario,
+        certificado,
+        clavePrivada,
+        fraseClavePrivada,
+      })
+      // Primera firma real de este proceso: el servicio asignó el uuid del
+      // documento multifirma — guardarlo para que las firmas siguientes lo
+      // reenvíen (ver comentario en firmarConWsFirmaOficio).
+      if (!firmante.firma_proceso.uuid_ws_firma && sello.uuid) {
+        await prisma.firma_proceso.update({
+          where: { id: firmante.firma_proceso_id },
+          data: { uuid_ws_firma: sello.uuid },
         })
-
-    const estadoPortal = normalizarEstado(portalRes, "iniciado")
+      }
+    }
+    const estadoPortal = "iniciado"
     const ahora = new Date()
 
     const result = await prisma.$transaction(async tx => {
@@ -125,9 +188,19 @@ export async function POST(req: NextRequest) {
           firmado: true,
           fecha_firma: ahora,
           rfc: rfcUsuario.toUpperCase(),
-          nombre: usuarioEfectivo?.nombre ?? portalRes?.firma?.responsable ?? null,
+          nombre: usuarioEfectivo?.nombre ?? null,
           cargo_firmante: String(cargoFirmante).trim(),
           ...(slotSinAsignar || bandejaLibrePorRol ? { usuario_id: usuarioId } : {}),
+          ...(sello ? {
+            sello_digital: sello.selloDigital,
+            estampado_tiempo: sello.estampadoTiempo,
+            sello_estampado_tiempo: sello.selloEstampadoTiempo,
+            no_certificado_gem: sello.noCertificadoGEM,
+            rfc_gem: sello.rfcGEM,
+            url_validacion: sello.urlValidacion,
+            url_validacion_corta: sello.urlValidacionCorta,
+            uuid_firma: sello.uuid,
+          } : {}),
         },
       })
       const firmadosLocal = await tx.firma_firmante.count({
@@ -298,7 +371,7 @@ export async function POST(req: NextRequest) {
       firmados: result.firmadosLocal,
       estado: result.completo ? "completado" : estadoPortal,
       emision: emisionHecha ? { folio: folioDictamenFinal } : null,
-      portal: portalRes,
+      sello,
     })
   } catch (err: any) {
     console.error("[firma-efirma/firmar-interno]", err)

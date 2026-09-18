@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     if (!file.name.toLowerCase().endsWith(".xlsx")) {
       return NextResponse.json({ error: "Solo se aceptan archivos .xlsx" }, { status: 400 })
     }
+    const actualizarExistentes = formData.get("actualizarExistentes") === "true"
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const { rows, colActivo, formatoMultiHoja, formatoLabel } = leerWorkbookDesdeBuffer(buffer)
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     const contexto = await cargarContexto(prisma)
-    const { resumen } = procesarFilas(rows, colActivo, formatoMultiHoja, contexto, false)
+    const { resumen } = procesarFilas(rows, colActivo, formatoMultiHoja, contexto, false, actualizarExistentes)
 
     return NextResponse.json({ formatoLabel, resumen })
   } catch (e) {

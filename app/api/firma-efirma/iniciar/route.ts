@@ -3,8 +3,10 @@ import { randomBytes } from "crypto"
 import { mkdir, writeFile } from "fs/promises"
 import { join } from "path"
 import { prisma } from "@/lib/prisma"
-import { efirmaClient } from "@/lib/efirma-client"
+import { s3Upload } from "@/lib/s3"
 import { plantillaFirmantes, resolverUsuariosInternos, usuarioIdParaFirmante } from "@/lib/firma-plantillas"
+
+const FIRMA_S3_PREFIX = "firma-efirma"
 
 const BYPASS = process.env.EFIRMA_BYPASS === "true"
 const BYPASS_DIR = join(process.cwd(), ".firma-bypass")
@@ -12,7 +14,7 @@ const BYPASS_DIR = join(process.cwd(), ".firma-bypass")
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { solicitudId, archivo, nombre, creadoPorId } = body
+    const { solicitudId, archivo, creadoPorId } = body
 
     if (!solicitudId || !archivo || !creadoPorId) {
       return NextResponse.json({ ok: false, error: "Faltan campos requeridos (solicitudId, archivo, creadoPorId)" }, { status: 400 })
@@ -36,14 +38,18 @@ export async function POST(req: NextRequest) {
     const plantilla = plantillaFirmantes(solicitud.tipo_solicitud)
     const totalFirmantes = plantilla.length
 
-    let procesoId: string
-    let storageKey: string
+    // No hay portal externo manejando "procesos" de firma (WSFirmaOficio firma
+    // un documento por llamada, sin sesión multi-firmante propia) — procesoId
+    // y storageKey son puramente internos, igual en bypass que en real. El PDF
+    // se guarda una sola vez aquí (en disco en bypass, en S3 en real) para que
+    // cada firmante posterior (/firmar, /firmar-interno) lo use como contenido
+    // a sellar y para que el firmante externo pueda previsualizarlo antes de firmar.
+    const procesoId  = `${idNum}-${Date.now()}`
+    const storageKey = randomBytes(16).toString("hex")
+    const base64 = String(archivo).replace(/^data:application\/pdf;base64,/, "")
     if (BYPASS) {
-      procesoId  = `bypass-${idNum}-${Date.now()}`
-      storageKey = randomBytes(16).toString("hex")
       try {
         await mkdir(BYPASS_DIR, { recursive: true })
-        const base64 = String(archivo).replace(/^data:application\/pdf;base64,/, "")
         await writeFile(join(BYPASS_DIR, `${storageKey}.pdf`), Buffer.from(base64, "base64"))
       } catch (e) {
         console.error("[firma-efirma/iniciar] bypass: error guardando PDF local", e)
@@ -53,16 +59,14 @@ export async function POST(req: NextRequest) {
         )
       }
     } else {
-      const portalRes = await efirmaClient.iniciar({
-        firmarAhora: false,
-        nombre: nombre ?? `Justificacion-${idNum}`,
-        archivo,
-        totalFirmantes,
-      })
-      procesoId  = portalRes?.procesoId ?? portalRes?.proceso_id
-      storageKey = portalRes?.storageKey ?? portalRes?.uuid ?? portalRes?.procesoUuid
-      if (!procesoId || !storageKey) {
-        return NextResponse.json({ ok: false, error: "Respuesta inválida del portal de firmas", detalle: portalRes }, { status: 502 })
+      try {
+        await s3Upload(`${FIRMA_S3_PREFIX}/${storageKey}.pdf`, Buffer.from(base64, "base64"), "application/pdf")
+      } catch (e) {
+        console.error("[firma-efirma/iniciar] error guardando PDF en S3", e)
+        return NextResponse.json(
+          { ok: false, error: "No se pudo guardar el PDF a firmar" },
+          { status: 500 },
+        )
       }
     }
 

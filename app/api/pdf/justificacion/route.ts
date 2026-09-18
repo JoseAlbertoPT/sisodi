@@ -9,7 +9,6 @@ import {
   PlantillaNombramientoDeterminado,
   type JustificacionNombramientoData,
 } from "@/components/plantillas/PlantillaNombramientoDeterminado";
-import { efirmaClient } from "@/lib/efirma-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
 import { claveParaPdf, siglasSecretaria, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
@@ -81,7 +80,7 @@ function buildFirmaFicticia(firmante: any, uuid?: string | null): FirmaPortal {
   const cargo = firmante?.cargo_firmante || firmante?.cargo || "Servidor Público";
   const rol = firmante?.rol || "Firmante";
   const fechaFirma = firmante?.fecha_firma || new Date().toISOString();
-  const portalUrl = process.env.EFIRMA_PORTAL_URL || "https://firma-dev.morelos.gob.mx";
+  const portalUrl = "https://firma-dev.morelos.gob.mx";
   const fakeUuid = uuid || "00000000-0000-0000-0000-000000000000";
   return {
     usuario: rfc,
@@ -665,33 +664,26 @@ export async function buildJustificacionBuffer(
         ...buildFirmaFicticia(f, firmaProceso?.uuid),
         documento: tituloDocumentoParaBandeja(f.bandeja, esNombramiento),
       }));
-    } else if (firmaProceso?.proceso_id) {
-      const estado: any = await efirmaClient.estado(firmaProceso.proceso_id);
-      // El portal regresa las firmas por RFC, no por id de firma_firmante —
-      // se hace match por RFC (mayúsculas, igual que se guarda) contra
-      // nuestros propios firmantes para saber su `bandeja`.
-      const firmantesPorRfc = new Map<string, any>(
-        ((firmaProceso as any)?.firmantes ?? []).map((f: any) => [(f.rfc ?? "").toUpperCase(), f]),
-      );
-      firmasPortal = Array.isArray(estado?.firmas)
-        ? estado.firmas.map((f: any) => {
-            const firmante = firmantesPorRfc.get((f.usuario ?? "").toUpperCase());
-            return {
-              usuario: f.usuario ?? "",
-              rolFirmante: f.rolFirmante ?? null,
-              responsable: f.responsable ?? null,
-              selloDigital: f.selloDigital ?? null,
-              estampadoTiempo: f.estampadoTiempo ?? null,
-              selloEstampadoTiempo: f.selloEstampadoTiempo ?? null,
-              noCertificado: f.noCertificado ?? null,
-              noCertificadoGEM: f.noCertificadoGEM ?? null,
-              rfcGEM: f.rfcGEM ?? null,
-              urlValidacion: f.urlValidacion ?? null,
-              firmadoEn: f.firmadoEn ?? null,
-              documento: tituloDocumentoParaBandeja(firmante?.bandeja, esNombramiento),
-            };
-          })
-        : [];
+    } else {
+      // El sello de cada firmante (WSFirmaOficio/firmaDatosEx) se guarda al
+      // momento de firmar (ver app/api/firma-efirma/firmar[-interno]/route.ts)
+      // en la propia fila de firma_firmante — no hay portal externo al que
+      // volver a preguntarle.
+      const firmantesFirmados = ((firmaProceso as any)?.firmantes ?? []).filter((f: any) => f.firmado);
+      firmasPortal = firmantesFirmados.map((f: any) => ({
+        usuario: f.rfc ?? "",
+        rolFirmante: f.rol ?? null,
+        responsable: f.nombre ?? null,
+        selloDigital: f.sello_digital ?? null,
+        estampadoTiempo: f.estampado_tiempo ?? null,
+        selloEstampadoTiempo: f.sello_estampado_tiempo ?? null,
+        noCertificado: null,
+        noCertificadoGEM: f.no_certificado_gem ?? null,
+        rfcGEM: f.rfc_gem ?? null,
+        urlValidacion: f.url_validacion ?? null,
+        firmadoEn: f.fecha_firma ?? null,
+        documento: tituloDocumentoParaBandeja(f.bandeja, esNombramiento),
+      }));
     }
 
     if (firmasPortal.length > 0) {

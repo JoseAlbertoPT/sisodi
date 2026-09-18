@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { buildCartaDescriptivaBuffer } from "../carta-descriptiva/route";
 import { buildDictamenPrestacionBuffer } from "../dictamen-prestacion/route";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
-import { efirmaClient } from "@/lib/efirma-client";
+import { firmaDatosEx } from "@/lib/firma-oficio-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
 import { puedeFirmarCatalogo } from "@/lib/api-guard";
 
@@ -23,6 +23,7 @@ interface PdfOverrides {
 interface FirmaInput {
   usuarioId: string
   cargo: string
+  folio: string
   certificado?: string
   clavePrivada?: string
   fraseClavePrivada?: string
@@ -65,29 +66,33 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
     if (!input.certificado || !input.clavePrivada || !input.fraseClavePrivada) {
       throw new Error("Faltan credenciales de e.firma (.cer, .key y contraseña).");
     }
-    // Firma real contra el portal: se usa el modo "firmar de una vez" del
-    // mismo cliente que usa el resto del sistema (ver efirmaClient.iniciar),
-    // sin crear un firma_proceso persistente — es de un solo uso.
-    const portalRes: any = await efirmaClient.iniciar({
-      firmarAhora: true,
-      usuario: rfc,
+    // Firma real vía WSFirmaOficio (firmaDatosEx) — un solo sello de una sola
+    // vez, sin crear un firma_proceso persistente. No hay aún un PDF final
+    // (se renderiza después, en buildResponse) así que el "contenido" a
+    // sellar es un texto descriptivo, no el documento — igual que la
+    // Constancia calcula su propia huella SHA-256 del PDF final por separado.
+    const resultado = await firmaDatosEx({
       certificado: input.certificado,
       clavePrivada: input.clavePrivada,
       fraseClavePrivada: input.fraseClavePrivada,
-      nombre: `ReutilizacionCatalogo-${Date.now()}`,
-      totalFirmantes: 1,
+      folioDocumento: input.folio,
+      // yyyy-MM-dd, no ISO-8601 con hora/zona (ver comentario equivalente en
+      // app/api/firma-efirma/firmar-interno/route.ts).
+      fechaDocumento: ahora.toISOString().slice(0, 10),
+      contenido: `Reutilización de Catálogo — Folio ${input.folio} — ${rfc} — ${ahora.toISOString()}`,
+      destinatario: { nombreCompleto: usuario.nombre ?? rfc, rfc },
     });
     return {
       usuario: rfc,
       rolFirmante: `Realizó — ${cargo}`,
       responsable: usuario.nombre,
-      selloDigital: portalRes?.selloDigital ?? portalRes?.firma?.selloDigital ?? null,
-      estampadoTiempo: portalRes?.estampadoTiempo ?? ahora.toISOString().replace("T", " ").slice(0, 19),
-      selloEstampadoTiempo: portalRes?.selloEstampadoTiempo ?? null,
-      noCertificado: portalRes?.noCertificado ?? null,
-      noCertificadoGEM: portalRes?.noCertificadoGEM ?? null,
-      rfcGEM: portalRes?.rfcGEM ?? null,
-      urlValidacion: portalRes?.urlValidacion ?? null,
+      selloDigital: resultado.selloDigital,
+      estampadoTiempo: resultado.estampadoTiempo ?? ahora.toISOString().replace("T", " ").slice(0, 19),
+      selloEstampadoTiempo: resultado.selloEstampadoTiempo,
+      noCertificado: null,
+      noCertificadoGEM: resultado.noCertificadoGEM,
+      rfcGEM: resultado.rfcGEM,
+      urlValidacion: resultado.urlValidacion,
       firmadoEn: ahora,
       cargo,
       documento: "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS",
@@ -106,7 +111,7 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
     noCertificado: "00001000000700000001",
     noCertificadoGEM: "00001000000709040175",
     rfcGEM: "GEM720601TW9",
-    urlValidacion: `${(process.env.EFIRMA_PORTAL_URL ?? "https://firma-dev.morelos.gob.mx").replace(/\/$/, "")}/ValidacionFirma?uuid=${crypto.randomUUID()}`,
+    urlValidacion: `https://firma-dev.morelos.gob.mx/ValidacionFirma?uuid=${crypto.randomUUID()}`,
     firmadoEn: ahora,
     cargo,
     documento: "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS",
@@ -267,6 +272,7 @@ export async function POST(req: NextRequest) {
       firma = await resolverFirma({
         usuarioId: String(body.firmaUsuarioId),
         cargo: String(body.firmaCargo),
+        folio: solicitudId ?? catalogoId ?? "N/A",
         certificado: body.firmaCertificado ? String(body.firmaCertificado) : undefined,
         clavePrivada: body.firmaClavePrivada ? String(body.firmaClavePrivada) : undefined,
         fraseClavePrivada: body.firmaFraseClavePrivada ? String(body.firmaFraseClavePrivada) : undefined,

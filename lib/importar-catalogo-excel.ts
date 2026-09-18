@@ -61,6 +61,8 @@ const HOJA_FIELD_MATCHERS: [string, (h: string) => boolean][] = [
   ["tipoPago",               (h) => h.includes("TIPO DE PAGO")],
   ["importeBruto",           (h) => h.includes("IMPORTE")],
   ["nivelCategoria",         (h) => h.includes("NIVEL") && h.includes("CATEGORIA")],
+  ["nivel",                  (h) => h.includes("NIVEL") && !h.includes("CATEGORIA")],
+  ["categoria",              (h) => h.includes("CATEGORIA") && !h.includes("NIVEL")],
   ["objeto",                 (h) => h.includes("OBJETO")],
   ["actividades",            (h) => h.includes("ACTIVIDADES") && h.includes("REALIZAR")],
   ["responsabilidades",      (h) => h.includes("RESPONSABILIDADES") && h.includes("CUMPLIR")],
@@ -106,21 +108,6 @@ function parseFechaDMY(raw: string): { date: Date | null; error: string | null }
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
   if (!m) return { date: null, error: `formato irreconocible: "${s}"` }
   const d = parseInt(m[1]), mo = parseInt(m[2]), y = parseInt(m[3])
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return { date: null, error: `fecha inválida: "${s}"` }
-  if (y < 2015 || y > 2035) return { date: null, error: `año fuera de rango razonable: "${s}"` }
-  const date = new Date(Date.UTC(y, mo - 1, d))
-  if (date.getUTCMonth() !== mo - 1) return { date: null, error: `día fuera de rango para el mes: "${s}"` }
-  return { date, error: null }
-}
-
-function parseFechaMDY(raw: string): { date: Date | null; error: string | null } {
-  const s = (raw ?? "").trim()
-  if (!s) return { date: null, error: null }
-  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/)
-  if (!m) return { date: null, error: `formato irreconocible: "${s}"` }
-  const mo = parseInt(m[1]), d = parseInt(m[2])
-  let y = parseInt(m[3])
-  if (y < 100) y += 2000
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return { date: null, error: `fecha inválida: "${s}"` }
   if (y < 2015 || y > 2035) return { date: null, error: `año fuera de rango razonable: "${s}"` }
   const date = new Date(Date.UTC(y, mo - 1, d))
@@ -280,6 +267,35 @@ export function leerWorkbookDesdeBuffer(buffer: Buffer | ArrayBuffer): WorkbookL
 }
 
 // ── Contexto de base de datos necesario para validar/insertar filas ──────
+export interface SolicitudExistente {
+  id: number
+  estado_id: number
+  folio_dictamen: string | null
+  secretaria: string | null
+  unidad_administrativa: string | null
+  unidad_responsable: string | null
+  programa_proyecto: string | null
+  regimen: string | null
+  tipo_actividades: string | null
+  numero_prestadores: number | null
+  vigencia_inicio: Date | null
+  vigencia_fin: Date | null
+  fecha_emision: Date | null
+  importe_bruto: any
+  tipo_importe: string | null
+  nivel_tabulador: string | null
+  categoria_tabulador: string | null
+  objeto: string | null
+  actividades: string[]
+  responsabilidades: string[]
+  escolaridad: string | null
+  comp_adm: string | null
+  comp_tec: string | null
+  comp_soc: string | null
+  valores: string | null
+  areas_exp: string | null
+}
+
 export interface ContextoImport {
   match: (raw: string) => { canonico: string | null }
   admin: { id: string }
@@ -290,6 +306,8 @@ export interface ContextoImport {
   periodoHoyId: number | null
   yaImportadosPorJustificacion: Set<string>
   yaImportadosPorDictamen: Set<string>
+  existentePorFolioJustificacion: Map<string, SolicitudExistente>
+  existentePorFolioDictamen: Map<string, SolicitudExistente>
 }
 
 export async function cargarContexto(prisma: PrismaClient, adminCorreo = ADMIN_CORREO_DEFAULT): Promise<ContextoImport> {
@@ -322,28 +340,114 @@ export async function cargarContexto(prisma: PrismaClient, adminCorreo = ADMIN_C
   const periodoHoyId = periodoMap.get(`${hoy.getUTCMonth() + 1}-${hoy.getUTCFullYear()}`) ?? null
 
   const existentes = await prisma.solicitud.findMany({
-    select: { folio_justificacion: true, folio_dictamen: true },
+    select: {
+      id: true, estado_id: true, folio_justificacion: true, folio_dictamen: true,
+      secretaria: true, unidad_administrativa: true, unidad_responsable: true,
+      programa_proyecto: true, regimen: true, tipo_actividades: true, numero_prestadores: true,
+      vigencia_inicio: true, vigencia_fin: true, fecha_emision: true, importe_bruto: true, tipo_importe: true,
+      nivel_tabulador: true, categoria_tabulador: true, objeto: true, actividades: true, responsabilidades: true,
+      escolaridad: true, comp_adm: true, comp_tec: true, comp_soc: true, valores: true, areas_exp: true,
+    },
   })
   // Los catalogo_justificacion "huérfanos" (sin solicitud_id) no aparecen en `solicitud` —
   // hay que incluirlos también (por folio_justificacion Y folio_dictamen) o el dedup no los
-  // ve y el import los duplica.
+  // ve y el import los duplica. No tienen solicitud asociada, así que nunca son candidatos a actualizar.
   const catalogoHuerfanos = await prisma.catalogo_justificacion.findMany({
     where: { solicitud_id: null },
     select: { folio_justificacion: true, folio_dictamen: true },
   })
+
+  const existentePorFolioJustificacion = new Map<string, SolicitudExistente>()
+  const existentePorFolioDictamen = new Map<string, SolicitudExistente>()
+  for (const { folio_justificacion, folio_dictamen, ...snapshot } of existentes) {
+    if (folio_justificacion) existentePorFolioJustificacion.set(folio_justificacion, { ...snapshot, folio_dictamen })
+    else if (folio_dictamen) existentePorFolioDictamen.set(folio_dictamen, { ...snapshot, folio_dictamen })
+  }
+
   const yaImportadosPorJustificacion = new Set([
-    ...existentes.map((s) => s.folio_justificacion).filter(Boolean),
+    ...existentePorFolioJustificacion.keys(),
     ...catalogoHuerfanos.map((c) => c.folio_justificacion).filter(Boolean),
   ] as string[])
   const yaImportadosPorDictamen = new Set([
-    ...existentes.filter((s) => !s.folio_justificacion).map((s) => s.folio_dictamen).filter(Boolean),
+    ...existentePorFolioDictamen.keys(),
     ...catalogoHuerfanos.filter((c) => !c.folio_justificacion).map((c) => c.folio_dictamen).filter(Boolean),
   ] as string[])
 
-  return { match, admin, estadoFinal, estadoSinDictamen, estadoBorrador, periodoMap, periodoHoyId, yaImportadosPorJustificacion, yaImportadosPorDictamen }
+  return {
+    match, admin, estadoFinal, estadoSinDictamen, estadoBorrador, periodoMap, periodoHoyId,
+    yaImportadosPorJustificacion, yaImportadosPorDictamen,
+    existentePorFolioJustificacion, existentePorFolioDictamen,
+  }
 }
 
-// ── Procesamiento fila por fila: valida, arma el reporte y las filas a insertar ──
+// ── Comparación fila-Excel vs. registro existente (para el modo "actualizar") ──
+export interface CampoCambiado {
+  campo: string
+  anterior: string
+  nuevo: string
+}
+
+function fechaISO(d: Date | null | undefined): string | null {
+  return d ? d.toISOString().slice(0, 10) : null
+}
+
+function decimalANumero(d: unknown): number | null {
+  if (d === null || d === undefined) return null
+  const n = Number(d as any)
+  return isNaN(n) ? null : n
+}
+
+// Normaliza saltos de línea (\r\n / \r → \n) para que datos guardados en importaciones
+// previas no se marquen como "distintos" solo por el estilo de salto de línea del Excel de origen.
+function normalizarSaltos(s: string): string {
+  return s.replace(/\r\n?/g, "\n")
+}
+
+function arraysIguales(a: string[] = [], b: string[] = []): boolean {
+  return a.length === b.length && a.every((v, i) => normalizarSaltos(v) === normalizarSaltos(b[i]))
+}
+
+function calcularCambios(existente: SolicitudExistente, nuevo: Record<string, any>): CampoCambiado[] {
+  const cambios: CampoCambiado[] = []
+  const vacio = "(vacío)"
+  const cmp = (campo: string, a: string | number | null, b: string | number | null) => {
+    const an = typeof a === "string" ? normalizarSaltos(a) : a
+    const bn = typeof b === "string" ? normalizarSaltos(b) : b
+    if ((an ?? null) !== (bn ?? null)) cambios.push({ campo, anterior: an === null || an === undefined ? vacio : String(an), nuevo: bn === null || bn === undefined ? vacio : String(bn) })
+  }
+  const cmpFecha = (campo: string, a: Date | null, b: Date | null) => cmp(campo, fechaISO(a), fechaISO(b))
+  const cmpArr = (campo: string, a: string[], b: string[]) => {
+    if (!arraysIguales(a, b)) cambios.push({ campo, anterior: `${a.length} línea(s)`, nuevo: `${b.length} línea(s)` })
+  }
+
+  cmp("Secretaría", existente.secretaria, nuevo.secretaria)
+  cmp("Unidad administrativa", existente.unidad_administrativa, nuevo.unidad_administrativa)
+  cmp("Unidad responsable", existente.unidad_responsable, nuevo.unidad_responsable)
+  cmp("Programa/Proyecto", existente.programa_proyecto, nuevo.programa_proyecto)
+  cmp("Régimen", existente.regimen, nuevo.regimen)
+  cmp("Tipo de actividad", existente.tipo_actividades, nuevo.tipo_actividades)
+  cmp("Número de prestadores", existente.numero_prestadores, nuevo.numero_prestadores)
+  cmpFecha("Fecha de emisión", existente.fecha_emision, nuevo.fecha_emision)
+  cmpFecha("Vigencia inicio", existente.vigencia_inicio, nuevo.vigencia_inicio)
+  cmpFecha("Vigencia término", existente.vigencia_fin, nuevo.vigencia_fin)
+  cmp("Importe bruto", decimalANumero(existente.importe_bruto), nuevo.importe_bruto)
+  cmp("Tipo de importe", existente.tipo_importe, nuevo.tipo_importe)
+  cmp("Nivel", existente.nivel_tabulador, nuevo.nivel_tabulador)
+  cmp("Categoría", existente.categoria_tabulador, nuevo.categoria_tabulador)
+  cmp("Objeto", existente.objeto, nuevo.objeto)
+  cmpArr("Actividades", existente.actividades, nuevo.actividades)
+  cmpArr("Responsabilidades", existente.responsabilidades, nuevo.responsabilidades)
+  cmp("Escolaridad", existente.escolaridad, nuevo.escolaridad)
+  cmp("Competencias administrativas", existente.comp_adm, nuevo.comp_adm)
+  cmp("Competencias técnicas", existente.comp_tec, nuevo.comp_tec)
+  cmp("Competencias sociales", existente.comp_soc, nuevo.comp_soc)
+  cmp("Valores", existente.valores, nuevo.valores)
+  cmp("Áreas de experiencia", existente.areas_exp, nuevo.areas_exp)
+
+  return cambios
+}
+
+// ── Procesamiento fila por fila: valida, arma el reporte y las filas a insertar/actualizar ──
 export interface FilaResultado {
   idx: number
   secretariaRaw: string
@@ -353,10 +457,19 @@ export interface FilaResultado {
   advertencias: string[]
 }
 
+export interface FilaActualizacion {
+  idx: number
+  secretariaRaw: string
+  folioDictamen: string
+  cambios: CampoCambiado[]
+}
+
 export interface ResumenImport {
   totalFilas: number
   yaImportadosCount: number
   listasParaImportar: number
+  listasParaActualizar: number
+  sinCambioCount: number
   conErrores: number
   sinFolioDictamen: number
   regimenNoReconocido: number
@@ -364,6 +477,7 @@ export interface ResumenImport {
   secretariasNoMatch: { nombre: string; count: number }[]
   filasConError: FilaResultado[]
   filasConAdvertencia: FilaResultado[]
+  filasParaActualizar: FilaActualizacion[]
 }
 
 export function procesarFilas(
@@ -372,8 +486,13 @@ export function procesarFilas(
   formatoMultiHoja: boolean,
   contexto: ContextoImport,
   modoBorrador = false,
-): { resultados: FilaResultado[]; toInsert: any[]; resumen: ResumenImport } {
-  const { match, admin, estadoFinal, estadoSinDictamen, estadoBorrador, periodoMap, periodoHoyId, yaImportadosPorJustificacion, yaImportadosPorDictamen } = contexto
+  modoActualizar = false,
+): { resultados: FilaResultado[]; toInsert: any[]; toUpdate: any[]; resumen: ResumenImport } {
+  const {
+    match, admin, estadoFinal, estadoSinDictamen, estadoBorrador, periodoMap, periodoHoyId,
+    yaImportadosPorJustificacion, yaImportadosPorDictamen,
+    existentePorFolioJustificacion, existentePorFolioDictamen,
+  } = contexto
 
   const resultados: FilaResultado[] = []
   const secretariasNoMatch = new Map<string, number>()
@@ -381,7 +500,10 @@ export function procesarFilas(
   let regimenNoReconocido = 0
   let sinPeriodo = 0
   const toInsert: any[] = []
+  const toUpdate: any[] = []
+  const filasParaActualizar: FilaActualizacion[] = []
   let yaImportadosCount = 0
+  let sinCambioCount = 0
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
@@ -394,7 +516,12 @@ export function procesarFilas(
     const yaExiste = folioJustificacion
       ? yaImportadosPorJustificacion.has(folioJustificacion)
       : (folioDictamen ? yaImportadosPorDictamen.has(folioDictamen) : false)
-    if (yaExiste) {
+    const existente = folioJustificacion
+      ? existentePorFolioJustificacion.get(folioJustificacion)
+      : (folioDictamen ? existentePorFolioDictamen.get(folioDictamen) : undefined)
+
+    // Sin modo actualizar (o sin una solicitud real que actualizar, p.ej. huérfano de catálogo), se omite como antes.
+    if (yaExiste && !(modoActualizar && existente)) {
       yaImportadosCount++
       continue
     }
@@ -408,7 +535,7 @@ export function procesarFilas(
     const advertencias: string[] = []
     const reportar = (msg: string) => { advertencias.push(msg); if (!modoBorrador) errores.push(msg) }
 
-    const parserTexto = formatoMultiHoja ? parseFechaMDY : parseFechaDMY
+    const parserTexto = parseFechaDMY
     const { date: fechaDictamen, error: errFD } = fechaDesdeCelda(row, colActivo.fechaDictamen, parserTexto)
     if (errFD) reportar(`FECHA DICTAMEN: ${errFD}`)
     const { date: vigenciaInicio, error: errVI } = fechaDesdeCelda(row, colActivo.vigenciaInicio, parserTexto)
@@ -456,9 +583,48 @@ export function procesarFilas(
 
     resultados.push({ idx: i + 2, secretariaRaw, secretariaMatch: canonico, folioDictamen, errores, advertencias })
 
+    const contenido = {
+      tipo_solicitud:        regimen === "nombramiento" ? "Nombramiento Tiempo Determinado" : "Prestacion de Servicios",
+      fecha_emision:         fechaDictamen,
+      secretaria:            canonico ?? (secretariaRaw || null),
+      secretaria_txt_snapshot: canonico ?? (secretariaRaw || null),
+      unidad_administrativa: getCell(row, colActivo.unidadAdscripcion) || null,
+      unidad_responsable:    getCell(row, colActivo.unidadResponsableGasto) || null,
+      programa_proyecto:     getCell(row, colActivo.programaProyecto) || null,
+      regimen,
+      tipo_actividades:      getCell(row, colActivo.tipoActividad) || null,
+      numero_prestadores:    parseInt(getCell(row, colActivo.numPrestadores)) || null,
+      vigencia_inicio:       vigenciaInicio,
+      vigencia_fin:          vigenciaFin,
+      importe_bruto:         importeBruto,
+      tipo_importe:          tipoImporte,
+      nivel_tabulador:       getCell(row, colActivo.nivelCategoria) || getCell(row, colActivo.nivel) || null,
+      categoria_tabulador:   getCell(row, colActivo.categoria) || null,
+      objeto:                getCell(row, colActivo.objeto) || null,
+      actividades:           actividadesItems,
+      responsabilidades:     responsabilidadesItems,
+      escolaridad:           getCell(row, colActivo.escolaridad) || null,
+      comp_adm:              getCell(row, colActivo.compAdm) || null,
+      comp_tec:              getCell(row, colActivo.compTec) || null,
+      comp_soc:              getCell(row, colActivo.compSoc) || null,
+      valores:               getCell(row, colActivo.valores) || null,
+      areas_exp:             getCell(row, colActivo.areasExp) || null,
+    }
+
     if (errores.length === 0) {
       if (folioJustificacion) yaImportadosPorJustificacion.add(folioJustificacion)
       else if (folioDictamen) yaImportadosPorDictamen.add(folioDictamen)
+
+      if (modoActualizar && existente) {
+        const cambios = calcularCambios(existente, contenido)
+        if (cambios.length === 0) {
+          sinCambioCount++
+        } else {
+          filasParaActualizar.push({ idx: i + 2, secretariaRaw, folioDictamen, cambios })
+          toUpdate.push({ id: existente.id, estadoId: existente.estado_id, cambios, data: contenido })
+        }
+        continue
+      }
 
       const estadoId = modoBorrador
         ? estadoBorrador.id
@@ -469,33 +635,10 @@ export function procesarFilas(
         usuario_id:            admin.id,
         estado_id:             estadoId,
         periodo_id:            periodoId,
-        tipo_solicitud:        regimen === "nombramiento" ? "Nombramiento Tiempo Determinado" : "Prestacion de Servicios",
         folio_justificacion:   folioJustificacion || null,
         folio_dictamen:        folioDictamen || null,
-        fecha_emision:         fechaDictamen,
-        secretaria:            canonico ?? (secretariaRaw || null),
-        secretaria_txt_snapshot: canonico ?? (secretariaRaw || null),
         modalidad_firma:       "autografa",
-        unidad_administrativa: getCell(row, colActivo.unidadAdscripcion) || null,
-        unidad_responsable:    getCell(row, colActivo.unidadResponsableGasto) || null,
-        programa_proyecto:     getCell(row, colActivo.programaProyecto) || null,
-        regimen,
-        tipo_actividades:      getCell(row, colActivo.tipoActividad) || null,
-        numero_prestadores:    parseInt(getCell(row, colActivo.numPrestadores)) || null,
-        vigencia_inicio:       vigenciaInicio,
-        vigencia_fin:          vigenciaFin,
-        importe_bruto:         importeBruto,
-        tipo_importe:          tipoImporte,
-        nivel_tabulador:       getCell(row, colActivo.nivelCategoria) || null,
-        objeto:                getCell(row, colActivo.objeto) || null,
-        actividades:           actividadesItems,
-        responsabilidades:     responsabilidadesItems,
-        escolaridad:           getCell(row, colActivo.escolaridad) || null,
-        comp_adm:              getCell(row, colActivo.compAdm) || null,
-        comp_tec:              getCell(row, colActivo.compTec) || null,
-        comp_soc:              getCell(row, colActivo.compSoc) || null,
-        valores:               getCell(row, colActivo.valores) || null,
-        areas_exp:             getCell(row, colActivo.areasExp) || null,
+        ...contenido,
       })
     }
   }
@@ -507,6 +650,8 @@ export function procesarFilas(
     totalFilas: rows.length,
     yaImportadosCount,
     listasParaImportar: toInsert.length,
+    listasParaActualizar: toUpdate.length,
+    sinCambioCount,
     conErrores: conError.length,
     sinFolioDictamen,
     regimenNoReconocido,
@@ -516,9 +661,10 @@ export function procesarFilas(
       .map(([nombre, count]) => ({ nombre, count })),
     filasConError: conError,
     filasConAdvertencia: conAdvertencias,
+    filasParaActualizar,
   }
 
-  return { resultados, toInsert, resumen }
+  return { resultados, toInsert, toUpdate, resumen }
 }
 
 export async function insertarSolicitudes(
@@ -562,6 +708,50 @@ export async function insertarSolicitudes(
     creadas++
   }
   return creadas
+}
+
+export async function actualizarSolicitudes(
+  toUpdate: { id: number; estadoId: number; cambios: CampoCambiado[]; data: Record<string, any> }[],
+  contexto: ContextoImport,
+  prisma: PrismaClient,
+): Promise<number> {
+  let actualizadas = 0
+  for (const { id, estadoId, cambios, data } of toUpdate) {
+    await prisma.solicitud.update({ where: { id }, data })
+
+    const vigencia = data.vigencia_inicio && data.vigencia_fin
+      ? `${data.vigencia_inicio.toISOString().slice(0, 10)} / ${data.vigencia_fin.toISOString().slice(0, 10)}`
+      : null
+    // No todas las solicitudes tienen catalogo_justificacion (solo las que ya se sincronizaron);
+    // updateMany no falla si no hay ninguna coincidencia.
+    await prisma.catalogo_justificacion.updateMany({
+      where: { solicitud_id: id },
+      data: {
+        regimen_contratacion:    data.regimen ?? undefined,
+        programa_proyecto:       data.programa_proyecto ?? undefined,
+        tipo_actividad:          data.tipo_actividades ?? null,
+        numero_personas:         data.numero_prestadores ?? null,
+        tipo_pago:               data.tipo_importe ?? null,
+        importe_bruto:           data.importe_bruto ?? null,
+        vigencia,
+        tipo_solicitud:          data.tipo_solicitud ?? null,
+        secretaria:              data.secretaria ?? null,
+        secretaria_txt_snapshot: data.secretaria_txt_snapshot ?? null,
+      },
+    })
+
+    const resumenCambios = cambios.map((c) => `${c.campo}: "${c.anterior}" → "${c.nuevo}"`).join(" | ")
+    await prisma.historial_solicitud.create({
+      data: {
+        solicitud_id:    id,
+        usuario_id:      contexto.admin.id,
+        estado_nuevo_id: estadoId,
+        comentario:      `Actualizado por reimportación de histórico consolidado DGSAC: ${resumenCambios}`.slice(0, 1000),
+      },
+    })
+    actualizadas++
+  }
+  return actualizadas
 }
 
 export interface ResultadoSincronizar {

@@ -2,30 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { readFile } from "fs/promises"
 import { join } from "path"
 import { prisma } from "@/lib/prisma"
+import { s3Download } from "@/lib/s3"
 
-const DEFAULT_BASE_URL = "http://localhost:3001"
 const BYPASS = process.env.EFIRMA_BYPASS === "true"
 const BYPASS_DIR = join(process.cwd(), ".firma-bypass")
-
-async function fetchPdfFromPortal(uuid: string, projectToken: string, base: string) {
-  return fetch(`${base}/api/files/${encodeURIComponent(uuid)}/original`, {
-    headers: { "X-Project-Token": projectToken },
-    redirect: "manual",
-    cache: "no-store",
-  })
-}
-
-async function fetchStorageKeyFromEstado(procesoId: string, projectToken: string, base: string): Promise<string | null> {
-  try {
-    const r = await fetch(`${base}/api/multifirma/${encodeURIComponent(procesoId)}/estado`, {
-      headers: { "X-Project-Token": projectToken },
-      cache: "no-store",
-    })
-    if (!r.ok) return null
-    const j = await r.json()
-    return j?.storageKey ?? null
-  } catch { return null }
-}
+const FIRMA_S3_PREFIX = "firma-efirma"
 
 export async function GET(req: NextRequest) {
   try {
@@ -65,39 +46,20 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const base = (process.env.EFIRMA_PORTAL_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "")
-    const projectToken = process.env.EFIRMA_PROJECT_TOKEN
-    if (!projectToken) {
-      return NextResponse.json({ ok: false, error: "EFIRMA_PROJECT_TOKEN no configurado" }, { status: 500 })
+    try {
+      const buf = await s3Download(`${FIRMA_S3_PREFIX}/${String(uuid)}.pdf`)
+      return new NextResponse(new Uint8Array(buf), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": contentDisposition,
+          "Cache-Control": "no-store, private",
+        },
+      })
+    } catch (e) {
+      console.error("[firma-efirma/pdf] error leyendo PDF de S3", e)
+      return NextResponse.json({ ok: false, error: "No se pudo obtener el PDF" }, { status: 502 })
     }
-
-    let res = await fetchPdfFromPortal(String(uuid), projectToken, base)
-
-    if ((res.status === 404 || res.status === 302) && firmante.firma_proceso.proceso_id) {
-      const storageKeyReal = await fetchStorageKeyFromEstado(firmante.firma_proceso.proceso_id, projectToken, base)
-      if (storageKeyReal && storageKeyReal !== uuid) {
-        try {
-          await prisma.firma_proceso.update({
-            where: { id: firmante.firma_proceso_id },
-            data: { uuid: storageKeyReal },
-          })
-        } catch { /* ignorar */ }
-        res = await fetchPdfFromPortal(storageKeyReal, projectToken, base)
-      }
-    }
-
-    if (!res.ok) {
-      return NextResponse.json({ ok: false, error: `No se pudo obtener el PDF (${res.status})` }, { status: 502 })
-    }
-    const buf = await res.arrayBuffer()
-    return new NextResponse(buf, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": contentDisposition,
-        "Cache-Control": "no-store, private",
-      },
-    })
   } catch (err: any) {
     console.error("[firma-efirma/pdf]", err)
     return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })

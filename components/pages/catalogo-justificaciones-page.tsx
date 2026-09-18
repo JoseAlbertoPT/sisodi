@@ -16,10 +16,12 @@ import { TOOLTIPS } from "@/lib/tooltips-textos"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
+
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+
 } from "@/components/ui/dialog"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -139,14 +141,20 @@ function fmtMoney(val: string | null | undefined) {
   if (isNaN(n)) return val
   return n.toLocaleString("es-MX", { style: "currency", currency: "MXN" })
 }
-// Igual que en Nueva Solicitud (components/pages/nueva-solicitud-page.tsx):
-// quita "$" y las comas de miles antes de parsear — parseFloat solo, sin
-// esto, corta en la primera coma ("$27,693.56" -> 27, no 27693.56).
+
 function parseMoney(str: string): number {
   if (!str) return -1
   const clean = str.replace(/[$,\s]/g, "")
   const n = parseFloat(clean)
   return isNaN(n) ? -1 : n
+}
+function formatMoneyInput(raw: string): string {
+  const clean = raw.replace(/[^0-9.]/g, "")
+  if (!clean) return ""
+  const [intPart, ...rest] = clean.split(".")
+  const intFormatted = (intPart || "0").replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+  const decPart = rest.length > 0 ? "." + rest.join("").slice(0, 2) : ""
+  return intFormatted + decPart
 }
 function entidadNombre(rec: CatalogoRecord) {
   return rec.solicitud.secretaria_txt_snapshot
@@ -185,6 +193,8 @@ interface ResumenImportExcel {
   totalFilas: number
   yaImportadosCount: number
   listasParaImportar: number
+  listasParaActualizar: number
+  sinCambioCount: number
   conErrores: number
   sinFolioDictamen: number
   regimenNoReconocido: number
@@ -192,6 +202,7 @@ interface ResumenImportExcel {
   secretariasNoMatch: { nombre: string; count: number }[]
   filasConError: { idx: number; secretariaRaw: string; folioDictamen: string; errores: string[] }[]
   filasConAdvertencia: { idx: number; secretariaRaw: string; folioDictamen: string; advertencias: string[] }[]
+  filasParaActualizar: { idx: number; secretariaRaw: string; folioDictamen: string; cambios: { campo: string; anterior: string; nuevo: string }[] }[]
 }
 function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const { user } = useAuth()
@@ -249,9 +260,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const progSigef = useProgramasSigef(solRec ? entidadNombre(solRec) : "")
   const solImporteBrutoNum = solImporteBruto.trim() ? parseMoney(solImporteBruto) : null
   const { rangos: rangosTabuladorSol } = useTabulador()
-  // Rango del tabulador (min/max) del nivel/categoría con el que ya quedó
-  // registrada la solicitud original — la reutilización no puede salirse de
-  // ese rango (ej. Nivel 107 A: $22,155.06 a $24,369.40).
   const rangoTabuladorSol = useMemo(() => {
     if (!solRec?.solicitud.nivel_tabulador) return null
     return rangosTabuladorSol.find((r) =>
@@ -395,7 +403,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           setSolFirmaCargoBloqueado(true)
         }
       })
-      .catch(() => { /* noop */ })
+      .catch(() => {})
   }
   const handleFirmarYGenerar = async () => {
     if (!solRec || !user) return
@@ -758,7 +766,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         </DialogContent>
       </Dialog>
       <Dialog open={showSol} onOpenChange={setShowSol}>
-        <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
+        <DialogContent className="max-w-lg bg-white p-0 gap-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
             <DialogTitle className="ds-title-md text-content-high">
               Generar Dictamen Técnico Funcional
@@ -895,11 +903,11 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium flex items-center gap-1.5">
-                    Importe Bruto
+                  <Label className="text-sm font-medium flex flex-wrap items-center gap-1.5">
+                    <span className="shrink-0">Importe Bruto</span>
                     {rangoTabuladorSol && (
                       <span className="font-normal text-muted-foreground">
-                        (rango tabulador: {fmtMoney(String(rangoTabuladorSol.min))} a {fmtMoney(String(rangoTabuladorSol.max))})
+                        (Nivel {rangoTabuladorSol.nivel} · Categoría {rangoTabuladorSol.categoria} — rango tabulador: {fmtMoney(String(rangoTabuladorSol.min))} a {fmtMoney(String(rangoTabuladorSol.max))})
                       </span>
                     )}
                   </Label>
@@ -908,6 +916,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     placeholder={solRec ? `$${solRec.importe_bruto ?? "0.00"}` : "$0.00"}
                     value={solImporteBruto}
                     onChange={(e) => setSolImporteBruto(e.target.value)}
+                    onBlur={() => setSolImporteBruto((v) => formatMoneyInput(v))}
                     disabled={solLoading}
                     className={
                       importeFueraDeRango
@@ -918,7 +927,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                   {importeFueraDeRango && rangoTabuladorSol && (
                     <div className="flex items-center gap-2 text-xs text-destructive">
                       <AlertCircle className="h-4 w-4 shrink-0" />
-                      Debe estar entre {fmtMoney(String(rangoTabuladorSol.min))} y {fmtMoney(String(rangoTabuladorSol.max))} según el Tabulador
+                      Debe estar entre {fmtMoney(String(rangoTabuladorSol.min))} y {fmtMoney(String(rangoTabuladorSol.max))} según el Tabulador (Nivel {rangoTabuladorSol.nivel} · Categoría {rangoTabuladorSol.categoria})
                     </div>
                   )}
                 </div>
@@ -953,7 +962,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     !solVigInicio ||
                     !solVigFin ||
                     esInicioSinRangoValido(solVigInicio) ||
-                    (!isParaestatal(solRec) && Number(solPrestadores || 0) > maxPrestadoresPermitido(entidadNombre(solRec)))
+                    (!isParaestatal(solRec) && Number(solPrestadores || 0) > maxPrestadoresPermitido(entidadNombre(solRec))) ||
+                    importeFueraDeRango
                   }
                   title={!canFirmarCatalogo ? "Solo un usuario con rol UEFA o Administrador puede firmar." : undefined}
                 >
@@ -1212,7 +1222,8 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
   const [importPreviewLoading, setImportPreviewLoading] = useState(false)
   const [importError, setImportError]         = useState<string | null>(null)
   const [importCommitLoading, setImportCommitLoading]   = useState(false)
-  const [importResult, setImportResult]       = useState<{ creadas: number; sincronizacion: { insertados: number } } | null>(null)
+  const [importResult, setImportResult]       = useState<{ creadas: number; actualizadas: number; sincronizacion: { insertados: number } } | null>(null)
+  const [importActualizarExistentes, setImportActualizarExistentes] = useState(false)
 
   const resetImportDialog = () => {
     setImportFiles([])
@@ -1221,9 +1232,10 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     setImportResult(null)
     setImportPreviewLoading(false)
     setImportCommitLoading(false)
+    setImportActualizarExistentes(false)
   }
 
-  const handleImportFilesChange = async (files: File[]) => {
+  const handleImportFilesChange = async (files: File[], actualizarExistentes = importActualizarExistentes) => {
     setImportFiles(files)
     setImportPreview(null)
     setImportError(null)
@@ -1234,6 +1246,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       const fd = new FormData()
       fd.append("file", files[0])
       fd.append("userId", user.id)
+      fd.append("actualizarExistentes", actualizarExistentes ? "true" : "false")
       const res = await fetch("/api/catalogo-justificaciones/importar/preview", { method: "POST", body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Error al leer el archivo")
@@ -1245,6 +1258,11 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     }
   }
 
+  const handleImportActualizarExistentesChange = (v: boolean) => {
+    setImportActualizarExistentes(v)
+    if (importFiles.length > 0) void handleImportFilesChange(importFiles, v)
+  }
+
   const handleImportCommit = async () => {
     if (importFiles.length === 0 || !user) return
     setImportCommitLoading(true)
@@ -1253,6 +1271,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       const fd = new FormData()
       fd.append("file", importFiles[0])
       fd.append("userId", user.id)
+      fd.append("actualizarExistentes", importActualizarExistentes ? "true" : "false")
       const res = await fetch("/api/catalogo-justificaciones/importar/commit", { method: "POST", body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Error al importar el archivo")
@@ -1752,7 +1771,9 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
               <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-green-500 bg-green-50 px-4 py-3">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
                 <span className="text-sm text-green-700">
-                  Se crearon <strong>{importResult.creadas}</strong> solicitud{importResult.creadas !== 1 ? "es" : ""} y se sincronizaron <strong>{importResult.sincronizacion.insertados}</strong> registro{importResult.sincronizacion.insertados !== 1 ? "s" : ""} en el catálogo.
+                  Se crearon <strong>{importResult.creadas}</strong> solicitud{importResult.creadas !== 1 ? "es" : ""}
+                  {importResult.actualizadas > 0 && <> y se actualizaron <strong>{importResult.actualizadas}</strong> existente{importResult.actualizadas !== 1 ? "s" : ""}</>}
+                  {" "}y se sincronizaron <strong>{importResult.sincronizacion.insertados}</strong> registro{importResult.sincronizacion.insertados !== 1 ? "s" : ""} en el catálogo.
                 </span>
               </div>
             ) : (
@@ -1780,6 +1801,17 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                   loadingText="Leyendo y validando archivo..."
                   disabled={importCommitLoading}
                 />
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <Checkbox
+                    checked={importActualizarExistentes}
+                    onCheckedChange={(v) => handleImportActualizarExistentesChange(v === true)}
+                    className="mt-0.5 shrink-0"
+                    disabled={importCommitLoading || importPreviewLoading}
+                  />
+                  <span className="text-xs text-content-high leading-relaxed">
+                    Actualizar registros existentes con la información del Excel si algo cambió (folio ya en el catálogo con datos distintos). Si el folio ya existe y no cambió nada, se deja igual.
+                  </span>
+                </label>
                 {importError && (
                   <p className="text-xs text-destructive flex items-center gap-1">
                     <AlertCircle className="h-3.5 w-3.5" />{importError}
@@ -1791,6 +1823,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                       <p className="text-content-high">Formato detectado: <strong>{importPreview.formatoLabel}</strong></p>
                       <p className="text-content-high">Total de filas con datos: <strong>{importPreview.resumen.totalFilas}</strong></p>
                       <p className="text-green-700">Listas para importar: <strong>{importPreview.resumen.listasParaImportar}</strong></p>
+                      {importActualizarExistentes && importPreview.resumen.listasParaActualizar > 0 && (
+                        <p className="text-blue-700">Se actualizarán (folio ya existente con datos distintos): <strong>{importPreview.resumen.listasParaActualizar}</strong></p>
+                      )}
+                      {importActualizarExistentes && importPreview.resumen.sinCambioCount > 0 && (
+                        <p className="text-muted-foreground">Ya estaban igual, no se tocan: <strong>{importPreview.resumen.sinCambioCount}</strong></p>
+                      )}
                       {importPreview.resumen.yaImportadosCount > 0 && (
                         <p className="text-muted-foreground">Ya estaban en el catálogo (se omiten): <strong>{importPreview.resumen.yaImportadosCount}</strong></p>
                       )}
@@ -1798,6 +1836,23 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                         <p className="text-destructive">Con errores (se omiten): <strong>{importPreview.resumen.conErrores}</strong></p>
                       )}
                     </div>
+                    {importActualizarExistentes && importPreview.resumen.filasParaActualizar.length > 0 && (
+                      <div className="flex flex-col gap-1.5 rounded-lg border-l-4 border-l-blue-500 bg-blue-50 px-4 py-3">
+                        <span className="text-xs font-medium text-blue-800">
+                          {importPreview.resumen.filasParaActualizar.length} fila{importPreview.resumen.filasParaActualizar.length !== 1 ? "s se actualizarán" : " se actualizará"}:
+                        </span>
+                        <ul className="text-xs text-blue-700 list-disc list-inside max-h-32 overflow-y-auto space-y-1">
+                          {importPreview.resumen.filasParaActualizar.slice(0, 10).map((r, i) => (
+                            <li key={i}>
+                              Fila {r.idx} folio={r.folioDictamen || "(sin folio)"}: {r.cambios.map((c) => `${c.campo} ("${c.anterior}" → "${c.nuevo}")`).join(" | ")}
+                            </li>
+                          ))}
+                        </ul>
+                        {importPreview.resumen.filasParaActualizar.length > 10 && (
+                          <span className="text-xs text-blue-700/70">…y {importPreview.resumen.filasParaActualizar.length - 10} más.</span>
+                        )}
+                      </div>
+                    )}
                     {importPreview.resumen.filasConError.length > 0 && (
                       <div className="flex flex-col gap-1.5 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3">
                         <span className="text-xs font-medium text-destructive flex items-center gap-1">
@@ -1854,10 +1909,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                   variant="vino"
                   className="rounded-full h-10 px-6 font-normal shadow-sm"
                   onClick={handleImportCommit}
-                  disabled={importCommitLoading || importPreviewLoading || !importPreview || importPreview.resumen.listasParaImportar === 0}
+                  disabled={importCommitLoading || importPreviewLoading || !importPreview || (importPreview.resumen.listasParaImportar === 0 && importPreview.resumen.listasParaActualizar === 0)}
                 >
                   {importCommitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {importCommitLoading ? "Importando…" : `Confirmar importación${importPreview ? ` (${importPreview.resumen.listasParaImportar})` : ""}`}
+                  {importCommitLoading
+                    ? "Importando…"
+                    : `Confirmar importación${importPreview ? ` (${importPreview.resumen.listasParaImportar}${importPreview.resumen.listasParaActualizar > 0 ? ` + ${importPreview.resumen.listasParaActualizar} act.` : ""})` : ""}`}
                 </Button>
               </>
             )}

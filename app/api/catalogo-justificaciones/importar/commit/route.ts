@@ -6,6 +6,7 @@ import {
   cargarContexto,
   procesarFilas,
   insertarSolicitudes,
+  actualizarSolicitudes,
   sincronizarCatalogo,
 } from "@/lib/importar-catalogo-excel"
 
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
     if (!file.name.toLowerCase().endsWith(".xlsx")) {
       return NextResponse.json({ error: "Solo se aceptan archivos .xlsx" }, { status: 400 })
     }
+    const actualizarExistentes = formData.get("actualizarExistentes") === "true"
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const { rows, colActivo, formatoMultiHoja } = leerWorkbookDesdeBuffer(buffer)
@@ -29,12 +31,13 @@ export async function POST(req: NextRequest) {
     }
 
     const contexto = await cargarContexto(prisma)
-    const { toInsert, resumen } = procesarFilas(rows, colActivo, formatoMultiHoja, contexto, false)
+    const { toInsert, toUpdate, resumen } = procesarFilas(rows, colActivo, formatoMultiHoja, contexto, false, actualizarExistentes)
 
     const creadas = await insertarSolicitudes(toInsert, contexto, prisma, false)
+    const actualizadas = await actualizarSolicitudes(toUpdate, contexto, prisma)
     const sync = await sincronizarCatalogo(prisma)
 
-    return NextResponse.json({ creadas, resumen, sincronizacion: sync })
+    return NextResponse.json({ creadas, actualizadas, resumen, sincronizacion: sync })
   } catch (e) {
     console.error("[POST /api/catalogo-justificaciones/importar/commit]", e)
     return NextResponse.json({ error: "Error al importar el archivo" }, { status: 500 })

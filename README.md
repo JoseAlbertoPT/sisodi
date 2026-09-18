@@ -27,8 +27,9 @@ cp .env.example .env
 | `NEXTAUTH_URL` | URL pública de la aplicación | `https://sisodij.gob.mx` |
 | `NEXT_PUBLIC_API_URL` | URL pública del API (esta misma app) | `https://sisodij.gob.mx/api` |
 | `NEXT_PUBLIC_APP_URL` | URL pública de la app | `https://sisodij.gob.mx` |
-| `EFIRMA_PORTAL_URL` | URL del portal e.firma | `https://efirma.gob.mx` |
-| `EFIRMA_PROJECT_TOKEN` | Token del proyecto en e.firma | `pk_xxxx` |
+| `FIRMA_OFICIO_WS_URL` | URL del WS SOAP WSFirmaOficio | `https://firma-dev.morelos.gob.mx/WSFirmaOficio` |
+| `FIRMA_OFICIO_TOKEN` | Token del servicio WSFirmaOficio (operación firmaDatosEx) | — |
+| `FIRMA_OFICIO_TIPO_DOCUMENTO` | tipoDocumento fijo para Justificación/Dictamen | `32` |
 | `EFIRMA_BYPASS` | `false` en producción siempre | `false` |
 
 ---
