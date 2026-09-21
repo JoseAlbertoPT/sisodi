@@ -320,12 +320,7 @@ export function FirmaElectronicaTabs({
 
   const externos = firmantes.filter(f => f.tipo === "externo")
   const internosTodos = firmantes.filter(f => f.tipo === "interno")
-
-
-  // Un externo firmado pero aún no verificado cuenta como "no listo" para
-  // efectos de avanzar el turno, igual que si no hubiera firmado.
   const listo = (x: Firmante) => x.firmado && (x.tipo !== "externo" || x.verificado)
-
   const esSuTurno = (f: Firmante) => {
     if (f.firmado) return false
     if (f.tipo === "interno" && f.bandeja === "revision") {
