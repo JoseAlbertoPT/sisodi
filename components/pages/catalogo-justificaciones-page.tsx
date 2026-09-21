@@ -135,6 +135,7 @@ function regimenBadgeColor(raw: string | null | undefined): { color: string; bgC
   if (r.includes("nombramiento") || r.includes("tiempo determinado")) return { color: C_AMARILLO, bgColor: C_AMARILLO_BG }
   return { color: C_VERDE_ESTADO, bgColor: C_VERDE_ESTADO_BG }
 }
+
 function fmtMoney(val: string | null | undefined) {
   if (!val) return "—"
   const n = Number(val)
@@ -344,13 +345,11 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     setTerminosAceptados(false)
     setShowTerminos(true)
   }
-
   const handleAceptarTerminos = () => {
     if (!terminosAceptados || !terminosRec) return
     setShowTerminos(false)
     openSol(terminosRec)
   }
-
   const openSol  = (rec: CatalogoRecord) => {
     setSolRec(rec)
     setSolVigInicio(todayStart)
@@ -405,6 +404,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       })
       .catch(() => {})
   }
+
   const handleFirmarYGenerar = async () => {
     if (!solRec || !user) return
     if (!solFirmaCargo.trim() || !solFirmaCerFile || !solFirmaKeyFile || !solFirmaPassword) {

@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx"
 import type { PrismaClient } from "./generated/prisma"
+import { buildRomanNumberedList } from "./roman-list"
 
 export const SHEET_NAME_LEGACY = "BASE CONSOLIDADA"
 export const ADMIN_CORREO_DEFAULT = "admin@sisodij.gob.mx"
@@ -158,11 +159,6 @@ function parseListField(raw: string): string[] {
     .split(/\r\n|\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
-}
-
-const ROMAN_MARKER_RE = /^[IVXLCDM]+\.\s/
-function tieneFormatoNumeradoValido(items: string[]): boolean {
-  return items.every((line) => ROMAN_MARKER_RE.test(line))
 }
 
 function normalizeRegimen(raw: string): string | null {
@@ -552,14 +548,11 @@ export function procesarFilas(
     const regimen = normalizeRegimen(getCell(row, colActivo.regimen))
     if (!regimen) { regimenNoReconocido++; reportar(`RÉGIMEN no reconocido: "${getCell(row, colActivo.regimen)}"`) }
 
-    const actividadesItems = parseListField(getCell(row, colActivo.actividades))
-    const responsabilidadesItems = parseListField(getCell(row, colActivo.responsabilidades))
-    if (actividadesItems.length > 0 && !tieneFormatoNumeradoValido(actividadesItems)) {
-      advertencias.push("ACTIVIDADES: hay líneas sin numeral romano al inicio; revisar formato de origen en el Excel (columna Q)")
-    }
-    if (responsabilidadesItems.length > 0 && !tieneFormatoNumeradoValido(responsabilidadesItems)) {
-      advertencias.push("RESPONSABILIDADES: hay líneas sin numeral romano al inicio; revisar formato de origen en el Excel (columna R)")
-    }
+    // Se renumera siempre con numeral romano consecutivo (descartando el que ya traiga
+    // el Excel, si trae alguno) para que quede uniforme sin importar el formato de origen —
+    // mismo criterio que ya usa la generación de PDF (stripLeadingRomanNumeral + toRoman).
+    const actividadesItems = buildRomanNumberedList(parseListField(getCell(row, colActivo.actividades)))
+    const responsabilidadesItems = buildRomanNumberedList(parseListField(getCell(row, colActivo.responsabilidades)))
 
     let periodoId: number | null = null
     let periodoOrigen = ""
