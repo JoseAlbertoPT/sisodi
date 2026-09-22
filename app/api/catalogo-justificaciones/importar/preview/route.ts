@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireCatalogoAdmin } from "@/lib/api-guard"
-import { leerWorkbookDesdeBuffer, cargarContexto, procesarFilas } from "@/lib/importar-catalogo-excel"
+import { leerWorkbookDesdeBuffer, cargarContexto, procesarFilas, calcularObsoletosPorReemplazo } from "@/lib/importar-catalogo-excel"
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Solo se aceptan archivos .xlsx" }, { status: 400 })
     }
     const actualizarExistentes = formData.get("actualizarExistentes") === "true"
+    const reemplazarAnterior = formData.get("reemplazarAnterior") === "true"
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const { rows, colActivo, formatoMultiHoja, formatoLabel } = leerWorkbookDesdeBuffer(buffer)
@@ -26,7 +27,11 @@ export async function POST(req: NextRequest) {
     const contexto = await cargarContexto(prisma)
     const { resumen } = procesarFilas(rows, colActivo, formatoMultiHoja, contexto, false, actualizarExistentes)
 
-    return NextResponse.json({ formatoLabel, resumen })
+    const obsoletos = reemplazarAnterior
+      ? (await calcularObsoletosPorReemplazo(prisma, rows, colActivo)).resumen
+      : null
+
+    return NextResponse.json({ formatoLabel, resumen, obsoletos })
   } catch (e) {
     console.error("[POST /api/catalogo-justificaciones/importar/preview]", e)
     return NextResponse.json({ error: "Error al leer el archivo" }, { status: 500 })

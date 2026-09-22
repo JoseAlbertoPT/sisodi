@@ -169,7 +169,7 @@ function normalizeRegimen(raw: string): string | null {
   return null
 }
 
-function getCell(row: Record<string, unknown>, col: string | undefined): string {
+export function getCell(row: Record<string, unknown>, col: string | undefined): string {
   if (!col) return ""
   const v = row[col]
   if (v instanceof Date) {
@@ -809,4 +809,79 @@ export async function sincronizarCatalogo(prisma: PrismaClient): Promise<Resulta
   }
 
   return { insertados, total: solicitudes.length, errores }
+}
+
+// ── Reemplazo de importación anterior: al marcar la opción "reemplazar", las
+// solicitudes que vinieron de una importación previa (historial con comentario
+// "Importado...") y cuyo folio ya NO aparece en el archivo que se está subiendo
+// ahora se consideran obsoletas y se eliminan. Las solicitudes creadas por el
+// flujo normal del sistema (sin ese comentario) nunca se tocan aquí.
+export interface ObsoletoImportado {
+  id: number
+  folioDictamen: string | null
+  folioJustificacion: string | null
+  secretaria: string | null
+}
+
+export interface ResumenObsoletos {
+  candidatos: number
+  ejemplos: ObsoletoImportado[]
+}
+
+function foliosDelArchivo(rows: Record<string, unknown>[], colActivo: Record<string, string>): Set<string> {
+  const folios = new Set<string>()
+  for (const row of rows) {
+    const fj = getCell(row, colActivo.folioJustificacion)
+    const fd = getCell(row, colActivo.folioDictamen)
+    if (fj) folios.add(fj)
+    if (fd) folios.add(fd)
+  }
+  return folios
+}
+
+export async function calcularObsoletosPorReemplazo(
+  prisma: PrismaClient,
+  rows: Record<string, unknown>[],
+  colActivo: Record<string, string>,
+): Promise<{ ids: number[]; resumen: ResumenObsoletos }> {
+  const folios = foliosDelArchivo(rows, colActivo)
+
+  const importadas = await prisma.$queryRawUnsafe<{
+    id: number
+    folio_justificacion: string | null
+    folio_dictamen: string | null
+    secretaria: string | null
+  }[]>(`
+    SELECT DISTINCT s.id, s.folio_justificacion, s.folio_dictamen, s.secretaria
+    FROM solicitud s
+    JOIN historial_solicitud hs ON hs.solicitud_id = s.id
+    WHERE hs.comentario ILIKE 'Importado%'
+  `)
+
+  const obsoletas = importadas.filter((s) => {
+    const enArchivo =
+      (s.folio_justificacion && folios.has(s.folio_justificacion)) ||
+      (s.folio_dictamen && folios.has(s.folio_dictamen))
+    return !enArchivo
+  })
+
+  return {
+    ids: obsoletas.map((s) => s.id),
+    resumen: {
+      candidatos: obsoletas.length,
+      ejemplos: obsoletas.slice(0, 10).map((s) => ({
+        id: s.id,
+        folioDictamen: s.folio_dictamen,
+        folioJustificacion: s.folio_justificacion,
+        secretaria: s.secretaria,
+      })),
+    },
+  }
+}
+
+export async function eliminarSolicitudesObsoletas(ids: number[], prisma: PrismaClient): Promise<number> {
+  if (ids.length === 0) return 0
+  await prisma.catalogo_justificacion.deleteMany({ where: { solicitud_id: { in: ids } } })
+  await prisma.solicitud.deleteMany({ where: { id: { in: ids } } })
+  return ids.length
 }

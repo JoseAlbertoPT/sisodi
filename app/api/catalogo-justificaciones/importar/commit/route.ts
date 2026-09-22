@@ -8,6 +8,8 @@ import {
   insertarSolicitudes,
   actualizarSolicitudes,
   sincronizarCatalogo,
+  calcularObsoletosPorReemplazo,
+  eliminarSolicitudesObsoletas,
 } from "@/lib/importar-catalogo-excel"
 
 export async function POST(req: NextRequest) {
@@ -23,6 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Solo se aceptan archivos .xlsx" }, { status: 400 })
     }
     const actualizarExistentes = formData.get("actualizarExistentes") === "true"
+    const reemplazarAnterior = formData.get("reemplazarAnterior") === "true"
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const { rows, colActivo, formatoMultiHoja } = leerWorkbookDesdeBuffer(buffer)
@@ -37,7 +40,14 @@ export async function POST(req: NextRequest) {
     const actualizadas = await actualizarSolicitudes(toUpdate, contexto, prisma)
     const sync = await sincronizarCatalogo(prisma)
 
-    return NextResponse.json({ creadas, actualizadas, resumen, sincronizacion: sync })
+    // El reemplazo se calcula y aplica DESPUÉS de insertar/actualizar: las filas del
+    // archivo nuevo ya están en el sistema, así que lo único que queda marcado como
+    // "obsoleto" es lo que vino de una importación anterior y ya no aparece aquí.
+    const eliminadas = reemplazarAnterior
+      ? await eliminarSolicitudesObsoletas((await calcularObsoletosPorReemplazo(prisma, rows, colActivo)).ids, prisma)
+      : 0
+
+    return NextResponse.json({ creadas, actualizadas, eliminadas, resumen, sincronizacion: sync })
   } catch (e) {
     console.error("[POST /api/catalogo-justificaciones/importar/commit]", e)
     return NextResponse.json({ error: "Error al importar el archivo" }, { status: 500 })

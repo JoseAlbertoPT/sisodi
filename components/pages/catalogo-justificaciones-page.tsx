@@ -205,6 +205,10 @@ interface ResumenImportExcel {
   filasConAdvertencia: { idx: number; secretariaRaw: string; folioDictamen: string; advertencias: string[] }[]
   filasParaActualizar: { idx: number; secretariaRaw: string; folioDictamen: string; cambios: { campo: string; anterior: string; nuevo: string }[] }[]
 }
+interface ResumenObsoletosExcel {
+  candidatos: number
+  ejemplos: { id: number; folioDictamen: string | null; folioJustificacion: string | null; secretaria: string | null }[]
+}
 function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const { user } = useAuth()
   const [q, setQ]               = useState("")
@@ -1218,12 +1222,13 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
 
   const [importOpen, setImportOpen]           = useState(false)
   const [importFiles, setImportFiles]         = useState<File[]>([])
-  const [importPreview, setImportPreview]     = useState<{ formatoLabel: string; resumen: ResumenImportExcel } | null>(null)
+  const [importPreview, setImportPreview]     = useState<{ formatoLabel: string; resumen: ResumenImportExcel; obsoletos: ResumenObsoletosExcel | null } | null>(null)
   const [importPreviewLoading, setImportPreviewLoading] = useState(false)
   const [importError, setImportError]         = useState<string | null>(null)
   const [importCommitLoading, setImportCommitLoading]   = useState(false)
-  const [importResult, setImportResult]       = useState<{ creadas: number; actualizadas: number; sincronizacion: { insertados: number } } | null>(null)
+  const [importResult, setImportResult]       = useState<{ creadas: number; actualizadas: number; eliminadas: number; sincronizacion: { insertados: number } } | null>(null)
   const [importActualizarExistentes, setImportActualizarExistentes] = useState(false)
+  const [importReemplazarAnterior, setImportReemplazarAnterior]     = useState(false)
 
   const resetImportDialog = () => {
     setImportFiles([])
@@ -1233,9 +1238,14 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     setImportPreviewLoading(false)
     setImportCommitLoading(false)
     setImportActualizarExistentes(false)
+    setImportReemplazarAnterior(false)
   }
 
-  const handleImportFilesChange = async (files: File[], actualizarExistentes = importActualizarExistentes) => {
+  const handleImportFilesChange = async (
+    files: File[],
+    actualizarExistentes = importActualizarExistentes,
+    reemplazarAnterior = importReemplazarAnterior,
+  ) => {
     setImportFiles(files)
     setImportPreview(null)
     setImportError(null)
@@ -1247,6 +1257,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       fd.append("file", files[0])
       fd.append("userId", user.id)
       fd.append("actualizarExistentes", actualizarExistentes ? "true" : "false")
+      fd.append("reemplazarAnterior", reemplazarAnterior ? "true" : "false")
       const res = await fetch("/api/catalogo-justificaciones/importar/preview", { method: "POST", body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Error al leer el archivo")
@@ -1260,7 +1271,12 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
 
   const handleImportActualizarExistentesChange = (v: boolean) => {
     setImportActualizarExistentes(v)
-    if (importFiles.length > 0) void handleImportFilesChange(importFiles, v)
+    if (importFiles.length > 0) void handleImportFilesChange(importFiles, v, importReemplazarAnterior)
+  }
+
+  const handleImportReemplazarAnteriorChange = (v: boolean) => {
+    setImportReemplazarAnterior(v)
+    if (importFiles.length > 0) void handleImportFilesChange(importFiles, importActualizarExistentes, v)
   }
 
   const handleImportCommit = async () => {
@@ -1272,6 +1288,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
       fd.append("file", importFiles[0])
       fd.append("userId", user.id)
       fd.append("actualizarExistentes", importActualizarExistentes ? "true" : "false")
+      fd.append("reemplazarAnterior", importReemplazarAnterior ? "true" : "false")
       const res = await fetch("/api/catalogo-justificaciones/importar/commit", { method: "POST", body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Error al importar el archivo")
@@ -1774,6 +1791,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                   Se crearon <strong>{importResult.creadas}</strong> solicitud{importResult.creadas !== 1 ? "es" : ""}
                   {importResult.actualizadas > 0 && <> y se actualizaron <strong>{importResult.actualizadas}</strong> existente{importResult.actualizadas !== 1 ? "s" : ""}</>}
                   {" "}y se sincronizaron <strong>{importResult.sincronizacion.insertados}</strong> registro{importResult.sincronizacion.insertados !== 1 ? "s" : ""} en el catálogo.
+                  {importResult.eliminadas > 0 && <> Se eliminaron <strong>{importResult.eliminadas}</strong> registro{importResult.eliminadas !== 1 ? "s" : ""} de importaciones anteriores que ya no vienen en este archivo.</>}
                 </span>
               </div>
             ) : (
@@ -1812,6 +1830,17 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                     Actualizar registros existentes con la información del Excel si algo cambió (folio ya en el catálogo con datos distintos). Si el folio ya existe y no cambió nada, se deja igual.
                   </span>
                 </label>
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <Checkbox
+                    checked={importReemplazarAnterior}
+                    onCheckedChange={(v) => handleImportReemplazarAnteriorChange(v === true)}
+                    className="mt-0.5 shrink-0"
+                    disabled={importCommitLoading || importPreviewLoading}
+                  />
+                  <span className="text-xs text-content-high leading-relaxed">
+                    Reemplazar importación anterior: elimina las solicitudes que vinieron de un Excel importado antes y que ya no aparecen en este archivo (folio distinto). Las solicitudes creadas por el flujo normal del sistema nunca se tocan.
+                  </span>
+                </label>
                 {importError && (
                   <p className="text-xs text-destructive flex items-center gap-1">
                     <AlertCircle className="h-3.5 w-3.5" />{importError}
@@ -1835,7 +1864,28 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                       {importPreview.resumen.conErrores > 0 && (
                         <p className="text-destructive">Con errores (se omiten): <strong>{importPreview.resumen.conErrores}</strong></p>
                       )}
+                      {importReemplazarAnterior && importPreview.obsoletos && (
+                        <p className="text-rose-700">
+                          De importaciones anteriores que ya no vienen en este archivo (se eliminarán): <strong>{importPreview.obsoletos.candidatos}</strong>
+                        </p>
+                      )}
                     </div>
+                    {importReemplazarAnterior && importPreview.obsoletos && importPreview.obsoletos.candidatos > 0 && (
+                      <div className="flex flex-col gap-1.5 rounded-lg border-l-4 border-l-rose-500 bg-rose-50 px-4 py-3">
+                        <span className="text-xs font-medium text-rose-800 flex items-center gap-1">
+                          <XCircle className="h-3.5 w-3.5" />
+                          {importPreview.obsoletos.candidatos} registro{importPreview.obsoletos.candidatos !== 1 ? "s" : ""} de importaciones anteriores se eliminará{importPreview.obsoletos.candidatos !== 1 ? "n" : ""} por no venir en este archivo:
+                        </span>
+                        <ul className="text-xs text-rose-700 list-disc list-inside max-h-32 overflow-y-auto">
+                          {importPreview.obsoletos.ejemplos.map((o) => (
+                            <li key={o.id}>[{o.secretaria ?? "—"}] folio={o.folioDictamen || o.folioJustificacion || "(sin folio)"}</li>
+                          ))}
+                        </ul>
+                        {importPreview.obsoletos.candidatos > importPreview.obsoletos.ejemplos.length && (
+                          <span className="text-xs text-rose-700/70">…y {importPreview.obsoletos.candidatos - importPreview.obsoletos.ejemplos.length} más.</span>
+                        )}
+                      </div>
+                    )}
                     {importActualizarExistentes && importPreview.resumen.filasParaActualizar.length > 0 && (
                       <div className="flex flex-col gap-1.5 rounded-lg border-l-4 border-l-blue-500 bg-blue-50 px-4 py-3">
                         <span className="text-xs font-medium text-blue-800">
@@ -1909,12 +1959,17 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                   variant="vino"
                   className="rounded-full h-10 px-6 font-normal shadow-sm"
                   onClick={handleImportCommit}
-                  disabled={importCommitLoading || importPreviewLoading || !importPreview || (importPreview.resumen.listasParaImportar === 0 && importPreview.resumen.listasParaActualizar === 0)}
+                  disabled={
+                    importCommitLoading || importPreviewLoading || !importPreview ||
+                    (importPreview.resumen.listasParaImportar === 0
+                      && importPreview.resumen.listasParaActualizar === 0
+                      && !(importReemplazarAnterior && (importPreview.obsoletos?.candidatos ?? 0) > 0))
+                  }
                 >
                   {importCommitLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {importCommitLoading
                     ? "Importando…"
-                    : `Confirmar importación${importPreview ? ` (${importPreview.resumen.listasParaImportar}${importPreview.resumen.listasParaActualizar > 0 ? ` + ${importPreview.resumen.listasParaActualizar} act.` : ""})` : ""}`}
+                    : `Confirmar importación${importPreview ? ` (${importPreview.resumen.listasParaImportar}${importPreview.resumen.listasParaActualizar > 0 ? ` + ${importPreview.resumen.listasParaActualizar} act.` : ""}${importReemplazarAnterior && importPreview.obsoletos ? ` − ${importPreview.obsoletos.candidatos} elim.` : ""})` : ""}`}
                 </Button>
               </>
             )}
