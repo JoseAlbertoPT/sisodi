@@ -1522,14 +1522,15 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <FileSpreadsheet className="h-4 w-4" />
           Reporte general
         </Button>
-        <Button
+
+        {/*<Button
           variant="vino"
           className="gap-1.5 shrink-0"
           onClick={() => setImportOpen(true)}
         >
           <Upload className="h-4 w-4" />
           Importar Excel al catálogo
-        </Button>
+        </Button>*/}
 
         {/* Comentado a pedido: el reporte "General" ya separa por hojas
             (General + Con Movimientos), así que esta opción de menú quedó
