@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createHash } from "crypto"
 import { prisma } from "@/lib/prisma"
-import { firmaDatosEx, fechaDocumentoHoy } from "@/lib/firma-oficio-client"
-import { s3Download } from "@/lib/s3"
+import type { firmaDatosEx } from "@/lib/firma-oficio-client"
+import { firmarProcesoConWsFirmaOficio } from "@/lib/firma-ws-proceso"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { checkSesionUsuario } from "@/lib/validar-sesion"
 import { ESTADO_POR_BANDEJA_PENDIENTE } from "@/lib/firma-plantillas"
@@ -10,53 +9,9 @@ import { puedeFirmarVerificacion } from "@/lib/api-guard"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
-const FIRMA_S3_PREFIX = "firma-efirma"
-
 const norm = (s: string) => s.normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "").toLowerCase().trim()
 
 const BYPASS = process.env.EFIRMA_BYPASS === "true"
-
-// El uuid del PDF en S3 (nuestra key interna) es distinto del uuid del
-// "documento multifirma" que WSFirmaOficio genera y regresa en la primera
-// firma real — hay que reenviar ESE (guardado en firma_proceso.uuid_ws_firma)
-// en las firmas siguientes, o el servicio responde codigoRespuesta 1027
-// ("El documento no existe o no pertenece a multifirma"). En la primera firma
-// del proceso uuidWsFirma todavía es null: se manda sin uuid y el servicio
-// asigna uno, que se guarda para las firmas siguientes (ver POST más abajo).
-async function firmarConWsFirmaOficio(opts: {
-  uuidS3: string
-  uuidWsFirma: string | null
-  folio: string
-  usuarioRfc: string
-  nombreFirmante: string
-  certificado: string
-  clavePrivada: string
-  fraseClavePrivada: string
-}) {
-  // "contenido" se manda como texto corto (folio + huella SHA-256 del PDF),
-  // no el PDF completo en base64 — mandar el documento entero (~cientos de KB
-  // dentro de un solo campo XML) hacía tronar el servicio con codigoRespuesta
-  // 5000 ("Ocurrió un incidente"), un Axis/JAX-WS viejo probablemente sin
-  // límite de tamaño de mensaje bien manejado. La huella sigue ligando la
-  // firma al documento exacto sin mandar el archivo.
-  const pdfBuffer = await s3Download(`${FIRMA_S3_PREFIX}/${opts.uuidS3}.pdf`)
-  const huella = createHash("sha256").update(pdfBuffer).digest("hex")
-  const contenido = `Folio ${opts.folio} — SHA-256 ${huella} — ${opts.usuarioRfc} — ${new Date().toISOString()}`
-  // A pesar de que el XSD marca fechaDocumento y destinatario como
-  // opcionales (minOccurs="0"), el servicio responde codigoRespuesta 1000
-  // ("Todos los parámetros son requeridos, excepto CURP y RFC") si se
-  // omiten — solo CURP y RFC dentro de destinatario son realmente opcionales.
-  return firmaDatosEx({
-    certificado: opts.certificado,
-    clavePrivada: opts.clavePrivada,
-    fraseClavePrivada: opts.fraseClavePrivada,
-    folioDocumento: opts.folio,
-    fechaDocumento: fechaDocumentoHoy(),
-    contenido,
-    destinatario: { nombreCompleto: opts.nombreFirmante, rfc: opts.usuarioRfc },
-    uuid: opts.uuidWsFirma ?? undefined,
-  })
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -168,9 +123,8 @@ export async function POST(req: NextRequest) {
         select: { folio_recepcion: true, folio_justificacion: true },
       })
       const folio = solicitudMeta?.folio_recepcion ?? solicitudMeta?.folio_justificacion ?? String(firmante.firma_proceso.solicitud_id)
-      sello = await firmarConWsFirmaOficio({
-        uuidS3: firmante.firma_proceso.uuid!,
-        uuidWsFirma: firmante.firma_proceso.uuid_ws_firma ?? null,
+      sello = await firmarProcesoConWsFirmaOficio({
+        proceso: firmante.firma_proceso,
         folio,
         usuarioRfc: rfcFinal,
         nombreFirmante: nombreFinal ?? rfcFinal,
@@ -178,15 +132,6 @@ export async function POST(req: NextRequest) {
         clavePrivada,
         fraseClavePrivada,
       })
-      // Primera firma real de este proceso: el servicio asignó el uuid del
-      // documento multifirma — guardarlo para que las firmas siguientes lo
-      // reenvíen (ver comentario en firmarConWsFirmaOficio).
-      if (!firmante.firma_proceso.uuid_ws_firma && sello.uuid) {
-        await prisma.firma_proceso.update({
-          where: { id: firmante.firma_proceso_id },
-          data: { uuid_ws_firma: sello.uuid },
-        })
-      }
     }
     const estadoPortal = "iniciado"
     const ahora = new Date()

@@ -191,6 +191,16 @@ function mensajeParaUsuario(codigoRespuesta: number, mensajeOriginal: string | n
     : `El servicio de firma respondió un error (código ${codigoRespuesta}).`
 }
 
+// Conserva el codigoRespuesta y el mensaje original del servicio para que
+// quien llama pueda reaccionar a un error puntual (ver lib/firma-ws-proceso.ts)
+// sin depender del texto amigable que ve el usuario.
+export class FirmaOficioError extends Error {
+  constructor(message: string, readonly codigoRespuesta: number, readonly mensajeServicio: string | null) {
+    super(message)
+    this.name = "FirmaOficioError"
+  }
+}
+
 export async function firmaDatosEx(input: FirmaDatosExInput): Promise<FirmaDatosExResultado> {
   const timeoutMs = getTimeoutMs()
   let res: Response
@@ -222,7 +232,7 @@ export async function firmaDatosEx(input: FirmaDatosExInput): Promise<FirmaDatos
   const CODIGOS_EXITO = [0, 2000]
   if (!CODIGOS_EXITO.includes(resultado.codigoRespuesta)) {
     console.error("[firma-oficio-client] codigoRespuesta de error. Request:", envelopeRedactado(input), "\nRaw response:", text)
-    throw new Error(mensajeParaUsuario(resultado.codigoRespuesta, resultado.mensaje))
+    throw new FirmaOficioError(mensajeParaUsuario(resultado.codigoRespuesta, resultado.mensaje), resultado.codigoRespuesta, resultado.mensaje)
   }
   return resultado
 }
