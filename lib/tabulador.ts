@@ -25,15 +25,36 @@ export function secretariaAplica(secretariasRango: string[], secretariaActual: s
   return secretariasRango.some((s) => normalizeText(s) === normActual)
 }
 
+/**
+ * Busca el rango del tabulador para un nivel/categoría (y, si se da, la
+ * Secretaría). Si no hay coincidencia exacta de categoría pero el nivel tiene
+ * una sola categoría aplicable, se usa esa: solicitudes capturadas antes de
+ * que el tabulador cambiara sus categorías (p. ej. guardadas con "A" cuando
+ * hoy el nivel solo tiene "UNICA") siguen encontrando su rango. Si el nivel
+ * tiene varias categorías no se adivina.
+ */
+export function buscarRangoTabulador(
+  rangos: RangoTabulador[],
+  nivel: string | null | undefined,
+  categoria: string | null | undefined,
+  secretaria?: string | null,
+): RangoTabulador | null {
+  if (!nivel) return null
+  const delNivel = rangos.filter(
+    r => r.nivel === nivel && (secretaria === undefined || secretariaAplica(r.secretarias, secretaria))
+  )
+  if (!categoria) return delNivel[0] ?? null
+  const exacto = delNivel.find(r => r.categoria === categoria)
+  if (exacto) return exacto
+  return new Set(delNivel.map(r => r.categoria)).size === 1 ? delNivel[0] : null
+}
+
 export function formatRangoTabulador(
   rangos: RangoTabulador[],
   nivel: string | null | undefined,
   categoria: string | null | undefined,
 ): string | null {
-  if (!nivel) return null
-  const rango = rangos.find(
-    r => r.nivel === nivel && (categoria ? r.categoria === categoria : true)
-  )
+  const rango = buscarRangoTabulador(rangos, nivel, categoria)
   if (!rango) return null
   return `${rango.nivel}   ${fmt(rango.min)} a ${fmt(rango.max)}`
 }

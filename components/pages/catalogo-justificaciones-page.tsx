@@ -60,7 +60,7 @@ import { folioSinSiglas } from "@/lib/clave-dictamen"
 import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
 import { useProgramasSigef } from "@/hooks/use-programas-sigef"
 import { useTabulador } from "@/hooks/use-tabulador"
-import { secretariaAplica } from "@/lib/tabulador"
+import { buscarRangoTabulador } from "@/lib/tabulador"
 import { parseCertificadoInfo } from "@/lib/certificado-cer"
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
@@ -269,12 +269,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const solImporteBrutoNum = solImporteBruto.trim() ? parseMoney(solImporteBruto) : null
   const { rangos: rangosTabuladorSol } = useTabulador()
   const rangoTabuladorSol = useMemo(() => {
-    if (!solRec?.solicitud.nivel_tabulador) return null
-    return rangosTabuladorSol.find((r) =>
-      r.nivel === solRec.solicitud.nivel_tabulador
-      && (solRec.solicitud.categoria_tabulador ? r.categoria === solRec.solicitud.categoria_tabulador : true)
-      && secretariaAplica(r.secretarias, entidadNombre(solRec))
-    ) ?? null
+    if (!solRec) return null
+    return buscarRangoTabulador(rangosTabuladorSol, solRec.solicitud.nivel_tabulador, solRec.solicitud.categoria_tabulador, entidadNombre(solRec))
   }, [rangosTabuladorSol, solRec])
   const importeFueraDeRango =
     rangoTabuladorSol !== null
