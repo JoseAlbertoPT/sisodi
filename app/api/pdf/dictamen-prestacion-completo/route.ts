@@ -27,6 +27,11 @@ interface FirmaInput {
   certificado?: string
   clavePrivada?: string
   fraseClavePrivada?: string
+  /** Nombre/RFC extraídos del .cer en el navegador (lib/certificado-cer.ts) —
+   *  cuando vienen, se usan en vez del nombre/RFC del usuario en la app, para
+   *  que la Constancia refleje a quien realmente posee ese certificado. */
+  nombreCert?: string
+  rfcCert?: string
 }
 
 function selloFalso(prefix: string, length = 344): string {
@@ -59,7 +64,10 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
     throw new Error("Falta el cargo/puesto de quien firma.");
   }
   const cargo = input.cargo.trim().toUpperCase();
-  const rfc = usuario.rfc.toUpperCase();
+  const rfcCertTrim = input.rfcCert?.trim() ?? "";
+  const nombreCertTrim = input.nombreCert?.trim() ?? "";
+  const rfc = (rfcCertTrim || usuario.rfc).toUpperCase();
+  const nombre = nombreCertTrim || usuario.nombre;
   const ahora = new Date();
 
   if (!BYPASS) {
@@ -79,12 +87,12 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
       // DD/MM/YYYY, no ISO (ver fechaDocumentoHoy en lib/firma-oficio-client.ts).
       fechaDocumento: fechaDocumentoHoy(ahora),
       contenido: `Reutilización de Catálogo — Folio ${input.folio} — ${rfc} — ${ahora.toISOString()}`,
-      destinatario: { nombreCompleto: usuario.nombre ?? rfc, rfc },
+      destinatario: { nombreCompleto: nombre ?? rfc, rfc },
     });
     return {
       usuario: rfc,
       rolFirmante: `Realizó — ${cargo}`,
-      responsable: usuario.nombre,
+      responsable: nombre,
       selloDigital: resultado.selloDigital,
       estampadoTiempo: resultado.estampadoTiempo ?? ahora.toISOString().replace("T", " ").slice(0, 19),
       selloEstampadoTiempo: resultado.selloEstampadoTiempo,
@@ -103,7 +111,7 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
   return {
     usuario: rfc,
     rolFirmante: `Realizó — ${cargo}`,
-    responsable: usuario.nombre,
+    responsable: nombre,
     selloDigital: selloFalso("DEMO"),
     estampadoTiempo: ahora.toISOString().replace("T", " ").slice(0, 19),
     selloEstampadoTiempo: selloFalso("GEM"),
@@ -275,6 +283,8 @@ export async function POST(req: NextRequest) {
         certificado: body.firmaCertificado ? String(body.firmaCertificado) : undefined,
         clavePrivada: body.firmaClavePrivada ? String(body.firmaClavePrivada) : undefined,
         fraseClavePrivada: body.firmaFraseClavePrivada ? String(body.firmaFraseClavePrivada) : undefined,
+        nombreCert: body.nombreCert ? String(body.nombreCert) : undefined,
+        rfcCert: body.rfcCert ? String(body.rfcCert) : undefined,
       });
     } catch (e) {
       return NextResponse.json(

@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { randomBytes } from "crypto"
-import { mkdir, writeFile } from "fs/promises"
-import { join } from "path"
 import { prisma } from "@/lib/prisma"
-import { s3Upload } from "@/lib/s3"
+import { firmaPdfDisponible, guardarFirmaPdf } from "@/lib/firma-pdf-storage"
 import { plantillaFirmantes, resolverUsuariosInternos, usuarioIdParaFirmante } from "@/lib/firma-plantillas"
-
-const FIRMA_S3_PREFIX = "firma-efirma"
-
-const BYPASS = process.env.EFIRMA_BYPASS === "true"
-const BYPASS_DIR = join(process.cwd(), ".firma-bypass")
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,9 +23,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Solicitud no encontrada" }, { status: 404 })
     }
 
+    const base64 = String(archivo).replace(/^data:application\/pdf;base64,/, "")
+
     const existente = await prisma.firma_proceso.findUnique({ where: { solicitud_id: idNum } })
     if (existente && existente.estado !== "cancelado") {
-      return NextResponse.json({ ok: false, error: "Ya existe un proceso de firma para esta solicitud" }, { status: 409 })
+      // Procesos iniciados antes del cambio a S3 no tienen su PDF aquí y no hay
+      // forma de cancelarlos desde la app. Si nadie ha firmado todavía, se vuelve
+      // a subir el PDF con la misma key: uuid y tokens se conservan, así que el
+      // link ya enviado al firmante externo empieza a funcionar sin reenviarlo.
+      const reparable =
+        existente.uuid && existente.firmados === 0 && existente.estado !== "completado"
+        && !(await firmaPdfDisponible(existente.uuid))
+      if (!reparable) {
+        return NextResponse.json({ ok: false, error: "Ya existe un proceso de firma para esta solicitud" }, { status: 409 })
+      }
+      try {
+        await guardarFirmaPdf(existente.uuid!, Buffer.from(base64, "base64"))
+      } catch (e) {
+        console.error("[firma-efirma/iniciar] error volviendo a guardar el PDF", e)
+        return NextResponse.json({ ok: false, error: "No se pudo guardar el PDF a firmar" }, { status: 500 })
+      }
+      const firmantes = await prisma.firma_firmante.findMany({
+        where: { firma_proceso_id: existente.id },
+        orderBy: { orden: "asc" },
+        include: { usuario: { select: { id: true, nombre: true, rfc: true, correo: true } } },
+      })
+      return NextResponse.json({
+        ok: true,
+        reparado: true,
+        proceso: {
+          id: existente.id,
+          uuid: existente.uuid,
+          total_firmantes: existente.total_firmantes,
+          firmados: existente.firmados,
+          estado: existente.estado,
+        },
+        firmantes,
+      })
     }
 
     const plantilla = plantillaFirmantes(solicitud.tipo_solicitud)
@@ -46,28 +73,14 @@ export async function POST(req: NextRequest) {
     // a sellar y para que el firmante externo pueda previsualizarlo antes de firmar.
     const procesoId  = `${idNum}-${Date.now()}`
     const storageKey = randomBytes(16).toString("hex")
-    const base64 = String(archivo).replace(/^data:application\/pdf;base64,/, "")
-    if (BYPASS) {
-      try {
-        await mkdir(BYPASS_DIR, { recursive: true })
-        await writeFile(join(BYPASS_DIR, `${storageKey}.pdf`), Buffer.from(base64, "base64"))
-      } catch (e) {
-        console.error("[firma-efirma/iniciar] bypass: error guardando PDF local", e)
-        return NextResponse.json(
-          { ok: false, error: "No se pudo guardar el PDF en modo bypass" },
-          { status: 500 },
-        )
-      }
-    } else {
-      try {
-        await s3Upload(`${FIRMA_S3_PREFIX}/${storageKey}.pdf`, Buffer.from(base64, "base64"), "application/pdf")
-      } catch (e) {
-        console.error("[firma-efirma/iniciar] error guardando PDF en S3", e)
-        return NextResponse.json(
-          { ok: false, error: "No se pudo guardar el PDF a firmar" },
-          { status: 500 },
-        )
-      }
+    try {
+      await guardarFirmaPdf(storageKey, Buffer.from(base64, "base64"))
+    } catch (e) {
+      console.error("[firma-efirma/iniciar] error guardando PDF a firmar", e)
+      return NextResponse.json(
+        { ok: false, error: "No se pudo guardar el PDF a firmar" },
+        { status: 500 },
+      )
     }
 
     const internos = await resolverUsuariosInternos(idNum)

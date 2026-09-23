@@ -14,6 +14,7 @@ import {
   AlertCircle, Users, Lock, Briefcase, FileKey, KeyRound, X,
 } from "lucide-react"
 import { SelladoDocumentoSection, type SelladoEtapa } from "@/components/sellado-documento-section"
+import { parseCertificadoInfo } from "@/lib/certificado-cer"
 
 interface Firmante {
   id: number
@@ -115,6 +116,8 @@ export function FirmaElectronicaTabs({
 
   const [cargoFirma, setCargoFirma] = useState("")
   const [cerFile, setCerFile] = useState<File | null>(null)
+  const [nombreCert, setNombreCert] = useState("")
+  const [rfcCert, setRfcCert] = useState("")
   const [keyFile, setKeyFile] = useState<File | null>(null)
   const [fraseKey, setFraseKey] = useState("")
   const [firmandoTrabajo, setFirmandoTrabajo] = useState(false)
@@ -126,9 +129,20 @@ export function FirmaElectronicaTabs({
 
   const resetFirmandoInline = () => {
     setFirmandoInline(null)
-    setCargoFirma(""); setCerFile(null); setKeyFile(null); setFraseKey("")
+    setCargoFirma(""); setCerFile(null); setNombreCert(""); setRfcCert(""); setKeyFile(null); setFraseKey("")
     setFirmandoError(null); setCargoHabilitado(false); setAvisoCargoAbierto(false)
     setCamposInvalidos({ cargo: false, cer: false, key: false, password: false })
+  }
+
+  const handleCerFile = async (file: File | null) => {
+    setCerFile(file)
+    setNombreCert(""); setRfcCert("")
+    if (!file) return
+    try {
+      const info = parseCertificadoInfo(await file.arrayBuffer())
+      if (info.nombre) setNombreCert(info.nombre)
+      if (info.rfc) setRfcCert(info.rfc)
+    } catch { /* noop */ }
   }
 
   const aceptarAvisoCargo = () => {
@@ -165,6 +179,7 @@ export function FirmaElectronicaTabs({
           firmanteId, usuarioId: currentUserId,
           cargoFirmante: cargoFirma.trim(),
           certificado: cerB64, clavePrivada: keyB64, fraseClavePrivada: fraseKey,
+          nombreCert, rfcCert,
         }),
       })
       const json = await res.json()
@@ -473,13 +488,18 @@ export function FirmaElectronicaTabs({
                         aria-invalid={camposInvalidos.cer}
                         onChange={e => {
                           const f = e.target.files?.[0] ?? null
-                          setCerFile(f)
+                          void handleCerFile(f)
                           if (camposInvalidos.cer && f) setCamposInvalidos(p => ({ ...p, cer: false }))
                         }}
                       />
                       {camposInvalidos.cer && (
                         <p className="text-xs text-support-error flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" /> Este campo es obligatorio
+                        </p>
+                      )}
+                      {nombreCert && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Firmará como: <strong>{nombreCert}</strong>{rfcCert ? ` (${rfcCert})` : ""}
                         </p>
                       )}
                     </div>

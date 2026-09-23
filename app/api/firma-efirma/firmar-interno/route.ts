@@ -61,7 +61,7 @@ async function firmarConWsFirmaOficio(opts: {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { firmanteId, usuarioId, cargoFirmante, certificado, clavePrivada, fraseClavePrivada, skipEmit } = body
+    const { firmanteId, usuarioId, cargoFirmante, certificado, clavePrivada, fraseClavePrivada, skipEmit, nombreCert, rfcCert } = body
 
     if (!firmanteId || !usuarioId || !cargoFirmante) {
       return NextResponse.json({ ok: false, error: "Faltan campos requeridos" }, { status: 400 })
@@ -151,6 +151,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Tu usuario no tiene RFC registrado. Contacta al administrador." }, { status: 400 })
     }
 
+    // El .cer que se sube es la fuente de verdad de quién firma en realidad
+    // (así lo extrae lib/certificado-cer.ts en el navegador) — si el cliente
+    // manda nombreCert/rfcCert (no vacíos), se usan en vez del nombre/RFC
+    // guardados en el usuario de la app, tanto para lo que se le manda al
+    // servicio de firma como para lo que queda impreso en la Constancia.
+    const rfcCertTrim = typeof rfcCert === "string" ? rfcCert.trim() : ""
+    const nombreCertTrim = typeof nombreCert === "string" ? nombreCert.trim() : ""
+    const rfcFinal = rfcCertTrim || rfcUsuario.toUpperCase()
+    const nombreFinal = nombreCertTrim || usuarioEfectivo?.nombre || null
+
     let sello: Awaited<ReturnType<typeof firmaDatosEx>> | null = null
     if (!BYPASS) {
       const solicitudMeta = await prisma.solicitud.findUnique({
@@ -162,8 +172,8 @@ export async function POST(req: NextRequest) {
         uuidS3: firmante.firma_proceso.uuid!,
         uuidWsFirma: firmante.firma_proceso.uuid_ws_firma ?? null,
         folio,
-        usuarioRfc: rfcUsuario.toUpperCase(),
-        nombreFirmante: usuarioEfectivo?.nombre ?? rfcUsuario,
+        usuarioRfc: rfcFinal,
+        nombreFirmante: nombreFinal ?? rfcFinal,
         certificado,
         clavePrivada,
         fraseClavePrivada,
@@ -187,8 +197,8 @@ export async function POST(req: NextRequest) {
         data: {
           firmado: true,
           fecha_firma: ahora,
-          rfc: rfcUsuario.toUpperCase(),
-          nombre: usuarioEfectivo?.nombre ?? null,
+          rfc: rfcFinal,
+          nombre: nombreFinal,
           cargo_firmante: String(cargoFirmante).trim(),
           ...(slotSinAsignar || bandejaLibrePorRol ? { usuario_id: usuarioId } : {}),
           ...(sello ? {

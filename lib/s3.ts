@@ -2,6 +2,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3"
 import type { Readable } from "stream"
@@ -32,6 +33,22 @@ export async function s3Download(key: string): Promise<Buffer> {
   const chunks: Buffer[] = []
   for await (const chunk of stream) chunks.push(Buffer.from(chunk))
   return Buffer.concat(chunks)
+}
+
+export function isS3NotFound(e: unknown): boolean {
+  const err = e as { name?: string; $metadata?: { httpStatusCode?: number } } | null
+  return err?.name === "NoSuchKey" || err?.name === "NotFound" || err?.$metadata?.httpStatusCode === 404
+}
+
+// false solo si el objeto no existe; cualquier otro error (credenciales, red) se propaga.
+export async function s3Exists(key: string): Promise<boolean> {
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }))
+    return true
+  } catch (e) {
+    if (isS3NotFound(e)) return false
+    throw e
+  }
 }
 
 export async function s3Delete(key: string): Promise<void> {

@@ -172,6 +172,25 @@ function envelopeRedactado(input: FirmaDatosExInput): string {
   return buildEnvelope({ ...input, certificado: "[REDACTED]", clavePrivada: "[REDACTED]", fraseClavePrivada: "[REDACTED]" })
 }
 
+// Traduce los codigoRespuesta documentados de WSFirmaOficio a un mensaje que
+// tenga sentido para quien está firmando (no un código interno del servicio
+// del gobierno). El código y mensaje original siempre quedan en el
+// console.error de arriba para depurar; esto es solo lo que ve el usuario.
+const MENSAJES_POR_CODIGO: Record<number, string> = {
+  1000: "Faltan datos requeridos para completar la firma. Contacta al administrador del sistema.",
+  1011: "La contraseña de la clave privada es incorrecta, o el certificado (.cer) y la clave privada (.key) no corresponden a la misma e.firma. Verifica los archivos y la contraseña e intenta de nuevo.",
+  1027: "El documento no se pudo asociar al proceso de firma (puede haber expirado). Intenta iniciar el proceso de firma de nuevo.",
+  5000: "El servicio de firma electrónica del gobierno tuvo un problema al procesar la solicitud. Intenta de nuevo en unos minutos; si persiste, contacta al administrador del sistema.",
+}
+
+function mensajeParaUsuario(codigoRespuesta: number, mensajeOriginal: string | null): string {
+  const amigable = MENSAJES_POR_CODIGO[codigoRespuesta]
+  if (amigable) return amigable
+  return mensajeOriginal
+    ? `El servicio de firma respondió: ${mensajeOriginal}`
+    : `El servicio de firma respondió un error (código ${codigoRespuesta}).`
+}
+
 export async function firmaDatosEx(input: FirmaDatosExInput): Promise<FirmaDatosExResultado> {
   const timeoutMs = getTimeoutMs()
   let res: Response
@@ -203,7 +222,7 @@ export async function firmaDatosEx(input: FirmaDatosExInput): Promise<FirmaDatos
   const CODIGOS_EXITO = [0, 2000]
   if (!CODIGOS_EXITO.includes(resultado.codigoRespuesta)) {
     console.error("[firma-oficio-client] codigoRespuesta de error. Request:", envelopeRedactado(input), "\nRaw response:", text)
-    throw new Error(`WSFirmaOficio respondió código ${resultado.codigoRespuesta}: ${resultado.mensaje ?? "sin mensaje"}`)
+    throw new Error(mensajeParaUsuario(resultado.codigoRespuesta, resultado.mensaje))
   }
   return resultado
 }

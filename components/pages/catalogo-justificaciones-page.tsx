@@ -61,6 +61,7 @@ import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
 import { useProgramasSigef } from "@/hooks/use-programas-sigef"
 import { useTabulador } from "@/hooks/use-tabulador"
 import { secretariaAplica } from "@/lib/tabulador"
+import { parseCertificadoInfo } from "@/lib/certificado-cer"
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
   loading: () => (
@@ -243,6 +244,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [solFirmaCargo, setSolFirmaCargo]     = useState("")
   const [solFirmaCargoBloqueado, setSolFirmaCargoBloqueado] = useState(false)
   const [solFirmaCerFile, setSolFirmaCerFile] = useState<File | null>(null)
+  const [solNombreCert, setSolNombreCert]     = useState("")
+  const [solRfcCert, setSolRfcCert]           = useState("")
   const [solFirmaKeyFile, setSolFirmaKeyFile] = useState<File | null>(null)
   const [solFirmaPassword, setSolFirmaPassword] = useState("")
   const [solLoading, setSolLoading]   = useState(false)
@@ -361,7 +364,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     setSolPersonas("")
     setSolPrestadores("")
     setSolPrograma(rec.programa_proyecto || "")
-    setSolImporteBruto("")
+    setSolImporteBruto(rec.importe_bruto ? formatMoneyInput(rec.importe_bruto) : "")
     setSolError(null)
     setShowFirmarSol(false)
     setSolFirmaCargo("")
@@ -369,6 +372,17 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     setSolFirmaKeyFile(null)
     setSolFirmaPassword("")
     setShowSol(true)
+  }
+
+  const handleSolCerFile = async (file: File | null) => {
+    setSolFirmaCerFile(file)
+    setSolNombreCert(""); setSolRfcCert("")
+    if (!file) return
+    try {
+      const info = parseCertificadoInfo(await file.arrayBuffer())
+      if (info.nombre) setSolNombreCert(info.nombre)
+      if (info.rfc) setSolRfcCert(info.rfc)
+    } catch { /* noop */ }
   }
 
   const abrirFirmarYGenerar = () => {
@@ -395,6 +409,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     setSolFirmaCargo("")
     setSolFirmaCargoBloqueado(false)
     setSolFirmaCerFile(null)
+    setSolNombreCert("")
+    setSolRfcCert("")
     setSolFirmaKeyFile(null)
     setSolFirmaPassword("")
     setShowFirmarSol(true)
@@ -455,6 +471,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         firmaCertificado: cerB64,
         firmaClavePrivada: keyB64,
         firmaFraseClavePrivada: solFirmaPassword,
+        nombreCert: solNombreCert,
+        rfcCert: solRfcCert,
       }
       if (solRec.solicitud.id) body.solicitudId = solRec.solicitud.id
       else body.catalogoId = solRec.id
@@ -1011,10 +1029,15 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 <Label className="text-xs">Certificado (.cer)</Label>
                 <Input
                   type="file" accept=".cer"
-                  onChange={(e) => setSolFirmaCerFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => void handleSolCerFile(e.target.files?.[0] ?? null)}
                   disabled={solLoading}
                 />
                 {solFirmaCerFile && <span className="text-xs text-muted-foreground truncate">{solFirmaCerFile.name}</span>}
+                {solNombreCert && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Firmará como: <strong>{solNombreCert}</strong>{solRfcCert ? ` (${solRfcCert})` : ""} — extraído del certificado
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-xs">Clave privada (.key)</Label>

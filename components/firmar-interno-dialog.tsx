@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Shield, Loader2, FileKey, KeyRound, Briefcase, AlertCircle } from "lucide-react"
+import { parseCertificadoInfo } from "@/lib/certificado-cer"
 // import { SelladoDocumentoSection } from "@/components/sellado-documento-section"
 
 async function fileToBase64(file: File): Promise<string> {
@@ -43,6 +44,8 @@ interface Props {
 export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titulo, subtitulo, bandeja, folio, solicitudId, folioDictamen, iniciarEnSellado, onFirmado }: Props) {
   const [cargo, setCargo] = useState("")
   const [cerFile, setCerFile] = useState<File | null>(null)
+  const [nombreCert, setNombreCert] = useState("")
+  const [rfcCert, setRfcCert] = useState("")
   const [keyFile, setKeyFile] = useState<File | null>(null)
   const [password, setPassword] = useState("")
   const [trabajando, setTrabajando] = useState(false)
@@ -93,8 +96,19 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
     setTimeout(() => cargoInputRef.current?.focus(), 50)
   }
 
+  const handleCerFile = async (file: File | null) => {
+    setCerFile(file)
+    setNombreCert(""); setRfcCert("")
+    if (!file) return
+    try {
+      const info = parseCertificadoInfo(await file.arrayBuffer())
+      if (info.nombre) setNombreCert(info.nombre)
+      if (info.rfc) setRfcCert(info.rfc)
+    } catch { /* noop */ }
+  }
+
   const reset = () => {
-    setCargo(""); setCerFile(null); setKeyFile(null); setPassword("")
+    setCargo(""); setCerFile(null); setNombreCert(""); setRfcCert(""); setKeyFile(null); setPassword("")
     setError(null); setExito(false)
     setAvisoCargoAbierto(false)
     setCargoHabilitado(false)
@@ -137,6 +151,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
           firmanteId, usuarioId,
           cargoFirmante: cargo.trim(),
           certificado: cerB64, clavePrivada: keyB64, fraseClavePrivada: password,
+          nombreCert, rfcCert,
         }),
       })
       const json = await res.json()
@@ -163,6 +178,7 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
           firmanteId, usuarioId,
           cargoFirmante: cargo.trim(),
           certificado: cerB64, clavePrivada: keyB64, fraseClavePrivada: password,
+          nombreCert, rfcCert,
           skipEmit: true,
         }),
       })
@@ -399,11 +415,16 @@ export function FirmarInternoDialog({ open, onClose, firmanteId, usuarioId, titu
                   aria-invalid={camposInvalidos.cer}
                   onChange={e => {
                     const f = e.target.files?.[0] ?? null
-                    setCerFile(f)
+                    void handleCerFile(f)
                     if (camposInvalidos.cer && f) setCamposInvalidos(p => ({ ...p, cer: false }))
                   }}
                 />
                 {cerFile && <span className="text-xs text-muted-foreground truncate">{cerFile.name}</span>}
+                {nombreCert && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Firmará como: <strong>{nombreCert}</strong>{rfcCert ? ` (${rfcCert})` : ""} — extraído del certificado
+                  </p>
+                )}
                 {camposInvalidos.cer && (
                   <p className="text-[10px] text-support-error flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
