@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { idsSolicitudesImportadas } from "@/lib/importar-catalogo-excel"
 
 export async function GET(_req: NextRequest) {
   try {
@@ -50,6 +51,7 @@ export async function POST(_req: NextRequest) {
     const solicitudes = await prisma.solicitud.findMany({
       where: { id: { in: Array.from(idsSet) } },
     })
+    const importadas = await idsSolicitudesImportadas(prisma, solicitudes.map((s) => s.id))
 
     let insertados = 0
     const errores: string[] = []
@@ -85,6 +87,7 @@ export async function POST(_req: NextRequest) {
             secretaria_txt_snapshot:   (sol as any).secretaria_txt_snapshot ?? null,
             folio_recepcion:           sol.folio_recepcion ?? null,
             folio_dictamen:            (sol as any).folio_dictamen ?? null,
+            origen:                    importadas.has(sol.id) ? "excel" : "sistema",
           },
         })
         insertados++

@@ -399,9 +399,9 @@ export function TabuladorTabContent() {
                 <tr className="bg-bg-base text-content-high">
                   <th className="px-5 py-3 text-left font-semibold align-middle w-[12%]">Nivel</th>
                   <th className="px-5 py-3 text-left font-semibold align-middle w-[16%]">Categoría</th>
-                  <th className="px-5 py-3 text-right font-semibold align-middle w-[15%]">Importe bruto mínimo</th>
-                  <th className="px-5 py-3 text-right font-semibold align-middle w-[15%]">Importe bruto máximo</th>
-                  <th className="px-5 py-3 text-left font-semibold align-middle w-[27%]">Secretaria /Dependencia</th>
+                  <th className="px-5 py-3 text-center font-semibold align-middle w-[15%]">Rango percepción<br />mensuales mínimo</th>
+                  <th className="px-5 py-3 text-center font-semibold align-middle w-[15%]">Rango percepción<br />mensuales máxima</th>
+                  <th className="px-5 py-3 text-left font-semibold align-middle w-[27%]">Secretaría /Dependencia</th>
                   <th className="px-5 py-3 text-right font-semibold align-middle w-[15%]">Acciones</th>
                 </tr>
               </thead>
@@ -410,8 +410,8 @@ export function TabuladorTabContent() {
                   <tr key={row.id} className={`border-t border-border/60 transition-colors ${idx % 2 === 0 ? "bg-card" : "bg-muted/20"} hover:bg-muted/40`}>
                     <td className="px-5 py-3 align-middle"><span className="font-semibold text-card-foreground">{row.nivel}</span></td>
                     <td className="px-5 py-3 align-middle text-card-foreground">{row.categoria}</td>
-                    <td className="px-5 py-3 text-right align-middle tabular-nums">{fmt(row.importeBrutoMin)}</td>
-                    <td className="px-5 py-3 text-right align-middle tabular-nums">{fmt(row.importeBrutoMax)}</td>
+                    <td className="px-5 py-3 text-center align-middle tabular-nums">{fmt(row.importeBrutoMin)}</td>
+                    <td className="px-5 py-3 text-center align-middle tabular-nums">{fmt(row.importeBrutoMax)}</td>
                     <td className="px-5 py-3 align-middle text-card-foreground">
                       <div className="flex items-center gap-1.5 truncate">
                         <span className="truncate">{secretariasLabel(row.secretarias)}</span>
@@ -466,9 +466,9 @@ export function TabuladorTabContent() {
                   <tr className="bg-bg-base text-content-high">
                     <th className="px-3 py-2 text-left font-semibold align-middle w-[13%]">Nivel</th>
                     <th className="px-3 py-2 text-left font-semibold align-middle w-[17%]">Categoría</th>
-                    <th className="px-3 py-2 text-right font-semibold align-middle w-[15%]">Importe mínimo</th>
-                    <th className="px-3 py-2 text-right font-semibold align-middle w-[15%]">Importe máximo</th>
-                    <th className="px-3 py-2 text-left font-semibold align-middle w-[30%]">Secretaria /Dependencia</th>
+                    <th className="px-3 py-2 text-center font-semibold align-middle w-[15%]">Rango percepción<br />mensuales mínimo</th>
+                    <th className="px-3 py-2 text-center font-semibold align-middle w-[15%]">Rango percepción<br />mensuales máxima</th>
+                    <th className="px-3 py-2 text-left font-semibold align-middle w-[30%]">Secretaría /Dependencia</th>
                     <th className="px-3 py-2 align-middle w-10"></th>
                   </tr>
                 </thead>
@@ -561,7 +561,7 @@ export function TabuladorTabContent() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm font-medium">Importe bruto mínimo</Label>
+                <Label className="text-sm font-medium">Rango percepción mensuales mínimo</Label>
                 <MoneyInput
                   value={editForm.importeBrutoMin}
                   onChange={(v) => setEditForm((p) => ({ ...p, importeBrutoMin: v }))}
@@ -569,7 +569,7 @@ export function TabuladorTabContent() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm font-medium">Importe bruto máximo</Label>
+                <Label className="text-sm font-medium">Rango percepción mensuales máxima</Label>
                 <MoneyInput
                   value={editForm.importeBrutoMax}
                   onChange={(v) => setEditForm((p) => ({ ...p, importeBrutoMax: v }))}
@@ -578,7 +578,7 @@ export function TabuladorTabContent() {
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-sm font-medium">Secretaria /Dependencia</Label>
+              <Label className="text-sm font-medium">Secretaría /Dependencia</Label>
               <SecretariaScopeField
                 value={editForm.secretarias}
                 onChange={(v) => setEditForm((p) => ({ ...p, secretarias: v }))}

@@ -34,7 +34,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ records: [], total: 0, page, limit })
     }
 
-    const conditions = ["cj.activo = true"]
+    // Consulta solo muestra lo importado del Excel (histórico consolidado); los
+    // dictámenes emitidos en el sistema se ven únicamente en Administración.
+    const conditions = ["cj.activo = true", "cj.origen = 'excel'"]
     const params: any[] = [viewerSecretaria]
     conditions.push(`lower(trim(split_part(COALESCE(cj.secretaria, s.secretaria), '>', 1))) = lower($1)`)
 

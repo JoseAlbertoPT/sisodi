@@ -938,7 +938,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     disabled={solLoading}
                     className={
                       importeFueraDeRango
-                        ? "bg-background border-destructive focus-visible:border-destructive"
+                         ? "bg-background border-destructive focus-visible:border-destructive"
                         : "bg-background"
                     }
                   />

@@ -753,6 +753,19 @@ export interface ResultadoSincronizar {
   errores: string[]
 }
 
+// Solicitudes que vinieron de la importación del Excel: insertarSolicitudes les deja
+// en el historial un comentario "Importado...". Sirve para marcar el origen del
+// registro de catálogo (la pestaña Consulta solo muestra origen = "excel").
+export async function idsSolicitudesImportadas(prisma: PrismaClient, ids: number[]): Promise<Set<number>> {
+  if (ids.length === 0) return new Set()
+  const rows = await prisma.historial_solicitud.findMany({
+    where: { solicitud_id: { in: ids }, comentario: { startsWith: "Importado", mode: "insensitive" } },
+    select: { solicitud_id: true },
+    distinct: ["solicitud_id"],
+  })
+  return new Set(rows.map((r) => r.solicitud_id))
+}
+
 export async function sincronizarCatalogo(prisma: PrismaClient): Promise<ResultadoSincronizar> {
   const [dictamenes, estadoEmitido] = await Promise.all([
     prisma.dictamen.findMany({ select: { solicitud_id: true } }),
@@ -768,6 +781,7 @@ export async function sincronizarCatalogo(prisma: PrismaClient): Promise<Resulta
   if (idsSet.size === 0) return { insertados: 0, total: 0, errores: [] }
 
   const solicitudes = await prisma.solicitud.findMany({ where: { id: { in: Array.from(idsSet) } } })
+  const importadas = await idsSolicitudesImportadas(prisma, solicitudes.map((s) => s.id))
 
   let insertados = 0
   const errores: string[] = []
@@ -800,6 +814,7 @@ export async function sincronizarCatalogo(prisma: PrismaClient): Promise<Resulta
           secretaria_txt_snapshot:   (sol as any).secretaria_txt_snapshot ?? null,
           folio_recepcion:           sol.folio_recepcion ?? null,
           folio_dictamen:            (sol as any).folio_dictamen ?? null,
+          origen:                    importadas.has(sol.id) ? "excel" : "sistema",
         },
       })
       insertados++

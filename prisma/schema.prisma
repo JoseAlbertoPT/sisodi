@@ -476,6 +476,8 @@ model catalogo_justificacion {
   es_renovacion             Boolean?             @default(false)
   tipo_administracion       String?              @db.VarChar(20)
   fecha_emision             DateTime?            @db.Timestamp(6)
+  // "excel" = vino de la importación del histórico consolidado; "sistema" = dictamen emitido en el flujo normal.
+  origen                    String               @default("sistema") @db.VarChar(20)
   solicitud                 solicitud?           @relation(fields: [solicitud_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   catalogo_solicitudes      catalogo_solicitud[]
 }
