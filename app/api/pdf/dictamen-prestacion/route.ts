@@ -69,12 +69,6 @@ export async function buildDictamenPrestacionBuffer(
       })
     : null;
 
-  // Regla 12: el dictamen definitivo no se puede descargar hasta que la
-  // solicitud tenga la última firma requerida (estado "Emitido").
-  if (sol && !puedeMostrarFolioDictamen((sol as any).estado?.nombre)) {
-    throw new Error("El dictamen aún no puede descargarse: falta completar el proceso de firma.");
-  }
-
   let data: DictamenPrestacionData;
   let folio: string;
   const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
@@ -106,6 +100,16 @@ export async function buildDictamenPrestacionBuffer(
   const reutilizacionNumero = catalogoJustificacionId
     ? await prisma.catalogo_solicitud.count({ where: { catalogo_justificacion_id: catalogoJustificacionId } })
     : 0;
+  // Regla 12: el dictamen definitivo no se puede descargar hasta que la
+  // solicitud tenga la última firma requerida (estado "Emitido"). La
+  // reutilización desde Catálogo queda fuera: que exista el registro del
+  // catálogo ya prueba que el dictamen original se emitió, y este documento
+  // nuevo lo firma en ese momento quien reutiliza — el estado actual de la
+  // solicitud original (que pudo cambiar después de emitirse) no aplica.
+  const esReutilizacionCatalogo = esGeneracionDesdeCatalogo && catalogoJustificacionId !== null;
+  if (sol && !esReutilizacionCatalogo && !puedeMostrarFolioDictamen((sol as any).estado?.nombre)) {
+    throw new Error("El dictamen aún no puede descargarse: falta completar el proceso de firma.");
+  }
   const conSufijo = (f: string): string => (reutilizacionNumero > 0 ? `${f}-${reutilizacionNumero}` : f);
 
   if (sol) {
