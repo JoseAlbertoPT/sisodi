@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { requireCatalogoConsulta } from "@/lib/api-guard"
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const q      = searchParams.get("q")?.trim() ?? ""

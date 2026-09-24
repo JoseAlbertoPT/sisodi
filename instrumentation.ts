@@ -1,6 +1,13 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return
 
+  // Con EFIRMA_BYPASS=true la firma electrónica se SIMULA (no se validan
+  // certificados y los sellos son falsos). Solo avisa en vez de impedir el
+  // arranque, para no tirar un servidor que hoy lo tenga activo a propósito.
+  if (process.env.NODE_ENV === "production" && process.env.EFIRMA_BYPASS === "true") {
+    console.warn("⚠️  [seguridad] EFIRMA_BYPASS=true en producción: la firma electrónica está SIMULADA.")
+  }
+
   // Precalienta el caché de "Programa o Proyecto" de SIGeF al arrancar el
   // servidor, para que el primer usuario del día no espere los ~4s de la
   // consulta SOAP en frío (ver lib/sigef-cache.ts). No bloquea el arranque.

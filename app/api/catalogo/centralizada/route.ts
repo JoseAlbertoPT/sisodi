@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { ensureOrganismoParaestatal } from "@/lib/sync-organismo-paraestatal"
 
@@ -47,6 +48,9 @@ function buildTree(flat: FlatNode[]): TreeNode[] {
 }
 
 export async function GET() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const all = await prisma.organo_centralizado.findMany({
       orderBy: [{ orden: "asc" }, { nombre: "asc" }],
@@ -59,6 +63,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { nombre, parentId, orden, tipo, ua_clave_administrativa, clave_reporte_plazas } = await req.json()
     if (!nombre?.trim()) return err("El nombre es requerido")

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion, setTextoConfiguracion } from "@/lib/configuracion-texto"
 
 export async function GET() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const valor = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT)
     return NextResponse.json({ ok: true, valor })
@@ -12,6 +16,9 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { valor } = await req.json().catch(() => ({ valor: null }))
     if (typeof valor !== "string" || valor.trim() === "") {

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
-import { checkSesionUsuario } from "@/lib/validar-sesion"
+import { checkSesionUsuario } from "@/lib/validar-sesion"
+import { contenidoParaCatalogo } from "@/lib/catalogo-contenido"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -18,6 +21,9 @@ const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictam
  *  - La solicitud no puede estar ya en estado "Emitido".
  */
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const { solicitudId, usuarioId } = body
@@ -126,6 +132,8 @@ export async function POST(req: NextRequest) {
             : null
         await prisma.catalogo_justificacion.create({
           data: {
+            // Copia propia del contenido: el catálogo no debe depender de que la solicitud siga existiendo.
+            ...(await contenidoParaCatalogo(prisma, Number(sid))),
             solicitud_id:              sid,
             regimen_contratacion:      (solicitud as any).regimen ?? "honorarios",
             programa_proyecto:         (solicitud as any).programa_proyecto ?? "",
@@ -154,6 +162,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, folio: folioDictamenFinal })
   } catch (error: any) {
     console.error("[POST /api/firma-efirma/emitir-dictamen]", error)
-    return NextResponse.json({ ok: false, error: error?.message ?? "Error" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(error, "Error") }, { status: 500 })
   }
 }

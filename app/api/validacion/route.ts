@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion, verificarActor } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { getEstadoId } from "@/lib/estado-cache"
@@ -10,11 +12,17 @@ const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictam
 const ESTADOS_EXCLUIDOS_UEFA = ["En Captura", "Borrador"]
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const estadoNombre = searchParams.get("estado") ?? "En Captura"
     const usuarioId    = searchParams.get("usuarioId")
     const viewerUserId = searchParams.get("viewerId")
+    // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
+    const actorErr = verificarActor(sesion, viewerUserId)
+    if (actorErr) return actorErr
 
     let where: any = {}
 
@@ -127,13 +135,16 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("[GET /api/validacion]", error)
     return NextResponse.json(
-      { ok: false, error: error?.message ?? "Error al obtener solicitudes para validación" },
+      { ok: false, error: mensajePublico(error, "Error al obtener solicitudes para validación") },
       { status: 500 }
     )
   }
 }
 
 export async function PATCH(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const { solicitudId, nuevoEstado, usuarioId, comentario, revisorId } = body
@@ -229,7 +240,7 @@ export async function PATCH(req: NextRequest) {
   } catch (error: any) {
     console.error("[PATCH /api/validacion]", error)
     return NextResponse.json(
-      { ok: false, error: error?.message ?? "Error al actualizar el estado" },
+      { ok: false, error: mensajePublico(error, "Error al actualizar el estado") },
       { status: 500 }
     )
   }

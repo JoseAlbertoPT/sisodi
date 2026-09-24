@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
+import { esAdministrador } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 
 // IDs reales en DB: 1=Tablero, 2=JUSTIFICACIONES(header), 3=Nueva solicitud,
@@ -17,6 +19,11 @@ const ROL_MENUS: Record<string, number[]> = {
 }
 
 export async function POST() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+  // Reescribe la matriz de menús de todos los roles: solo Administrador.
+  if (!esAdministrador(sesion.rol)) return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+
   try {
     const resultados: string[] = []
 

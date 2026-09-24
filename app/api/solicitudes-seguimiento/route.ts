@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     // Acota el seguimiento al ámbito del usuario que consulta: centralizado
     // (registros sin tipo se tratan como centralizada) o paraestatal.
@@ -57,7 +62,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, data })
   } catch (err: any) {
     console.error("[solicitudes-seguimiento]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }
 

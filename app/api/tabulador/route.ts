@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
@@ -28,6 +29,9 @@ function mismasSecretarias(a: string[], b: string[]): boolean {
 }
 
 export async function GET() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const rows = await prisma.tabulador.findMany({ orderBy: [{ nivel: "asc" }, { categoria: "asc" }] })
     return NextResponse.json({ ok: true, tabulador: rows.map(mapRow) })
@@ -38,6 +42,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json().catch(() => null)
     const nivel = String(body?.nivel ?? "").trim()

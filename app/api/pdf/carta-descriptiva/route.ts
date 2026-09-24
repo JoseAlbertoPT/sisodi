@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma";
 import { renderToStream } from "@react-pdf/renderer";
 import {
@@ -203,6 +204,9 @@ async function buildPDFResponse(
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
   const clave = searchParams.get("clave");
@@ -211,6 +215,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const body = await req.json().catch(() => ({}));
   const solicitudId = body?.solicitudId ? String(body.solicitudId) : null;
   const clave = body?.clave ? String(body.clave) : null;

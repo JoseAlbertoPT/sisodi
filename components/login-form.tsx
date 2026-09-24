@@ -13,6 +13,7 @@ import Image from "next/image"
 function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
   type Paso = "rfc" | "codigo" | "nueva" | "exito"
   const [paso, setPaso] = useState<Paso>("rfc")
+  const [resetToken, setResetToken] = useState("")
   const [rfc, setRfc] = useState("")
   const [rfcError, setRfcError] = useState("")
   const [rfcLoading, setRfcLoading] = useState(false)
@@ -85,6 +86,8 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
       })
       const data = await res.json()
       if (!res.ok) { setCodigoError(data.error); return }
+      // Prueba de que el código se validó; el paso final la debe presentar.
+      setResetToken(data.resetToken ?? "")
       setPaso("nueva")
     } catch { setCodigoError("Error de conexión. Intente de nuevo.") }
     finally { setCodigoLoading(false) }
@@ -123,7 +126,7 @@ function ModalRecuperarContrasena({ onClose }: { onClose: () => void }) {
     try {
       const res = await fetch("/api/auth?action=recuperar-reset", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rfc: rfc.trim().toUpperCase(), nuevaPassword }),
+        body: JSON.stringify({ rfc: rfc.trim().toUpperCase(), resetToken, nuevaPassword }),
       })
       const data = await res.json()
       if (!res.ok) { setSaveError(data.error); return }
@@ -319,7 +322,7 @@ function ModalCambioContrasena({
         body: JSON.stringify({ rfc: username, password: passwordActual }),
       })
       if (!res.ok) { setError("La contraseña actual es incorrecta."); setLoading(false); return }
-      await changePassword(username, nuevaPassword)
+      await changePassword(username, passwordActual, nuevaPassword)
       logout()
       onSuccess()
     } catch { setError("Error al cambiar la contraseña. Intente de nuevo.") }
@@ -464,7 +467,7 @@ export function LoginForm() {
       if (!todasOk) { setError("Por favor cumpla todos los requisitos."); return }
       setChangeLoading(true)
       try {
-        await changePassword(rfc.trim().toUpperCase(), nuevaPassword)
+        await changePassword(rfc.trim().toUpperCase(), password, nuevaPassword)
         logout()
         setMustChangePassword(false)
         setRfc(""); setPassword(""); setNuevaPassword(""); setConfirmarPassword("")

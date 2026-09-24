@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { randomBytes } from "crypto"
 import { prisma } from "@/lib/prisma"
 import { firmaPdfDisponible, guardarFirmaPdf } from "@/lib/firma-pdf-storage"
 import { plantillaFirmantes, resolverUsuariosInternos, usuarioIdParaFirmante } from "@/lib/firma-plantillas"
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const { solicitudId, archivo, creadoPorId } = body
@@ -140,6 +145,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: any) {
     console.error("[firma-efirma/iniciar]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }

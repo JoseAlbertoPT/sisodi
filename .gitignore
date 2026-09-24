@@ -45,3 +45,9 @@ tsconfig.tsbuildinfo
 # Binarios
 cloudflared-linux-amd64.deb
 *.deb
+
+# Datos generados / respaldos con información real (no van al repo)
+/.firma-bypass/
+/backup-*.json
+/_scratch_*.pdf
+/test_*.pdf

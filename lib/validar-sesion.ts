@@ -1,12 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
-
-// Debe coincidir con IDLE_MS en lib/auth-context.tsx — este es el respaldo
-// del lado del servidor: el navegador cierra sesión por su cuenta a los 30
-// minutos de inactividad, pero si por lo que sea esa lógica no corre (equipo
-// suspendido, pestaña congelada, etc.), esta validación igual rechaza la
-// petición en cuanto `ultima_actividad` quedó demasiado vieja.
-const IDLE_MS = 30 * 60 * 1000
+import { requireSesion, verificarActor } from "@/lib/session"
 
 /**
  * Verifica que el usuario que ejecuta una acción exista en la base y que su
@@ -40,36 +33,11 @@ export async function checkSesionUsuario(
     )
   }
 
-  const existe = await prisma.usuario.findUnique({
-    where:  { id: usuarioId },
-    select: { id: true, ultima_actividad: true },
-  })
-
-  if (!existe) {
-    return NextResponse.json(
-      {
-        ok: false,
-        sessionInvalid: true,
-        error: "Tu sesión ya no es válida: el usuario no existe en el sistema. Cierra sesión y vuelve a iniciar sesión.",
-      },
-      { status: 401 },
-    )
-  }
-
-  // Si no hay marca (fila antigua sin pasar por login, o mock de prueba que
-  // no la incluye) se asume recién activa en vez de expirada — evita falsos
-  // rechazos; en uso real siempre queda seteada desde el login.
-  const ultima = existe.ultima_actividad?.getTime() ?? Date.now()
-  if (Date.now() - ultima >= IDLE_MS) {
-    return NextResponse.json(
-      {
-        ok: false,
-        sessionInvalid: true,
-        error: "Tu sesión expiró por inactividad. Vuelve a iniciar sesión.",
-      },
-      { status: 401 },
-    )
-  }
-
-  return null
+  // La identidad sale de la cookie de sesión (lib/session.ts), no del
+  // usuarioId que manda el cliente: ese id solo se acepta si coincide con el
+  // de la sesión. Existencia, cuenta activa e inactividad ya las valida
+  // requireSesion.
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+  return verificarActor(sesion, usuarioId)
 }

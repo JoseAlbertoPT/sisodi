@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 
 function toResponse(h: {
@@ -27,6 +28,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { id } = await params
     const h = await prisma.historico.findUnique({ where: { id } })
@@ -42,6 +46,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { id } = await params
     await prisma.historico.delete({ where: { id } })

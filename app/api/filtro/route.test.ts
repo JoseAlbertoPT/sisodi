@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
+// Las rutas exigen sesión (lib/session.ts): se simula la del usuario de prueba.
+vi.mock("@/lib/session", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/session")>()),
+  requireSesion: vi.fn(async () => ({ id: "user-1", nombre: "Usuario Prueba", rol: "Administrador" })),
+}))
+
 vi.mock("@/lib/sse-manager", () => ({ broadcastUpdate: vi.fn() }))
 vi.mock("@/lib/secretaria-scope", () => ({ getSecretariaScopeIds: vi.fn(async () => null) }))
 

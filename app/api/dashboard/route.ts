@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const anio     = parseInt(searchParams.get("anio") ?? String(new Date().getFullYear()), 10)
@@ -207,7 +212,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error: any) {
     console.error("[GET /api/dashboard]", error)
-    return NextResponse.json({ ok: false, error: error?.message }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(error, "Error interno") }, { status: 500 })
   }
 }
 

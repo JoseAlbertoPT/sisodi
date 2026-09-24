@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mensajePublico } from "@/lib/error-publico";
+import { requireSesion, verificarActor } from "@/lib/session"
 import { PDFDocument } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
 import { buildCartaDescriptivaBuffer } from "../carta-descriptiva/route";
@@ -185,7 +187,7 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
   } catch (e) {
     console.error("[pdf/dictamen-prestacion-completo] Error generando buffers:", e);
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Error al generar el PDF" },
+      { ok: false, error: mensajePublico(e, "Error al generar el PDF") },
       { status: 500 },
     );
   }
@@ -231,13 +233,16 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
   } catch (e) {
     console.error("[pdf/dictamen-prestacion-completo] Error uniendo PDFs:", e);
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Error al unir los documentos" },
+      { ok: false, error: mensajePublico(e, "Error al unir los documentos") },
       { status: 500 },
     );
   }
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
   const catalogoId = searchParams.get("catalogoId");
@@ -252,6 +257,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const body = await req.json().catch(() => ({}));
   const solicitudId = body?.solicitudId ? String(body.solicitudId) : null;
   const catalogoId = body?.catalogoId ? String(body.catalogoId) : null;
@@ -269,6 +277,9 @@ export async function POST(req: NextRequest) {
   // estos campos — una descarga normal (sin firma) sigue funcionando igual.
   let firma: FirmaPortal | null = null;
   if (body?.firmaCargo && body?.firmaUsuarioId) {
+    // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
+    const actorErr = verificarActor(sesion, String(body.firmaUsuarioId))
+    if (actorErr) return actorErr
     if (!(await puedeFirmarCatalogo(String(body.firmaUsuarioId)))) {
       return NextResponse.json(
         { ok: false, error: "Solo un usuario con rol UEFA o Administrador puede firmar la reutilización del Catálogo." },
@@ -288,7 +299,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (e) {
       return NextResponse.json(
-        { ok: false, error: e instanceof Error ? e.message : "No se pudo firmar el dictamen" },
+        { ok: false, error: mensajePublico(e, "No se pudo firmar el dictamen") },
         { status: 400 },
       );
     }

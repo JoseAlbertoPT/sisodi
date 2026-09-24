@@ -1,5 +1,16 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { requireSesion, verificarActor } from "@/lib/session"
+
+/**
+ * Exige sesión y que el id que manda el cliente (si manda uno) sea el de la
+ * sesión. Devuelve la respuesta de error o null.
+ */
+async function sesionDelActor(userId: string | null): Promise<NextResponse | null> {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+  return verificarActor(sesion, userId)
+}
 
 export const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador", "Revisor"]
 
@@ -7,6 +18,8 @@ export async function requireRol(userId: string | null, rolesPermitidos: string[
   if (!userId) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
+  const sesionErr = await sesionDelActor(userId)
+  if (sesionErr) return sesionErr
   const usuario = await prisma.usuario.findUnique({
     where: { id: userId },
     select: { rol: { select: { nombre: true } } },
@@ -73,6 +86,8 @@ export async function requireCatalogoAdmin(userId: string | null): Promise<NextR
   if (!userId) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
+  const sesionErr = await sesionDelActor(userId)
+  if (sesionErr) return sesionErr
   if (!(await puedeAdministrarCatalogo(userId))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 })
   }
@@ -83,6 +98,8 @@ export async function requireCatalogoConsulta(userId: string | null): Promise<Ne
   if (!userId) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
+  const sesionErr = await sesionDelActor(userId)
+  if (sesionErr) return sesionErr
   if (!(await puedeConsultarCatalogo(userId))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 })
   }
@@ -139,3 +156,44 @@ export async function puedeFirmarVerificacion(userId: string | null): Promise<bo
   const acciones = usuario.usuario_menu[0]?.acciones ?? []
   return !acciones.includes(VERIFICACION_ACCION_SIN_FIRMA)
 }
+
+export const USUARIOS_MENU_KEY = "usuarios"
+
+/**
+ * Gestión de usuarios y de sus permisos (pantalla Configuración > Usuarios):
+ * la puede usar quien tenga ese menú en sus permisos efectivos — los explícitos
+ * de usuario_menu si tiene alguno, si no los de su rol (misma regla que
+ * /api/menus para armar el sidebar) — y siempre un Administrador.
+ */
+export async function puedeGestionarUsuarios(userId: string): Promise<boolean> {
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: userId },
+    select: {
+      rol_id: true,
+      rol: { select: { nombre: true } },
+      usuario_menu: { select: { menu: { select: { key: true, activo: true } } } },
+    },
+  })
+  if (!usuario) return false
+  if (normalizaRol(usuario.rol.nombre) === "administrador") return true
+  if (usuario.usuario_menu.length > 0) {
+    return usuario.usuario_menu.some((um) => um.menu?.key === USUARIOS_MENU_KEY && um.menu?.activo !== false)
+  }
+  const porRol = await prisma.rol_menu.count({
+    where: { rol_id: usuario.rol_id, menu: { key: USUARIOS_MENU_KEY, activo: true } },
+  })
+  return porRol > 0
+}
+
+/** Exige sesión con acceso a la gestión de usuarios. Devuelve el usuario o la respuesta de error. */
+export async function requireGestionUsuarios(): Promise<{ id: string; nombre: string; rol: string } | NextResponse> {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+  if (!(await puedeGestionarUsuarios(sesion.id))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+  }
+  return sesion
+}
+
+export const esAdministrador = (rolNombre: string | null | undefined) =>
+  normalizaRol(rolNombre ?? "") === "administrador"

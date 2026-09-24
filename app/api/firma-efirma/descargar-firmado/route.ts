@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
 import { prisma } from "@/lib/prisma"
 import { buildJustificacionBuffer } from "@/app/api/pdf/justificacion/route"
 
@@ -53,6 +54,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (err: any) {
     console.error("[firma-efirma/descargar-firmado]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }

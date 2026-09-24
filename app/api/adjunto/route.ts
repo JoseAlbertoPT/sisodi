@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { s3Upload, s3Delete } from "@/lib/s3"
 
+// Mismo tope que ya aplica el formulario (FileDropZone con maxSizeMB={50} en
+// nueva-solicitud-page.tsx): el servidor no debe aceptar más de lo que la UI permite.
+const MAX_ADJUNTO_BYTES = 50 * 1024 * 1024
+
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
 
   try {
     const form = await req.formData()
@@ -14,6 +23,9 @@ export async function POST(req: NextRequest) {
     const idNum = Number(solicitudId)
     if (isNaN(idNum)) {
       return NextResponse.json({ ok: false, error: "solicitudId inválido" }, { status: 400 })
+    }
+    if (file.size > MAX_ADJUNTO_BYTES) {
+      return NextResponse.json({ ok: false, error: "El archivo supera el límite de 50 MB." }, { status: 413 })
     }
     const bytes    = await file.arrayBuffer()
     const buffer   = Buffer.from(bytes)
@@ -32,11 +44,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, data: adjunto })
   } catch (error: any) {
     console.error("[POST /api/adjunto]", error)
-    return NextResponse.json({ ok: false, error: error?.message ?? "Error al subir archivo" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(error, "Error al subir archivo") }, { status: 500 })
   }
 }
 
 export async function DELETE(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const idRaw = searchParams.get("id")
@@ -56,6 +71,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ ok: true })
   } catch (error: any) {
     console.error("[DELETE /api/adjunto]", error)
-    return NextResponse.json({ ok: false, error: error?.message ?? "Error al eliminar archivo" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(error, "Error al eliminar archivo") }, { status: 500 })
   }
 }

@@ -29,6 +29,10 @@ let yaRedirigiendo = false
  */
 export function forzarReLogin(mensaje?: string): void {
   if (yaRedirigiendo) return
+  // Sin sesión guardada ya se está en el login: las cargas globales que corren
+  // antes de iniciar sesión (calendario, permisos de captura...) reciben 401 y
+  // no deben disparar el aviso ni recargar en bucle.
+  try { if (!localStorage.getItem(AUTH_KEY)) return } catch { /* noop */ }
   yaRedirigiendo = true
   try { localStorage.removeItem(AUTH_KEY) } catch { /* noop */ }
   try { sessionStorage.removeItem("sdtf_just_logged_in") } catch { /* noop */ }

@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { s3Upload } from "@/lib/s3"
 
 const MAX_SIZE = 15 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const formData = await req.formData()
     const file = formData.get("file") as File | null
@@ -67,6 +72,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: any) {
     console.error("[firma-efirma/autografa/upload]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }

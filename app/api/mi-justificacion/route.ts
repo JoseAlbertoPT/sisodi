@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion, verificarActor } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { getSecretariaScopeIds } from "@/lib/secretaria-scope"
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const usuarioId = req.headers.get("x-user-id")
+    // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
+    const actorErr = verificarActor(sesion, usuarioId)
+    if (actorErr) return actorErr
     if (!usuarioId) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })
     }

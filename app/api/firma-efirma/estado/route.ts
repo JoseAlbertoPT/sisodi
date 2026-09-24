@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { randomBytes } from "crypto"
 import { prisma } from "@/lib/prisma"
 
@@ -7,6 +9,9 @@ const FIRMANTES_INCLUDE = {
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const url = new URL(req.url)
     const uuid = url.searchParams.get("uuid")
@@ -86,6 +91,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (err: any) {
     console.error("[firma-efirma/estado]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }

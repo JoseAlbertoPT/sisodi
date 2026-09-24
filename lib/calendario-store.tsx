@@ -17,6 +17,7 @@ import {
 } from "@/lib/calendario-api"
 import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
 import { useRealtime } from "@/hooks/use-realtime"
+import { useAuth } from "@/lib/auth-context"
 
 export type RegimenPeriodo = "honorarios" | "asimilados" | "nombramiento"
 
@@ -75,9 +76,14 @@ export function CalendarioProvider({ children }: { children: ReactNode }) {
     }
   }, [ejercicio])
 
+  // La API exige sesión: se carga al iniciar sesión (antes del login solo
+  // devolvería 401).
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   useEffect(() => {
+    if (!userId) return
     load()
-  }, [load])
+  }, [load, userId])
 
   const refetch = useCallback(async () => {
     await load()

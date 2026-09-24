@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion, verificarActor } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { checkSesionUsuario } from "@/lib/validar-sesion"
@@ -29,6 +31,9 @@ function resolverFolioDictamen(sol: any): string | null {
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const vista = searchParams.get("vista")
@@ -41,6 +46,9 @@ export async function GET(req: NextRequest) {
     }
 
     const userId = searchParams.get("userId")
+    // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
+    const actorErr = verificarActor(sesion, userId)
+    if (actorErr) return actorErr
 
     const estadoEmitido = await prisma.estado.findFirst({
       where: { nombre: { equals: "Emitido", mode: "insensitive" } },
@@ -190,7 +198,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         ok:    false,
-        error: error?.message ?? "Error al obtener dictámenes emitidos",
+        error: mensajePublico(error, "Error al obtener dictámenes emitidos"),
       },
       { status: 500 }
     )
@@ -198,6 +206,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const { solicitudId, tipoFirma, archivoPdf, destinatarios, usuarioId } = body
@@ -268,7 +279,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(
       {
         ok:    false,
-        error: error?.message ?? "Error al actualizar el dictamen",
+        error: mensajePublico(error, "Error al actualizar el dictamen"),
       },
       { status: 500 }
     )

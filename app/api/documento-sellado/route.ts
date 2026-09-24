@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion, verificarActor } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { s3Upload, s3Delete } from "@/lib/s3"
@@ -14,6 +16,9 @@ function parseEtapa(value: string | null): Etapa | null {
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const solicitudIdRaw = searchParams.get("solicitudId")
@@ -43,17 +48,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, sellados })
   } catch (error: any) {
     console.error("[GET /api/documento-sellado]", error)
-    return NextResponse.json({ ok: false, error: error?.message ?? "Error" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(error, "Error") }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const form = await req.formData()
     const file = form.get("file") as File | null
     const solicitudIdRaw = form.get("solicitudId") as string | null
     const etapaRaw = form.get("etapa") as string | null
     const usuarioId = (form.get("usuarioId") as string | null) || null
+    // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
+    const actorErr = verificarActor(sesion, usuarioId)
+    if (actorErr) return actorErr
 
     if (!file || !solicitudIdRaw || !etapaRaw) {
       return NextResponse.json({ ok: false, error: "Faltan file, solicitudId o etapa" }, { status: 400 })
@@ -108,11 +119,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, sellado: data })
   } catch (error: any) {
     console.error("[POST /api/documento-sellado]", error)
-    return NextResponse.json({ ok: false, error: error?.message ?? "Error al subir" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(error, "Error al subir") }, { status: 500 })
   }
 }
 
 export async function DELETE(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const solicitudIdRaw = searchParams.get("solicitudId")
@@ -141,6 +155,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ ok: true })
   } catch (error: any) {
     console.error("[DELETE /api/documento-sellado]", error)
-    return NextResponse.json({ ok: false, error: error?.message ?? "Error" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(error, "Error") }, { status: 500 })
   }
 }

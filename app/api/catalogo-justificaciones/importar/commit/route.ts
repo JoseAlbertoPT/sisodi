@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { requireCatalogoAdmin } from "@/lib/api-guard"
 import {
@@ -13,6 +14,9 @@ import {
 } from "@/lib/importar-catalogo-excel"
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const formData = await req.formData()
     const userId = formData.get("userId") as string | null

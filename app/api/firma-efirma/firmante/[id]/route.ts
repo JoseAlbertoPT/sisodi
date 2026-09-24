@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 
 // Permite corregir el nombre / cargo impreso de un firmante que YA firmó,
@@ -10,6 +12,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { id } = await params
     const idNum = Number(id)
@@ -52,6 +57,6 @@ export async function PATCH(
     })
   } catch (err: any) {
     console.error("[PATCH /api/firma-efirma/firmante/:id]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }

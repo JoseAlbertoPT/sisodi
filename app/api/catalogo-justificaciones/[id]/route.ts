@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { requireCatalogoAdmin } from "@/lib/api-guard"
 import { broadcastUpdate } from "@/lib/sse-manager"
@@ -7,6 +8,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { id } = await params
     const body  = await req.json()

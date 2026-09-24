@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { requireCatalogoConsulta } from "@/lib/api-guard"
@@ -21,6 +22,9 @@ function maxPrestadoresPermitido(secretaria: string | null | undefined): number 
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const {

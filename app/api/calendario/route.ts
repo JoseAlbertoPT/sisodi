@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
@@ -23,6 +24,9 @@ function mapRow(r: any) {
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const ejercicio = Number(req.nextUrl.searchParams.get("ejercicio") ?? new Date().getFullYear())
     const rows = await prisma.calendario.findMany({ where: { ejercicio }, orderBy: { id: "asc" } })
@@ -39,6 +43,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const ejercicio = Number(req.nextUrl.searchParams.get("ejercicio") ?? new Date().getFullYear())
     const { honorarios, asimilados, nombramiento } = await req.json()

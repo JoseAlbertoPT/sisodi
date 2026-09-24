@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx"
 import type { PrismaClient } from "./generated/prisma"
 import { buildRomanNumberedList } from "./roman-list"
+import { contenidoParaCatalogo } from "./catalogo-contenido"
 
 export const SHEET_NAME_LEGACY = "BASE CONSOLIDADA"
 export const ADMIN_CORREO_DEFAULT = "admin@sisodij.gob.mx"
@@ -720,6 +721,8 @@ export async function actualizarSolicitudes(
     await prisma.catalogo_justificacion.updateMany({
       where: { solicitud_id: id },
       data: {
+        // También el contenido de la carta/dictamen (ver lib/catalogo-contenido.ts).
+        ...(await contenidoParaCatalogo(prisma, id)),
         regimen_contratacion:    data.regimen ?? undefined,
         programa_proyecto:       data.programa_proyecto ?? undefined,
         tipo_actividad:          data.tipo_actividades ?? null,
@@ -797,6 +800,8 @@ export async function sincronizarCatalogo(prisma: PrismaClient): Promise<Resulta
 
       await prisma.catalogo_justificacion.create({
         data: {
+          // Copia propia del contenido: el catálogo no debe depender de que la solicitud siga existiendo.
+          ...(await contenidoParaCatalogo(prisma, Number(sol.id))),
           solicitud_id:              sol.id,
           regimen_contratacion:      (sol as any).regimen ?? "honorarios",
           programa_proyecto:         (sol as any).programa_proyecto ?? "",

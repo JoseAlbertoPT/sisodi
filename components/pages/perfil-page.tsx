@@ -74,7 +74,7 @@ export function PerfilPage() {
         body: JSON.stringify({ rfc: user.rfc, password: passwordActual }),
       })
       if (!res.ok) { setError("La contraseña actual es incorrecta."); setCargando(false); return }
-      await changePassword(user.rfc, passwordNueva)
+      await changePassword(user.rfc, passwordActual, passwordNueva)
       logout()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cambiar la contraseña.")

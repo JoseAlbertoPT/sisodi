@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 
 function err(msg: string, status = 400) {
@@ -6,6 +7,9 @@ function err(msg: string, status = 400) {
 }
 
 export async function GET() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const categorias = await prisma.categoria_paraestatal.findMany({
       include: { organos: { orderBy: [{ orden: "asc" }, { nombre: "asc" }] } },
@@ -19,6 +23,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { nombre, orden } = await req.json()
     if (!nombre?.trim()) return err("El nombre es requerido")

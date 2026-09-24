@@ -8,3 +8,7 @@ node_modules
 *.md
 Dockerfile
 docker-compose*.yml
+.firma-bypass
+backup-*.json
+_scratch_*
+test_*.pdf

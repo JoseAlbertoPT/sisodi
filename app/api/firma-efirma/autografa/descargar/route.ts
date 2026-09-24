@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { s3Download } from "@/lib/s3"
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const solicitudIdRaw = searchParams.get("solicitudId")
@@ -27,6 +32,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (err: any) {
     console.error("[GET /api/firma-efirma/autografa/descargar]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error al descargar" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error al descargar") }, { status: 500 })
   }
 }

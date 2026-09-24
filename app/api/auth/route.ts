@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { puedeAdministrarCatalogo, puedeConsultarCatalogo } from "@/lib/api-guard"
+import { randomBytes, randomInt } from "crypto"
 import bcrypt from "bcryptjs"
 import nodemailer from "nodemailer"
+import { cerrarSesion, cerrarSesionesDeUsuario, hashToken, iniciarSesion, requireSesion } from "@/lib/session"
 
 const transporter = nodemailer.createTransport({
   host:   process.env.SMTP_HOST   ?? "smtp.gmail.com",
@@ -75,14 +77,97 @@ function formatearEspera(ms: number): string {
   return `${min} minuto${min !== 1 ? "s" : ""}`
 }
 
+// Mismo mínimo que ya exigen los formularios (login-form.tsx, perfil-page.tsx).
+const PASSWORD_MIN = 8
+// Intentos permitidos por código de recuperación antes de invalidarlo.
+const CODIGO_MAX_INTENTOS = 5
+const CODIGO_VIGENCIA_MS = 10 * 60 * 1000
+// Tiempo mínimo entre dos envíos de código al mismo usuario (el formulario ya
+// espera 60 s para "Reenviar"; esto solo frena abusos por script).
+const CODIGO_REENVIO_MIN_MS = 30 * 1000
+
+function buscarUsuarioPorRfc(rfc: string) {
+  return prisma.usuario.findUnique({
+    where:   { rfc: rfc.trim().toUpperCase() },
+    include: { rol: true, area: true, organo_centralizado: true },
+  })
+}
+
+type UsuarioLogin = NonNullable<Awaited<ReturnType<typeof buscarUsuarioPorRfc>>>
+
+/**
+ * Verifica RFC + contraseña aplicando el bloqueo por intentos fallidos. La usan
+ * el login y el cambio de contraseña (que exige la contraseña actual), así que
+ * ninguno de los dos sirve para adivinar contraseñas sin límite.
+ */
+async function verificarCredenciales(
+  rfc: string,
+  password: string,
+  msgIncorrecta = "Credenciales incorrectas",
+): Promise<UsuarioLogin | NextResponse> {
+  let usuario = await buscarUsuarioPorRfc(rfc)
+
+  if (!usuario)        return err(msgIncorrecta, 401)
+  if (!usuario.activo) return err("Su cuenta está desactivada. Contacte al administrador.", 403)
+
+  const ahora = new Date()
+
+  if (usuario.bloqueado_hasta && usuario.bloqueado_hasta > ahora) {
+    const restanteMs = usuario.bloqueado_hasta.getTime() - ahora.getTime()
+    return errBloqueo(`Cuenta bloqueada temporalmente por demasiados intentos fallidos. Intente de nuevo en ${formatearEspera(restanteMs)}.`, restanteMs)
+  }
+
+  // El bloqueo anterior ya expiró: se limpia y se arranca el conteo de
+  // intentos desde cero, pero conservando nivel_bloqueo (umbral más
+  // estricto para el siguiente bloqueo).
+  if (usuario.bloqueado_hasta) {
+    usuario = await prisma.usuario.update({
+      where: { id: usuario.id },
+      data:  { bloqueado_hasta: null, intentos_fallidos: 0 },
+      include: { rol: true, area: true, organo_centralizado: true },
+    })
+  }
+
+  const valida = await bcrypt.compare(password, usuario.password_hash)
+  if (!valida) {
+    const escalado = usuario.nivel_bloqueo >= 1
+    const umbral = escalado ? INTENTOS_UMBRAL_ESCALADO : INTENTOS_UMBRAL_INICIAL
+    const nuevosIntentos = usuario.intentos_fallidos + 1
+
+    if (nuevosIntentos >= umbral) {
+      const duracionMs = escalado ? DURACION_BLOQUEO_ESCALADO_MS : DURACION_BLOQUEO_INICIAL_MS
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: {
+          intentos_fallidos: 0,
+          bloqueado_hasta:   new Date(ahora.getTime() + duracionMs),
+          nivel_bloqueo:     Math.min(usuario.nivel_bloqueo + 1, 1),
+        },
+      })
+      return errBloqueo(`Demasiados intentos fallidos. Cuenta bloqueada por ${formatearEspera(duracionMs)}.`, duracionMs)
+    }
+
+    await prisma.usuario.update({ where: { id: usuario.id }, data: { intentos_fallidos: nuevosIntentos } })
+    return err(msgIncorrecta, 401)
+  }
+
+  if (usuario.intentos_fallidos > 0 || usuario.nivel_bloqueo > 0) {
+    await prisma.usuario.update({ where: { id: usuario.id }, data: { intentos_fallidos: 0, bloqueado_hasta: null, nivel_bloqueo: 0 } })
+  }
+  return usuario
+}
+
 export async function GET(req: NextRequest) {
   const action = req.nextUrl.searchParams.get("action")
-  const id     = req.nextUrl.searchParams.get("id")
 
-  if (action === "perfil" && id) {
+  if (action === "perfil") {
+    // Siempre el perfil del usuario de la sesión (el cliente manda su propio
+    // id en ?id=, que ya no se usa para no exponer datos de otros).
+    const sesion = await requireSesion()
+    if (sesion instanceof NextResponse) return sesion
     try {
       const usuario = await prisma.usuario.findUnique({
-        where:   { id },
+        where:   { id: sesion.id },
         include: { area: true, organo_centralizado: true },
       })
       if (!usuario) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -102,65 +187,16 @@ export async function POST(req: NextRequest) {
   const action = req.nextUrl.searchParams.get("action")
 
   try {
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
 
     if (action === "login") {
       const { rfc, password } = body
 
       if (!rfc || !password) return err("RFC y contraseña son requeridos")
 
-      let usuario = await prisma.usuario.findUnique({
-        where:   { rfc: rfc.trim().toUpperCase() },
-        include: { rol: true, area: true, organo_centralizado: true },
-      })
-
-      if (!usuario)        return err("Credenciales incorrectas", 401)
-      if (!usuario.activo) return err("Su cuenta está desactivada. Contacte al administrador.", 403)
-
-      const ahora = new Date()
-
-      if (usuario.bloqueado_hasta && usuario.bloqueado_hasta > ahora) {
-        const restanteMs = usuario.bloqueado_hasta.getTime() - ahora.getTime()
-        return errBloqueo(`Cuenta bloqueada temporalmente por demasiados intentos fallidos. Intente de nuevo en ${formatearEspera(restanteMs)}.`, restanteMs)
-      }
-
-      // El bloqueo anterior ya expiró: se limpia y se arranca el conteo de
-      // intentos desde cero, pero conservando nivel_bloqueo (umbral más
-      // estricto para el siguiente bloqueo).
-      if (usuario.bloqueado_hasta) {
-        usuario = await prisma.usuario.update({
-          where: { id: usuario.id },
-          data:  { bloqueado_hasta: null, intentos_fallidos: 0 },
-          include: { rol: true, area: true, organo_centralizado: true },
-        })
-      }
-
-      const valida = await bcrypt.compare(password, usuario.password_hash)
-      if (!valida) {
-        const escalado = usuario.nivel_bloqueo >= 1
-        const umbral = escalado ? INTENTOS_UMBRAL_ESCALADO : INTENTOS_UMBRAL_INICIAL
-        const nuevosIntentos = usuario.intentos_fallidos + 1
-
-        if (nuevosIntentos >= umbral) {
-          const duracionMs = escalado ? DURACION_BLOQUEO_ESCALADO_MS : DURACION_BLOQUEO_INICIAL_MS
-          await prisma.usuario.update({
-            where: { id: usuario.id },
-            data: {
-              intentos_fallidos: 0,
-              bloqueado_hasta:   new Date(ahora.getTime() + duracionMs),
-              nivel_bloqueo:     Math.min(usuario.nivel_bloqueo + 1, 1),
-            },
-          })
-          return errBloqueo(`Demasiados intentos fallidos. Cuenta bloqueada por ${formatearEspera(duracionMs)}.`, duracionMs)
-        }
-
-        await prisma.usuario.update({ where: { id: usuario.id }, data: { intentos_fallidos: nuevosIntentos } })
-        return err("Credenciales incorrectas", 401)
-      }
-
-      if (usuario.intentos_fallidos > 0 || usuario.nivel_bloqueo > 0) {
-        await prisma.usuario.update({ where: { id: usuario.id }, data: { intentos_fallidos: 0, bloqueado_hasta: null, nivel_bloqueo: 0 } })
-      }
+      const resultado = await verificarCredenciales(String(rfc), String(password))
+      if (resultado instanceof NextResponse) return resultado
+      const usuario = resultado
 
       const [catalogoAdministracion, catalogoConsulta] = await Promise.all([
         puedeAdministrarCatalogo(usuario.id),
@@ -168,7 +204,8 @@ export async function POST(req: NextRequest) {
       ])
       await prisma.usuario.update({ where: { id: usuario.id }, data: { ultima_actividad: new Date() } })
 
-      return NextResponse.json({
+      const mustChangePassword = usuario.must_change_password ?? false
+      const res = NextResponse.json({
         id:                  usuario.id,
         nombre:              usuario.nombre,
         correo:              usuario.correo,
@@ -179,33 +216,51 @@ export async function POST(req: NextRequest) {
         secretariaId:        usuario.secretaria_id ?? null,
         organoNombre:        usuario.organo_centralizado?.nombre ?? null,
         claveReportePlazas:  usuario.organo_centralizado?.clave_reporte_plazas ?? null,
-        mustChangePassword:  usuario.must_change_password ?? false,
+        mustChangePassword,
         tipoAdministracion:  usuario.organo_centralizado ? "centralizada" : "paraestatal",
         catalogoAdministracion,
         catalogoConsulta,
       })
+      // Quien debe cambiar su contraseña no recibe sesión hasta hacerlo (el
+      // frontend tampoco lo deja entrar: vuelve a pedir login al terminar).
+      if (!mustChangePassword) await iniciarSesion(res, req, usuario.id)
+      return res
     }
+
+    if (action === "logout") {
+      const res = NextResponse.json({ ok: true })
+      await cerrarSesion(res)
+      return res
+    }
+
     if (action === "heartbeat") {
-      const { usuarioId } = body
-      if (!usuarioId) return err("usuarioId requerido")
+      const sesion = await requireSesion()
+      if (sesion instanceof NextResponse) return sesion
       await prisma.usuario.updateMany({
-        where: { id: usuarioId },
+        where: { id: sesion.id },
         data:  { ultima_actividad: new Date() },
       })
       return NextResponse.json({ ok: true })
     }
 
     if (action === "change-password") {
-      const { rfc, nuevaPassword } = body
-      if (!rfc || !nuevaPassword) return err("Datos incompletos")
+      const { rfc, passwordActual, nuevaPassword } = body
+      if (!rfc || !passwordActual || !nuevaPassword) return err("Datos incompletos")
+      if (String(nuevaPassword).length < PASSWORD_MIN) return err(`La nueva contraseña debe tener al menos ${PASSWORD_MIN} caracteres.`)
 
-      const hash    = await bcrypt.hash(nuevaPassword, 12)
-      const updated = await prisma.usuario.updateMany({
-        where: { rfc: rfc.trim().toUpperCase(), activo: true },
+      // Exige la contraseña actual (con el mismo bloqueo por intentos que el
+      // login): antes bastaba el RFC para cambiarle la contraseña a cualquiera.
+      const resultado = await verificarCredenciales(String(rfc), String(passwordActual), "La contraseña actual es incorrecta.")
+      if (resultado instanceof NextResponse) return resultado
+
+      const hash = await bcrypt.hash(String(nuevaPassword), 12)
+      await prisma.usuario.update({
+        where: { id: resultado.id },
         data:  { password_hash: hash, must_change_password: false },
       })
-
-      if (updated.count === 0) return err("Usuario no encontrado", 404)
+      // El frontend cierra sesión tras cambiarla; aquí además se invalidan
+      // las sesiones abiertas en otros equipos.
+      await cerrarSesionesDeUsuario(resultado.id)
       return NextResponse.json({ ok: true })
     }
 
@@ -214,23 +269,30 @@ export async function POST(req: NextRequest) {
       if (!rfc) return err("RFC requerido")
 
       const usuario = await prisma.usuario.findFirst({
-        where:  { rfc: rfc.trim().toUpperCase(), activo: true },
-        select: { id: true, correo: true },
+        where:  { rfc: String(rfc).trim().toUpperCase(), activo: true },
+        select: { id: true, correo: true, codigo_recuperacion: { select: { expira_en: true } } },
       })
 
       if (!usuario) return err("No se encontró ninguna cuenta asociada a ese RFC.", 404)
 
-      
-      const codigo   = Math.floor(100000 + Math.random() * 900000).toString()
-      const expiraEn = new Date(Date.now() + 10 * 60 * 1000) 
+      const previo = usuario.codigo_recuperacion?.expira_en
+      if (previo) {
+        const enviadoHaceMs = Date.now() - (previo.getTime() - CODIGO_VIGENCIA_MS)
+        if (enviadoHaceMs >= 0 && enviadoHaceMs < CODIGO_REENVIO_MIN_MS) {
+          return err("Espere unos segundos antes de solicitar otro código.", 429)
+        }
+      }
+
+      // crypto.randomInt: generador criptográfico (Math.random no lo es).
+      const codigo   = randomInt(100000, 1000000).toString()
+      const expiraEn = new Date(Date.now() + CODIGO_VIGENCIA_MS)
 
       await prisma.codigo_recuperacion.upsert({
         where:  { usuario_id: usuario.id },
-        create: { usuario_id: usuario.id, codigo, expira_en: expiraEn, usado: false },
-        update: { codigo, expira_en: expiraEn, usado: false },
+        create: { usuario_id: usuario.id, codigo, expira_en: expiraEn, usado: false, intentos: 0, reset_token_hash: null },
+        update: { codigo, expira_en: expiraEn, usado: false, intentos: 0, reset_token_hash: null },
       })
 
-      
       try {
         await enviarCodigoRecuperacion(usuario.correo, codigo)
         console.log(`[mailer] Código enviado a ${maskEmail(usuario.correo)}`)
@@ -250,11 +312,7 @@ export async function POST(req: NextRequest) {
       if (!rfc || !codigo) return err("Datos incompletos")
 
       const registro = await prisma.codigo_recuperacion.findFirst({
-        where: {
-          codigo,
-          usado:   false,
-          usuario: { rfc: rfc.trim().toUpperCase() },
-        },
+        where: { usado: false, usuario: { rfc: String(rfc).trim().toUpperCase() } },
       })
 
       if (!registro)
@@ -263,38 +321,55 @@ export async function POST(req: NextRequest) {
       if (new Date() > new Date(registro.expira_en))
         return err("El código ha expirado. Solicite uno nuevo.", 400)
 
+      if (registro.codigo !== String(codigo)) {
+        // Límite de intentos por código: sin esto un código de 6 dígitos se
+        // podía adivinar a fuerza bruta dentro de sus 10 minutos.
+        const intentos = registro.intentos + 1
+        const agotado = intentos >= CODIGO_MAX_INTENTOS
+        await prisma.codigo_recuperacion.update({
+          where: { id: registro.id },
+          data:  { intentos, ...(agotado ? { usado: true } : {}) },
+        })
+        if (agotado) return err("Demasiados intentos. Solicite un código nuevo.", 400)
+        return err("Código incorrecto. Verifique e intente de nuevo.", 400)
+      }
+
+      // Token de un solo uso que el paso final debe presentar: prueba que el
+      // código sí se validó (antes el reset solo pedía el RFC).
+      const resetToken = randomBytes(32).toString("hex")
       await prisma.codigo_recuperacion.update({
         where: { id: registro.id },
-        data:  { usado: true },
+        data:  { usado: true, reset_token_hash: hashToken(resetToken), expira_en: new Date(Date.now() + CODIGO_VIGENCIA_MS) },
       })
 
-      return NextResponse.json({ ok: true })
+      return NextResponse.json({ ok: true, resetToken })
     }
 
     if (action === "recuperar-reset") {
-      const { rfc, nuevaPassword } = body
-      if (!rfc || !nuevaPassword) return err("Datos incompletos")
+      const { rfc, resetToken, nuevaPassword } = body
+      if (!rfc || !resetToken || !nuevaPassword) return err("Datos incompletos")
+      if (String(nuevaPassword).length < PASSWORD_MIN) return err(`La nueva contraseña debe tener al menos ${PASSWORD_MIN} caracteres.`)
 
-      const hash    = await bcrypt.hash(nuevaPassword, 12)
-      const updated = await prisma.usuario.updateMany({
-        where: { rfc: rfc.trim().toUpperCase(), activo: true },
+      const registro = await prisma.codigo_recuperacion.findFirst({
+        where: {
+          reset_token_hash: hashToken(String(resetToken)),
+          expira_en:        { gt: new Date() },
+          usuario:          { rfc: String(rfc).trim().toUpperCase(), activo: true },
+        },
+        select: { usuario_id: true },
+      })
+      if (!registro) return err("La verificación expiró. Solicite un código nuevo.", 400)
+
+      const hash = await bcrypt.hash(String(nuevaPassword), 12)
+      await prisma.usuario.update({
+        where: { id: registro.usuario_id },
         // Restablecer por correo ya verifica identidad (código enviado a su
         // correo) — de paso se limpia cualquier bloqueo por intentos
         // fallidos, para no dejarlo bloqueado después de recuperar el acceso.
         data:  { password_hash: hash, must_change_password: false, intentos_fallidos: 0, bloqueado_hasta: null, nivel_bloqueo: 0 },
       })
-
-      if (updated.count === 0) return err("Usuario no encontrado", 404)
-
-      const usuario = await prisma.usuario.findFirst({
-        where:  { rfc: rfc.trim().toUpperCase() },
-        select: { id: true },
-      })
-      if (usuario) {
-        await prisma.codigo_recuperacion.deleteMany({
-          where: { usuario_id: usuario.id },
-        })
-      }
+      await prisma.codigo_recuperacion.deleteMany({ where: { usuario_id: registro.usuario_id } })
+      await cerrarSesionesDeUsuario(registro.usuario_id)
 
       return NextResponse.json({ ok: true })
     }

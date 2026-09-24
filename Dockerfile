@@ -6,6 +6,9 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+# SheetJS (xlsx) se instala desde el tarball oficial versionado en vendor/: la
+# versión de npm (0.18.5) está abandonada y tiene vulnerabilidades sin parche.
+COPY vendor ./vendor
 RUN npm ci
 
 # --- Builder ---

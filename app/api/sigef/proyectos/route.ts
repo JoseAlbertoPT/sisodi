@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { getProyectosCached, resolverIdDependencia } from "@/lib/sigef-cache"
 
 export const runtime = "nodejs"
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const { searchParams } = new URL(req.url)
   const secretaria = searchParams.get("secretaria")?.trim()
   if (!secretaria) {
@@ -30,7 +35,7 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[GET /api/sigef/proyectos]", e)
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Error al consultar SIGeF" },
+      { error: mensajePublico(e, "Error al consultar SIGeF") },
       { status: 502 },
     )
   }

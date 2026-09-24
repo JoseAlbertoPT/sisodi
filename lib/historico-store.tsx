@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from "react"
 import type { HistoricoRow } from "./parse-excel-historico"
 import * as historicoApi from "./historico-api"
+import { useAuth } from "@/lib/auth-context"
 
 export interface HistoricoRecord {
   id: string
@@ -47,7 +48,14 @@ export function HistoricoStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  useEffect(() => { refetch() }, [refetch])
+  // La API exige sesión: se carga al iniciar sesión (antes del login solo
+  // devolvería 401).
+  const { user } = useAuth()
+  const userId = user?.id ?? null
+  useEffect(() => {
+    if (!userId) { setHistoricos([]); return }
+    refetch()
+  }, [refetch, userId])
 
   const uploadHistorico = useCallback(
     async (file: File, file2?: File | null): Promise<HistoricoRecord> => {

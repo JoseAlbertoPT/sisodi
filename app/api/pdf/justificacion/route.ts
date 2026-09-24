@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mensajePublico } from "@/lib/error-publico";
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma";
 import { renderToStream } from "@react-pdf/renderer";
 import {
@@ -734,12 +736,15 @@ async function generatePDFResponse(solicitudId: string | null, firmasInput: Firm
   } catch (error: unknown) {
     console.error(error);
     const message =
-      error instanceof Error ? error.message : "Error al generar el PDF";
+      mensajePublico(error, "Error al generar el PDF");
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const body = await req.json().catch(() => ({}));
   const firmas: FirmaNames = {
     firmaElaboroNombre: body.firmaElaboroNombre,
@@ -756,6 +761,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
   const catalogoId = searchParams.get("catalogoId");

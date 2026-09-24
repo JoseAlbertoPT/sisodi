@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import type { firmaDatosEx } from "@/lib/firma-oficio-client"
 import { firmarProcesoConWsFirmaOficio } from "@/lib/firma-ws-proceso"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { checkSesionUsuario } from "@/lib/validar-sesion"
 import { ESTADO_POR_BANDEJA_PENDIENTE } from "@/lib/firma-plantillas"
-import { puedeFirmarVerificacion } from "@/lib/api-guard"
+import { puedeFirmarVerificacion } from "@/lib/api-guard"
+import { contenidoParaCatalogo } from "@/lib/catalogo-contenido"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -14,6 +17,9 @@ const norm = (s: string) => s.normalize("NFD").replace(new RegExp("[\\u0300-\\u0
 const BYPASS = process.env.EFIRMA_BYPASS === "true"
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const { firmanteId, usuarioId, cargoFirmante, certificado, clavePrivada, fraseClavePrivada, skipEmit, nombreCert, rfcCert } = body
@@ -291,6 +297,8 @@ export async function POST(req: NextRequest) {
                   : null
               await prisma.catalogo_justificacion.create({
                 data: {
+                  // Copia propia del contenido: el catálogo no debe depender de que la solicitud siga existiendo.
+                  ...(await contenidoParaCatalogo(prisma, Number(solicitudId))),
                   solicitud_id:              solicitudId,
                   regimen_contratacion:      (solicitud as any).regimen ?? "honorarios",
                   programa_proyecto:         (solicitud as any).programa_proyecto ?? "",
@@ -330,6 +338,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (err: any) {
     console.error("[firma-efirma/firmar-interno]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }

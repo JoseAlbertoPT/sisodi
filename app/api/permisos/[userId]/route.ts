@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireGestionUsuarios } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
@@ -11,6 +12,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  const sesion = await requireGestionUsuarios()
+  if (sesion instanceof NextResponse) return sesion
+
   const { userId } = await params
 
   const user = await prisma.usuario.findUnique({
@@ -57,6 +61,9 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  const sesion = await requireGestionUsuarios()
+  if (sesion instanceof NextResponse) return sesion
+
   const { userId } = await params
   const body: PermisosUser = await req.json()
 

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { cerrarSesionesDeUsuario } from "@/lib/session"
+import { esAdministrador, requireGestionUsuarios } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { broadcastForceLogout } from "@/lib/sse-manager"
@@ -11,6 +13,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const sesion = await requireGestionUsuarios()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { id } = await params
     const { nombre, correo, rfc, password, rolNombre, areaNombre, activo, secretariaId, secretariaTexto, cargo } = await req.json()
@@ -18,24 +23,21 @@ export async function PATCH(
     const usuarioActual = await prisma.usuario.findUnique({ where: { id }, include: { rol: true } })
     if (!usuarioActual) return err("Usuario no encontrado", 404)
 
-    // Solo un Administrador puede modificar/gestionar a otro usuario con rol Administrador.
-    if (usuarioActual.rol?.nombre?.toLowerCase() === "administrador") {
-      const solicitanteId = req.headers.get("x-user-id")
-      const solicitante = solicitanteId
-        ? await prisma.usuario.findUnique({
-            where: { id: solicitanteId },
-            select: { rol: { select: { nombre: true } } },
-          })
-        : null
-      if (solicitante?.rol?.nombre?.toLowerCase() !== "administrador") {
-        return err("Solo un administrador puede modificar a un usuario administrador", 403)
-      }
+    // Solo un Administrador puede modificar/gestionar a otro usuario con rol
+    // Administrador. Quién solicita sale de la sesión (antes de la cabecera
+    // x-user-id, que el cliente podía falsear).
+    if (esAdministrador(usuarioActual.rol?.nombre) && !esAdministrador(sesion.rol)) {
+      return err("Solo un administrador puede modificar a un usuario administrador", 403)
     }
 
     let rol_id = usuarioActual.rol_id
     if (rolNombre) {
       const rol = await prisma.rol.findFirst({ where: { nombre: rolNombre } })
       if (!rol) return err(`Rol "${rolNombre}" no encontrado`, 404)
+      // Tampoco se puede promover a Administrador sin serlo.
+      if (rol.id !== usuarioActual.rol_id && esAdministrador(rol.nombre) && !esAdministrador(sesion.rol)) {
+        return err("Solo un administrador puede asignar el rol de administrador", 403)
+      }
       rol_id = rol.id
     }
 
@@ -188,6 +190,8 @@ export async function PATCH(
     // sesión abierta en el navegador, no debe poder seguir usando el sistema.
     if (secretariaIdCambia || secretariaTextoCambia || rolCambia || areaCambia || nombreCambia || rfcCambia || cargoCambia || passwordCambia || seDeshabilita) {
       broadcastForceLogout([id])
+      // Además de avisarle al navegador, invalida sus sesiones en el servidor.
+      await cerrarSesionesDeUsuario(id)
     }
 
     return NextResponse.json({

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireSesion } from "@/lib/session"
 import { renderToStream } from "@react-pdf/renderer";
 import {
   PlantillaCartaDescriptivaServicios,
@@ -17,6 +18,9 @@ async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
 }
 
 export async function GET() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const mock: CartaDescriptivaData = {
     clave: "SDEyT/34/01/2026",
     fecha: "01 de enero de 2026",

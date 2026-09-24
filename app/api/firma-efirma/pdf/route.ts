@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
 import { readFile } from "fs/promises"
 import { join } from "path"
 import { prisma } from "@/lib/prisma"
@@ -62,6 +63,6 @@ export async function GET(req: NextRequest) {
     }
   } catch (err: any) {
     console.error("[firma-efirma/pdf]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }

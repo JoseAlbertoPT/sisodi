@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
@@ -20,6 +21,9 @@ function toClient(p: {
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const usuarioId = req.nextUrl.searchParams.get("usuarioId")
     const rows = await prisma.permiso_captura.findMany({
@@ -34,6 +38,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { usuarioId, regimen, periodo, grantedBy } = await req.json()
     if (!usuarioId || !regimen || !periodo || !grantedBy)
@@ -45,7 +52,8 @@ export async function POST(req: NextRequest) {
     })
 
     const created = await prisma.permiso_captura.create({
-      data: { usuario_id: usuarioId, regimen, periodo, granted_by: grantedBy },
+      // Quien otorga es el usuario de la sesión (el cliente manda su propio nombre).
+      data: { usuario_id: usuarioId, regimen, periodo, granted_by: sesion.nombre || grantedBy },
     })
     broadcastUpdate(["permisos-captura"])
     return NextResponse.json(toClient(created), { status: 201 })

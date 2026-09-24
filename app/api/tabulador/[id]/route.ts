@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
@@ -28,6 +29,9 @@ function mismasSecretarias(a: string[], b: string[]): boolean {
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const id = Number((await params).id)
     if (!Number.isInteger(id)) return NextResponse.json({ ok: false, error: "id inválido" }, { status: 400 })
@@ -67,6 +71,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const id = Number((await params).id)
     if (!Number.isInteger(id)) return NextResponse.json({ ok: false, error: "id inválido" }, { status: 400 })

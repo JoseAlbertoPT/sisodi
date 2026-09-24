@@ -26,7 +26,7 @@ interface AuthContextType {
   isLoading: boolean
   login: (rfc: string, password: string) => Promise<{ mustChangePassword: boolean } | { error: string; retryAfterMs?: number }>
   logout: () => void
-  changePassword: (rfc: string, nuevaPassword: string) => Promise<void>
+  changePassword: (rfc: string, passwordActual: string, nuevaPassword: string) => Promise<void>
 }
 
 export const AUTH_KEY = "sdtf_user"
@@ -81,11 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const changePassword = async (rfc: string, nuevaPassword: string): Promise<void> => {
+  const changePassword = async (rfc: string, passwordActual: string, nuevaPassword: string): Promise<void> => {
+    // El servidor exige la contraseña actual (antes bastaba el RFC).
     const res = await fetch("/api/auth?action=change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rfc, nuevaPassword }),
+      body: JSON.stringify({ rfc, passwordActual, nuevaPassword }),
     })
     if (!res.ok) {
       const data = await res.json()
@@ -97,6 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null)
     try { localStorage.removeItem(LAST_ACTIVITY_KEY) } catch { /* noop */ }
+    // Borra la sesión del servidor (cookie HttpOnly, ver lib/session.ts).
+    fetch("/api/auth?action=logout", { method: "POST" }).catch(() => { /* noop */ })
   }, [])
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)

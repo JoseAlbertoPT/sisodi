@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 
 interface TreeNode {
@@ -12,6 +13,9 @@ interface TreeNode {
   acciones: { code: string; label: string }[]
 }
 export async function GET() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const allMenus = await prisma.menu.findMany({
     where: { activo: true },
     orderBy: { orden: "asc" },

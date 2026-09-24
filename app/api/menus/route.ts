@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion, verificarActor } from "@/lib/session"
 import pool from "@/lib/db"
 
 interface MenuNode {
@@ -12,8 +14,14 @@ interface MenuNode {
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const rolNombre = req.nextUrl.searchParams.get("rol")
   const userId    = req.nextUrl.searchParams.get("userId")
+  // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
+  const actorErr = verificarActor(sesion, userId)
+  if (actorErr) return actorErr
   if (!rolNombre) {
     return NextResponse.json({ error: "Falta parámetro 'rol'" }, { status: 400 })
   }
@@ -120,7 +128,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("[GET /api/menus] error:", err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Error interno" },
+      { error: mensajePublico(err, "Error interno") },
       { status: 500 }
     )
   }

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mensajePublico } from "@/lib/error-publico";
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma";
 import { renderToStream } from "@react-pdf/renderer";
 import {
@@ -207,7 +209,7 @@ async function buildPDFResponse(solicitudId: string | null, overrides: PdfOverri
     result = await buildDictamenPrestacionBuffer(solicitudId, overrides, catalogoId);
   } catch (e) {
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "No se pudo generar el dictamen" },
+      { ok: false, error: mensajePublico(e, "No se pudo generar el dictamen") },
       { status: 403 },
     );
   }
@@ -229,6 +231,9 @@ async function buildPDFResponse(solicitudId: string | null, overrides: PdfOverri
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const { searchParams } = new URL(req.url);
   const solicitudId = searchParams.get("id");
   const catalogoId = searchParams.get("catalogoId");
@@ -242,6 +247,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   const body = await req.json().catch(() => ({}));
   const solicitudId = body?.solicitudId ? String(body.solicitudId) : null;
   const catalogoId = body?.catalogoId ? String(body.catalogoId) : null;

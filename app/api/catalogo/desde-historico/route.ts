@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 
 function normalize(s: string): string {
@@ -71,6 +72,9 @@ function processSheets(
 }
 
 export async function GET() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const historicos = await prisma.historico.findMany({
       orderBy: { subido_en: "desc" },

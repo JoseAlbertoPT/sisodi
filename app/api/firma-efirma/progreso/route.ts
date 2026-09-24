@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion, verificarActor } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 
 const BYPASS = process.env.EFIRMA_BYPASS === "true"
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const url = new URL(req.url)
     const usuarioId = url.searchParams.get("usuarioId") ?? undefined
+    // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
+    const actorErr = verificarActor(sesion, usuarioId)
+    if (actorErr) return actorErr
     const soloPendientesPorMi = url.searchParams.get("pendientePorMi") === "1"
 
     const procesos = await prisma.firma_proceso.findMany({
@@ -127,6 +135,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (err: any) {
     console.error("[firma-efirma/progreso]", err)
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }

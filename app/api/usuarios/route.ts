@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
+import { esAdministrador, puedeGestionarUsuarios, requireGestionUsuarios } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
@@ -7,6 +9,9 @@ function err(msg: string, status = 400) {
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const rolFiltro          = searchParams.get("rol")
@@ -14,6 +19,12 @@ export async function GET(req: NextRequest) {
     const checkCorreo        = searchParams.get("checkCorreo")
     const checkRfc           = searchParams.get("checkRfc")
     const soloActivos        = searchParams.get("soloActivos") === "true"
+
+    // Cualquier usuario con sesión puede listar (varias bandejas eligen
+    // Revisores de aquí), pero RFC y las validaciones de duplicados son solo
+    // para quien gestiona usuarios.
+    const gestiona = await puedeGestionarUsuarios(sesion.id)
+    if ((checkCorreo || checkRfc) && !gestiona) return err("No autorizado", 403)
 
     if (checkCorreo) {
       const existe = await prisma.usuario.findFirst({ where: { correo: checkCorreo.trim().toLowerCase() } })
@@ -46,7 +57,7 @@ export async function GET(req: NextRequest) {
         id:                 u.id,
         nombre:             u.nombre,
         correo:             u.correo,
-        rfc:                u.rfc ?? null,
+        rfc:                gestiona ? (u.rfc ?? null) : null,
         rol:                u.rol.nombre,
         secretaria:         u.secretaria_texto ?? u.area?.nombre ?? "Sin área",
         secretariaId:       u.secretaria_id ?? null,
@@ -62,6 +73,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireGestionUsuarios()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { nombre, correo, rfc, password, rolNombre, areaNombre, secretariaId, secretariaTexto, cargo } = await req.json()
 
@@ -72,6 +86,11 @@ export async function POST(req: NextRequest) {
 
     const rol = await prisma.rol.findFirst({ where: { nombre: rolNombre } })
     if (!rol) return err(`Rol "${rolNombre}" no encontrado`, 404)
+    // Misma regla que al editar (usuarios/[id]): solo un Administrador puede
+    // dar el rol de Administrador.
+    if (esAdministrador(rol.nombre) && !esAdministrador(sesion.rol)) {
+      return err("Solo un administrador puede crear un usuario administrador", 403)
+    }
 
     const area = areaNombre
       ? await prisma.area.findFirst({ where: { nombre: areaNombre } })

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion, verificarActor } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { getEstadoId } from "@/lib/estado-cache"
@@ -19,6 +21,9 @@ async function resolverPeriodoId(periodoId?: number, mes?: number, anio?: number
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const estadoParam = searchParams.get("estado") ?? "En Captura"
@@ -57,13 +62,16 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("[GET /api/solicitudes]", error)
     return NextResponse.json(
-      { ok: false, error: error?.message ?? "Error al obtener solicitudes" },
+      { ok: false, error: mensajePublico(error, "Error al obtener solicitudes") },
       { status: 500 }
     )
   }
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const {
@@ -82,6 +90,9 @@ export async function POST(req: NextRequest) {
       estado_nombre, tipo_administracion,
     } = body
     if (!usuarioId)      return NextResponse.json({ ok: false, error: "usuarioId es requerido" }, { status: 400 })
+    // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
+    const actorErr = verificarActor(sesion, usuarioId)
+    if (actorErr) return actorErr
     if (!tipo_solicitud) return NextResponse.json({ ok: false, error: "tipo_solicitud es requerido" }, { status: 400 })
     const estadoNombre = estado_nombre ?? "En Captura"
 
@@ -232,11 +243,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, data: nueva, folio: folioJustificacion }, { status: 201 })
   } catch (error: any) {
     console.error("[POST /api/solicitudes]", error)
-    return NextResponse.json({ ok: false, error: error?.message ?? "Error al crear solicitud" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(error, "Error al crear solicitud") }, { status: 500 })
   }
 }
 
 export async function PATCH(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const { solicitudId: rawId, ...campos } = body
@@ -320,6 +334,9 @@ export async function PATCH(req: NextRequest) {
       if (pid) data.periodo_id = pid
     }
     const usuarioId    = campos.usuarioId ?? null
+    // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
+    const actorErr = verificarActor(sesion, usuarioId)
+    if (actorErr) return actorErr
     const historialDiff: { campo: string; de: string; a: string }[] | undefined =
       Array.isArray(campos.historialDiff) ? campos.historialDiff : undefined
 
@@ -357,6 +374,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true, data: updated })
   } catch (error: any) {
     console.error("[PATCH /api/solicitudes]", error)
-    return NextResponse.json({ ok: false, error: error?.message ?? "Error al actualizar solicitud" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(error, "Error al actualizar solicitud") }, { status: 500 })
   }
 }

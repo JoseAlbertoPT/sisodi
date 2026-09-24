@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { idsSolicitudesImportadas } from "@/lib/importar-catalogo-excel"
+import { contenidoParaCatalogo } from "@/lib/catalogo-contenido"
 
 export async function GET(_req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const [totalDictamenes, totalCatalogo, estados] = await Promise.all([
       prisma.dictamen.count(),
@@ -20,11 +26,14 @@ export async function GET(_req: NextRequest) {
       estados: estados.map((r) => ({ nombre: r.nombre, total: Number(r.total) })),
     })
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "Error" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(e, "Error") }, { status: 500 })
   }
 }
 
 export async function POST(_req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     // Recopilar IDs de solicitudes candidatas desde dos fuentes:
     // 1. Solicitudes que tienen registro en tabla dictamen
@@ -70,6 +79,8 @@ export async function POST(_req: NextRequest) {
 
         await prisma.catalogo_justificacion.create({
           data: {
+            // Copia propia del contenido: el catálogo no debe depender de que la solicitud siga existiendo.
+            ...(await contenidoParaCatalogo(prisma, Number(sol.id))),
             solicitud_id:              sol.id,
             regimen_contratacion:      (sol as any).regimen ?? "honorarios",
             programa_proyecto:         (sol as any).programa_proyecto ?? "",
@@ -92,7 +103,7 @@ export async function POST(_req: NextRequest) {
         })
         insertados++
       } catch (e: any) {
-        errores.push(`solicitud ${sol.id}: ${e?.message ?? "error"}`)
+        errores.push(`solicitud ${sol.id}: ${mensajePublico(e, "error")}`)
         console.error(`[sincronizar] Error al insertar solicitud ${sol.id}:`, e)
       }
     }
@@ -100,6 +111,6 @@ export async function POST(_req: NextRequest) {
     return NextResponse.json({ ok: true, insertados, total: solicitudes.length, errores })
   } catch (e: any) {
     console.error("[POST /api/catalogo-justificaciones/sincronizar]", e)
-    return NextResponse.json({ ok: false, error: e?.message ?? "Error" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(e, "Error") }, { status: 500 })
   }
 }

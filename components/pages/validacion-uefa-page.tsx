@@ -369,6 +369,10 @@ function DictamenModal({
   const titulo = esParaestatal ? "OPINIÓN TÉCNICA FUNCIONAL" : "DICTAMEN TÉCNICO FUNCIONAL"
   const folioDictamenFormateado  = formatearFolio(solicitud.folioDictamen)
   const folioRecepcionFormateado = formatearFolio(solicitud.folio)
+  // Los datos vienen de la captura del solicitante: se escapan antes de
+  // meterlos al HTML de la ventana de impresión (misma sesión/origen).
+  const esc = (v: unknown) =>
+    String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!)
   const handlePrint = () => {
     const pw = window.open("", "_blank")
     if (!pw) return
@@ -393,21 +397,21 @@ function DictamenModal({
         <p>DIRECCIÓN DE ORGANIZACIÓN</p>
         <h1>${titulo}</h1>
       </div>
-      <p><strong>Número:</strong> ${folioDictamenFormateado}</p>
-      <p><strong>Folio Recepción:</strong> ${folioRecepcionFormateado}</p>
-      <p><strong>Fecha:</strong> ${solicitud.fechaDictamen ?? "—"}</p>
+      <p><strong>Número:</strong> ${esc(folioDictamenFormateado)}</p>
+      <p><strong>Folio Recepción:</strong> ${esc(folioRecepcionFormateado)}</p>
+      <p><strong>Fecha:</strong> ${esc(solicitud.fechaDictamen ?? "—")}</p>
       <p><strong>Modalidad:</strong> ${solicitud.tipoFirma === "electronica" ? "Firma Electrónica" : "Firma Autógrafa"}</p>
       <h2>Destinatarios</h2>
       <ul>${(solicitud.destinatarios ?? []).length > 0
-        ? (solicitud.destinatarios ?? []).map((d) => `<li>${d}</li>`).join("")
+        ? (solicitud.destinatarios ?? []).map((d) => `<li>${esc(d)}</li>`).join("")
         : "<li>—</li>"}</ul>
       <h2>Datos del Solicitante</h2>
-      <p><strong>Secretaría:</strong> ${solicitud.secretaria} &nbsp;|&nbsp; <strong>Denominación:</strong> ${solicitud.denominacion}</p>
-      <p><strong>Vigencia:</strong> ${solicitud.vigenciaInicio} — ${solicitud.vigenciaFin} &nbsp;|&nbsp; <strong>Importe:</strong> ${solicitud.importeBruto}</p>
+      <p><strong>Secretaría:</strong> ${esc(solicitud.secretaria)} &nbsp;|&nbsp; <strong>Denominación:</strong> ${esc(solicitud.denominacion)}</p>
+      <p><strong>Vigencia:</strong> ${esc(solicitud.vigenciaInicio)} — ${esc(solicitud.vigenciaFin)} &nbsp;|&nbsp; <strong>Importe:</strong> ${esc(solicitud.importeBruto)}</p>
       <div class="firmas">
-        <div class="firma-block"><div class="firma-line"><p>${solicitud.firmadoPor?.reviso ?? "—"}</p><p class="firma-role">Revisó</p></div></div>
-        <div class="firma-block"><div class="firma-line"><p>${solicitud.firmadoPor?.valido ?? "—"}</p><p class="firma-role">Validó</p></div></div>
-        <div class="firma-block"><div class="firma-line"><p>${solicitud.firmadoPor?.emitio ?? "—"}</p><p class="firma-role">Emitió</p></div></div>
+        <div class="firma-block"><div class="firma-line"><p>${esc(solicitud.firmadoPor?.reviso ?? "—")}</p><p class="firma-role">Revisó</p></div></div>
+        <div class="firma-block"><div class="firma-line"><p>${esc(solicitud.firmadoPor?.valido ?? "—")}</p><p class="firma-role">Validó</p></div></div>
+        <div class="firma-block"><div class="firma-line"><p>${esc(solicitud.firmadoPor?.emitio ?? "—")}</p><p class="firma-role">Emitió</p></div></div>
       </div>
       <div class="sello">DICTAMINADO</div>
       </body></html>

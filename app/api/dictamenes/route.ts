@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
-import { checkSesionUsuario } from "@/lib/validar-sesion"
+import { checkSesionUsuario } from "@/lib/validar-sesion"
+import { contenidoParaCatalogo } from "@/lib/catalogo-contenido"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 
@@ -23,6 +26,9 @@ async function generarFolioDictamen(tipo: "dictamen" | "opinion"): Promise<strin
 }
 
 export async function GET(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const { searchParams } = new URL(req.url)
     const vista = searchParams.get("vista") ?? "pendientes"
@@ -183,13 +189,16 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("[GET /api/emision]", error)
     return NextResponse.json(
-      { ok: false, error: error?.message ?? "Error al obtener solicitudes para emisión" },
+      { ok: false, error: mensajePublico(error, "Error al obtener solicitudes para emisión") },
       { status: 500 }
     )
   }
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const {
@@ -311,6 +320,8 @@ export async function POST(req: NextRequest) {
             : null
         await prisma.catalogo_justificacion.create({
           data: {
+            // Copia propia del contenido: el catálogo no debe depender de que la solicitud siga existiendo.
+            ...(await contenidoParaCatalogo(prisma, Number(Number(solicitudId)))),
             solicitud_id:             Number(solicitudId),
             regimen_contratacion:     solicitud.regimen ?? "honorarios",
             programa_proyecto:        solicitud.programa_proyecto ?? "",
@@ -345,13 +356,16 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("[POST /api/emision]", error)
     return NextResponse.json(
-      { ok: false, error: error?.message ?? "Error al emitir el dictamen" },
+      { ok: false, error: mensajePublico(error, "Error al emitir el dictamen") },
       { status: 500 }
     )
   }
 }
 
 export async function PATCH(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const body = await req.json()
     const { solicitudId, archivoPdf } = body
@@ -384,7 +398,7 @@ export async function PATCH(req: NextRequest) {
   } catch (error: any) {
     console.error("[PATCH /api/emision]", error)
     return NextResponse.json(
-      { ok: false, error: error?.message ?? "Error al actualizar PDF" },
+      { ok: false, error: mensajePublico(error, "Error al actualizar PDF") },
       { status: 500 }
     )
   }

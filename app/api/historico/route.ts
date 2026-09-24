@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import * as XLSX from "xlsx"
 
@@ -103,6 +104,9 @@ function parseXlsxFile(buffer: ArrayBuffer): {
 }
 
 export async function GET() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const list = await prisma.historico.findMany({ orderBy: { subido_en: "desc" } })
     return NextResponse.json(list.map(toResponse))
@@ -113,6 +117,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const formData = await req.formData()
 

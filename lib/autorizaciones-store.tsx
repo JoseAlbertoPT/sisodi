@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
+import { useAuth } from "@/lib/auth-context"
 
 export interface PermisoCaptura {
   id: number
@@ -33,6 +34,10 @@ const PermisosContext = createContext<PermisosContextType | undefined>(undefined
 
 export function AutorizacionesProvider({ children }: { children: ReactNode }) {
   const [permisos, setPermisos] = useState<PermisoCaptura[]>([])
+  // La API exige sesión: se carga (y recarga) al iniciar sesión, no al montar
+  // el layout — antes del login la petición solo devolvería 401.
+  const { user } = useAuth()
+  const userId = user?.id ?? null
 
   const recargar = useCallback(async () => {
     try {
@@ -41,7 +46,10 @@ export function AutorizacionesProvider({ children }: { children: ReactNode }) {
     } catch {  }
   }, [])
 
-  useEffect(() => { void recargar() }, [recargar])
+  useEffect(() => {
+    if (!userId) { setPermisos([]); return }
+    void recargar()
+  }, [recargar, userId])
 
   // Sincronización en tiempo real: cuando cualquier sesión otorga, revoca o consume
   // un permiso, el servidor emite "permisos-captura" por SSE y todos los clientes recargan.

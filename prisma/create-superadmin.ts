@@ -1,11 +1,15 @@
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
+import { randomBytes } from "crypto"
 
 const prisma = new PrismaClient()
 
 const RFC      = process.env.SUPERADMIN_RFC      ?? "ADMI000000AA0"
 const CORREO   = process.env.SUPERADMIN_EMAIL    ?? "admin@sisodij.gob.mx"
-const PASSWORD = process.env.SUPERADMIN_PASSWORD ?? "Admin123!"
+// Sin contraseña fija en el código: SUPERADMIN_PASSWORD o una aleatoria
+// temporal (se muestra una vez y se exige cambiarla al entrar).
+const PASSWORD_DESDE_ENV = process.env.SUPERADMIN_PASSWORD
+const PASSWORD = PASSWORD_DESDE_ENV || `${randomBytes(12).toString("base64url")}Aa1!`
 const NOMBRE   = process.env.SUPERADMIN_NOMBRE   ?? "Super Administrador"
 const ROL_NAME = "Administrador"
 const AREA_NAME = "Dirección de Organización"
@@ -40,7 +44,7 @@ async function main() {
         rol_id: rol.id,
         area_id: area.id,
         activo: true,
-        must_change_password: false,
+        must_change_password: true,
       },
     })
     console.log("🔄 Superadmin actualizado (password reseteado)")
@@ -54,7 +58,7 @@ async function main() {
         rol_id: rol.id,
         area_id: area.id,
         activo: true,
-        must_change_password: false,
+        must_change_password: true,
       },
     })
     console.log("✅ Superadmin creado")
@@ -62,7 +66,7 @@ async function main() {
 
   console.log(`   RFC:        ${RFC}`)
   console.log(`   Correo:     ${CORREO}`)
-  console.log(`   Contraseña: ${PASSWORD}`)
+  console.log(`   Contraseña: ${PASSWORD_DESDE_ENV ? "(la de SUPERADMIN_PASSWORD)" : `${PASSWORD}  ← temporal, se pedirá cambiarla al entrar`}`)
   console.log(`   Rol:        ${ROL_NAME}`)
 }
 

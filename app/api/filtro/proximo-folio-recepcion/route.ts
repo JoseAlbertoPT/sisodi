@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { mensajePublico } from "@/lib/error-publico"
+import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 
 const INICIALES_MES: Record<number, string> = {
@@ -13,6 +15,9 @@ const INICIALES_MES: Record<number, string> = {
 // PATCH al confirmar. Aquí puede haber una carrera si dos aprobaciones caen
 // en el mismo instante, pero es aceptable para un texto informativo.
 export async function GET() {
+  const sesion = await requireSesion()
+  if (sesion instanceof NextResponse) return sesion
+
   try {
     const ahora = new Date()
     const mes = ahora.getMonth() + 1
@@ -25,6 +30,6 @@ export async function GET() {
     const folio = `${ini}-${String(siguiente).padStart(3, "0")}-${anio}`
     return NextResponse.json({ ok: true, folio })
   } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err?.message ?? "Error interno" }, { status: 500 })
+    return NextResponse.json({ ok: false, error: mensajePublico(err, "Error interno") }, { status: 500 })
   }
 }
