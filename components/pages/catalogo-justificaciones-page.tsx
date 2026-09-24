@@ -1171,7 +1171,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
               Antes de reutilizar este registro del catálogo, lee y acepta los términos y condiciones aplicables a la generación de una nueva solicitud a partir de esta justificación.
             </p>
             <div className="rounded-lg border border-[var(--sem-border-md)] bg-[#f9f8f5] px-4 py-3 max-h-48 overflow-y-auto text-sm text-content-high leading-relaxed">
-              <strong>Nota:</strong> Previamente al elegir la Carta Descriptiva que considere alineada a las necesidades de contratación de personas prestadores de servicios profesionales, deberá contar con el oficio de suficiencia presupuestal correspondiente.
+              <strong>Nota:</strong> Previamente al elegir la Carta Descriptiva que considere alineada a las necesidades de contratación de prestadores de servicios profesionales, deberá contar con el oficio de suficiencia presupuestal correspondiente.
             </div>
             <label className="flex items-start gap-2.5 cursor-pointer select-none">
               <Checkbox
