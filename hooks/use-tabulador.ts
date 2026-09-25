@@ -15,8 +15,9 @@ interface TabuladorRow {
 
 /**
  * Trae el tabulador (nivel/categoría/importe mínimo/máximo) registrado en
- * Configuración > Tabulador, para "Equivalencia al Tabulador" en Nueva
- * Solicitud. Solo muestra spinner/loading en la carga inicial — refrescos en
+ * Configuración > Tabulador para el AÑO EN CURSO (igual que el Calendario), para
+ * "Equivalencia al Tabulador" en Nueva Solicitud y la reutilización de
+ * Catálogo. Solo muestra spinner/loading en la carga inicial — refrescos en
  * segundo plano (tiempo real) no ocultan los rangos ya cargados (mismo
  * criterio que lib/calendario-store.tsx, para no parpadear mientras alguien
  * llena el formulario).
@@ -27,7 +28,7 @@ export function useTabulador(): { rangos: RangoTabulador[]; loading: boolean } {
   const [loadedOnce, setLoadedOnce] = useState(false)
 
   const cargar = () => {
-    fetch("/api/tabulador", { cache: "no-store" })
+    fetch(`/api/tabulador?ejercicio=${new Date().getFullYear()}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((json) => {
         if (!json?.ok) return

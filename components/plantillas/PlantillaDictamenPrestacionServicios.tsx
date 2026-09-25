@@ -33,6 +33,10 @@ const NOTA_DICTAMEN_DEFAULT =
 
 export interface DictamenPrestacionData {
   folio: string;
+  /** Solo en reutilización desde Catálogo: `folio` pasa a ser el "Folio de
+   *  origen" y este es el folio propio de esta emisión. Mientras DGDO define su
+   *  formato, es el folio de origen + "-N" (número de reutilización). */
+  folioActual?: string;
   fecha: string;
   secretariaDependencia: string;
   unidadResponsableGasto: string;
@@ -368,7 +372,14 @@ export function PlantillaDictamenPrestacionServicios({
           </View>
           <View style={s.headerCol3}>
             <View style={s.folioBox}>
-              <Text style={s.folioText}>Folio: {data.folio}</Text>
+              {data.folioActual ? (
+                <>
+                  <Text style={s.folioText}>Folio de origen: {data.folio}</Text>
+                  <Text style={s.folioText}>Folio actual: {data.folioActual}</Text>
+                </>
+              ) : (
+                <Text style={s.folioText}>Folio: {data.folio}</Text>
+              )}
             </View>
             <View style={s.pageBox}>
               <Text

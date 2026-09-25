@@ -252,6 +252,55 @@ function RomanItem({ text }: { text: string }) {
   );
 }
 
+// Listas de viñetas hasta este tamaño se mantienen completas (título + todas
+// las viñetas): si no caben en lo que resta de la hoja, la sección entera
+// pasa a la siguiente en vez de dejar una o dos viñetas sueltas en otra hoja.
+const MAX_ITEMS_BLOQUE = 12;
+
+/**
+ * Reparte los elementos de una lista para evitar huérfanos al paginar:
+ * - lista corta de viñetas → un solo bloque que no se parte;
+ * - lista larga → título + primer elemento juntos, los intermedios sueltos y
+ *   los dos últimos juntos, para que nunca quede un solo elemento en una hoja.
+ */
+function ListaSinHuerfanos({
+  encabezado,
+  items,
+  render,
+  bloqueCompleto,
+  minPresenceAhead,
+}: {
+  encabezado: React.ReactNode;
+  items: string[];
+  render: (text: string, key: number) => React.ReactNode;
+  bloqueCompleto: boolean;
+  minPresenceAhead: number;
+}) {
+  if (bloqueCompleto || items.length <= 2) {
+    return (
+      <View wrap={false}>
+        {encabezado}
+        {items.map((it, i) => render(it, i))}
+      </View>
+    );
+  }
+  const primero = items[0]!;
+  const medio = items.slice(1, -2);
+  const ultimos = items.slice(-2);
+  return (
+    <>
+      <View wrap={false} minPresenceAhead={minPresenceAhead}>
+        {encabezado}
+        {render(primero, 0)}
+      </View>
+      {medio.map((it, i) => render(it, i + 1))}
+      <View wrap={false}>
+        {ultimos.map((it, i) => render(it, items.length - 2 + i))}
+      </View>
+    </>
+  );
+}
+
 function SubSection({
   number,
   title,
@@ -265,32 +314,21 @@ function SubSection({
 }) {
   if (items.length === 0) return null;
 
-  const first = items[0];
-  const rest = items.slice(1);
-  const FirstItem =
-    variant === "roman" ? (
-      first !== undefined ? <RomanItem text={first} /> : null
-    ) : first !== undefined ? (
-      <BulletItem text={first} />
-    ) : null;
-
   return (
-    <>
-      <View wrap={false} minPresenceAhead={40}>
+    <ListaSinHuerfanos
+      encabezado={
         <View style={s.subSectionRow}>
           <FauxBoldText style={s.subSectionNumber}>{number}</FauxBoldText>
           <FauxBoldText style={s.subSectionTitle}>{title}</FauxBoldText>
         </View>
-        {FirstItem}
-      </View>
-      {rest.map((it, i) =>
-        variant === "roman" ? (
-          <RomanItem key={i + 1} text={it} />
-        ) : (
-          <BulletItem key={i + 1} text={it} />
-        ),
-      )}
-    </>
+      }
+      items={items}
+      render={(text, key) =>
+        variant === "roman" ? <RomanItem key={key} text={text} /> : <BulletItem key={key} text={text} />
+      }
+      bloqueCompleto={variant === "bullet" && items.length <= MAX_ITEMS_BLOQUE}
+      minPresenceAhead={40}
+    />
   );
 }
 
@@ -305,21 +343,19 @@ function SubSubBullets({
 }) {
   if (items.length === 0) return null;
 
-  const first = items[0];
-  const rest = items.slice(1);
   return (
-    <>
-      <View wrap={false} minPresenceAhead={30}>
+    <ListaSinHuerfanos
+      encabezado={
         <FauxBoldText style={s.subSubTitle}>
           <Text style={s.subSubNumber}>{number} </Text>
           {title}
         </FauxBoldText>
-        {first !== undefined && <BulletItem text={first} />}
-      </View>
-      {rest.map((it, i) => (
-        <BulletItem key={i + 1} text={it} />
-      ))}
-    </>
+      }
+      items={items}
+      render={(text, key) => <BulletItem key={key} text={text} />}
+      bloqueCompleto={items.length <= MAX_ITEMS_BLOQUE}
+      minPresenceAhead={30}
+    />
   );
 }
 

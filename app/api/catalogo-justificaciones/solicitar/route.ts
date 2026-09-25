@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireSesion } from "@/lib/session"
+import { requireSesion, verificarActor } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
-import { requireCatalogoConsulta } from "@/lib/api-guard"
+import { requireCatalogoConsulta, puedeFirmarCatalogo } from "@/lib/api-guard"
+import { resolverFirmaCatalogo } from "@/lib/firma-catalogo"
+import type { FirmaPortal } from "@/lib/pdf-firma-estampado"
+import { mensajePublico } from "@/lib/error-publico"
 import { validarVigencia, parseFechaLocal } from "@/lib/vigencia"
 
 function parseVigenciaRango(nuevaVigencia: string): { inicio: Date; fin: Date } | null {
@@ -37,6 +40,12 @@ export async function POST(req: NextRequest) {
       tipo,
       programa_anterior,
       nuevo_programa_proyecto,
+      firma_cargo,
+      firma_certificado,
+      firma_clave_privada,
+      firma_frase_clave_privada,
+      nombre_cert,
+      rfc_cert,
     } = body
 
     if (!catalogo_justificacion_id || !usuario_id || !nueva_vigencia?.trim()) {
@@ -88,6 +97,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Reutilización: primera firma (UEFA/Administrador) al momento de
+    // solicitar. El movimiento queda "pendiente_firma" en la pestaña
+    // Solicitud hasta la segunda firma; ya no se descarga el Dictamen aquí.
+    let firmaUefa: FirmaPortal | null = null
+    if (!esCancelacion) {
+      const actorErr = verificarActor(sesion, String(usuario_id))
+      if (actorErr) return actorErr
+      if (!(await puedeFirmarCatalogo(String(usuario_id)))) {
+        return NextResponse.json(
+          { error: "Solo un usuario con rol UEFA o Administrador puede firmar la reutilización del Catálogo." },
+          { status: 403 },
+        )
+      }
+      if (!firma_cargo) {
+        return NextResponse.json({ error: "Falta el cargo/puesto de quien firma." }, { status: 400 })
+      }
+      try {
+        firmaUefa = await resolverFirmaCatalogo({
+          usuarioId: String(usuario_id),
+          cargo: String(firma_cargo),
+          folio: catalogo.folio_dictamen ?? String(catalogo.solicitud_id ?? catalogo.id),
+          certificado: firma_certificado ? String(firma_certificado) : undefined,
+          clavePrivada: firma_clave_privada ? String(firma_clave_privada) : undefined,
+          fraseClavePrivada: firma_frase_clave_privada ? String(firma_frase_clave_privada) : undefined,
+          nombreCert: nombre_cert ? String(nombre_cert) : undefined,
+          rfcCert: rfc_cert ? String(rfc_cert) : undefined,
+        })
+      } catch (e) {
+        return NextResponse.json({ error: mensajePublico(e, "No se pudo firmar la solicitud") }, { status: 400 })
+      }
+    }
+
     const record = await prisma.catalogo_solicitud.create({
       data: {
         catalogo_justificacion_id: Number(catalogo_justificacion_id),
@@ -99,6 +140,8 @@ export async function POST(req: NextRequest) {
         tipo: tipoNormalizado,
         programa_anterior: esCancelacion || !nuevo_programa_proyecto ? null : (String(programa_anterior ?? "").trim() || null),
         nuevo_programa_proyecto: esCancelacion || !nuevo_programa_proyecto ? null : String(nuevo_programa_proyecto).trim(),
+        estado: esCancelacion ? null : "pendiente_firma",
+        firma_uefa: firmaUefa ? JSON.parse(JSON.stringify(firmaUefa)) : undefined,
       },
     })
 

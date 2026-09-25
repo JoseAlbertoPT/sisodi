@@ -28,6 +28,14 @@ export async function fetchCalendario(ejercicio: number): Promise<CalendarioResp
   return res.json()
 }
 
+/** Años que ya tienen calendario guardado. */
+export async function fetchEjercicios(): Promise<number[]> {
+  const res = await fetch("/api/calendario/ejercicios")
+  if (!res.ok) throw new Error("Error al cargar los años del calendario")
+  const json = await res.json()
+  return Array.isArray(json.ejercicios) ? json.ejercicios : []
+}
+
 export async function updateCalendario(
   ejercicio: number,
   data: CalendarioResponse,
@@ -79,5 +87,47 @@ export function buildEmptyCalendario(year: number): CalendarioResponse {
     }),
     asimilados: buildQuincenas(year),
     nombramiento: buildQuincenas(year),
+  }
+}
+
+/** "DD/MM/YYYY" → misma fecha `delta` años después. 29/02 pasa a 28/02 si el año nuevo no es bisiesto. */
+function desplazarAnio(fecha: string | undefined, delta: number): string | undefined {
+  if (!fecha) return fecha
+  const [d, m, y] = fecha.split("/")
+  const anio = Number(y)
+  if (!m || !y || isNaN(anio)) return fecha
+  const nuevoAnio = anio + delta
+  if (!d) return `/${m}/${nuevoAnio}`
+  const ultimoDia = new Date(nuevoAnio, Number(m), 0).getDate()
+  const dia = Math.min(Number(d), ultimoDia)
+  return `${String(dia).padStart(2, "0")}/${m}/${nuevoAnio}`
+}
+
+/**
+ * Calendario de `year` precargado con las fechas de `anterior` (el año
+ * `anioAnterior`): mismo día y mes, en el año que corresponde. Los periodos
+ * que no existían en el anterior quedan vacíos, igual que en buildEmptyCalendario.
+ */
+export function buildCalendarioDesdeAnterior(
+  anterior: CalendarioResponse,
+  anioAnterior: number,
+  year: number,
+): CalendarioResponse {
+  const delta = year - anioAnterior
+  const base = buildEmptyCalendario(year)
+  const copiar = <T extends PeriodoCap3000 | PeriodoCap1000>(vacio: T, previo: T | undefined): T =>
+    !previo
+      ? vacio
+      : {
+          ...vacio,
+          limiteDO:    desplazarAnio(previo.limiteDO, delta) ?? vacio.limiteDO,
+          limiteDGRH:  desplazarAnio(previo.limiteDGRH, delta) ?? vacio.limiteDGRH,
+          fechaInicio: desplazarAnio(previo.fechaInicio, delta),
+          fechaFin:    desplazarAnio(previo.fechaFin, delta),
+        }
+  return {
+    honorarios:   base.honorarios.map((r) => copiar(r, anterior.honorarios.find((p) => p.mes === r.mes))),
+    asimilados:   base.asimilados.map((r) => copiar(r, anterior.asimilados.find((p) => p.quincena === r.quincena))),
+    nombramiento: base.nombramiento.map((r) => copiar(r, anterior.nombramiento.find((p) => p.quincena === r.quincena))),
   }
 }

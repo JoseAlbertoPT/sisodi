@@ -58,30 +58,30 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, data: [] })
     }
 
-    // Solo el rol Capturista se restringe a su propia secretaría. Administrador,
-    // Emisor, Verificador, Revisor y UEFA ven todos los dictámenes emitidos.
+    // Capturista y UEFA solo ven los dictámenes aprobados (Emitido) de su
+    // propia secretaría. Administrador, Emisor, Verificador y Revisor ven todos.
     // Se compara por el nombre de la secretaría de nivel superior (antes del " > ")
     // porque el snapshot id/texto de cada solicitud varía según si se creó como
     // centralizada o paraestatal, pero la columna plana `secretaria` siempre trae
-    // el nombre limpio.
-    let capturistaSecretaria: string | null = null
-    if (userId) {
-      const viewer = await prisma.usuario.findUnique({
-        where:  { id: userId },
-        select: {
-          secretaria_texto:    true,
-          organo_centralizado: { select: { nombre: true } },
-          rol:                 { select: { nombre: true } },
-        },
-      })
-      if (viewer && (viewer.rol?.nombre?.toLowerCase() ?? "") === "capturista") {
-        capturistaSecretaria = (viewer.secretaria_texto ?? viewer.organo_centralizado?.nombre ?? "")
-          .split(">")[0]
-          .trim()
-          .toLowerCase()
-        if (!capturistaSecretaria) {
-          return NextResponse.json({ ok: true, data: [] })
-        }
+    // el nombre limpio. El usuario sale de la sesión (no del parámetro), para
+    // que omitir `userId` no quite el filtro.
+    const ROLES_SOLO_SU_SECRETARIA = ["capturista", "uefa"]
+    let secretariaRestringida: string | null = null
+    const viewer = await prisma.usuario.findUnique({
+      where:  { id: userId ?? sesion.id },
+      select: {
+        secretaria_texto:    true,
+        organo_centralizado: { select: { nombre: true } },
+        rol:                 { select: { nombre: true } },
+      },
+    })
+    if (viewer && ROLES_SOLO_SU_SECRETARIA.includes((viewer.rol?.nombre ?? "").trim().toLowerCase())) {
+      secretariaRestringida = (viewer.secretaria_texto ?? viewer.organo_centralizado?.nombre ?? "")
+        .split(">")[0]
+        .trim()
+        .toLowerCase()
+      if (!secretariaRestringida) {
+        return NextResponse.json({ ok: true, data: [] })
       }
     }
 
@@ -112,9 +112,9 @@ export async function GET(req: NextRequest) {
       orderBy: { fecha_emision: "desc" },
     })
 
-    const solicitudes = capturistaSecretaria
+    const solicitudes = secretariaRestringida
       ? solicitudesTodas.filter(
-          (sol) => ((sol as any).secretaria ?? "").split(">")[0].trim().toLowerCase() === capturistaSecretaria
+          (sol) => ((sol as any).secretaria ?? "").split(">")[0].trim().toLowerCase() === secretariaRestringida
         )
       : solicitudesTodas
 
@@ -178,7 +178,6 @@ export async function GET(req: NextRequest) {
         vigenciaFin:
           sol.vigencia_fin?.toISOString().slice(0, 10) ?? null,
         esExtemporanea: (sol as any).es_extemporanea ?? null,
-        regimen:        (sol as any).regimen ?? null,
         estado:         sol.estado.nombre,
         periodo:
           sol.periodo ? `${sol.periodo.mes}/${sol.periodo.anio}` : null,

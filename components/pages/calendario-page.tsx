@@ -14,8 +14,9 @@ import {
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
 import { TabuladorTabContent } from "@/components/tabulador-tab-content"
+import { NotaTabContent } from "@/components/nota-tab-content"
 import { useCalendario } from "@/lib/calendario-store"
-import { updateCalendario, buildEmptyCalendario, mesNumero, mesDeQuincena, type CalendarioResponse } from "@/lib/calendario-api"
+import { updateCalendario, fetchCalendario, fetchEjercicios, buildEmptyCalendario, buildCalendarioDesdeAnterior, mesNumero, mesDeQuincena, type CalendarioResponse } from "@/lib/calendario-api"
 import { useToast } from "@/hooks/use-toast"
 import {
   Select,
@@ -133,11 +134,24 @@ export function CalendarioPage() {
   const [saving, setSaving] = useState(false)
   const [editData, setEditData] = useState<CalendarioResponse | null>(null)
   const isEmpty = !loading && honorarios.length === 0 && asimilados.length === 0 && nombramiento.length === 0
-  const handleCreateYear = () => {
-    const template = buildEmptyCalendario(ejercicio)
-    setEditData(template)
+  const tieneFechas = (c: CalendarioResponse | null): c is CalendarioResponse =>
+    !!c && c.honorarios.length + c.asimilados.length + c.nombramiento.length > 0
+
+  const handleCreateYear = async (year: number = ejercicio) => {
+    const anioAnterior = year - 1
+    let anterior: CalendarioResponse | null = null
+    try {
+      anterior = await fetchCalendario(anioAnterior)
+    } catch { /* sin anterior: plantilla vacía */ }
+    const tieneAnterior = tieneFechas(anterior)
+    setEditData(tieneAnterior ? buildCalendarioDesdeAnterior(anterior!, anioAnterior, year) : buildEmptyCalendario(year))
     setEditing(true)
-    toast({ title: `Año ${ejercicio}`, description: "Complete solo el día en cada campo y presione Guardar." })
+    toast({
+      title: `Año ${year}`,
+      description: tieneAnterior
+        ? `Se cargaron las fechas de ${anioAnterior}. Ajuste las que cambien y presione Guardar.`
+        : "Complete solo el día en cada campo y presione Guardar.",
+    })
   }
   const handleStartEdit = () => {
     setEditData({
@@ -198,61 +212,18 @@ export function CalendarioPage() {
       return next
     })
   }
-  const [availableYears, setAvailableYears] = useState<number[]>(() => {
-    const current = new Date().getFullYear()
-    return [current]
-  })
+
+  const [availableYears, setAvailableYears] = useState<number[]>(() => [new Date().getFullYear()])
+  const agregarAnios = (anios: number[]) =>
+    setAvailableYears((prev) => [...new Set([...prev, ...anios])].sort((a, b) => a - b))
+  useEffect(() => {
+    fetchEjercicios().then(agregarAnios).catch(() => {})
+  }, [])
+  useEffect(() => { agregarAnios([ejercicio]) }, [ejercicio])
   const [showNewYearInput, setShowNewYearInput] = useState(false)
   const [newYearValue, setNewYearValue] = useState("")
   const [mainTab, setMainTab] = useState<"calendario" | "nota" | "tabulador">("calendario")
-  const [notaLoaded, setNotaLoaded]     = useState(false)
-  const [notaValue, setNotaValue]       = useState("")
-  const [notaOriginal, setNotaOriginal] = useState("")
-  const [notaEditing, setNotaEditing]   = useState(false)
-  const [notaLoading, setNotaLoading]   = useState(false)
-  const [notaSaving, setNotaSaving]     = useState(false)
-  const [notaError, setNotaError]       = useState<string | null>(null)
-
-  useEffect(() => {
-    if (mainTab !== "nota" || notaLoaded || notaLoading) return
-    setNotaError(null)
-    setNotaLoading(true)
-    fetch("/api/configuracion/nota-dictamen")
-      .then((res) => res.json())
-      .then((json) => { if (json.ok) { setNotaValue(json.valor); setNotaOriginal(json.valor) }; setNotaLoaded(true) })
-      .catch(() => setNotaError("No se pudo cargar la nota"))
-      .finally(() => setNotaLoading(false))
-  }, [mainTab, notaLoaded, notaLoading])
-  const iniciarEditNota = () => {
-    setNotaError(null)
-    setNotaEditing(true)
-  }
-  const cancelarEditNota = () => {
-    setNotaValue(notaOriginal)
-    setNotaError(null)
-    setNotaEditing(false)
-  }
-  const guardarNota = async () => {
-    setNotaSaving(true)
-    setNotaError(null)
-    try {
-      const res = await fetch("/api/configuracion/nota-dictamen", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ valor: notaValue }),
-      })
-      const json = await res.json()
-      if (!res.ok || !json.ok) throw new Error(json.error || "Error al guardar la nota")
-      setNotaOriginal(notaValue)
-      setNotaEditing(false)
-      toast({ title: "Nota guardada", description: "Los cambios se guardaron correctamente." })
-    } catch (e) {
-      setNotaError(e instanceof Error ? e.message : "Error al guardar la nota")
-    } finally {
-      setNotaSaving(false)
-    }
-  }
-  const handleAddYear = () => {
+  const handleAddYear = async () => {
     const year = parseInt(newYearValue, 10)
     if (!year || year < 2020 || year > 2099) {
       toast({ variant: "destructive", title: "Año inválido", description: "Ingrese un año entre 2020 y 2099." })
@@ -262,10 +233,15 @@ export function CalendarioPage() {
       toast({ variant: "destructive", title: "Año duplicado", description: `El año ${year} ya existe en la lista.` })
       return
     }
-    setAvailableYears((prev) => [...prev, year].sort((a, b) => a - b))
+    agregarAnios([year])
     setEjercicio(year)
     setNewYearValue("")
     setShowNewYearInput(false)
+    let existente: CalendarioResponse | null = null
+    try {
+      existente = await fetchCalendario(year)
+    } catch {  }
+    if (!tieneFechas(existente)) await handleCreateYear(year)
   }
   const displayData = editing && editData ? editData : { honorarios, asimilados, nombramiento }
   const quincenaOrder = (q: string) => {
@@ -343,7 +319,7 @@ export function CalendarioPage() {
             </Select>
             {!editing ? (
               isEmpty ? (
-                <Button size="sm" className="gap-1.5 text-xs h-9" onClick={handleCreateYear} disabled={loading}>
+                <Button size="sm" className="gap-1.5 text-xs h-9" onClick={() => void handleCreateYear()} disabled={loading}>
                   <CalendarPlus className="h-3.5 w-3.5" />Crear año {ejercicio}
                 </Button>
               ) : (
@@ -379,9 +355,9 @@ export function CalendarioPage() {
                   onChange={(e) => setNewYearValue(e.target.value)}
                   className="w-20 h-7 text-xs text-center border-0 bg-transparent shadow-none font-mono"
                   autoFocus
-                  onKeyDown={(e) => { if (e.key === "Enter") handleAddYear(); if (e.key === "Escape") setShowNewYearInput(false) }}
+                  onKeyDown={(e) => { if (e.key === "Enter") void handleAddYear(); if (e.key === "Escape") setShowNewYearInput(false) }}
                 />
-                <Button size="sm" className="h-7 w-7 p-0 rounded-md" onClick={handleAddYear}><Check className="h-3 w-3" /></Button>
+                <Button size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => void handleAddYear()}><Check className="h-3 w-3" /></Button>
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-md" onClick={() => setShowNewYearInput(false)}><X className="h-3 w-3" /></Button>
               </div>
             )}
@@ -413,7 +389,7 @@ export function CalendarioPage() {
                   Cree el calendario para generar automáticamente los 12 meses y 24 quincenas. Solo deberá completar el día de cada fecha límite.
                 </p>
               </div>
-              <Button variant="primary" className="gap-2" onClick={handleCreateYear}>
+              <Button variant="primary" className="gap-2" onClick={() => void handleCreateYear()}>
                 <CalendarPlus className="h-4 w-4" />Crear calendario {ejercicio}
               </Button>
             </CardContent>
@@ -557,64 +533,7 @@ export function CalendarioPage() {
         </TabsContent>
 
         <TabsContent value="nota">
-          <Card className="shadow-none">
-            <CardContent className="flex flex-col gap-4 py-6">
-              {notaLoading ? (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-8">
-                  <Loader2 className="h-4 w-4 animate-spin" />Cargando…
-                </div>
-              ) : (
-                <textarea
-                  value={notaValue}
-                  onChange={(e) => setNotaValue(e.target.value)}
-                  readOnly={!notaEditing}
-                  rows={10}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm leading-relaxed focus:outline-none ${
-                    notaEditing
-                      ? "border-[var(--sem-border-md)] bg-background focus:border-[#2D3B2D]"
-                      : "border-border/60 bg-muted/30 text-muted-foreground cursor-default"
-                  }`}
-                />
-              )}
-              {notaError && (
-                <p className="text-xs text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-3.5 w-3.5" />{notaError}
-                </p>
-              )}
-              <div className="flex items-center justify-end gap-2">
-                {!notaEditing ? (
-                  <Button
-                    variant="vino"
-                    className="rounded-full h-10 px-6 font-normal shadow-sm gap-1.5"
-                    onClick={iniciarEditNota}
-                    disabled={notaLoading}
-                  >
-                    Editar
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="default"
-                      className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
-                      onClick={cancelarEditNota}
-                      disabled={notaSaving}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      variant="vino"
-                      className="rounded-full h-10 px-6 font-normal shadow-sm gap-1.5"
-                      onClick={guardarNota}
-                      disabled={notaSaving}
-                    >
-                      {notaSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                      {notaSaving ? "Guardando…" : "Guardar"}
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <NotaTabContent />
         </TabsContent>
       </Tabs>
     </PageLayout>

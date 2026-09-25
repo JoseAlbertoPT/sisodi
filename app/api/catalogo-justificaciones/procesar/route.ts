@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
-import { requireCatalogoConsulta } from "@/lib/api-guard"
+import { requireCatalogoAdmin } from "@/lib/api-guard"
 import { validarVigencia, parseFechaLocal as parseDate } from "@/lib/vigencia"
 
 function trunc(val: string | null | undefined, max: number): string | null {
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
 
-    const guardError = await requireCatalogoConsulta(String(admin_usuario_id))
+    const guardError = await requireCatalogoAdmin(String(admin_usuario_id))
     if (guardError) return guardError
 
     const id = Number(catalogo_solicitud_id)

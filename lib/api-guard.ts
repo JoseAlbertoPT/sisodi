@@ -12,7 +12,15 @@ async function sesionDelActor(userId: string | null): Promise<NextResponse | nul
   return verificarActor(sesion, userId)
 }
 
-export const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador", "Revisor"]
+// Pestañas del Catálogo por rol (default sin override por usuario):
+//   UEFA: Consulta + Solicitud · Verificador: Administración ·
+//   Emisor: Administración + Solicitud · Administrador: todas.
+// Enlace DGRH y Consulta conservan la pestaña Consulta.
+export const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador"]
+export const ROLES_CONSULTA_CATALOGO = ["Administrador", "UEFA", "Enlace DGRH", "Consulta"]
+export const ROLES_SOLICITUD_CATALOGO = ["Administrador", "UEFA", "Emisor"]
+// En la pestaña Solicitud estos roles ven las de todas las secretarías; UEFA solo la suya.
+export const ROLES_SOLICITUD_CATALOGO_TODAS = ["Administrador", "Emisor"]
 
 export async function requireRol(userId: string | null, rolesPermitidos: string[]): Promise<NextResponse | null> {
   if (!userId) {
@@ -40,8 +48,7 @@ export const CATALOGO_ACCION_CONSULTA = "consulta"
  * Consulta y Administración de Catálogo se otorgan de forma independiente
  * (checkboxes separados en el modal de Permisos, ver menu-permiso-tree.tsx):
  * - Sin override explícito para este usuario (acciones = []): se usa el
- *   default — Administración según ROLES_ADMIN_CATALOGO, Consulta para
- *   cualquiera (comportamiento histórico).
+ *   default por rol — ROLES_ADMIN_CATALOGO y ROLES_CONSULTA_CATALOGO.
  * - Con override explícito (acciones no vacío): es autoritativo para AMBAS
  *   pestañas — solo se ve lo que esté marcado, aunque el rol normalmente
  *   diera acceso a la otra. Por eso "acciones.length > 0" corta el fallback
@@ -70,6 +77,7 @@ export async function puedeConsultarCatalogo(userId: string | null): Promise<boo
   const usuario = await prisma.usuario.findUnique({
     where: { id: userId },
     select: {
+      rol: { select: { nombre: true } },
       usuario_menu: {
         where: { menu: { key: CATALOGO_MENU_KEY } },
         select: { acciones: true },
@@ -79,7 +87,17 @@ export async function puedeConsultarCatalogo(userId: string | null): Promise<boo
   if (!usuario) return false
   const acciones = usuario.usuario_menu[0]?.acciones ?? []
   if (acciones.length > 0) return acciones.includes(CATALOGO_ACCION_CONSULTA)
-  return true
+  return ROLES_CONSULTA_CATALOGO.includes(usuario.rol.nombre)
+}
+
+/** Pestaña Solicitud del Catálogo (reutilizaciones pendientes de firma). Solo por rol. */
+export async function puedeVerSolicitudesCatalogo(userId: string | null): Promise<boolean> {
+  if (!userId) return false
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: userId },
+    select: { rol: { select: { nombre: true } } },
+  })
+  return !!usuario && ROLES_SOLICITUD_CATALOGO.includes(usuario.rol.nombre)
 }
 
 export async function requireCatalogoAdmin(userId: string | null): Promise<NextResponse | null> {

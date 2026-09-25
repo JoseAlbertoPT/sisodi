@@ -3,9 +3,10 @@ import { requireSesion } from "@/lib/session"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
-function mapRow(r: { id: number; nivel: string; categoria: string; importe_bruto_min: unknown; importe_bruto_max: unknown; secretarias: string[] }) {
+function mapRow(r: { id: number; ejercicio: number; nivel: string; categoria: string; importe_bruto_min: unknown; importe_bruto_max: unknown; secretarias: string[] }) {
   return {
     id: r.id,
+    ejercicio: r.ejercicio,
     nivel: r.nivel,
     categoria: r.categoria,
     importeBrutoMin: Number(r.importe_bruto_min),
@@ -53,7 +54,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ ok: false, error: "El importe mínimo no puede ser mayor al máximo" }, { status: 400 })
     }
 
-    const candidatos = await prisma.tabulador.findMany({ where: { nivel, categoria, NOT: { id } } })
+    const actual = await prisma.tabulador.findUnique({ where: { id }, select: { ejercicio: true } })
+    if (!actual) return NextResponse.json({ ok: false, error: "Registro no encontrado" }, { status: 404 })
+
+    // Los duplicados se revisan dentro del mismo año del tabulador.
+    const candidatos = await prisma.tabulador.findMany({ where: { ejercicio: actual.ejercicio, nivel, categoria, NOT: { id } } })
     if (candidatos.some((c) => mismasSecretarias(c.secretarias, secretarias))) {
       return NextResponse.json({ ok: false, error: `Ya existe otro registro para el nivel ${nivel} / categoría ${categoria} con el mismo alcance de Secretaría` }, { status: 409 })
     }

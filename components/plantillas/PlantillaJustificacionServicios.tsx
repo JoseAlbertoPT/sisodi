@@ -101,6 +101,10 @@ export interface JustificacionData {
   ocultarFirmas?: boolean;
   clave?: string;
   folio?: string;
+  /** Solo en reutilización desde Catálogo: `folio` pasa a ser el "Folio de
+   *  origen" y este es el folio propio de esta emisión (por ahora origen + "-N",
+   *  mientras DGDO define el formato). Igual que DictamenPrestacionData.folioActual. */
+  folioActual?: string;
   notaDictamen?: string;
   incluirPaginaDictamen?: boolean;
 }
@@ -815,7 +819,14 @@ export function PlantillaJustificacionServicios({ data }: { data: JustificacionD
           </View>
           <View style={s.pdcHeaderCol3}>
             <View style={s.pdcFolioBox}>
-              <Text style={s.pdcFolioText}>Folio: {folioPlano || ""}</Text>
+              {data.folioActual ? (
+                <>
+                  <Text style={s.pdcFolioText}>Folio de origen: {folioPlano || ""}</Text>
+                  <Text style={s.pdcFolioText}>Folio actual: {data.folioActual}</Text>
+                </>
+              ) : (
+                <Text style={s.pdcFolioText}>Folio: {folioPlano || ""}</Text>
+              )}
             </View>
             <View style={s.pdcPageBox}>
               <Text

@@ -15,7 +15,7 @@ import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estamp
 import { applyTextRules, applyTextRulesArray } from "@/lib/utils";
 import { claveParaPdf, siglasSecretaria, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import { stripLeadingRomanNumeral } from "@/lib/roman-list";
-import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
+import { getNotaDictamen } from "@/lib/configuracion-texto";
 import { stampPaginaPrincipal } from "@/lib/pdf-page-number-stamp";
 import { PDFDocument as PDFLibDocument } from "pdf-lib";
 import React from "react";
@@ -276,7 +276,7 @@ async function buildJustificacionBufferDesdeCatalogo(
   const fechaDictaminacion = cj.fecha_emision
     ? new Date(cj.fecha_emision).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })
     : "";
-  const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
+  const notaDictamen = (await getNotaDictamen()).valor;
 
   const dataHonorarios: JustificacionData = {
     tipoAdministracion: cj.tipo_administracion === "paraestatal" ? "paraestatal" : "centralizada",
@@ -439,7 +439,7 @@ export async function resolveJustificacionData(
       }
     }
 
-    const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
+    const notaDictamen = (await getNotaDictamen()).valor;
 
     const tipoAdministracion: 'centralizada' | 'paraestatal' =
       sol.tipo_administracion === 'paraestatal' ? 'paraestatal'
@@ -573,14 +573,15 @@ export async function resolveJustificacionData(
         fechaDictaminacion,
         ocultarFirmas: sinFirmas,
         // "Justificación"/"Clave" (siglas + folio) nunca lleva el consecutivo de
-        // reutilización — solo el campo "Folio" de abajo, ver JustificacionData.folio.
+        // reutilización — solo "Folio actual" de abajo, ver JustificacionData.folioActual.
         // El folio de dictamen (JOGE/1/02/2025) solo debe verse en Dictámenes
         // y Catálogo — en el PDF que se sube al portal de Firma de
         // Justificación (soloSiglas=true) se muestran solo las siglas.
         clave: soloSiglas ? siglasSecretaria(sol.secretaria) : claveParaPdf(sol.secretaria, folioDictamenVisible, esHistoricoImportado),
-        folio: overrides.reutilizacionNumero && folioDictamenVisible
+        folio: folioDictamenVisible ?? "",
+        folioActual: overrides.reutilizacionNumero && folioDictamenVisible
           ? `${folioDictamenVisible}-${overrides.reutilizacionNumero}`
-          : (folioDictamenVisible ?? ""),
+          : undefined,
         notaDictamen,
         incluirPaginaDictamen: tieneDictamen,
       };

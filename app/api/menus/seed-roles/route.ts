@@ -3,19 +3,18 @@ import { requireSesion } from "@/lib/session"
 import { esAdministrador } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 
-// IDs reales en DB: 1=Tablero, 2=JUSTIFICACIONES(header), 3=Nueva solicitud,
-// 4=Mis solicitudes, 5=Validación UEFA, 6=GESTIÓN DGDO(header),
-// 7=Revision, 8=Verificacion, 9=Emision, 10=Dictámenes,
-// 15=CONFIGURACIÓN(header), 11=Calendario, 12=Usuarios, 13=Catálogo
-const ROL_MENUS: Record<string, number[]> = {
-  "Administrador": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15],
-  "Capturista":    [2, 3, 4, 6, 10],      // Nueva solicitud, Mis solicitudes, Dictámenes
-  "Emisor":        [1, 6, 9, 10],         // Tablero, Emisión, Dictámenes
-  "Revisor":       [6, 7, 10],            // Revisión, Dictámenes
-  "Verificador":   [1, 6, 8, 10],         // Tablero, Validación, Dictámenes
-  "UEFA":          [2, 5, 6, 10],         // Validación UEFA, Dictámenes
-  "Enlace DGRH":   [2, 5, 6, 10],         // Validación UEFA, Dictámenes
-  "Consulta":      [1],
+// Se resuelve por `menu.key` (no por id: los ids varían entre ambientes).
+// Los encabezados (JUSTIFICACIONES, GESTIÓN DGDO, CONFIGURACIÓN) se agregan
+// automáticamente a partir del parent_id de cada menú.
+const ROL_MENUS: Record<string, string[] | "*"> = {
+  "Administrador": "*",
+  "Capturista":    ["nueva-solicitud", "mis-solicitudes"],
+  "Emisor":        ["dashboard", "catalogo-justificaciones", "bandeja-filtro3", "dictamenes"],
+  "Revisor":       ["dashboard", "bandeja-filtro1", "dictamenes"],
+  "Verificador":   ["dashboard", "catalogo-justificaciones", "bandeja-filtro2", "dictamenes", "calendario", "usuarios", "entidades"],
+  "UEFA":          ["catalogo-justificaciones", "validacion-uefa", "dictamenes"],
+  "Enlace DGRH":   ["catalogo-justificaciones", "validacion-uefa", "dictamenes"],
+  "Consulta":      ["dashboard", "catalogo-justificaciones"],
 }
 
 export async function POST() {
@@ -26,8 +25,14 @@ export async function POST() {
 
   try {
     const resultados: string[] = []
+    const menus = await prisma.menu.findMany({ select: { id: true, key: true, parent_id: true } })
 
-    for (const [rolNombre, menuIds] of Object.entries(ROL_MENUS)) {
+    for (const [rolNombre, keys] of Object.entries(ROL_MENUS)) {
+      const hojas = keys === "*" ? menus : menus.filter((m) => m.key && keys.includes(m.key))
+      const ids = new Set(hojas.map((m) => m.id))
+      for (const m of hojas) if (m.parent_id != null) ids.add(m.parent_id)
+      const menuIds = [...ids].sort((a, b) => a - b)
+
       const rol = await prisma.rol.findUnique({ where: { nombre: rolNombre } })
       if (!rol) { resultados.push(`⚠️  Rol "${rolNombre}" no encontrado`); continue }
 

@@ -19,6 +19,7 @@ import {
 
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 
@@ -44,6 +45,9 @@ import {
   CheckCircle2,
   XCircle,
   FileSpreadsheet,
+  FileText,
+  Download,
+  PenLine,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -250,6 +254,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [solFirmaPassword, setSolFirmaPassword] = useState("")
   const [solLoading, setSolLoading]   = useState(false)
   const [solError, setSolError]       = useState<string | null>(null)
+  const [solExito, setSolExito]       = useState<string | null>(null)
   const [canRec, setCanRec]           = useState<CatalogoRecord | null>(null)
   const [showCan, setShowCan]         = useState(false)
   const [canVigInicio, setCanVigInicio] = useState<Date | undefined>(undefined)
@@ -440,7 +445,13 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           : null
       const importeCambio =
         solImporteBrutoNum !== null && solImporteBrutoNum >= 0 ? solImporteBrutoNum : null
-      await fetch("/api/catalogo-justificaciones/solicitar", {
+      const [cerB64, keyB64] = await Promise.all([
+        fileToBase64(solFirmaCerFile),
+        fileToBase64(solFirmaKeyFile),
+      ])
+      // Primera firma (UEFA): el movimiento queda "Pendiente de firma" en la
+      // pestaña Solicitud; el Dictamen ya no se descarga en este paso.
+      const res = await fetch("/api/catalogo-justificaciones/solicitar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -452,50 +463,24 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           nuevo_importe_bruto: importeCambio,
           programa_anterior: programaCambio ? solRec.programa_proyecto : null,
           nuevo_programa_proyecto: programaCambio,
+          firma_cargo: solFirmaCargo.trim(),
+          firma_certificado: cerB64,
+          firma_clave_privada: keyB64,
+          firma_frase_clave_privada: solFirmaPassword,
+          nombre_cert: solNombreCert,
+          rfc_cert: solRfcCert,
         }),
       })
-      const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
-      const [cerB64, keyB64] = await Promise.all([
-        fileToBase64(solFirmaCerFile),
-        fileToBase64(solFirmaKeyFile),
-      ])
-      const body: Record<string, unknown> = {
-        vigenciaInicio: vi,
-        vigenciaFin: vf,
-        firmaCargo: solFirmaCargo.trim(),
-        firmaUsuarioId: user.id,
-        firmaCertificado: cerB64,
-        firmaClavePrivada: keyB64,
-        firmaFraseClavePrivada: solFirmaPassword,
-        nombreCert: solNombreCert,
-        rfcCert: solRfcCert,
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.error ?? "Error al enviar la solicitud")
       }
-      if (solRec.solicitud.id) body.solicitudId = solRec.solicitud.id
-      else body.catalogoId = solRec.id
-      if (np) body.numeroPersonas = np
-      if (programaCambio) body.programaProyecto = programaCambio
-      if (importeCambio !== null) body.importeBruto = importeCambio
-      const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-      if (!pdfRes.ok) {
-        const errJson = await pdfRes.json().catch(() => null)
-        throw new Error(errJson?.error ?? "Error al generar el PDF")
-      }
-      const blob = await pdfRes.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `Dictamen_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
       setShowFirmarSol(false)
       setShowSol(false)
+      setSolExito("Solicitud firmada y enviada a la pestaña Solicitud como pendiente de firma.")
       void fetchData()
     } catch (e) {
-      setSolError(e instanceof Error ? e.message : "Error al generar el PDF")
+      setSolError(e instanceof Error ? e.message : "Error al enviar la solicitud")
     } finally {
       setSolLoading(false)
     }
@@ -579,6 +564,15 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           </SelectContent>
         </Select>
       </div>
+      {solExito && (
+        <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-[var(--sem-accent-primary)] bg-muted/40 px-4 py-3">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--sem-accent-primary)]" />
+          <span className="text-sm text-card-foreground flex-1">{solExito}</span>
+          <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setSolExito(null)} aria-label="Cerrar">
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {error && (
         <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3">
           <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
@@ -1077,7 +1071,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
               disabled={solLoading || !solFirmaCargo.trim() || !solFirmaCerFile || !solFirmaKeyFile || !solFirmaPassword}
             >
               {solLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {solLoading ? "Firmando…" : "Firmar y Generar"}
+              {solLoading ? "Firmando…" : "Firmar y Enviar"}
             </Button>
           </div>
         </DialogContent>
@@ -1999,21 +1993,433 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
     </>
   )
 }
+interface SolicitudCatalogo {
+  id: number
+  folio: string | null
+  programaProyecto: string | null
+  vigenciaInicio: string | null
+  vigenciaFin: string | null
+  importeBruto: string | null
+  numeroPrestadores: number | null
+  estado: string | null
+  firmadoEn: string | null
+}
+
+const fmtFechaIso = (iso: string | null) => {
+  if (!iso) return "—"
+  const [y, m, d] = iso.split("-")
+  return y && m && d ? `${d}/${m}/${y}` : iso
+}
+
+
+function SolicitudTab() {
+  const { user } = useAuth()
+  const [rows, setRows] = useState<SolicitudCatalogo[]>([])
+  const [puedeFirmar, setPuedeFirmar] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [exito, setExito] = useState<string | null>(null)
+
+  const [firmarLote, setFirmarLote] = useState<SolicitudCatalogo[] | null>(null)
+  const [seleccion, setSeleccion] = useState<Set<number>>(new Set())
+  const [firmaCargo, setFirmaCargo] = useState("")
+  const [firmaCargoBloqueado, setFirmaCargoBloqueado] = useState(false)
+  const [firmaCerFile, setFirmaCerFile] = useState<File | null>(null)
+  const [firmaKeyFile, setFirmaKeyFile] = useState<File | null>(null)
+  const [firmaPassword, setFirmaPassword] = useState("")
+  const [nombreCert, setNombreCert] = useState("")
+  const [rfcCert, setRfcCert] = useState("")
+  const [firmaError, setFirmaError] = useState<string | null>(null)
+  const [firmando, setFirmando] = useState(false)
+  const [descargando, setDescargando] = useState<number | null>(null)
+
+
+  const cargadoRef = useRef(false)
+  const fetchData = useCallback(async () => {
+    if (!user?.id) return
+    if (!cargadoRef.current) setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({ userId: user.id })
+      const res = await fetch(`/api/catalogo-justificaciones/solicitudes?${params}`)
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.error ?? "Error al obtener solicitudes")
+      setRows(json?.records ?? [])
+      setPuedeFirmar(json?.puedeFirmar === true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al obtener solicitudes")
+    } finally {
+      cargadoRef.current = true
+      setLoading(false)
+    }
+  }, [user?.id])
+
+  useEffect(() => { void fetchData() }, [fetchData])
+  useRealtime(["catalogo"], fetchData)
+
+  const pendientes = useMemo(() => rows.filter((r) => r.estado === "pendiente_firma"), [rows])
+  useEffect(() => {
+    setSeleccion((prev) => {
+      const vigentes = new Set(pendientes.map((r) => r.id))
+      const next = new Set([...prev].filter((id) => vigentes.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [pendientes])
+  const todasSeleccionadas = pendientes.length > 0 && seleccion.size === pendientes.length
+  const toggleTodas = (checked: boolean) =>
+    setSeleccion(checked ? new Set(pendientes.map((r) => r.id)) : new Set())
+  const toggleUna = (id: number, checked: boolean) =>
+    setSeleccion((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+
+  const abrirFirmar = (recs: SolicitudCatalogo[]) => {
+    if (!user?.id || recs.length === 0) return
+    setFirmarLote(recs)
+    setFirmaCargo("")
+    setFirmaCargoBloqueado(false)
+    setFirmaCerFile(null)
+    setFirmaKeyFile(null)
+    setFirmaPassword("")
+    setNombreCert("")
+    setRfcCert("")
+    setFirmaError(null)
+    fetch(`/api/firma-efirma/ultimo-cargo?usuarioId=${encodeURIComponent(user.id)}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.ok && j.cargo) {
+          setFirmaCargo(String(j.cargo).toUpperCase())
+          setFirmaCargoBloqueado(true)
+        }
+      })
+      .catch(() => {})
+  }
+
+  const handleCerFile = async (file: File | null) => {
+    setFirmaCerFile(file)
+    setNombreCert(""); setRfcCert("")
+    if (!file) return
+    try {
+      const info = parseCertificadoInfo(await file.arrayBuffer())
+      if (info.nombre) setNombreCert(info.nombre)
+      if (info.rfc) setRfcCert(info.rfc)
+    } catch { /* noop */ }
+  }
+
+  const handleFirmar = async () => {
+    if (!firmarLote || !user?.id || !firmaCerFile || !firmaKeyFile) return
+    setFirmando(true)
+    setFirmaError(null)
+    try {
+      const [cerB64, keyB64] = await Promise.all([fileToBase64(firmaCerFile), fileToBase64(firmaKeyFile)])
+      const res = await fetch("/api/catalogo-justificaciones/solicitudes/firmar-lote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario_id: user.id,
+          ids: firmarLote.map((r) => r.id),
+          firma_cargo: firmaCargo.trim(),
+          firma_certificado: cerB64,
+          firma_clave_privada: keyB64,
+          firma_frase_clave_privada: firmaPassword,
+          nombre_cert: nombreCert,
+          rfc_cert: rfcCert,
+        }),
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.error ?? "No se pudo firmar")
+      const resultados: { id: number; ok: boolean; error?: string }[] = json?.resultados ?? []
+      const fallidas = resultados.filter((r) => !r.ok)
+      if (fallidas.length === resultados.length) {
+        throw new Error(fallidas[0]?.error ?? "No se pudo firmar")
+      }
+      const folioDe = (id: number) => firmarLote.find((r) => r.id === id)?.folio ?? `#${id}`
+      const firmadas = resultados.length - fallidas.length
+      setFirmarLote(null)
+      setSeleccion(new Set())
+      setExito(
+        firmadas === 1
+          ? "Solicitud firmada. El Dictamen ya está disponible para la UEFA."
+          : `${firmadas} solicitudes firmadas. Los Dictámenes ya están disponibles para las UEFA.`,
+      )
+      setError(
+        fallidas.length > 0
+          ? `No se pudieron firmar ${fallidas.length}: ${fallidas.map((f) => `${folioDe(f.id)} (${f.error})`).join("; ")}. Siguen pendientes.`
+          : null,
+      )
+      void fetchData()
+    } catch (e) {
+      setFirmaError(e instanceof Error ? e.message : "No se pudo firmar")
+    } finally {
+      setFirmando(false)
+    }
+  }
+
+  const pdfUrl = (rec: SolicitudCatalogo) => {
+    const params = new URLSearchParams({ userId: user?.id ?? "" })
+    return `/api/catalogo-justificaciones/solicitudes/${rec.id}/pdf?${params}`
+  }
+
+  const handleDescargar = async (rec: SolicitudCatalogo) => {
+    setDescargando(rec.id)
+    setError(null)
+    try {
+      const res = await fetch(pdfUrl(rec))
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.error ?? "No se pudo descargar el Dictamen")
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `Dictamen_${(rec.folio ?? String(rec.id)).replace(/[\\/]/g, "-")}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo descargar el Dictamen")
+    } finally {
+      setDescargando(null)
+    }
+  }
+
+  const columnas = puedeFirmar ? 9 : 8
+
+  return (
+    <div className="flex flex-col gap-3">
+      {puedeFirmar && seleccion.size > 0 && (
+        <div className="flex items-center justify-end gap-3">
+          <span className="text-sm text-muted-foreground">
+            {seleccion.size} {seleccion.size === 1 ? "seleccionada" : "seleccionadas"}
+          </span>
+          <Button
+            variant="vino"
+            className="rounded-full h-10 px-6 font-normal shadow-sm"
+            onClick={() => abrirFirmar(pendientes.filter((r) => seleccion.has(r.id)))}
+          >
+            <PenLine className="h-4 w-4" /> Firmar
+          </Button>
+        </div>
+      )}
+      {exito && (
+        <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-[var(--sem-accent-primary)] bg-muted/40 px-4 py-3">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--sem-accent-primary)]" />
+          <span className="text-sm text-card-foreground flex-1">{exito}</span>
+          <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setExito(null)} aria-label="Cerrar">
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border-l-4 border-l-destructive bg-destructive/5 px-4 py-3">
+          <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+          <span className="text-sm text-destructive">{error}</span>
+        </div>
+      )}
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden mb-5">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/30 border-b border-border">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Folio</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa / Proyecto</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia inicio</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia término</th>
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground">Importe</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">No. de prestadores</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Estatus</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground text-center">Acción</th>
+                {puedeFirmar && (
+                  <th className="px-2 py-2.5 text-center w-10">
+                    <Checkbox
+                      checked={todasSeleccionadas ? true : seleccion.size > 0 ? "indeterminate" : false}
+                      onCheckedChange={(v) => toggleTodas(v === true)}
+                      disabled={pendientes.length === 0}
+                      aria-label="Seleccionar todas las pendientes"
+                    />
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={columnas} className="px-4 py-10 text-center">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+                  </td>
+                </tr>
+              )}
+              {!loading && rows.length === 0 && (
+                <tr className="empty-row">
+                  <td colSpan={columnas}>
+                    <EmptyState
+                      icon={Inbox}
+                      title="Sin solicitudes"
+                      description={puedeFirmar ? "No hay solicitudes de las UEFA." : "Aún no has enviado solicitudes."}
+                    />
+                  </td>
+                </tr>
+              )}
+              {!loading && rows.map((r) => (
+                <tr key={r.id} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3 whitespace-nowrap">{r.folio ?? "—"}</td>
+                  <td className="px-4 py-3">{r.programaProyecto ?? "—"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{fmtFechaIso(r.vigenciaInicio)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{fmtFechaIso(r.vigenciaFin)}</td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">{fmtMoney(r.importeBruto)}</td>
+                  <td className="px-4 py-3 text-center">{r.numeroPrestadores ?? "—"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {r.estado === "firmado"
+                      ? <StatusBadge label="Firmado" color={C_VERDE_ESTADO} bgColor={C_VERDE_ESTADO_BG} />
+                      : <StatusBadge label="Pendiente" color={C_AMARILLO} bgColor={C_AMARILLO_BG} />}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center">
+                      {/* Firmada: Descargar (UEFA y Emisor). Pendiente: Firmar solo para
+                          Emisor/Administrador (varias a la vez con las casillas); UEFA solo ve el estatus. */}
+                      {r.estado === "firmado" ? (
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => void handleDescargar(r)}
+                          disabled={descargando === r.id}
+                          className="gap-1.5 font-medium"
+                          style={{ color: "var(--sem-content-low)" }}
+                        >
+                          {descargando === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Descargar
+                        </Button>
+                      ) : puedeFirmar && r.estado === "pendiente_firma" ? (
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => abrirFirmar([r])}
+                          className="gap-1.5 font-medium"
+                          style={{ color: "var(--sem-content-low)" }}
+                        >
+                          <PenLine className="h-4 w-4" />Firmar
+                        </Button>
+                      ) : null}
+                    </div>
+                  </td>
+                  {puedeFirmar && (
+                    <td className="px-2 py-3 text-center">
+                      {r.estado === "pendiente_firma" && (
+                        <Checkbox
+                          checked={seleccion.has(r.id)}
+                          onCheckedChange={(v) => toggleUna(r.id, v === true)}
+                          aria-label={`Seleccionar ${r.folio ?? r.id}`}
+                        />
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <Dialog open={!!firmarLote} onOpenChange={(v) => { if (!v && !firmando) setFirmarLote(null) }}>
+        <DialogContent className="max-w-xl bg-white p-0 gap-0 overflow-hidden">
+          <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
+            <DialogTitle className="ds-title-md text-content-high">
+              Vo.Bo. del Dictamen Técnico Funcional
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              {firmarLote && firmarLote.length > 1
+                ? `${firmarLote.length} solicitudes. Con una sola captura de su e.firma se firma cada una; se genera cada Dictamen con la firma de la UEFA y la suya, y queda disponible para la UEFA.`
+                : `Folio ${firmarLote?.[0]?.folio ?? "—"}. Al firmar se genera el Dictamen con la firma de la UEFA y la suya, y queda disponible para la UEFA.`}
+            </DialogDescription>
+          </div>
+          <div className="flex flex-col gap-4 px-6 py-5">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">Cargo / Puesto</Label>
+              <Input
+                value={firmaCargo}
+                readOnly={firmaCargoBloqueado}
+                onChange={(e) => { if (!firmaCargoBloqueado) setFirmaCargo(e.target.value.toUpperCase()) }}
+                placeholder="EJ. DIRECTOR DE ANÁLISIS NORMATIVO"
+                className={`uppercase bg-background ${firmaCargoBloqueado ? "cursor-not-allowed" : ""}`}
+                disabled={firmando}
+              />
+              {firmaCargoBloqueado && (
+                <p className="text-[10px] text-muted-foreground">Cargo tomado de tu usuario — no puede editarse aquí.</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">Certificado (.cer)</Label>
+              <Input type="file" accept=".cer" onChange={(e) => void handleCerFile(e.target.files?.[0] ?? null)} disabled={firmando} />
+              {nombreCert && (
+                <p className="text-[10px] text-muted-foreground">
+                  Firmará como: <strong>{nombreCert}</strong>{rfcCert ? ` (${rfcCert})` : ""} — extraído del certificado
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">Clave privada (.key)</Label>
+              <Input type="file" accept=".key" onChange={(e) => setFirmaKeyFile(e.target.files?.[0] ?? null)} disabled={firmando} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs">Contraseña de la clave privada</Label>
+              <Input
+                type="password"
+                value={firmaPassword}
+                onChange={(e) => setFirmaPassword(e.target.value)}
+                autoComplete="new-password"
+                disabled={firmando}
+              />
+            </div>
+            {firmaError && (
+              <div className="flex items-center gap-2 text-xs text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />{firmaError}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[var(--sem-border-md)]">
+            <Button
+              variant="default"
+              className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+              onClick={() => setFirmarLote(null)}
+              disabled={firmando}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm"
+              onClick={() => void handleFirmar()}
+              disabled={firmando || !firmaCargo.trim() || !firmaCerFile || !firmaKeyFile || !firmaPassword}
+            >
+              {firmando && <Loader2 className="h-4 w-4 animate-spin" />}
+              {firmando
+                ? (firmarLote && firmarLote.length > 1 ? `Firmando ${firmarLote.length}…` : "Firmando…")
+                : (firmarLote && firmarLote.length > 1 ? `Firmar ${firmarLote.length}` : "Firmar")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
 export function CatalogoJustificacionesPage() {
   const { user } = useAuth()
   const [canAdministrar, setCanAdministrar] = useState(user?.catalogoAdministracion === true)
-  const [canConsultar, setCanConsultar] = useState(user?.catalogoConsulta !== false)
+  const [canConsultar, setCanConsultar] = useState(user?.catalogoConsulta === true)
+  const [canSolicitud, setCanSolicitud] = useState(false)
   const [consultaCount, setConsultaCount] = useState<number | null>(null)
   const [adminCount, setAdminCount] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!user?.id) { setCanAdministrar(false); setCanConsultar(false); return }
+    if (!user?.id) { setCanAdministrar(false); setCanConsultar(false); setCanSolicitud(false); return }
     fetch(`/api/catalogo-justificaciones/puede-administrar?userId=${user.id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!d) return
         setCanAdministrar(d.puede === true)
         setCanConsultar(d.puedeConsultar === true)
+        setCanSolicitud(d.puedeSolicitud === true)
       })
       .catch(() => {})
   }, [user?.id])
@@ -2031,31 +2437,50 @@ export function CatalogoJustificacionesPage() {
       title="Catálogo para Dictaminaciones Técnicas Funcionales para la Prestación de Servicios Profesionales de la Administración Pública Centralizada del Poder Ejecutivo Estatal"
       description="Consulta las Cartas Descriptivas."
     >
-      {canAdministrar && canConsultar ? (
-        <Tabs defaultValue="consulta" className="w-full gap-3">
+      {canAdministrar || canConsultar || canSolicitud ? (
+        <Tabs
+          key={`${canConsultar}-${canSolicitud}-${canAdministrar}`}
+          defaultValue={canConsultar ? "consulta" : canSolicitud ? "solicitud" : "administracion"}
+          className="w-full gap-3"
+        >
           <TabsList>
-            <TabsTrigger value="consulta" className="gap-1.5">
-              <Search className="h-4 w-4" />
-              Consulta
-              {consultaCount !== null && <span className={TAB_BADGE}>{consultaCount}</span>}
-            </TabsTrigger>
-            <TabsTrigger value="administracion" className="gap-1.5">
-              <ListChecks className="h-4 w-4" />
-              Administración
-              {adminCount !== null && <span className={TAB_BADGE}>{adminCount}</span>}
-            </TabsTrigger>
+            {canConsultar && (
+              <TabsTrigger value="consulta" className="gap-1.5">
+                <Search className="h-4 w-4" />
+                Consulta
+                {consultaCount !== null && <span className={TAB_BADGE}>{consultaCount}</span>}
+              </TabsTrigger>
+            )}
+            {canSolicitud && (
+              <TabsTrigger value="solicitud" className="gap-1.5">
+                <FileText className="h-4 w-4" />
+                Solicitud
+              </TabsTrigger>
+            )}
+            {canAdministrar && (
+              <TabsTrigger value="administracion" className="gap-1.5">
+                <ListChecks className="h-4 w-4" />
+                Administración
+                {adminCount !== null && <span className={TAB_BADGE}>{adminCount}</span>}
+              </TabsTrigger>
+            )}
           </TabsList>
-          <TabsContent value="consulta">
-            <ConsultaTab onCountChange={setConsultaCount} />
-          </TabsContent>
-          <TabsContent value="administracion">
-            <AdministracionTab onCountChange={setAdminCount} />
-          </TabsContent>
+          {canConsultar && (
+            <TabsContent value="consulta">
+              <ConsultaTab onCountChange={setConsultaCount} />
+            </TabsContent>
+          )}
+          {canSolicitud && (
+            <TabsContent value="solicitud">
+              <SolicitudTab />
+            </TabsContent>
+          )}
+          {canAdministrar && (
+            <TabsContent value="administracion">
+              <AdministracionTab onCountChange={setAdminCount} />
+            </TabsContent>
+          )}
         </Tabs>
-      ) : canAdministrar ? (
-        <AdministracionTab onCountChange={setAdminCount} />
-      ) : canConsultar ? (
-        <ConsultaTab />
       ) : (
         <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
           <p className="text-sm font-medium text-card-foreground">Sin acceso al Catálogo</p>

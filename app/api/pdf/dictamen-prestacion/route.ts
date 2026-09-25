@@ -10,7 +10,7 @@ import {
 import { claveParaPdf, folioSinSiglas, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import { puedeMostrarFolioDictamen } from "@/lib/firma-visibilidad";
 import { applyTextRules } from "@/lib/utils";
-import { CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT, getTextoConfiguracion } from "@/lib/configuracion-texto";
+import { getNotaDictamen } from "@/lib/configuracion-texto";
 import { generarQRPng } from "@/lib/pdf-firma-estampado";
 import React from "react";
 
@@ -73,7 +73,7 @@ export async function buildDictamenPrestacionBuffer(
 
   let data: DictamenPrestacionData;
   let folio: string;
-  const notaDictamen = await getTextoConfiguracion(CLAVE_NOTA_DICTAMEN, NOTA_DICTAMEN_DEFAULT);
+  const notaDictamen = (await getNotaDictamen()).valor;
   const firmaQrPng = overrides.firmaUrlValidacion
     ? await generarQRPng(overrides.firmaUrlValidacion, 200).catch(() => undefined)
     : undefined;
@@ -122,7 +122,8 @@ export async function buildDictamenPrestacionBuffer(
       sol.folio_recepcion ??
       String(sol.id);
     data = {
-      folio: folioSinSiglas(conSufijo(folio)),
+      folio: folioSinSiglas(folio),
+      folioActual: reutilizacionNumero > 0 ? folioSinSiglas(conSufijo(folio)) : undefined,
       fecha: formatFechaLarga(new Date()),
       secretariaDependencia: sol.secretaria ?? "",
       unidadResponsableGasto: sol.unidad_responsable ?? "",
@@ -153,7 +154,8 @@ export async function buildDictamenPrestacionBuffer(
     if (!cj) return null;
     folio = cj.folio_dictamen ?? cj.folio_recepcion ?? String(cj.id);
     data = {
-      folio: folioSinSiglas(conSufijo(folio)),
+      folio: folioSinSiglas(folio),
+      folioActual: reutilizacionNumero > 0 ? folioSinSiglas(conSufijo(folio)) : undefined,
       fecha: formatFechaLarga(new Date()),
       secretariaDependencia: cj.secretaria ?? "",
       unidadResponsableGasto: cj.unidad_responsable ?? "",

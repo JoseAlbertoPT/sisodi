@@ -10,9 +10,10 @@ import type { MenuNode } from "@/lib/permisos-api"
 export const CATALOGO_MENU_KEY = "catalogo-justificaciones"
 export const CATALOGO_ACCION_ADMINISTRACION = "administracion"
 export const CATALOGO_ACCION_CONSULTA = "consulta"
-// Debe reflejar lib/api-guard.ts:ROLES_ADMIN_CATALOGO — duplicado porque ese módulo importa
-// Prisma y no puede usarse desde un componente cliente.
-const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador", "Revisor"]
+// Deben reflejar lib/api-guard.ts:ROLES_ADMIN_CATALOGO/ROLES_CONSULTA_CATALOGO — duplicados
+// porque ese módulo importa Prisma y no puede usarse desde un componente cliente.
+const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador"]
+const ROLES_CONSULTA_CATALOGO = ["Administrador", "UEFA", "Enlace DGRH", "Consulta"]
 
 // Debe reflejar lib/api-guard.ts:VERIFICACION_MENU_KEY/VERIFICACION_ACCION_SIN_FIRMA
 // (misma razón: ese módulo importa Prisma y no puede usarse en cliente).
@@ -37,8 +38,7 @@ export function verificacionIncluyeFirma(acciones: string[] | undefined): boolea
 /**
  * Consulta y Administración de Catálogo son independientes entre sí (ver
  * lib/api-guard.ts:puedeAdministrarCatalogo/puedeConsultarCatalogo). Sin
- * override explícito para este usuario, se usa el default por rol
- * (Administración) o siempre-permitido (Consulta). Con override explícito
+ * override explícito para este usuario, se usa el default por rol. Con override explícito
  * (acciones no vacío), es autoritativo para ambas: solo se ve lo marcado.
  */
 export function catalogoIncluyeAdministracion(acciones: string[] | undefined, rolUsuario: string | undefined): boolean {
@@ -47,10 +47,10 @@ export function catalogoIncluyeAdministracion(acciones: string[] | undefined, ro
   return rolUsuario ? ROLES_ADMIN_CATALOGO.includes(rolUsuario) : false
 }
 
-export function catalogoIncluyeConsulta(acciones: string[] | undefined): boolean {
+export function catalogoIncluyeConsulta(acciones: string[] | undefined, rolUsuario: string | undefined): boolean {
   const list = acciones ?? []
   if (list.length > 0) return list.includes(CATALOGO_ACCION_CONSULTA)
-  return true
+  return rolUsuario ? ROLES_CONSULTA_CATALOGO.includes(rolUsuario) : false
 }
 
 export function countActiveChildren(nodes: MenuNode[], menuIdSet: Set<string>): { active: number; total: number } {
@@ -254,7 +254,7 @@ function MenuPermisoRow({
   const hasChildren = node.children && node.children.length > 0
   const esCatalogo = node.key === CATALOGO_MENU_KEY
   const incluyeAdministracion = catalogoIncluyeAdministracion(menuActions?.[node.id], rolUsuario)
-  const incluyeConsulta = catalogoIncluyeConsulta(menuActions?.[node.id])
+  const incluyeConsulta = catalogoIncluyeConsulta(menuActions?.[node.id], rolUsuario)
   const esVerificacion = node.key === VERIFICACION_MENU_KEY
   const incluyeFirma = verificacionIncluyeFirma(menuActions?.[node.id])
 

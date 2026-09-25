@@ -6,15 +6,13 @@ import { prisma } from "@/lib/prisma";
 import { buildCartaDescriptivaBuffer } from "../carta-descriptiva/route";
 import { buildDictamenPrestacionBuffer } from "../dictamen-prestacion/route";
 import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
-import { firmaDatosEx, fechaDocumentoHoy } from "@/lib/firma-oficio-client";
 import { agregarConstanciaFirma, type FirmaPortal } from "@/lib/pdf-firma-estampado";
+import { resolverFirmaCatalogo } from "@/lib/firma-catalogo";
 import { puedeFirmarCatalogo } from "@/lib/api-guard";
 
 export const runtime = "nodejs";
 
-const BYPASS = process.env.EFIRMA_BYPASS === "true";
-
-interface PdfOverrides {
+export interface PdfOverrides {
   vigenciaInicio?: string
   vigenciaFin?: string
   numeroPrestadores?: number
@@ -22,117 +20,24 @@ interface PdfOverrides {
   importeBruto?: number
 }
 
-interface FirmaInput {
-  usuarioId: string
-  cargo: string
-  folio: string
-  certificado?: string
-  clavePrivada?: string
-  fraseClavePrivada?: string
-  /** Nombre/RFC extraídos del .cer en el navegador (lib/certificado-cer.ts) —
-   *  cuando vienen, se usan en vez del nombre/RFC del usuario en la app, para
-   *  que la Constancia refleje a quien realmente posee ese certificado. */
-  nombreCert?: string
-  rfcCert?: string
-}
-
-function selloFalso(prefix: string, length = 344): string {
-  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  let out = prefix;
-  while (out.length < length) {
-    out += charset[Math.floor(Math.random() * charset.length)];
-  }
-  return out.slice(0, length - 2) + "==";
-}
+type DictamenCompletoResult =
+  | { ok: true; bytes: Uint8Array; filename: string }
+  | { ok: false; status: number; error: string }
 
 /**
- * Resuelve la firma electrónica de quien reutiliza desde Catálogo — un solo
- * firmante, autofirma inmediata (no pasa por firma_proceso/firma_firmante:
- * a diferencia de una solicitud normal, aquí no hay un solicitud_id propio
- * al que atar un proceso multi-firmante, y no lo necesita — es un sello
- * inmediato de una sola persona, no un flujo de varios pasos). Devuelve la
- * misma forma (FirmaPortal) que usa la Constancia de Firma Electrónica de
- * Dictámenes, para reutilizar exactamente esa página (ver agregarConstanciaFirma).
+ * Carta Descriptiva + Dictamen en un solo PDF. `firmas`: Constancia de Firma
+ * Electrónica al final (en orden). La ÚLTIMA firma es la que se imprime dentro
+ * del Dictamen (nombre, cargo y QR) — en la reutilización con doble firma es
+ * la del Emisor.
  */
-async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
-  const usuario = await prisma.usuario.findUnique({
-    where: { id: input.usuarioId },
-    select: { nombre: true, rfc: true },
-  });
-  if (!usuario?.rfc) {
-    throw new Error("Tu usuario no tiene RFC registrado. Contacta al administrador.");
-  }
-  if (!input.cargo?.trim()) {
-    throw new Error("Falta el cargo/puesto de quien firma.");
-  }
-  const cargo = input.cargo.trim().toUpperCase();
-  const rfcCertTrim = input.rfcCert?.trim() ?? "";
-  const nombreCertTrim = input.nombreCert?.trim() ?? "";
-  const rfc = (rfcCertTrim || usuario.rfc).toUpperCase();
-  const nombre = nombreCertTrim || usuario.nombre;
-  const ahora = new Date();
-
-  if (!BYPASS) {
-    if (!input.certificado || !input.clavePrivada || !input.fraseClavePrivada) {
-      throw new Error("Faltan credenciales de e.firma (.cer, .key y contraseña).");
-    }
-    // Firma real vía WSFirmaOficio (firmaDatosEx) — un solo sello de una sola
-    // vez, sin crear un firma_proceso persistente. No hay aún un PDF final
-    // (se renderiza después, en buildResponse) así que el "contenido" a
-    // sellar es un texto descriptivo, no el documento — igual que la
-    // Constancia calcula su propia huella SHA-256 del PDF final por separado.
-    const resultado = await firmaDatosEx({
-      certificado: input.certificado,
-      clavePrivada: input.clavePrivada,
-      fraseClavePrivada: input.fraseClavePrivada,
-      folioDocumento: input.folio,
-      // DD/MM/YYYY, no ISO (ver fechaDocumentoHoy en lib/firma-oficio-client.ts).
-      fechaDocumento: fechaDocumentoHoy(ahora),
-      contenido: `Reutilización de Catálogo — Folio ${input.folio} — ${rfc} — ${ahora.toISOString()}`,
-      destinatario: { nombreCompleto: nombre ?? rfc, rfc },
-    });
-    return {
-      usuario: rfc,
-      rolFirmante: `Realizó — ${cargo}`,
-      responsable: nombre,
-      selloDigital: resultado.selloDigital,
-      estampadoTiempo: resultado.estampadoTiempo ?? ahora.toISOString().replace("T", " ").slice(0, 19),
-      selloEstampadoTiempo: resultado.selloEstampadoTiempo,
-      noCertificado: null,
-      noCertificadoGEM: resultado.noCertificadoGEM,
-      rfcGEM: resultado.rfcGEM,
-      urlValidacion: resultado.urlValidacion,
-      firmadoEn: ahora,
-      cargo,
-      documento: "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS",
-    };
-  }
-
-  // Modo bypass (desarrollo): mismos datos ficticios que usa el resto del
-  // sistema para simular una firma completa sin llamar al portal real.
-  return {
-    usuario: rfc,
-    rolFirmante: `Realizó — ${cargo}`,
-    responsable: nombre,
-    selloDigital: selloFalso("DEMO"),
-    estampadoTiempo: ahora.toISOString().replace("T", " ").slice(0, 19),
-    selloEstampadoTiempo: selloFalso("GEM"),
-    noCertificado: "00001000000700000001",
-    noCertificadoGEM: "00001000000709040175",
-    rfcGEM: "GEM720601TW9",
-    urlValidacion: `https://firma-dev.morelos.gob.mx/ValidacionFirma?uuid=${crypto.randomUUID()}`,
-    firmadoEn: ahora,
-    cargo,
-    documento: "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS",
-  };
-}
-
-async function buildResponse(solicitudId: string | null, overrides: PdfOverrides = {}, catalogoId: string | null = null, firma: FirmaPortal | null = null) {
+export async function buildDictamenCompletoBuffer(
+  solicitudId: string | null,
+  overrides: PdfOverrides = {},
+  catalogoId: string | null = null,
+  firmas: FirmaPortal[] = [],
+): Promise<DictamenCompletoResult> {
   if (!solicitudId && !catalogoId) {
-    return NextResponse.json(
-      { ok: false, error: "Falta solicitudId o catalogoId" },
-      { status: 400 },
-    );
+    return { ok: false, status: 400, error: "Falta solicitudId o catalogoId" };
   }
 
   // Consulta ligera solo para calcular la clave antes de lanzar ambos renders en paralelo.
@@ -146,10 +51,7 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
       },
     });
     if (!solMeta) {
-      return NextResponse.json(
-        { ok: false, error: "Solicitud no encontrada" },
-        { status: 404 },
-      );
+      return { ok: false, status: 404, error: "Solicitud no encontrada" };
     }
     const folioMeta = solMeta.dictamen?.folio ?? solMeta.folio_dictamen ?? solMeta.folio_recepcion ?? solicitudId;
     clave = claveParaPdf(solMeta.secretaria, folioMeta, solMeta.historial_solicitud.length > 0);
@@ -159,10 +61,7 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
       select: { secretaria: true, folio_dictamen: true, folio_recepcion: true },
     });
     if (!cjMeta) {
-      return NextResponse.json(
-        { ok: false, error: "Registro de catálogo no encontrado" },
-        { status: 404 },
-      );
+      return { ok: false, status: 404, error: "Registro de catálogo no encontrado" };
     }
     const folioMeta = cjMeta.folio_dictamen ?? cjMeta.folio_recepcion ?? catalogoId!;
     clave = claveParaPdf(cjMeta.secretaria, folioMeta, true);
@@ -171,12 +70,13 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
   // Cuando se firma (reutilización desde Catálogo), el nombre y cargo de quien
   // firma también se imprimen en el propio Dictamen (debajo de la NOTA), además
   // de la Constancia de Firma Electrónica que se agrega al final del documento.
-  const dictamenOverrides = firma
+  const firmaImpresa = firmas.length > 0 ? firmas[firmas.length - 1] : null;
+  const dictamenOverrides = firmaImpresa
     ? {
         ...overrides,
-        firmaNombre: firma.responsable ?? undefined,
-        firmaCargo: firma.cargo ?? undefined,
-        firmaUrlValidacion: firma.urlValidacion ?? undefined,
+        firmaNombre: firmaImpresa.responsable ?? undefined,
+        firmaCargo: firmaImpresa.cargo ?? undefined,
+        firmaUrlValidacion: firmaImpresa.urlValidacion ?? undefined,
       }
     : overrides;
 
@@ -186,17 +86,11 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
     cartaResult = await buildCartaDescriptivaBuffer(solicitudId, clave || null, catalogoId, new Date());
   } catch (e) {
     console.error("[pdf/dictamen-prestacion-completo] Error generando buffers:", e);
-    return NextResponse.json(
-      { ok: false, error: mensajePublico(e, "Error al generar el PDF") },
-      { status: 500 },
-    );
+    return { ok: false, status: 500, error: mensajePublico(e, "Error al generar el PDF") };
   }
 
   if (!dictamenResult || !cartaResult) {
-    return NextResponse.json(
-      { ok: false, error: "Solicitud no encontrada" },
-      { status: 404 },
-    );
+    return { ok: false, status: 404, error: "Solicitud no encontrada" };
   }
 
   try {
@@ -206,37 +100,40 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
       const pages = await merged.copyPages(src, src.getPageIndices());
       pages.forEach((p) => merged.addPage(p));
     }
-    let mergedBytes = await merged.save();
+    let mergedBytes: Uint8Array = await merged.save();
 
     const filename = `Dictamen_${dictamenResult.folio.replace(/\//g, "-")}.pdf`;
 
     // Reutilización desde Catálogo con firma: se agrega la misma página de
     // "Constancia de Firma Electrónica" que llevan los Dictámenes normales
     // (ver lib/pdf-firma-estampado.ts), no un texto aparte dentro del Dictamen.
-    if (firma) {
+    if (firmas.length > 0) {
       mergedBytes = await agregarConstanciaFirma({
         pdfBase: Buffer.from(mergedBytes),
-        firmas: [firma],
+        firmas,
         nombreArchivo: filename,
         folio: dictamenResult.folio,
       });
     }
 
-    return new NextResponse(new Uint8Array(mergedBytes), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-        "Cache-Control": "no-store",
-      },
-    });
+    return { ok: true, bytes: mergedBytes, filename };
   } catch (e) {
     console.error("[pdf/dictamen-prestacion-completo] Error uniendo PDFs:", e);
-    return NextResponse.json(
-      { ok: false, error: mensajePublico(e, "Error al unir los documentos") },
-      { status: 500 },
-    );
+    return { ok: false, status: 500, error: mensajePublico(e, "Error al unir los documentos") };
   }
+}
+
+async function buildResponse(solicitudId: string | null, overrides: PdfOverrides = {}, catalogoId: string | null = null, firma: FirmaPortal | null = null) {
+  const r = await buildDictamenCompletoBuffer(solicitudId, overrides, catalogoId, firma ? [firma] : []);
+  if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: r.status });
+  return new NextResponse(new Uint8Array(r.bytes), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${r.filename}"`,
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 export async function GET(req: NextRequest) {
@@ -287,7 +184,7 @@ export async function POST(req: NextRequest) {
       );
     }
     try {
-      firma = await resolverFirma({
+      firma = await resolverFirmaCatalogo({
         usuarioId: String(body.firmaUsuarioId),
         cargo: String(body.firmaCargo),
         folio: solicitudId ?? catalogoId ?? "N/A",

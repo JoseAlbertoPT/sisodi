@@ -20,14 +20,18 @@ const RANGOS: { nivel: string; categoria: string; min: number; max: number }[] =
   { nivel: "510", categoria: "A a B", min: 0.00,     max: 31569.00 },
 ]
 
+// Estos rangos corresponden al tabulador 2026; otros años se crean con
+// "Crear nueva plantilla" en Configuración > Tabulador.
+const EJERCICIO = 2026
+
 export async function seedTabulador(prisma: PrismaClient) {
   // Todos aplican a todas las Secretarías (secretarias: []).
   for (const r of RANGOS) {
-    const existente = await prisma.tabulador.findFirst({ where: { nivel: r.nivel, categoria: r.categoria, secretarias: { isEmpty: true } } })
+    const existente = await prisma.tabulador.findFirst({ where: { ejercicio: EJERCICIO, nivel: r.nivel, categoria: r.categoria, secretarias: { isEmpty: true } } })
     if (existente) {
       await prisma.tabulador.update({ where: { id: existente.id }, data: { importe_bruto_min: r.min, importe_bruto_max: r.max } })
     } else {
-      await prisma.tabulador.create({ data: { nivel: r.nivel, categoria: r.categoria, importe_bruto_min: r.min, importe_bruto_max: r.max } })
+      await prisma.tabulador.create({ data: { ejercicio: EJERCICIO, nivel: r.nivel, categoria: r.categoria, importe_bruto_min: r.min, importe_bruto_max: r.max } })
     }
   }
   console.log(`Tabulador: ${RANGOS.length}`)

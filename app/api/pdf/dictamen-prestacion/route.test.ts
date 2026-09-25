@@ -9,14 +9,14 @@ vi.mock("@/lib/session", async (importOriginal) => ({
 const solicitudFindUnique          = vi.fn()
 const catalogoJustFindUnique       = vi.fn(async (): Promise<{ id: number } | null> => null)
 const catalogoSolicitudCount       = vi.fn(async () => 0)
-const configuracionTextoFindUnique = vi.fn(async () => null)
+const configuracionTextoFindMany = vi.fn(async () => [] as any[])
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     solicitud:              { findUnique: (...a: any[]) => (solicitudFindUnique as any)(...a) },
     catalogo_justificacion: { findUnique: (...a: any[]) => (catalogoJustFindUnique as any)(...a) },
     catalogo_solicitud:     { count: (...a: any[]) => (catalogoSolicitudCount as any)(...a) },
-    configuracion_texto:    { findUnique: (...a: any[]) => (configuracionTextoFindUnique as any)(...a) },
+    configuracion_texto:    { findMany: (...a: any[]) => (configuracionTextoFindMany as any)(...a) },
   },
 }))
 
@@ -56,7 +56,7 @@ beforeEach(() => {
   lastPlantillaData = null
   catalogoJustFindUnique.mockResolvedValue(null)
   catalogoSolicitudCount.mockResolvedValue(0)
-  configuracionTextoFindUnique.mockResolvedValue(null)
+  configuracionTextoFindMany.mockResolvedValue([])
 })
 
 describe("GET /api/pdf/dictamen-prestacion — Regla 12: bloqueado hasta la última firma", () => {
@@ -93,11 +93,12 @@ describe("GET /api/pdf/dictamen-prestacion — sufijo de reutilización: solo en
 
     expect(res.status).toBe(200)
     expect(lastPlantillaData.folio).toBe("05/08/2026")
+    expect(lastPlantillaData.folioActual).toBeUndefined()
     expect(lastPlantillaData.justificacion).not.toContain("-2")
     expect(catalogoSolicitudCount).not.toHaveBeenCalled()
   })
 
-  it("al reutilizar desde Catálogo (con vigencia override): 'Folio' sí lleva el sufijo, 'Justificación' se queda limpia", async () => {
+  it("al reutilizar desde Catálogo (con vigencia override): 'Folio de origen' limpio, 'Folio actual' con sufijo, 'Justificación' limpia", async () => {
     solicitudFindUnique.mockResolvedValue(baseSolicitud({ estado: { nombre: "Emitido" }, secretaria: "Secretaría de Finanzas" }))
     catalogoJustFindUnique.mockResolvedValue({ id: 5 })
     catalogoSolicitudCount.mockResolvedValue(2)
@@ -107,7 +108,8 @@ describe("GET /api/pdf/dictamen-prestacion — sufijo de reutilización: solo en
     ))
 
     expect(res.status).toBe(200)
-    expect(lastPlantillaData.folio).toBe("05/08/2026-2")
+    expect(lastPlantillaData.folio).toBe("05/08/2026")
+    expect(lastPlantillaData.folioActual).toBe("05/08/2026-2")
     expect(lastPlantillaData.justificacion).not.toContain("-2")
   })
 })
