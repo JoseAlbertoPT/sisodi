@@ -2224,14 +2224,6 @@ function SolicitudTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/30 border-b border-border">
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Folio</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa / Proyecto</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia inicio</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia término</th>
-                <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground">Importe</th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">No. de prestadores</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Estatus</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground text-center">Acción</th>
                 {puedeFirmar && (
                   <th className="px-2 py-2.5 text-center w-10">
                     <Checkbox
@@ -2242,6 +2234,14 @@ function SolicitudTab() {
                     />
                   </th>
                 )}
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Folio</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Programa / Proyecto</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia inicio</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Vigencia término</th>
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground">Importe</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground">No. de prestadores</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Estatus</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground text-center">Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -2265,6 +2265,17 @@ function SolicitudTab() {
               )}
               {!loading && rows.map((r) => (
                 <tr key={r.id} className="border-b border-border last:border-0">
+                  {puedeFirmar && (
+                    <td className="px-2 py-3 text-center">
+                      {r.estado === "pendiente_firma" && (
+                        <Checkbox
+                          checked={seleccion.has(r.id)}
+                          onCheckedChange={(v) => toggleUna(r.id, v === true)}
+                          aria-label={`Seleccionar ${r.folio ?? r.id}`}
+                        />
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-3 whitespace-nowrap">{r.folio ?? "—"}</td>
                   <td className="px-4 py-3">{r.programaProyecto ?? "—"}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{fmtFechaIso(r.vigenciaInicio)}</td>
@@ -2278,9 +2289,9 @@ function SolicitudTab() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center">
-                      {/* Firmada: Descargar (UEFA y Emisor). Pendiente: Firmar solo para
-                          Emisor/Administrador (varias a la vez con las casillas); UEFA solo ve el estatus. */}
-                      {r.estado === "firmado" ? (
+                      {/* Firmada: Descargar (UEFA y Emisor). Pendiente: Firmar esa sola (Emisor/
+                          Administrador); para varias, casillas + "Firmar" de arriba. UEFA solo ve el estatus. */}
+                      {r.estado === "firmado" && (
                         <Button
                           variant="ghost" size="sm"
                           onClick={() => void handleDescargar(r)}
@@ -2290,7 +2301,8 @@ function SolicitudTab() {
                         >
                           {descargando === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Descargar
                         </Button>
-                      ) : puedeFirmar && r.estado === "pendiente_firma" ? (
+                      )}
+                      {puedeFirmar && r.estado === "pendiente_firma" && (
                         <Button
                           variant="ghost" size="sm"
                           onClick={() => abrirFirmar([r])}
@@ -2299,20 +2311,9 @@ function SolicitudTab() {
                         >
                           <PenLine className="h-4 w-4" />Firmar
                         </Button>
-                      ) : null}
+                      )}
                     </div>
                   </td>
-                  {puedeFirmar && (
-                    <td className="px-2 py-3 text-center">
-                      {r.estado === "pendiente_firma" && (
-                        <Checkbox
-                          checked={seleccion.has(r.id)}
-                          onCheckedChange={(v) => toggleUna(r.id, v === true)}
-                          aria-label={`Seleccionar ${r.folio ?? r.id}`}
-                        />
-                      )}
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>
