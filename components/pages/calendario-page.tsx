@@ -527,7 +527,6 @@ export function CalendarioPage() {
         )}
       </div>
         </TabsContent>
-
         <TabsContent value="tabulador">
           <TabuladorTabContent />
         </TabsContent>

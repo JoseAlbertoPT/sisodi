@@ -12,7 +12,17 @@ export async function register() {
   // servidor, para que el primer usuario del día no espere los ~4s de la
   // consulta SOAP en frío (ver lib/sigef-cache.ts). No bloquea el arranque.
   const { warmAllKnownDependencias } = await import("@/lib/sigef-cache")
-  void warmAllKnownDependencias()
+  const { sincronizarDependenciasSigef } = await import("@/lib/sigef-sync")
+
+  // Primero se sincronizan las Secretarías con el catálogo de dependencias de
+  // SIGeF (altas y cambios de id, ver lib/sigef-sync.ts) y luego se
+  // precalienta, para que el precalentamiento ya use los ids correctos.
+  const sincronizarYPrecalentar = () =>
+    sincronizarDependenciasSigef()
+      .catch((e) => console.error("[sigef sync]", e instanceof Error ? e.message : e))
+      .then(() => warmAllKnownDependencias())
+  void sincronizarYPrecalentar()
+  setInterval(() => void sincronizarYPrecalentar(), 60 * 60 * 1000)
 
   // El WS de SIGeF corre en la infraestructura del proveedor y se cae de
   // forma intermitente (ver integracion-sigef-progreso.md). Si estaba caído

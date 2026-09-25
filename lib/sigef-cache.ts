@@ -11,8 +11,10 @@ import { MANUAL_OVERRIDES } from "@/lib/importar-catalogo-excel"
 // inmediato y se refresca en segundo plano para la siguiente consulta — el
 // usuario solo espera esos ~4s si nadie los precalentó antes (ver
 // `warmAllKnownDependencias`, llamado una vez al arrancar el servidor desde
-// instrumentation.ts) o si el TTL ya venció.
-export const CACHE_TTL_MS = 12 * 60 * 60 * 1000
+// instrumentation.ts) o si el TTL ya venció. Con 1 h, lo que SIGeF agregue o
+// cambie (proyectos, unidades movidas de Secretaría) se ve a más tardar en
+// ~1 h sin que nadie haga nada; `limpiarCacheSigef` lo fuerza al momento.
+export const CACHE_TTL_MS = 60 * 60 * 1000
 const cache = new Map<string, { at: number; proyectos: SigefProyecto[] }>()
 const refrescando = new Set<string>()
 
@@ -38,6 +40,12 @@ function refrescarEnSegundoPlano(idDependencia: string) {
     })
     .catch((e) => console.error("[sigef cache refresh]", idDependencia, e))
     .finally(() => refrescando.delete(idDependencia))
+}
+
+/** Olvida todo lo cacheado: la siguiente consulta va directo a SIGeF. */
+export function limpiarCacheSigef(): void {
+  cache.clear()
+  fallos.clear()
 }
 
 export async function getProyectosCached(idDependencia: string): Promise<SigefProyecto[]> {
@@ -74,9 +82,15 @@ const overridesNormalizados = new Map(
 export async function resolverIdDependencia(secretariaRaw: string): Promise<number | null> {
   const nodos = await prisma.organo_centralizado.findMany({
     where: { parent_id: null, sigef_id_dependencia: { not: null } },
-    select: { nombre: true, sigef_id_dependencia: true },
+    select: { nombre: true, sigef_nombre: true, sigef_id_dependencia: true },
   })
-  const porNombre = new Map(nodos.map((n) => [normalizeText(n.nombre), n.sigef_id_dependencia as number]))
+  // El nombre con el que SIGeF la conoce también vale (ej. registros que
+  // guardaron la Secretaría con el nombre de SIGeF, no el del catálogo).
+  const porNombre = new Map<string, number>()
+  for (const n of nodos) {
+    if (n.sigef_nombre) porNombre.set(normalizeText(n.sigef_nombre), n.sigef_id_dependencia as number)
+  }
+  for (const n of nodos) porNombre.set(normalizeText(n.nombre), n.sigef_id_dependencia as number)
 
   const normInput = normalizeText(secretariaRaw)
   const directo = porNombre.get(normInput)

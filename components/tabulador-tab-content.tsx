@@ -743,7 +743,7 @@ export function TabuladorTabContent() {
           <div className="px-6 py-4 border-b border-[var(--sem-border-md)]">
             <DialogTitle className="ds-title-md text-content-high">Nuevo tabulador</DialogTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Se creará el tabulador del año elegido. Si hay un tabulador anterior, se precargan sus niveles para solo ajustar lo que cambie.
+              Se creará el tabulador del año elegido.
             </p>
           </div>
           <div className="flex flex-col gap-4 px-6 py-5">
@@ -756,7 +756,7 @@ export function TabuladorTabContent() {
                 </span>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
                   <span className="text-sm font-medium">Año</span>
                   <Select value={plantillaAnio} onValueChange={setPlantillaAnio}>
@@ -767,14 +767,11 @@ export function TabuladorTabContent() {
                   </Select>
                   <span className="text-[11px] text-muted-foreground">Años con Calendario creado.</span>
                 </div>
-                {plantillaAnio && anioBasePlantilla(Number(plantillaAnio)) !== null ? (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-sm font-medium">Niveles</span>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Se precargan los niveles del tabulador <strong>{anioBasePlantilla(Number(plantillaAnio))}</strong>.
-                      Podrá editarlos, agregar o quitar filas antes de guardar.
-                    </p>
-                  </div>
+                {!plantillaAnio ? null : anioBasePlantilla(Number(plantillaAnio)) !== null ? (
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Se precargan los niveles del tabulador <strong>{anioBasePlantilla(Number(plantillaAnio))}</strong>.
+                    Podrá editarlos, agregar o quitar filas antes de guardar.
+                  </p>
                 ) : (
                   <div className="flex flex-col gap-1.5">
                     <span className="text-sm font-medium">Número de niveles</span>

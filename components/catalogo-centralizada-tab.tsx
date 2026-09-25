@@ -286,6 +286,7 @@ function SecretariaRow({
               {uas.length} Unidad{uas.length !== 1 ? "es" : ""} Administrativa{uas.length !== 1 ? "s" : ""}
             </span>
             </div>
+            {/* Deshabilitado: las Secretarías y sus UA ya no se editan, eliminan ni agregan desde aquí.
             <div className="shrink-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -312,6 +313,7 @@ function SecretariaRow({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            */}
           </div>
           <CollapsibleContent>
             <div className="mt-2 mb-2 ml-6 border-l-2 border-[var(--sem-accent-primary)]/15 pl-3">
@@ -359,6 +361,7 @@ function SecretariaRow({
                         </span>
                           )}
                         </div>
+                        {/* Deshabilitado: ya no se editan ni eliminan UA desde aquí.
                         <div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -380,6 +383,7 @@ function SecretariaRow({
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
+                        */}
                       </div>
                   )
                 })}
@@ -668,6 +672,7 @@ export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n:
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <SearchInput placeholder="Buscar secretaría o unidad..." value={search} onChange={(e) => setSearch(e.target.value)} containerClassName="flex-1 max-w-sm" />
+          {/* Deshabilitado: las Secretarías se dan de alta solas desde SIGeF (lib/sigef-sync.ts).
           <Button
               size="sm"
               variant="primary"
@@ -676,6 +681,7 @@ export function CatalogoCentralizadaTab({ onCountChange }: { onCountChange?: (n:
           >
             Agregar Secretaría
           </Button>
+          */}
         </div>
         <Card className="shadow-sm border-[var(--color-core-piedra-90)] overflow-hidden">
 
