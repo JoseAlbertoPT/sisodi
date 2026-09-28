@@ -104,7 +104,7 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
       urlValidacion: resultado.urlValidacion,
       firmadoEn: ahora,
       cargo,
-      documento: "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS",
+      documento: "CARTA DESCRIPTIVA DE PRESTACIÓN DE SERVICIOS",
     };
   }
 
@@ -123,7 +123,7 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
     urlValidacion: `https://firma-dev.morelos.gob.mx/ValidacionFirma?uuid=${crypto.randomUUID()}`,
     firmadoEn: ahora,
     cargo,
-    documento: "DICTAMEN TÉCNICO FUNCIONAL DE JUSTIFICACIÓN DE PRESTACIÓN DE SERVICIOS",
+    documento: "CARTA DESCRIPTIVA DE PRESTACIÓN DE SERVICIOS",
   };
 }
 

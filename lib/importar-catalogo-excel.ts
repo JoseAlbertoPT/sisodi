@@ -120,7 +120,8 @@ function parseFechaDMY(raw: string): { date: Date | null; error: string | null }
 function parseImporte(raw: string): { value: number | null; error: string | null } {
   let s = (raw ?? "").trim()
   if (!s) return { value: null, error: null }
-  s = s.replace(/^\$/, "").trim()
+  // Sin espacios: "$29, 845.63" se cortaba en 29 (parseFloat se detiene en el espacio).
+  s = s.replace(/\s+/g, "").replace(/^\$/, "")
   const commaCount = (s.match(/,/g) ?? []).length
   const dotCount   = (s.match(/\./g) ?? []).length
   let normalized: string
@@ -836,8 +837,14 @@ export async function sincronizarCatalogo(prisma: PrismaClient): Promise<Resulta
 // "Importado...") y cuyo folio ya NO aparece en el archivo que se está subiendo
 // ahora se consideran obsoletas y se eliminan. Las solicitudes creadas por el
 // flujo normal del sistema (sin ese comentario) nunca se tocan aquí.
+//
+// También entran los registros de catálogo de origen "excel" que se quedaron sin
+// solicitud (solicitud_id null): si el archivo nuevo ya no los trae tal cual, son
+// restos de una importación anterior — p.ej. filas que antes venían sin folio de
+// justificación y ahora sí lo traen, que de otro modo quedan duplicadas.
 export interface ObsoletoImportado {
   id: number
+  tipo: "solicitud" | "catalogo"
   folioDictamen: string | null
   folioJustificacion: string | null
   secretaria: string | null
@@ -846,6 +853,12 @@ export interface ObsoletoImportado {
 export interface ResumenObsoletos {
   candidatos: number
   ejemplos: ObsoletoImportado[]
+}
+
+export interface Obsoletos {
+  ids: number[]
+  catalogoIds: number[]
+  resumen: ResumenObsoletos
 }
 
 function foliosDelArchivo(rows: Record<string, unknown>[], colActivo: Record<string, string>): Set<string> {
@@ -863,7 +876,7 @@ export async function calcularObsoletosPorReemplazo(
   prisma: PrismaClient,
   rows: Record<string, unknown>[],
   colActivo: Record<string, string>,
-): Promise<{ ids: number[]; resumen: ResumenObsoletos }> {
+): Promise<Obsoletos> {
   const folios = foliosDelArchivo(rows, colActivo)
 
   const importadas = await prisma.$queryRawUnsafe<{
@@ -885,23 +898,53 @@ export async function calcularObsoletosPorReemplazo(
     return !enArchivo
   })
 
+  // Huérfanos: sin folio de justificación solo siguen vigentes si el archivo también
+  // trae una fila SIN folio de justificación con ese mismo folio de dictamen (el folio
+  // de dictamen solo no basta: se repite entre secretarías).
+  const dictamenSinJustificacion = new Set<string>()
+  for (const row of rows) {
+    const fd = getCell(row, colActivo.folioDictamen)
+    if (fd && !getCell(row, colActivo.folioJustificacion)) dictamenSinJustificacion.add(fd)
+  }
+  const huerfanos = await prisma.catalogo_justificacion.findMany({
+    where: { solicitud_id: null, origen: "excel" },
+    select: { id: true, folio_justificacion: true, folio_dictamen: true, secretaria: true },
+  })
+  const huerfanosObsoletos = huerfanos.filter((c) =>
+    c.folio_justificacion
+      ? !folios.has(c.folio_justificacion)
+      : !(c.folio_dictamen && dictamenSinJustificacion.has(c.folio_dictamen)),
+  )
+
+  const ejemplos: ObsoletoImportado[] = [
+    ...obsoletas.map((s) => ({
+      id: s.id, tipo: "solicitud" as const,
+      folioDictamen: s.folio_dictamen, folioJustificacion: s.folio_justificacion, secretaria: s.secretaria,
+    })),
+    ...huerfanosObsoletos.map((c) => ({
+      id: c.id, tipo: "catalogo" as const,
+      folioDictamen: c.folio_dictamen, folioJustificacion: c.folio_justificacion, secretaria: c.secretaria,
+    })),
+  ]
+
   return {
     ids: obsoletas.map((s) => s.id),
+    catalogoIds: huerfanosObsoletos.map((c) => c.id),
     resumen: {
-      candidatos: obsoletas.length,
-      ejemplos: obsoletas.slice(0, 10).map((s) => ({
-        id: s.id,
-        folioDictamen: s.folio_dictamen,
-        folioJustificacion: s.folio_justificacion,
-        secretaria: s.secretaria,
-      })),
+      candidatos: ejemplos.length,
+      ejemplos: ejemplos.slice(0, 50),
     },
   }
 }
 
-export async function eliminarSolicitudesObsoletas(ids: number[], prisma: PrismaClient): Promise<number> {
-  if (ids.length === 0) return 0
-  await prisma.catalogo_justificacion.deleteMany({ where: { solicitud_id: { in: ids } } })
-  await prisma.solicitud.deleteMany({ where: { id: { in: ids } } })
-  return ids.length
+export async function eliminarSolicitudesObsoletas(obsoletos: Obsoletos, prisma: PrismaClient): Promise<number> {
+  const { ids, catalogoIds } = obsoletos
+  if (catalogoIds.length > 0) {
+    await prisma.catalogo_justificacion.deleteMany({ where: { id: { in: catalogoIds }, solicitud_id: null } })
+  }
+  if (ids.length > 0) {
+    await prisma.catalogo_justificacion.deleteMany({ where: { solicitud_id: { in: ids } } })
+    await prisma.solicitud.deleteMany({ where: { id: { in: ids } } })
+  }
+  return ids.length + catalogoIds.length
 }

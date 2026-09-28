@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     // archivo nuevo ya están en el sistema, así que lo único que queda marcado como
     // "obsoleto" es lo que vino de una importación anterior y ya no aparece aquí.
     const eliminadas = reemplazarAnterior
-      ? await eliminarSolicitudesObsoletas((await calcularObsoletosPorReemplazo(prisma, rows, colActivo)).ids, prisma)
+      ? await eliminarSolicitudesObsoletas(await calcularObsoletosPorReemplazo(prisma, rows, colActivo), prisma)
       : 0
 
     return NextResponse.json({ creadas, actualizadas, eliminadas, resumen, sincronizacion: sync })

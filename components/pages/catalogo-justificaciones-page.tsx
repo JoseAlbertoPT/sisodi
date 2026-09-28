@@ -208,7 +208,7 @@ interface ResumenImportExcel {
 }
 interface ResumenObsoletosExcel {
   candidatos: number
-  ejemplos: { id: number; folioDictamen: string | null; folioJustificacion: string | null; secretaria: string | null }[]
+  ejemplos: { id: number; tipo: "solicitud" | "catalogo"; folioDictamen: string | null; folioJustificacion: string | null; secretaria: string | null }[]
 }
 function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const { user } = useAuth()
@@ -1560,14 +1560,14 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           Reporte general
         </Button>
 
-        {/*<Button
+        <Button
           variant="vino"
           className="gap-1.5 shrink-0"
           onClick={() => setImportOpen(true)}
         >
           <Upload className="h-4 w-4" />
           Importar Excel al catálogo
-        </Button>*/}
+        </Button>
 
         {/* Comentado a pedido: el reporte "General" ya separa por hojas
             (General + Con Movimientos), así que esta opción de menú quedó
@@ -1916,7 +1916,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                         </span>
                         <ul className="text-xs text-rose-700 list-disc list-inside max-h-32 overflow-y-auto">
                           {importPreview.obsoletos.ejemplos.map((o) => (
-                            <li key={o.id}>[{o.secretaria ?? "—"}] folio={o.folioDictamen || o.folioJustificacion || "(sin folio)"}</li>
+                            <li key={`${o.tipo}-${o.id}`}>[{o.secretaria ?? "—"}] justificación={o.folioJustificacion || "(sin folio)"} · dictamen={o.folioDictamen || "(sin folio)"}</li>
                           ))}
                         </ul>
                         {importPreview.obsoletos.candidatos > importPreview.obsoletos.ejemplos.length && (
