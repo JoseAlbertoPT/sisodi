@@ -10,7 +10,7 @@ import {
 import path from "path";
 import fs from "fs";
 import React from "react";
-import { resolveQuetzalliSansPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
+import { resolveQuetzalliSansPath, resolveQuetzalliSansBoldPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
 import { FauxBoldText } from "@/components/plantillas/faux-bold-text";
 
 registerPdfNoHyphenation();
@@ -26,7 +26,11 @@ if (quetzalliPath) {
   });
 }
 const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
-const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
+const quetzalliBoldPath = quetzalliPath ? resolveQuetzalliSansBoldPath() : null;
+if (quetzalliBoldPath) {
+  Font.register({ family: "QuetzalliSansBold", src: quetzalliBoldPath });
+}
+const FONT_BOLD = quetzalliBoldPath ? "QuetzalliSansBold" : quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
 const NOTA_DICTAMEN_DEFAULT =
   "Esta Dirección General únicamente dictamina sobre la funcionalidad de las actividades conforme con la metodología establecida y queda fuera de sus atribuciones la distribución y ejecución de los recursos para el pago de las contrataciones, en las cuales se deberá observar lo dispuesto por el Artículo Quinto del Presupuesto de Egresos del Gobierno del Estado de Morelos para el ejercicio fiscal 2026 y demás normatividad aplicable.";

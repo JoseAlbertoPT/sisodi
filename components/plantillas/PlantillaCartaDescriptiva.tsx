@@ -10,7 +10,7 @@ import {
 import path from "path";
 import fs from "fs";
 import React from "react";
-import { resolveQuetzalliSansPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
+import { resolveQuetzalliSansPath, resolveQuetzalliSansBoldPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
 
 registerPdfNoHyphenation();
 
@@ -24,11 +24,12 @@ if (quetzalliPath) {
     ],
   });
 }
-// Solo existe el peso Thin de QuetzalliSans por ahora — se usa la misma
-// familia para "bold" (react-pdf no puede negritar sintéticamente); en
-// cuanto se agregue el peso Bold real, registrarlo aparte y usarlo aquí.
 const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
-const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
+const quetzalliBoldPath = quetzalliPath ? resolveQuetzalliSansBoldPath() : null;
+if (quetzalliBoldPath) {
+  Font.register({ family: "QuetzalliSansBold", src: quetzalliBoldPath });
+}
+const FONT_BOLD = quetzalliBoldPath ? "QuetzalliSansBold" : quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
 export interface CartaDescriptivaData {
   objetoContratacion: string;

@@ -12,7 +12,7 @@ import fs from "fs";
 import React from "react";
 import { toRoman } from "@/lib/roman-list";
 import { siglasSecretaria } from "@/lib/clave-dictamen";
-import { resolveQuetzalliSansPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
+import { resolveQuetzalliSansPath, resolveQuetzalliSansBoldPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
 import { FauxBoldText } from "@/components/plantillas/faux-bold-text";
 
 registerPdfNoHyphenation();
@@ -34,7 +34,11 @@ if (quetzalliPath) {
 }
 
 const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
-const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
+const quetzalliBoldPath = quetzalliPath ? resolveQuetzalliSansBoldPath() : null;
+if (quetzalliBoldPath) {
+  Font.register({ family: "QuetzalliSansBold", src: quetzalliBoldPath });
+}
+const FONT_BOLD = quetzalliBoldPath ? "QuetzalliSansBold" : quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
 const PALABRAS_MENORES = new Set([
   "de", "del", "la", "las", "el", "los", "y", "e", "o", "u",

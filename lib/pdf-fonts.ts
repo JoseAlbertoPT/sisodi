@@ -33,3 +33,15 @@ export function resolveQuetzalliSansPath(): string | null {
   if (fs.existsSync(thin)) return thin
   return null
 }
+
+/**
+ * Peso Bold de QuetzalliSans para títulos y subtítulos. No es un archivo
+ * oficial: se generó a partir de QuetzalliSans-Thin engrosando el contorno de
+ * cada glifo (FreeType FT_Outline_Embolden, +20 unidades de 1000), porque
+ * react-pdf no puede negritar una fuente por sí solo. Si llega el Bold
+ * oficial, basta con reemplazar el archivo.
+ */
+export function resolveQuetzalliSansBoldPath(): string | null {
+  const bold = path.join(FONT_DIR, "QuetzalliSans-Bold.otf")
+  return fs.existsSync(bold) ? bold : null
+}

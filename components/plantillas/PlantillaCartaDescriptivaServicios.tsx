@@ -10,7 +10,7 @@ import {
 import path from "path";
 import fs from "fs";
 import React from "react";
-import { resolveQuetzalliSansPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
+import { resolveQuetzalliSansPath, resolveQuetzalliSansBoldPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
 import { FauxBoldText } from "@/components/plantillas/faux-bold-text";
 
 registerPdfNoHyphenation();
@@ -31,7 +31,11 @@ if (quetzalliPath) {
   });
 }
 const FONT_REGULAR = quetzalliPath ? "QuetzalliSans" : "Helvetica";
-const FONT_BOLD = quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
+const quetzalliBoldPath = quetzalliPath ? resolveQuetzalliSansBoldPath() : null;
+if (quetzalliBoldPath) {
+  Font.register({ family: "QuetzalliSansBold", src: quetzalliBoldPath });
+}
+const FONT_BOLD = quetzalliBoldPath ? "QuetzalliSansBold" : quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
 
 Font.registerHyphenationCallback((word) => [word]);
 
