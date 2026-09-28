@@ -265,6 +265,19 @@ function RomanItem({ text }: { text: string }) {
   );
 }
 
+/**
+ * Limpia los elementos de una lista antes de imprimirlos. En el Excel del
+ * catálogo hay celdas con dos valores en un mismo renglón separados por
+ * muchos espacios ("Legalidad            Profesionalismo"): eso se vuelve
+ * dos viñetas. Los espacios repetidos dentro de un texto se reducen a uno.
+ */
+function limpiarItems(items: string[], separarPorEspacios: boolean): string[] {
+  return items
+    .flatMap((t) => (separarPorEspacios ? t.split(/\t+|[  ]{3,}/) : [t]))
+    .map((t) => t.replace(/\s+/g, " ").trim())
+    .filter((t) => t !== "");
+}
+
 // Listas de viñetas hasta este tamaño se mantienen completas (título + todas
 // las viñetas): si no caben en lo que resta de la hoja, la sección entera
 // pasa a la siguiente en vez de dejar una o dos viñetas sueltas en otra hoja.
@@ -325,6 +338,7 @@ function SubSection({
   items: string[];
   variant: "roman" | "bullet";
 }) {
+  items = limpiarItems(items, variant === "bullet");
   if (items.length === 0) return null;
 
   return (
@@ -354,6 +368,7 @@ function SubSubBullets({
   title: string;
   items: string[];
 }) {
+  items = limpiarItems(items, true);
   if (items.length === 0) return null;
 
   return (

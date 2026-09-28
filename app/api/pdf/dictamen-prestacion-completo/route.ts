@@ -207,7 +207,11 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
     }
     let mergedBytes = await merged.save();
 
-    const filename = `Dictamen_${dictamenResult.folio.replace(/\//g, "-")}.pdf`;
+    // Firmado desde Catálogo, lo que se firma es la Carta Descriptiva (ver
+    // resolverFirma), así que el archivo —y la Constancia— se nombran así.
+    const filename = firma
+      ? `CartaDescriptiva_${dictamenResult.folio.replace(/\//g, "-")}.pdf`
+      : `Dictamen_${dictamenResult.folio.replace(/\//g, "-")}.pdf`;
 
     // Reutilización desde Catálogo con firma: se agrega la misma página de
     // "Constancia de Firma Electrónica" que llevan los Dictámenes normales

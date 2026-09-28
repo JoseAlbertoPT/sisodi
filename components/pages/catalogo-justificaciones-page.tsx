@@ -494,7 +494,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `Dictamen_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
+      a.download = `CartaDescriptiva_${solRec.solicitud.folio_dictamen ?? solRec.solicitud.folio_recepcion ?? solRec.id}_${vi}_${vf}.pdf`
       a.click()
       URL.revokeObjectURL(url)
       setShowFirmarSol(false)
