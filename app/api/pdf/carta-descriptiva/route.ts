@@ -10,6 +10,7 @@ import { claveParaPdf, MARCA_HISTORICO_IMPORTADO } from "@/lib/clave-dictamen";
 import { puedeMostrarFolioDictamen } from "@/lib/firma-visibilidad";
 import { buildRomanNumberedList } from "@/lib/roman-list";
 import { applyTextRules } from "@/lib/utils";
+import { generarQRPng } from "@/lib/pdf-firma-estampado";
 import React from "react";
 
 export const runtime = "nodejs";
@@ -74,6 +75,7 @@ export async function buildCartaDescriptivaBuffer(
   claveOverride: string | null,
   catalogoId?: string | null,
   fechaOverride?: Date | null,
+  firma?: { nombre?: string; cargo?: string; urlValidacion?: string } | null,
 ) {
   const sol = solicitudId
     ? await prisma.solicitud.findUnique({
@@ -158,6 +160,12 @@ export async function buildCartaDescriptivaBuffer(
     competenciasSociales: splitToArray(source.comp_soc),
     valores: splitToArray(source.valores),
     areasExperiencia: splitToArray(source.areas_exp),
+    firmaNombre: firma?.nombre,
+    firmaCargo: firma?.cargo,
+    firmaUrlValidacion: firma?.urlValidacion,
+    firmaQrPng: firma?.urlValidacion
+      ? await generarQRPng(firma.urlValidacion, 200).catch(() => undefined)
+      : undefined,
   };
 
   const stream = await renderToStream(

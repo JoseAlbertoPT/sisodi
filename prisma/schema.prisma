@@ -519,17 +519,6 @@ model catalogo_solicitud {
   procesado                  Boolean                @default(false)
   procesado_en               DateTime?              @db.Timestamp(6)
   solicitud_nueva_id         Int?
-  // Doble firma de la reutilización: "pendiente_firma" tras firmar UEFA.
-  // NULL = movimiento anterior a este flujo (ya se descargó al momento).
-  estado                     String?                @db.VarChar(30)
-  // Firma de UEFA (FirmaPortal, ver lib/pdf-firma-estampado.ts) guardada para
-  // armar el Dictamen cuando se complete la segunda firma.
-  firma_uefa                 Json?
-  // Segunda firma (Vo.Bo. del Emisor). Al firmar: estado = "firmado" y se
-  // genera el PDF final (archivo_pdf_generado = key en S3).
-  firma_emisor               Json?
-  emisor_id                  String?                @db.Uuid
-  firmado_en                 DateTime?              @db.Timestamp(6)
   creado_en                  DateTime               @default(now()) @db.Timestamp(6)
   catalogo_justificacion     catalogo_justificacion @relation(fields: [catalogo_justificacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   usuario                    usuario                @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

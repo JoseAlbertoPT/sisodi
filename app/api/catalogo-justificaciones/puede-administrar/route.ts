@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireSesion, verificarActor } from "@/lib/session"
-import { puedeAdministrarCatalogo, puedeConsultarCatalogo, puedeFirmarCatalogo, puedeVerSolicitudesCatalogo } from "@/lib/api-guard"
+import { puedeAdministrarCatalogo, puedeConsultarCatalogo, puedeFirmarCatalogo } from "@/lib/api-guard"
 
 // Chequeo en vivo (no depende del snapshot de login guardado en localStorage), para que un
 // cambio de permiso hecho por un Administrador se refleje sin que el usuario afectado tenga
@@ -13,11 +13,10 @@ export async function GET(req: NextRequest) {
   // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
   const actorErr = verificarActor(sesion, userId)
   if (actorErr) return actorErr
-  const [puede, puedeConsultar, puedeFirmar, puedeSolicitud] = await Promise.all([
+  const [puede, puedeConsultar, puedeFirmar] = await Promise.all([
     puedeAdministrarCatalogo(userId),
     puedeConsultarCatalogo(userId),
     puedeFirmarCatalogo(userId),
-    puedeVerSolicitudesCatalogo(userId),
   ])
-  return NextResponse.json({ puede, puedeConsultar, puedeFirmar, puedeSolicitud })
+  return NextResponse.json({ puede, puedeConsultar, puedeFirmar })
 }

@@ -47,6 +47,12 @@ export interface CartaDescriptivaData {
   competenciasSociales: string[];
   valores: string[];
   areasExperiencia: string[];
+  /** Reutilización desde Catálogo: quien firma (UEFA) — se imprime al final de
+   *  la Carta, con el QR de validación al pie de cada página. */
+  firmaNombre?: string;
+  firmaCargo?: string;
+  firmaUrlValidacion?: string;
+  firmaQrPng?: Buffer;
 }
 
 const LOGO_FINANZAS = fs.readFileSync(
@@ -54,6 +60,9 @@ const LOGO_FINANZAS = fs.readFileSync(
 );
 const MARCA_MORELOS = fs.readFileSync(
   path.join(process.cwd(), "public/LOGO_MORELOS_V1.png"),
+);
+const BANNER_COMPLETO = fs.readFileSync(
+  path.join(process.cwd(), "public/banner-completo.png"),
 );
 
 const s = StyleSheet.create({
@@ -365,11 +374,12 @@ export function PlantillaCartaDescriptivaServicios({
   data: CartaDescriptivaData;
 }) {
   const clave = data.clave ?? "";
+  const tieneFirma = !!data.firmaNombre;
 
   return (
     <Document>
-      <Page size="LETTER" style={s.page} wrap>
-        <View style={s.pageFrame} fixed />
+      <Page size="LETTER" style={tieneFirma ? [s.page, { paddingBottom: 94 }] : s.page} wrap>
+        <View style={tieneFirma ? [s.pageFrame, { bottom: 80 }] : s.pageFrame} fixed />
         <View style={s.watermarkContainer} fixed>
           <Image src={MARCA_MORELOS} style={s.watermarkImage} />
         </View>
@@ -493,6 +503,42 @@ export function PlantillaCartaDescriptivaServicios({
           items={data.areasExperiencia}
           variant="bullet"
         />
+
+        {tieneFirma ? (
+          <View wrap={false} style={{ marginTop: 12, alignItems: "center" }}>
+            <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 8, textAlign: "center", marginBottom: 2, letterSpacing: 0.6 }}>
+              ATENTAMENTE
+            </FauxBoldText>
+            <Text style={{ fontFamily: FONT_BOLD, fontSize: 7, textAlign: "center", marginBottom: 1, color: "#B00020", letterSpacing: 0.6 }}>
+              DOCUMENTO FIRMADO ELECTRÓNICAMENTE
+            </Text>
+            <Text style={{ fontSize: 7, textAlign: "center", lineHeight: 1.25, maxWidth: "88%", marginBottom: 3 }}>
+              a través de un certificado reconocido legalmente y tiene, en relación a la información firmada, un valor jurídico y equivalente al de la firma autógrafa, en términos de la Ley de Transformación Digital del Estado de Morelos.
+            </Text>
+            <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 8, textAlign: "center", letterSpacing: 0.6 }}>
+              {data.firmaNombre}
+            </FauxBoldText>
+            {data.firmaCargo ? (
+              <FauxBoldText style={{ fontFamily: FONT_BOLD, fontSize: 7, textAlign: "center", letterSpacing: 0.6 }}>{data.firmaCargo}</FauxBoldText>
+            ) : null}
+          </View>
+        ) : null}
+
+        {tieneFirma ? (
+          <View style={{ position: "absolute", bottom: 8, left: 22, right: 22 }} fixed>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end", width: "100%", marginBottom: 0 }}>
+              {data.firmaUrlValidacion ? (
+                <Text style={{ fontSize: 6, color: "#000000", marginRight: 6, marginTop: 10 }}>
+                  {data.firmaUrlValidacion}
+                </Text>
+              ) : null}
+              {data.firmaQrPng ? (
+                <Image src={data.firmaQrPng} style={{ width: 54, height: 54, marginTop: -12 }} />
+              ) : null}
+            </View>
+            <Image src={BANNER_COMPLETO} style={{ width: "100%", height: 16 }} />
+          </View>
+        ) : null}
       </Page>
     </Document>
   );

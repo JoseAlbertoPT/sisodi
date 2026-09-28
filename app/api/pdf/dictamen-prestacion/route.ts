@@ -11,7 +11,6 @@ import { claveParaPdf, folioSinSiglas, MARCA_HISTORICO_IMPORTADO } from "@/lib/c
 import { puedeMostrarFolioDictamen } from "@/lib/firma-visibilidad";
 import { applyTextRules } from "@/lib/utils";
 import { getNotaDictamen } from "@/lib/configuracion-texto";
-import { generarQRPng } from "@/lib/pdf-firma-estampado";
 import React from "react";
 
 export const runtime = "nodejs";
@@ -46,9 +45,6 @@ interface PdfOverrides {
   numeroPrestadores?: number
   programaProyecto?: string
   importeBruto?: number
-  firmaNombre?: string
-  firmaCargo?: string
-  firmaUrlValidacion?: string
 }
 
 export async function buildDictamenPrestacionBuffer(
@@ -74,9 +70,6 @@ export async function buildDictamenPrestacionBuffer(
   let data: DictamenPrestacionData;
   let folio: string;
   const notaDictamen = (await getNotaDictamen()).valor;
-  const firmaQrPng = overrides.firmaUrlValidacion
-    ? await generarQRPng(overrides.firmaUrlValidacion, 200).catch(() => undefined)
-    : undefined;
 
   // Cada vez que se reutiliza (o cancela) un registro del catálogo, este
   // endpoint se llama justo después de /api/catalogo-justificaciones/solicitar
@@ -143,10 +136,6 @@ export async function buildDictamenPrestacionBuffer(
         ? sol.vigencia_fin.toISOString().split("T")[0]
         : ""),
       notaDictamen,
-      firmaNombre: overrides.firmaNombre,
-      firmaCargo: overrides.firmaCargo,
-      firmaUrlValidacion: overrides.firmaUrlValidacion,
-      firmaQrPng,
     };
   } else if (catalogoId) {
     // Registro histórico sin solicitud viva — datos archivados directo en catalogo_justificacion.
@@ -176,10 +165,6 @@ export async function buildDictamenPrestacionBuffer(
         ? cj.vigencia_fin.toISOString().split("T")[0]
         : ""),
       notaDictamen,
-      firmaNombre: overrides.firmaNombre,
-      firmaCargo: overrides.firmaCargo,
-      firmaUrlValidacion: overrides.firmaUrlValidacion,
-      firmaQrPng,
     };
   } else {
     return null;
