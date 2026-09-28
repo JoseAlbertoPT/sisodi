@@ -1560,6 +1560,8 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           Reporte general
         </Button>
 
+        {/* Comentado a pedido: se oculta la importación de Excel al catálogo.
+            El diálogo y los handlers se conservan por si se reactiva.
         <Button
           variant="vino"
           className="gap-1.5 shrink-0"
@@ -1568,6 +1570,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <Upload className="h-4 w-4" />
           Importar Excel al catálogo
         </Button>
+        */}
 
         {/* Comentado a pedido: el reporte "General" ya separa por hojas
             (General + Con Movimientos), así que esta opción de menú quedó
