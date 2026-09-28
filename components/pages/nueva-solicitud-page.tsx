@@ -40,6 +40,7 @@ import { filtrarSecretarias, getUAsForSecretaria, getClaveForUA } from "@/lib/ua
 import { fetchCentralizadaTree, type OrganoCentralizadoNode } from "@/lib/catalogo-api"
 import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
 import { useProgramasSigef } from "@/hooks/use-programas-sigef"
+import { parseImporteTexto } from "@/lib/parse-importe"
 
 export type FormularioData = {
   secretaria:            string
@@ -328,29 +329,13 @@ function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecr
 return getFallback(secretaria)
 }
 function parseImporteBruto(raw: string): string {
-  if (!raw) return ""
-  let clean = raw.replace(/[$\s]/g, "")
-  const commas = (clean.match(/,/g) ?? []).length
-  const dots   = (clean.match(/\./g) ?? []).length
-  if (commas === 2) {
-    const last = clean.lastIndexOf(",")
-    clean = clean.slice(0, last).replace(/,/g, "") + "." + clean.slice(last + 1)
-  } else if (commas === 1 && dots === 0) {
-    const parts = clean.split(",")
-    if (parts[1].length <= 2) clean = parts[0] + "." + parts[1]
-    else clean = parts.join("")
-  } else {
-    clean = clean.replace(/,/g, "")
-  }
-  const n = parseFloat(clean)
-  if (Number.isNaN(n)) return ""
+  const n = parseImporteTexto(raw)
+  if (n === null) return ""
   return n.toLocaleString("es-Mx", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 function parseMoney(str: string): number {
   if (!str) return -1
-  const clean = str.replace(/[$,\s]/g, "")
-  const n = parseFloat(clean)
-  return isNaN(n) ? -1 : n
+  return parseImporteTexto(str) ?? -1
 }
 function getVigenciaMin(): string {
   const now = new Date()
@@ -3490,7 +3475,7 @@ function buildSolicitudPayload({
     puesto_jefe_inmediato: formData.puestoJefeInmediato     || null,
     vigencia_inicio:       formData.vigenciaInicio || null,
     vigencia_fin:          formData.vigenciaFin    || null,
-    importe_bruto:         formData.importeBruto ? parseFloat(formData.importeBruto.replace(/[$,\s]/g, "")) || null : null,
+    importe_bruto:         formData.importeBruto ? parseImporteTexto(formData.importeBruto) || null : null,
     tipo_importe:          formData.tipoImporte || null,
     es_renovacion:         esRenovacion === "si",
     folio_anterior:        folioSeleccionado || null,
@@ -3619,8 +3604,8 @@ function computeDiff(
   const cmp = (v: unknown, key: keyof FormularioData): string => {
     if (v === null || v === undefined || v === "") return ""
     if (key === "importeBruto") {
-      const n = parseFloat(String(v).replace(/[$,\s]/g, ""))
-      return isNaN(n) ? "" : n.toFixed(2)
+      const n = parseImporteTexto(String(v))
+      return n === null ? "" : n.toFixed(2)
     }
     if (key === "tipoActividades") return toActivitySlug(v)
     // La "Unidad Administrativa" a veces guarda una clave (ej. "1.01.1.0.0.0.0")
@@ -3659,8 +3644,8 @@ function computeDiff(
       const s = String(v).trim()
       if (!s) return "—"
       if (key === "importeBruto") {
-        const n = parseFloat(s.replace(/[$,\s]/g, ""))
-        return isNaN(n) ? s : `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
+        const n = parseImporteTexto(s)
+        return n === null ? s : `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
       }
       if (key === "tipoActividades") {
         return TIPO_ACTIVIDAD_LABELS[toActivitySlug(s)] ?? s

@@ -2,6 +2,7 @@ import * as XLSX from "xlsx"
 import type { PrismaClient } from "./generated/prisma"
 import { buildRomanNumberedList } from "./roman-list"
 import { contenidoParaCatalogo } from "./catalogo-contenido"
+import { parseImporteTexto } from "./parse-importe"
 
 export const SHEET_NAME_LEGACY = "BASE CONSOLIDADA"
 export const ADMIN_CORREO_DEFAULT = "admin@sisodij.gob.mx"
@@ -118,30 +119,9 @@ function parseFechaDMY(raw: string): { date: Date | null; error: string | null }
 }
 
 function parseImporte(raw: string): { value: number | null; error: string | null } {
-  let s = (raw ?? "").trim()
-  if (!s) return { value: null, error: null }
-  // Sin espacios: "$29, 845.63" se cortaba en 29 (parseFloat se detiene en el espacio).
-  s = s.replace(/\s+/g, "").replace(/^\$/, "")
-  const commaCount = (s.match(/,/g) ?? []).length
-  const dotCount   = (s.match(/\./g) ?? []).length
-  let normalized: string
-  if (commaCount >= 2) {
-    const parts = s.split(",")
-    const dec = parts.pop()
-    normalized = parts.join("") + "." + dec
-  } else if (dotCount === 1 && commaCount === 1) {
-    const idxComma = s.indexOf(",")
-    const idxDot = s.indexOf(".")
-    normalized = idxComma < idxDot
-      ? s.replace(/,/g, "")
-      : s.replace(/\./g, "").replace(",", ".")
-  } else if (commaCount === 1) {
-    normalized = s.replace(",", ".")
-  } else {
-    normalized = s
-  }
-  const value = parseFloat(normalized)
-  if (isNaN(value)) return { value: null, error: `importe irreconocible: "${raw}"` }
+  if (!(raw ?? "").trim()) return { value: null, error: null }
+  const value = parseImporteTexto(raw)
+  if (value === null) return { value: null, error: `importe irreconocible: "${raw}"` }
   return { value, error: null }
 }
 

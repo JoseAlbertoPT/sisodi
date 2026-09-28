@@ -31,6 +31,7 @@ import { secretariaAplica } from "@/lib/tabulador"
 import { filtrarSecretarias, getUAsForSecretaria, getClaveForUA } from "@/lib/ua-claves-catalog"
 import { fetchCentralizadaTree, type OrganoCentralizadoNode } from "@/lib/catalogo-api"
 import type { SolicitudDetalle } from "@/components/pages/revision-do-page"
+import { parseImporteTexto } from "@/lib/parse-importe"
 
 export type FormularioData = {
   secretaria:            string
@@ -323,29 +324,13 @@ function getDatosSecretaria(secretaria: string, rows: HistoricoRow[]): DatosSecr
 return getFallback(secretaria)
 }
 function parseImporteBruto(raw: string): string {
-  if (!raw) return ""
-  let clean = raw.replace(/[$\s]/g, "")
-  const commas = (clean.match(/,/g) ?? []).length
-  const dots   = (clean.match(/\./g) ?? []).length
-  if (commas === 2) {
-    const last = clean.lastIndexOf(",")
-    clean = clean.slice(0, last).replace(/,/g, "") + "." + clean.slice(last + 1)
-  } else if (commas === 1 && dots === 0) {
-    const parts = clean.split(",")
-    if (parts[1].length <= 2) clean = parts[0] + "." + parts[1]
-    else clean = parts.join("")
-  } else {
-    clean = clean.replace(/,/g, "")
-  }
-  const n = parseFloat(clean)
-  if (Number.isNaN(n)) return ""
+  const n = parseImporteTexto(raw)
+  if (n === null) return ""
   return n.toLocaleString("es-Mx", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 function parseMoney(str: string): number {
   if (!str) return -1
-  const clean = str.replace(/[$,\s]/g, "")
-  const n = parseFloat(clean)
-  return isNaN(n) ? -1 : n
+  return parseImporteTexto(str) ?? -1
 }
 function getVigenciaMin(): string {
   const now = new Date()
@@ -2828,7 +2813,7 @@ function buildSolicitudPayload({
     puesto_jefe_inmediato: formData.puestoJefeInmediato     || null,
     vigencia_inicio:       formData.vigenciaInicio || null,
     vigencia_fin:          formData.vigenciaFin    || null,
-    importe_bruto:         formData.importeBruto ? parseFloat(formData.importeBruto.replace(/[$,\s]/g, "")) || null : null,
+    importe_bruto:         formData.importeBruto ? parseImporteTexto(formData.importeBruto) || null : null,
     tipo_importe:          formData.tipoImporte || null,
     es_renovacion:         esRenovacion === "si",
     folio_anterior:        folioSeleccionado || null,

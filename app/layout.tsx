@@ -53,7 +53,7 @@ const quetzalliSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Sistema de Emisión de Dictaminaciones Técnicas (SEDIT)',
+  title: 'Sistema para la Emisión de Dictaminaciones Técnicas Funcionales (SEDIT)',
   description: 'Sistema institucional de gestion y dictaminacion tecnica funcional',
   icons: {
     icon: [

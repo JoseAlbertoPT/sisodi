@@ -51,6 +51,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
+import { parseImporteTexto } from "@/lib/parse-importe"
 import { HistorialTimeline, ROLES_OCULTAN_OBSERVACIONES, type HistorialEntryData } from "@/components/historial-timeline"
 import { AvanceSolicitud, PanelHeader } from "@/components/solicitud-status-tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -120,6 +121,10 @@ function formatFolioRecepcion(folio: string): string {
     return `${INICIALES_MES[mes] ?? mes}-${String(parseInt(m2[1], 10)).padStart(3, "0")}`
   }
   return folio
+}
+/** Folio que se muestra de la solicitud: el de recepción si ya se asignó; si no, el ID de justificación. */
+function folioVisible(sol: { folioRecepcion?: string; folioJustificacion: string | null; folio: string }): string {
+  return sol.folioRecepcion ? formatFolioRecepcion(sol.folioRecepcion) : (sol.folioJustificacion || sol.folio)
 }
 
 interface UrgSolicitud {
@@ -947,7 +952,7 @@ function solToEditPayload(sol: UrgSolicitud): EditSolicitudPayload {
     : sol.tipo === "Nombramiento Tiempo Determinado" ? "nombramiento"
     : ""
   const regimen = (sol.regimen ?? "honorarios") as EditSolicitudPayload["regimen"]
-  const importeNum = sol.importeBruto.replace(/[$,\s]/g, "")
+  const importeNum = String(parseImporteTexto(sol.importeBruto) ?? "")
   return {
     id: sol.id,
     tipo,
@@ -1158,9 +1163,7 @@ function DetalleView({
               <span className="text-lg font-bold text-card-foreground">
                 {n === "borrador" || n === "en captura"
                   ? "Borrador"
-                  : sol.folioRecepcion
-                    ? formatFolioRecepcion(sol.folioRecepcion)
-                    : (sol.folioJustificacion || sol.folio)}
+                  : folioVisible(sol)}
               </span>
               {estadoBadge(sol.estado)}
               {sol.slaRestante != null && (
@@ -1442,7 +1445,7 @@ function DetalleView({
               <div className="ml-auto flex items-center gap-3">
                 <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                   {rightTab === "historial" &&
-                    `Folio ${sol.folioJustificacion || sol.folio} · ${sol.historial.length} evento${sol.historial.length !== 1 ? "s" : ""}`}
+                    `Folio ${folioVisible(sol)} · ${sol.historial.length} evento${sol.historial.length !== 1 ? "s" : ""}`}
                   {rightTab === "bitacora" &&
                     (() => {
                       const total = sol.bitacora.reduce((acc, e) => acc + e.eventos.length, 0)
@@ -1468,7 +1471,7 @@ function DetalleView({
                     iconBg="bg-[#dfe6c3]"
                     icon={<History className="h-5 w-5 text-[#2d331b]" />}
                     title="Historial de Estatus"
-                    subtitle={`Folio ${sol.folioJustificacion || sol.folio}`}
+                    subtitle={`Folio ${folioVisible(sol)}`}
                     countLabel={ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol) ? "" : `${sol.historial.length} evento${sol.historial.length !== 1 ? "s" : ""}`}
                   />
                   <AvanceSolicitud estado={sol.estado} tipo={sol.tipo} historial={sol.historial} compact />

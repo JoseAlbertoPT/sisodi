@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { useRealtime } from "@/hooks/use-realtime"
 import { fetchCentralizadaTree } from "@/lib/catalogo-api"
+import { parseImporteTexto } from "@/lib/parse-importe"
 import { Loader2, Plus, Trash2, AlertCircle, Rows3, ChevronDown, Info, Check, X, CopyPlus } from "lucide-react"
 
 interface TabuladorRow {
@@ -60,11 +61,15 @@ function MoneyInput({
   placeholder?: string
   className?: string
 }) {
-  const [focused, setFocused] = useState(false)
+  // Mientras se escribe se conserva el texto tal cual (puede traer coma
+  // decimal: "348,00", "1.300,50"); hacia fuera siempre va el número normalizado.
+  const [draft, setDraft] = useState<string | null>(null)
   const n = Number(value)
-  const display = focused || value === "" || !Number.isFinite(n)
-    ? value
-    : `$ ${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const display = draft !== null
+    ? draft
+    : value === "" || !Number.isFinite(n)
+      ? value
+      : `$ ${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   return (
     <Input
@@ -73,12 +78,12 @@ function MoneyInput({
       value={display}
       placeholder={placeholder}
       className={className}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      onFocus={() => setDraft(value)}
+      onBlur={() => setDraft(null)}
       onChange={(e) => {
-        const raw = e.target.value.replace(/[^\d.]/g, "")
-        const [entero, ...resto] = raw.split(".")
-        onChange(resto.length > 0 ? `${entero}.${resto.join("")}` : entero)
+        const raw = e.target.value.replace(/[^\d.,]/g, "")
+        setDraft(raw)
+        onChange(String(parseImporteTexto(raw) ?? ""))
       }}
     />
   )

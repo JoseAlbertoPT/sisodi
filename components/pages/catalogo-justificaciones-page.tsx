@@ -62,6 +62,7 @@ import { useProgramasSigef } from "@/hooks/use-programas-sigef"
 import { useTabulador } from "@/hooks/use-tabulador"
 import { buscarRangoTabulador, buscarRangoPorImporte } from "@/lib/tabulador"
 import { parseCertificadoInfo } from "@/lib/certificado-cer"
+import { parseImporteTexto } from "@/lib/parse-importe"
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
   loading: () => (
@@ -145,18 +146,13 @@ function fmtMoney(val: string | null | undefined) {
 }
 
 function parseMoney(str: string): number {
-  if (!str) return -1
-  const clean = str.replace(/[$,\s]/g, "")
-  const n = parseFloat(clean)
-  return isNaN(n) ? -1 : n
+  return parseImporteTexto(str) ?? -1
 }
+/** Normaliza lo capturado ("348,00", "1.300,50", "1300.5") a "1,300.50". */
 function formatMoneyInput(raw: string): string {
-  const clean = raw.replace(/[^0-9.]/g, "")
-  if (!clean) return ""
-  const [intPart, ...rest] = clean.split(".")
-  const intFormatted = (intPart || "0").replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-  const decPart = rest.length > 0 ? "." + rest.join("").slice(0, 2) : ""
-  return intFormatted + decPart
+  const n = parseImporteTexto(raw)
+  if (n === null) return ""
+  return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 function entidadNombre(rec: CatalogoRecord) {
   return rec.solicitud.secretaria_txt_snapshot

@@ -1,6 +1,7 @@
 "use client"
 
 import type { HistoricoRow } from "./parse-excel-historico"
+import { parseImporteTexto } from "./parse-importe"
 
 export const HISTORICO_COLUMNS = {
   folioJustificacion: "FOLIO DE JUSTIFICACIÓN",
@@ -67,9 +68,8 @@ function vigenciaToISO(ddmmyyyy: string): string {
 }
 
 function formatImporteBruto(raw: string): string {
-  const clean = raw.replace(/[$,\s]/g, "").replace(",", ".")
-  const n = parseFloat(clean)
-  if (Number.isNaN(n)) return ""
+  const n = parseImporteTexto(raw)
+  if (n === null) return ""
   return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
