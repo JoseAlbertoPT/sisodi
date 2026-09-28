@@ -49,6 +49,28 @@ export function buscarRangoTabulador(
   return new Set(delNivel.map(r => r.categoria)).size === 1 ? delNivel[0] : null
 }
 
+/**
+ * Rango del tabulador en el que cae un importe, para registros sin
+ * nivel/categoría (los importados del Excel histórico al Catálogo). Los rangos
+ * se enciman (p. ej. 108 C, 109 C y 303 empiezan en $0), así que se prefiere
+ * el más específico: primero los exclusivos de la Secretaría y, entre ellos,
+ * el de mínimo más alto. null si el importe no cae en ningún rango.
+ */
+export function buscarRangoPorImporte(
+  rangos: RangoTabulador[],
+  importe: number | null | undefined,
+  secretaria?: string | null,
+): RangoTabulador | null {
+  if (importe == null || !Number.isFinite(importe)) return null
+  const candidatos = rangos.filter(
+    r => importe >= r.min && importe <= r.max && secretariaAplica(r.secretarias, secretaria)
+  )
+  candidatos.sort((a, b) =>
+    (b.secretarias.length > 0 ? 1 : 0) - (a.secretarias.length > 0 ? 1 : 0) || b.min - a.min
+  )
+  return candidatos[0] ?? null
+}
+
 export function formatRangoTabulador(
   rangos: RangoTabulador[],
   nivel: string | null | undefined,

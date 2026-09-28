@@ -13,7 +13,6 @@ import React from "react";
 import { resolveQuetzalliSansPath, resolveQuetzalliSansBoldPath, registerPdfNoHyphenation } from "@/lib/pdf-fonts";
 
 registerPdfNoHyphenation();
-
 const quetzalliPath = resolveQuetzalliSansPath();
 if (quetzalliPath) {
   Font.register({
@@ -30,7 +29,6 @@ if (quetzalliBoldPath) {
   Font.register({ family: "QuetzalliSansBold", src: quetzalliBoldPath });
 }
 const FONT_BOLD = quetzalliBoldPath ? "QuetzalliSansBold" : quetzalliPath ? "QuetzalliSans" : "Helvetica-Bold";
-
 export interface CartaDescriptivaData {
   objetoContratacion: string;
   propositoServicios: string;
@@ -49,7 +47,6 @@ export interface CartaDescriptivaData {
 
 const LOGO_FINANZAS = fs.readFileSync(path.join(process.cwd(), "public/logo-20finanzas.png"));
 const MARCA_MORELOS = fs.readFileSync(path.join(process.cwd(), "public/LOGO_MORELOS_V1.png"));
-
 const s = StyleSheet.create({
   page: {
     paddingTop: 30,
@@ -189,12 +186,10 @@ export function PlantillaCartaDescriptiva({ data }: { data: CartaDescriptivaData
   return (
     <Document>
       <Page size="LETTER" style={s.page} wrap>
-
         <View style={s.pageFrame} fixed />
         <View style={s.watermarkContainer} fixed>
           <Image src={MARCA_MORELOS} style={s.watermarkImage} />
         </View>
-
         <View style={s.headerTable} fixed>
           <View style={s.headerCol1}>
             <Image src={LOGO_FINANZAS} style={s.logo} />

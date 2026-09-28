@@ -37,7 +37,7 @@ export function resolveQuetzalliSansPath(): string | null {
 /**
  * Peso Bold de QuetzalliSans para títulos y subtítulos. No es un archivo
  * oficial: se generó a partir de QuetzalliSans-Thin engrosando el contorno de
- * cada glifo (FreeType FT_Outline_Embolden, +20 unidades de 1000), porque
+ * cada glifo (FreeType FT_Outline_Embolden, +12 unidades de 1000), porque
  * react-pdf no puede negritar una fuente por sí solo. Si llega el Bold
  * oficial, basta con reemplazar el archivo.
  */

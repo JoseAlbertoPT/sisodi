@@ -60,7 +60,7 @@ import { folioSinSiglas } from "@/lib/clave-dictamen"
 import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
 import { useProgramasSigef } from "@/hooks/use-programas-sigef"
 import { useTabulador } from "@/hooks/use-tabulador"
-import { buscarRangoTabulador } from "@/lib/tabulador"
+import { buscarRangoTabulador, buscarRangoPorImporte } from "@/lib/tabulador"
 import { parseCertificadoInfo } from "@/lib/certificado-cer"
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
   ssr: false,
@@ -267,11 +267,17 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   }, [user?.id])
   const progSigef = useProgramasSigef(solRec ? entidadNombre(solRec) : "")
   const solImporteBrutoNum = solImporteBruto.trim() ? parseMoney(solImporteBruto) : null
-  const { rangos: rangosTabuladorSol } = useTabulador()
+  const { rangos: rangosTabuladorSol, loading: loadingTabuladorSol } = useTabulador()
   const rangoTabuladorSol = useMemo(() => {
     if (!solRec) return null
     return buscarRangoTabulador(rangosTabuladorSol, solRec.solicitud.nivel_tabulador, solRec.solicitud.categoria_tabulador, entidadNombre(solRec))
   }, [rangosTabuladorSol, solRec])
+  // Registros sin nivel/categoría (importados del Excel histórico): el rango se
+  // deduce del importe capturado. No se valida contra él — siempre lo contiene.
+  const rangoPorImporteSol = useMemo(() => {
+    if (!solRec || rangoTabuladorSol) return null
+    return buscarRangoPorImporte(rangosTabuladorSol, solImporteBrutoNum, entidadNombre(solRec))
+  }, [rangosTabuladorSol, rangoTabuladorSol, solRec, solImporteBrutoNum])
   const importeFueraDeRango =
     rangoTabuladorSol !== null
     && solImporteBrutoNum !== null
@@ -927,11 +933,19 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium flex flex-wrap items-center gap-1.5">
                     <span className="shrink-0">Importe Bruto</span>
-                    {rangoTabuladorSol && (
+                    {rangoTabuladorSol ? (
                       <span className="font-normal text-muted-foreground">
                         (Nivel {rangoTabuladorSol.nivel} · Categoría {rangoTabuladorSol.categoria} — rango tabulador: {fmtMoney(String(rangoTabuladorSol.min))} a {fmtMoney(String(rangoTabuladorSol.max))})
                       </span>
-                    )}
+                    ) : rangoPorImporteSol ? (
+                      <span className="font-normal text-muted-foreground">
+                        (Nivel {rangoPorImporteSol.nivel} · Categoría {rangoPorImporteSol.categoria} — rango tabulador: {fmtMoney(String(rangoPorImporteSol.min))} a {fmtMoney(String(rangoPorImporteSol.max))})
+                      </span>
+                    ) : solImporteBrutoNum !== null && !loadingTabuladorSol ? (
+                      <span className="font-normal text-muted-foreground">
+                        (El importe no corresponde a ningún rango del tabulador {new Date().getFullYear()})
+                      </span>
+                    ) : null}
                   </Label>
                   <Input
                     type="text"
