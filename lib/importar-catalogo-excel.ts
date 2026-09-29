@@ -37,6 +37,18 @@ export const COL_LEGACY = {
   areasExp:                "ÁREAS DE EXPERIENCIA",
 } as const
 
+const CAMPOS_OBLIGATORIOS = Object.keys(COL_LEGACY) as (keyof typeof COL_LEGACY)[]
+
+// Solo se suben filas con todos los campos capturados; si falta alguno (o la
+// columna no existe en la hoja) la fila se rechaza en vez de quedar con "—".
+function camposVacios(row: Record<string, unknown>, colActivo: Record<string, string>): string[] {
+  return CAMPOS_OBLIGATORIOS
+    .filter((campo) => campo === "nivelCategoria"
+      ? !getCell(row, colActivo.nivelCategoria) && !getCell(row, colActivo.nivel) && !getCell(row, colActivo.categoria)
+      : !getCell(row, colActivo[campo]))
+    .map((campo) => COL_LEGACY[campo])
+}
+
 export const MANUAL_OVERRIDES: Record<string, string> = {
   "JEFATURA DE LA OFICINA DE LA GOBERNATURA DEL ESTADO": "Jefatura de la Oficina de la Gubernatura del Estado",
   // Nombre corto ("Secretaria de Administracion", sin acentos ni "y Finanzas")
@@ -498,12 +510,6 @@ export function procesarFilas(
       ? existentePorFolioJustificacion.get(folioJustificacion)
       : (folioDictamen ? existentePorFolioDictamen.get(folioDictamen) : undefined)
 
-    // Sin modo actualizar (o sin una solicitud real que actualizar, p.ej. huérfano de catálogo), se omite como antes.
-    if (yaExiste && !(modoActualizar && existente)) {
-      yaImportadosCount++
-      continue
-    }
-
     const secretariaRaw = getCell(row, colActivo.secretaria) || getCell(row, "_hoja")
     const { canonico } = match(secretariaRaw)
     if (!canonico && secretariaRaw) {
@@ -520,6 +526,8 @@ export function procesarFilas(
     if (errVI) reportar(`VIGENCIA INICIO: ${errVI}`)
     const { date: vigenciaFin, error: errVT } = fechaDesdeCelda(row, colActivo.vigenciaTermino, parserTexto)
     if (errVT) reportar(`VIGENCIA TERMINO: ${errVT}`)
+    const vacios = camposVacios(row, colActivo)
+    if (vacios.length > 0) reportar(`Campos vacíos: ${vacios.join(", ")}`)
 
     const { value: importeBruto, error: errImp } = parseImporte(getCell(row, colActivo.importeBruto))
     if (errImp) reportar(errImp)
@@ -555,6 +563,20 @@ export function procesarFilas(
       advertencias.push("Periodo asignado por defecto (hoy), no se pudo derivar de la fila")
     }
     if (!periodoId) { sinPeriodo++; errores.push("No se pudo resolver un periodo válido para esta fila") }
+
+    // Sin modo actualizar (o sin una solicitud real que actualizar, p.ej. huérfano de catálogo), se omite como antes,
+    // pero pasa por la misma validación para que se vea cuáles quedaron mal en el catálogo.
+    if (yaExiste && !(modoActualizar && existente)) {
+      if (errores.length > 0) {
+        resultados.push({
+          idx: i + 2, secretariaRaw, secretariaMatch: canonico, folioDictamen,
+          errores: [`Ya está en el catálogo, pero: ${errores.join(" | ")}`], advertencias: [],
+        })
+      } else {
+        yaImportadosCount++
+      }
+      continue
+    }
 
     resultados.push({ idx: i + 2, secretariaRaw, secretariaMatch: canonico, folioDictamen, errores, advertencias })
 

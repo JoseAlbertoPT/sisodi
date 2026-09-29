@@ -1556,8 +1556,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           Reporte general
         </Button>
 
-        {/* Comentado a pedido: se oculta la importación de Excel al catálogo.
-            El diálogo y los handlers se conservan por si se reactiva.
+{ /*
         <Button
           variant="vino"
           className="gap-1.5 shrink-0"
@@ -1566,7 +1565,7 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
           <Upload className="h-4 w-4" />
           Importar Excel al catálogo
         </Button>
-        */}
+*/}
 
         {/* Comentado a pedido: el reporte "General" ya separa por hojas
             (General + Con Movimientos), así que esta opción de menú quedó
@@ -1946,14 +1945,11 @@ function AdministracionTab({ onCountChange }: { onCountChange?: (n: number) => v
                           <XCircle className="h-3.5 w-3.5" />
                           {importPreview.resumen.filasConError.length} fila{importPreview.resumen.filasConError.length !== 1 ? "s" : ""} con error (no se importarán):
                         </span>
-                        <ul className="text-xs text-destructive/90 list-disc list-inside max-h-32 overflow-y-auto">
-                          {importPreview.resumen.filasConError.slice(0, 20).map((r, i) => (
+                        <ul className="text-xs text-destructive/90 list-disc list-inside max-h-48 overflow-y-auto">
+                          {importPreview.resumen.filasConError.map((r, i) => (
                             <li key={i}>Fila {r.idx} [{r.secretariaRaw}] folio={r.folioDictamen || "(sin folio)"}: {r.errores.join(" | ")}</li>
                           ))}
                         </ul>
-                        {importPreview.resumen.filasConError.length > 20 && (
-                          <span className="text-xs text-destructive/70">…y {importPreview.resumen.filasConError.length - 20} más.</span>
-                        )}
                       </div>
                     )}
                     {importPreview.resumen.filasConAdvertencia.length > 0 && (
