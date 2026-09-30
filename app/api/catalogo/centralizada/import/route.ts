@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireSesion } from "@/lib/session"
+import { requireMenu, ENTIDADES_MENU_KEY } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 import { ensureOrganismoParaestatal } from "@/lib/sync-organismo-paraestatal"
 
@@ -19,6 +20,8 @@ function normClave(s: string): string {
 export async function POST(req: NextRequest) {
   const sesion = await requireSesion()
   if (sesion instanceof NextResponse) return sesion
+  const sinPermiso = await requireMenu(sesion.id, ENTIDADES_MENU_KEY)
+  if (sinPermiso) return sinPermiso
 
   try {
     const { rows } = await req.json() as { rows: ImportRow[] }

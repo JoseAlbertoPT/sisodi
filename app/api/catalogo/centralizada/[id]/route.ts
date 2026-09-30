@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireSesion } from "@/lib/session"
+import { requireMenu, ENTIDADES_MENU_KEY } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 
 function err(msg: string, status = 400) {
@@ -30,6 +31,8 @@ export async function PATCH(
 ) {
   const sesion = await requireSesion()
   if (sesion instanceof NextResponse) return sesion
+  const sinPermiso = await requireMenu(sesion.id, ENTIDADES_MENU_KEY)
+  if (sinPermiso) return sinPermiso
 
   try {
     const { id } = await params
@@ -86,6 +89,8 @@ export async function DELETE(
 ) {
   const sesion = await requireSesion()
   if (sesion instanceof NextResponse) return sesion
+  const sinPermiso = await requireMenu(sesion.id, ENTIDADES_MENU_KEY)
+  if (sinPermiso) return sinPermiso
 
   try {
     const { id } = await params

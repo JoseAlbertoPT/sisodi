@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { mensajePublico } from "@/lib/error-publico"
 import { requireSesion } from "@/lib/session"
+import { requireCatalogoAdmin } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 import { idsSolicitudesImportadas } from "@/lib/importar-catalogo-excel"
 import { contenidoParaCatalogo } from "@/lib/catalogo-contenido"
@@ -33,6 +34,8 @@ export async function GET(_req: NextRequest) {
 export async function POST(_req: NextRequest) {
   const sesion = await requireSesion()
   if (sesion instanceof NextResponse) return sesion
+  const sinPermiso = await requireCatalogoAdmin(sesion.id)
+  if (sinPermiso) return sinPermiso
 
   try {
     // Recopilar IDs de solicitudes candidatas desde dos fuentes:

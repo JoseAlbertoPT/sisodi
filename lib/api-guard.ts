@@ -170,6 +170,15 @@ export const USUARIOS_MENU_KEY = "usuarios"
  * /api/menus para armar el sidebar) — y siempre un Administrador.
  */
 export async function puedeGestionarUsuarios(userId: string): Promise<boolean> {
+  return tieneMenu(userId, USUARIOS_MENU_KEY)
+}
+
+/**
+ * ¿El usuario tiene acceso a la pantalla `menuKey`? Misma regla que el sidebar
+ * (/api/menus): los permisos explícitos de usuario_menu si tiene alguno, si no
+ * los de su rol. Un Administrador siempre tiene acceso.
+ */
+export async function tieneMenu(userId: string, menuKey: string): Promise<boolean> {
   const usuario = await prisma.usuario.findUnique({
     where: { id: userId },
     select: {
@@ -181,12 +190,25 @@ export async function puedeGestionarUsuarios(userId: string): Promise<boolean> {
   if (!usuario) return false
   if (normalizaRol(usuario.rol.nombre) === "administrador") return true
   if (usuario.usuario_menu.length > 0) {
-    return usuario.usuario_menu.some((um) => um.menu?.key === USUARIOS_MENU_KEY && um.menu?.activo !== false)
+    return usuario.usuario_menu.some((um) => um.menu?.key === menuKey && um.menu?.activo !== false)
   }
   const porRol = await prisma.rol_menu.count({
-    where: { rol_id: usuario.rol_id, menu: { key: USUARIOS_MENU_KEY, activo: true } },
+    where: { rol_id: usuario.rol_id, menu: { key: menuKey, activo: true } },
   })
   return porRol > 0
+}
+
+// Pantallas de configuración cuyas operaciones de escritura se restringen a
+// quien ve esa pantalla (antes bastaba con tener sesión).
+export const CONFIGURACION_MENU_KEY = "calendario" // Calendario, Tabulador, Nota
+export const ENTIDADES_MENU_KEY = "entidades"      // Unidades Administrativas
+
+/** 403 si el usuario de la sesión no tiene acceso a la pantalla `menuKey`; null si sí. */
+export async function requireMenu(userId: string, menuKey: string): Promise<NextResponse | null> {
+  if (!(await tieneMenu(userId, menuKey))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+  }
+  return null
 }
 
 /** Exige sesión con acceso a la gestión de usuarios. Devuelve el usuario o la respuesta de error. */

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireSesion } from "@/lib/session"
+import { puedeGestionarUsuarios } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
@@ -40,6 +41,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const sesion = await requireSesion()
   if (sesion instanceof NextResponse) return sesion
+  // Otorgar captura se hace desde Configuración > Usuarios.
+  if (!(await puedeGestionarUsuarios(sesion.id))) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+  }
 
   try {
     const { usuarioId, regimen, periodo, grantedBy } = await req.json()

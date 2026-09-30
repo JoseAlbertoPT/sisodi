@@ -497,7 +497,15 @@ if (process.env.NODE_ENV === "production" && process.env.EFIRMA_BYPASS === "true
 - Configurar SMTP: sin él, la recuperación de contraseña no puede enviar el código.
 - Revocar `pk_e****`. Purga del historial de git (opcional; rompe el flujo de la rama del servidor).
 
+### ✅ Segunda ronda (2026-09-30)
+- Nuevo `requireMenu(userId, menuKey)` en `lib/api-guard.ts`: exige que el usuario vea la pantalla (misma regla que el sidebar; Administrador siempre).
+- Calendario, Nota y Tabulador (escrituras) → menú `calendario`. Catálogos centralizada/paraestatal e importaciones → menú `entidades`.
+- `catalogo-justificaciones/sincronizar` (POST) → administrador de Catálogo.
+- `permisos-captura`: otorgar y revocar → gestión de usuarios; consumir → solo el dueño del permiso (antes cualquiera podía darse permiso de captura).
+- `rutas-protegidas.test.ts` verifica estas guardas.
+
 ### ⏳ Pendiente: código que requiere decisión de negocio (no se hizo para no romper flujos)
+- `historico` (POST/DELETE): la tabla no tiene dueño y también se usa desde Nueva solicitud; queda solo con sesión.
 - **Alcance de datos entre usuarios con sesión.** Cualquier usuario con sesión puede consultar por API solicitudes y adjuntos de otras dependencias. Para cerrarlo hay que definir qué ve cada rol.
 - **Roles en operaciones de catálogo, tabulador, histórico, configuración y firma.** Hoy basta con tener sesión. Falta definir qué roles pueden hacer cada una.
 - **Guardar los tokens de firma externa como hash.** El panel necesita volver a mostrar el enlace, así que no se aplicó.

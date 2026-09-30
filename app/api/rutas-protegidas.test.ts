@@ -45,3 +45,37 @@ describe("rutas de /api protegidas con sesión", () => {
     })
   }
 })
+
+/**
+ * Escrituras de configuración: además de sesión exigen permiso de la pantalla
+ * (requireMenu / requireCatalogoAdmin / puedeGestionarUsuarios, ver lib/api-guard.ts).
+ */
+const ESCRITURAS_CON_PERMISO: Record<string, RegExp> = {
+  "app/api/calendario/route.ts": /requireMenu\(/,
+  "app/api/configuracion/nota-dictamen/route.ts": /requireMenu\(/,
+  "app/api/tabulador/route.ts": /requireMenu\(/,
+  "app/api/tabulador/[id]/route.ts": /requireMenu\(/,
+  "app/api/catalogo/centralizada/route.ts": /requireMenu\(/,
+  "app/api/catalogo/centralizada/[id]/route.ts": /requireMenu\(/,
+  "app/api/catalogo/centralizada/import/route.ts": /requireMenu\(/,
+  "app/api/catalogo/paraestatal/categorias/route.ts": /requireMenu\(/,
+  "app/api/catalogo/paraestatal/categorias/[id]/route.ts": /requireMenu\(/,
+  "app/api/catalogo/paraestatal/organos/route.ts": /requireMenu\(/,
+  "app/api/catalogo/paraestatal/organos/[id]/route.ts": /requireMenu\(/,
+  "app/api/catalogo/paraestatal/import/route.ts": /requireMenu\(/,
+  "app/api/catalogo-justificaciones/sincronizar/route.ts": /requireCatalogoAdmin\(/,
+  "app/api/permisos-captura/route.ts": /puedeGestionarUsuarios\(/,
+  "app/api/permisos-captura/[id]/route.ts": /puedeGestionarUsuarios\(/,
+}
+
+describe("escrituras de configuración exigen permiso de pantalla", () => {
+  for (const [ruta, guarda] of Object.entries(ESCRITURAS_CON_PERMISO)) {
+    it(`${ruta} verifica permiso en cada escritura`, () => {
+      const src = readFileSync(join(root, ruta), "utf8")
+      const escrituras = src.match(/export async function (POST|PUT|PATCH|DELETE)\b/g) ?? []
+      const guardas = src.match(new RegExp(guarda.source, "g")) ?? []
+      expect(escrituras.length).toBeGreaterThan(0)
+      expect(guardas.length).toBeGreaterThanOrEqual(escrituras.length)
+    })
+  }
+})

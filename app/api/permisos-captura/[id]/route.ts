@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireSesion } from "@/lib/session"
+import { puedeGestionarUsuarios } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 
@@ -12,6 +13,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { action } = await req.json()
     const numId = Number(id)
     if (!numId) return NextResponse.json({ error: "ID inválido" }, { status: 400 })
+
+    // Revocar: solo quien gestiona usuarios. Consumir: solo el dueño del permiso.
+    const permiso = await prisma.permiso_captura.findUnique({ where: { id: numId }, select: { usuario_id: true } })
+    if (!permiso) return NextResponse.json({ error: "No encontrado" }, { status: 404 })
+    const autorizado = action === "consume"
+      ? permiso.usuario_id === sesion.id
+      : await puedeGestionarUsuarios(sesion.id)
+    if (!autorizado) return NextResponse.json({ error: "No autorizado" }, { status: 403 })
 
     let updated
     if (action === "revoke") {
