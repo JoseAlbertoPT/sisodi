@@ -3,20 +3,17 @@ import { consultarProyectosPorDependencia, type SigefProyecto } from "@/lib/sige
 import { normalizeText } from "@/lib/utils"
 import { MANUAL_OVERRIDES } from "@/lib/importar-catalogo-excel"
 
-// Cachea el resultado por idDependencia: consultar todas las unidades de una
-// Secretaría implica varias llamadas SOAP en paralelo (una por unidad) — para
-// la dependencia con más unidades observada (26) esto tarda ~4s reales. El
-// catálogo de proyectos no cambia con frecuencia, así que se sirve
-// stale-while-revalidate: si el caché expiró, se regresa el dato viejo de
-// inmediato y se refresca en segundo plano para la siguiente consulta — el
-// usuario solo espera esos ~4s si nadie los precalentó antes (ver
-// `warmAllKnownDependencias`, llamado una vez al arrancar el servidor desde
-// instrumentation.ts) o si el TTL ya venció. Con 1 h, lo que SIGeF agregue o
-// cambie (proyectos, unidades movidas de Secretaría) se ve a más tardar en
-// ~1 h sin que nadie haga nada; `limpiarCacheSigef` lo fuerza al momento.
-export const CACHE_TTL_MS = 60 * 60 * 1000
+// Lo que se sube a SIGeF (proyectos nuevos o modificados, unidades movidas de
+// Secretaría) debe verse en cuanto el usuario abre el formulario, así que se
+// consulta a SIGeF en vivo. El caché solo sirve para dos cosas:
+//  - Que varios usuarios abriendo el formulario en el mismo minuto compartan
+//    una sola consulta (consultar todas las unidades de una Secretaría son
+//    varias llamadas SOAP en paralelo, ~4s para la de 26 unidades).
+//  - Tener el último dato bueno para seguir mostrando algo si SIGeF falla.
+// `limpiarCacheSigef` fuerza la siguiente consulta a ir a SIGeF.
+export const CACHE_TTL_MS = 60 * 1000
 const cache = new Map<string, { at: number; proyectos: SigefProyecto[] }>()
-const refrescando = new Set<string>()
+const enCurso = new Map<string, Promise<SigefProyecto[]>>()
 
 // El WS de SIGeF corre en la infraestructura del proveedor y se ha visto caer
 // de forma intermitente incluso ya en producción (ver project_sigef_ws
@@ -30,16 +27,25 @@ const refrescando = new Set<string>()
 const FALLO_TTL_MS = 2 * 60 * 1000
 const fallos = new Map<string, { at: number; error: Error }>()
 
-function refrescarEnSegundoPlano(idDependencia: string) {
-  if (refrescando.has(idDependencia)) return
-  refrescando.add(idDependencia)
-  consultarProyectosPorDependencia(idDependencia)
-    .then((proyectos) => {
-      cache.set(idDependencia, { at: Date.now(), proyectos })
-      fallos.delete(idDependencia)
-    })
-    .catch((e) => console.error("[sigef cache refresh]", idDependencia, e))
-    .finally(() => refrescando.delete(idDependencia))
+/** Una sola consulta a SIGeF por dependencia a la vez; la comparten quienes lleguen mientras corre. */
+function consultarEnVivo(idDependencia: string): Promise<SigefProyecto[]> {
+  let p = enCurso.get(idDependencia)
+  if (!p) {
+    p = consultarProyectosPorDependencia(idDependencia)
+      .then((proyectos) => {
+        cache.set(idDependencia, { at: Date.now(), proyectos })
+        fallos.delete(idDependencia)
+        return proyectos
+      })
+      .catch((e) => {
+        const error = e instanceof Error ? e : new Error(String(e))
+        fallos.set(idDependencia, { at: Date.now(), error })
+        throw error
+      })
+      .finally(() => enCurso.delete(idDependencia))
+    enCurso.set(idDependencia, p)
+  }
+  return p
 }
 
 /** Olvida todo lo cacheado: la siguiente consulta va directo a SIGeF. */
@@ -50,22 +56,24 @@ export function limpiarCacheSigef(): void {
 
 export async function getProyectosCached(idDependencia: string): Promise<SigefProyecto[]> {
   const cached = cache.get(idDependencia)
-  if (cached) {
-    if (Date.now() - cached.at >= CACHE_TTL_MS) refrescarEnSegundoPlano(idDependencia)
-    return cached.proyectos
-  }
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.proyectos
+
+  // SIGeF acaba de fallar: no se le hace esperar al usuario otro timeout.
+  // Se muestra lo último que se obtuvo o, si no hay nada, se cae al fallback.
   const fallo = fallos.get(idDependencia)
-  if (fallo && Date.now() - fallo.at < FALLO_TTL_MS) throw fallo.error
+  if (fallo && Date.now() - fallo.at < FALLO_TTL_MS) {
+    if (cached) return cached.proyectos
+    throw fallo.error
+  }
 
   try {
-    const proyectos = await consultarProyectosPorDependencia(idDependencia)
-    cache.set(idDependencia, { at: Date.now(), proyectos })
-    fallos.delete(idDependencia)
-    return proyectos
+    return await consultarEnVivo(idDependencia)
   } catch (e) {
-    const error = e instanceof Error ? e : new Error(String(e))
-    fallos.set(idDependencia, { at: Date.now(), error })
-    throw error
+    if (cached) {
+      console.error("[sigef] falló la consulta en vivo, se usa el último dato", idDependencia, e)
+      return cached.proyectos
+    }
+    throw e
   }
 }
 
@@ -110,13 +118,17 @@ export async function resolverIdDependencia(secretariaRaw: string): Promise<numb
 // para que ningún usuario sea quien pague los ~4s de la primera consulta del
 // día — para entonces el servidor ya lleva unos segundos vivo y nadie ha
 // abierto el formulario todavía. Va en paralelo y no bloquea el arranque.
+// Solo llena las que aún no tienen dato: las que ya lo tienen se consultan en
+// vivo cuando alguien abre el formulario, así que refrescarlas aquí serían
+// llamadas SOAP de más.
 export async function warmAllKnownDependencias(): Promise<void> {
   try {
     const nodos = await prisma.organo_centralizado.findMany({
       where: { parent_id: null, sigef_id_dependencia: { not: null } },
       select: { sigef_id_dependencia: true },
     })
-    const ids = nodos.map((n) => String(n.sigef_id_dependencia))
+    const ids = nodos.map((n) => String(n.sigef_id_dependencia)).filter((id) => !cache.has(id))
+    if (ids.length === 0) return
     const resultados = await Promise.allSettled(ids.map((id) => getProyectosCached(id)))
 
     // Una línea con stack trace por dependencia ensucia el arranque sin

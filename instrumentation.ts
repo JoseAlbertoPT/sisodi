@@ -22,17 +22,12 @@ export async function register() {
       .catch((e) => console.error("[sigef sync]", e instanceof Error ? e.message : e))
       .then(() => warmAllKnownDependencias())
   void sincronizarYPrecalentar()
-  setInterval(() => void sincronizarYPrecalentar(), 60 * 60 * 1000)
 
-  // El WS de SIGeF corre en la infraestructura del proveedor y se cae de
-  // forma intermitente (ver integracion-sigef-progreso.md). Si estaba caído
-  // justo al arrancar el servidor, el precalentamiento de arriba falla y
-  // nadie vuelve a reintentarlo solo — le toca a un usuario real disparar el
-  // siguiente intento y pagar el timeout completo (SIGEF_TIMEOUT_MS). Este
-  // intervalo reintenta el precalentamiento cada 5 min en segundo plano, para
-  // que sea el propio servidor quien detecte la recuperación del servicio y
-  // repueble el caché — no un usuario esperando 10s en el formulario.
-  setInterval(() => {
-    void warmAllKnownDependencias()
-  }, 5 * 60 * 1000)
+  // Cada 5 min: lo que se dé de alta o cambie en SIGeF (Secretarías nuevas,
+  // cambios de idDependencia) se ve en minutos, y es una sola llamada SOAP.
+  // También reintenta el precalentamiento: el WS de SIGeF se cae de forma
+  // intermitente (ver integracion-sigef-progreso.md) y, si estaba caído al
+  // arrancar, así es el propio servidor quien detecta que volvió y repuebla
+  // el caché — no un usuario esperando el timeout en el formulario.
+  setInterval(() => void sincronizarYPrecalentar(), 5 * 60 * 1000)
 }

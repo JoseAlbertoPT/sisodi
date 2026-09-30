@@ -142,7 +142,7 @@ export function CalendarioPage() {
     let anterior: CalendarioResponse | null = null
     try {
       anterior = await fetchCalendario(anioAnterior)
-    } catch { /* sin anterior: plantilla vacía */ }
+    } catch {  }
     const tieneAnterior = tieneFechas(anterior)
     setEditData(tieneAnterior ? buildCalendarioDesdeAnterior(anterior!, anioAnterior, year) : buildEmptyCalendario(year))
     setEditing(true)
