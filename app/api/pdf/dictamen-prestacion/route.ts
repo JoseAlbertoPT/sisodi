@@ -51,6 +51,9 @@ export async function buildDictamenPrestacionBuffer(
   solicitudId: string | null,
   overrides: PdfOverrides = {},
   catalogoId?: string | null,
+  // Fila de catalogo_solicitud recién creada por /api/catalogo-justificaciones/solicitar:
+  // trae el folio actual (NN/MM/AAAA-CH|CA). Sin ella se toma la más reciente del registro.
+  catalogoSolicitudId?: number | null,
 ) {
   const sol = solicitudId
     ? await prisma.solicitud.findUnique({
@@ -92,7 +95,20 @@ export async function buildDictamenPrestacionBuffer(
             }))?.id ?? null
           : null)
     : null;
-  const reutilizacionNumero = catalogoJustificacionId
+  // Folio actual con el formato vigente (lib/folio-catalogo.ts). Las filas
+  // anteriores a ese formato no tienen folio y siguen con "folio de origen-N".
+  const usoCatalogo = catalogoJustificacionId
+    ? await prisma.catalogo_solicitud.findFirst({
+        where: {
+          catalogo_justificacion_id: catalogoJustificacionId,
+          ...(catalogoSolicitudId ? { id: catalogoSolicitudId } : {}),
+        },
+        orderBy: { id: "desc" },
+        select: { folio: true },
+      })
+    : null;
+  const folioActualCatalogo = usoCatalogo?.folio ?? null;
+  const reutilizacionNumero = catalogoJustificacionId && !folioActualCatalogo
     ? await prisma.catalogo_solicitud.count({ where: { catalogo_justificacion_id: catalogoJustificacionId } })
     : 0;
   // Regla 12: el dictamen definitivo no se puede descargar hasta que la
@@ -116,7 +132,7 @@ export async function buildDictamenPrestacionBuffer(
       String(sol.id);
     data = {
       folio: folioSinSiglas(folio),
-      folioActual: reutilizacionNumero > 0 ? folioSinSiglas(conSufijo(folio)) : undefined,
+      folioActual: folioActualCatalogo ?? (reutilizacionNumero > 0 ? folioSinSiglas(conSufijo(folio)) : undefined),
       fecha: formatFechaLarga(new Date()),
       secretariaDependencia: sol.secretaria ?? "",
       unidadResponsableGasto: sol.unidad_responsable ?? "",
@@ -144,7 +160,7 @@ export async function buildDictamenPrestacionBuffer(
     folio = cj.folio_dictamen ?? cj.folio_recepcion ?? String(cj.id);
     data = {
       folio: folioSinSiglas(folio),
-      folioActual: reutilizacionNumero > 0 ? folioSinSiglas(conSufijo(folio)) : undefined,
+      folioActual: folioActualCatalogo ?? (reutilizacionNumero > 0 ? folioSinSiglas(conSufijo(folio)) : undefined),
       fecha: formatFechaLarga(new Date()),
       secretariaDependencia: cj.secretaria ?? "",
       unidadResponsableGasto: cj.unidad_responsable ?? "",
@@ -178,7 +194,7 @@ export async function buildDictamenPrestacionBuffer(
   );
   const buffer = await streamToBuffer(stream as unknown as NodeJS.ReadableStream);
 
-  const filename = `Dictamen_${conSufijo(folio).replace(/\//g, "-")}.pdf`;
+  const filename = `Dictamen_${(folioActualCatalogo ?? conSufijo(folio)).replace(/\//g, "-")}.pdf`;
 
   return { buffer, sol, folio, filename };
 }

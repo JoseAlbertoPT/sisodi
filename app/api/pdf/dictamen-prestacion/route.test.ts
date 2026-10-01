@@ -9,13 +9,17 @@ vi.mock("@/lib/session", async (importOriginal) => ({
 const solicitudFindUnique          = vi.fn()
 const catalogoJustFindUnique       = vi.fn(async (): Promise<{ id: number } | null> => null)
 const catalogoSolicitudCount       = vi.fn(async () => 0)
+const catalogoSolicitudFindFirst   = vi.fn(async (): Promise<{ folio: string | null } | null> => null)
 const configuracionTextoFindMany = vi.fn(async () => [] as any[])
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     solicitud:              { findUnique: (...a: any[]) => (solicitudFindUnique as any)(...a) },
     catalogo_justificacion: { findUnique: (...a: any[]) => (catalogoJustFindUnique as any)(...a) },
-    catalogo_solicitud:     { count: (...a: any[]) => (catalogoSolicitudCount as any)(...a) },
+    catalogo_solicitud:     {
+      count:     (...a: any[]) => (catalogoSolicitudCount as any)(...a),
+      findFirst: (...a: any[]) => (catalogoSolicitudFindFirst as any)(...a),
+    },
     configuracion_texto:    { findMany: (...a: any[]) => (configuracionTextoFindMany as any)(...a) },
   },
 }))
@@ -56,6 +60,7 @@ beforeEach(() => {
   lastPlantillaData = null
   catalogoJustFindUnique.mockResolvedValue(null)
   catalogoSolicitudCount.mockResolvedValue(0)
+  catalogoSolicitudFindFirst.mockResolvedValue(null)
   configuracionTextoFindMany.mockResolvedValue([])
 })
 
@@ -111,5 +116,25 @@ describe("GET /api/pdf/dictamen-prestacion — sufijo de reutilización: solo en
     expect(lastPlantillaData.folio).toBe("05/08/2026")
     expect(lastPlantillaData.folioActual).toBe("05/08/2026-2")
     expect(lastPlantillaData.justificacion).not.toContain("-2")
+  })
+})
+
+describe("GET /api/pdf/dictamen-prestacion — folio actual NN/MM/AAAA-CH|CA de la reutilización", () => {
+  it("usa el folio guardado en la reutilización como 'Folio actual' y en el nombre del archivo, sin sufijo -N", async () => {
+    solicitudFindUnique.mockResolvedValue(baseSolicitud({ estado: { nombre: "Emitido" }, secretaria: "Secretaría de Finanzas" }))
+    catalogoJustFindUnique.mockResolvedValue({ id: 5 })
+    catalogoSolicitudFindFirst.mockResolvedValue({ folio: "01/09/2026-CH" })
+    catalogoSolicitudCount.mockResolvedValue(3)
+
+    const res = await GET(makeReq(
+      "http://localhost/api/pdf/dictamen-prestacion?id=1&vigenciaInicio=2026-09-20&vigenciaFin=2026-12-31",
+    ))
+
+    expect(res.status).toBe(200)
+    expect(lastPlantillaData.folio).toBe("05/08/2026")
+    expect(lastPlantillaData.folioActual).toBe("01/09/2026-CH")
+    expect(lastPlantillaData.justificacion).not.toContain("-CH")
+    expect(res.headers.get("Content-Disposition")).toContain("Dictamen_01-09-2026-CH.pdf")
+    expect(catalogoSolicitudCount).not.toHaveBeenCalled()
   })
 })

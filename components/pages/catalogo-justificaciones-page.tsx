@@ -74,6 +74,7 @@ const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => 
     </div>
   ),
 })
+
 interface CatalogoRecord {
   id: number
   solicitud_id: number
@@ -468,6 +469,8 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         const errJson = await res.json().catch(() => null)
         throw new Error(errJson?.error ?? "Error al registrar la solicitud")
       }
+      // Fila recién creada: trae el folio actual (NN/MM/AAAA-CH|CA) del dictamen.
+      const { record: usoCatalogo } = await res.json()
       const np = isParaestatal(solRec) ? (solPersonas || "") : (solPrestadores || "")
       const [cerB64, keyB64] = await Promise.all([
         fileToBase64(solFirmaCerFile),
@@ -486,6 +489,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       }
       if (solRec.solicitud.id) body.solicitudId = solRec.solicitud.id
       else body.catalogoId = solRec.id
+      if (usoCatalogo?.id) body.catalogoSolicitudId = usoCatalogo.id
       if (np) body.numeroPersonas = np
       if (programaCambio) body.programaProyecto = programaCambio
       if (importeCambio !== null) body.importeBruto = importeCambio
@@ -531,7 +535,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     try {
       const vi = dateToIso(canVigInicio!)
       const vf = dateToIso(canVigFin!)
-      await fetch("/api/catalogo-justificaciones/solicitar", {
+      const res = await fetch("/api/catalogo-justificaciones/solicitar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -541,7 +545,13 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
           tipo: "cancelacion",
         }),
       })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.error ?? "Error al registrar la cancelación")
+      }
+      const { record: usoCatalogo } = await res.json()
       const params = new URLSearchParams({ vigenciaInicio: vi, vigenciaFin: vf })
+      if (usoCatalogo?.id) params.set("catalogoSolicitudId", String(usoCatalogo.id))
       if (canRec.solicitud.id) params.set("id", String(canRec.solicitud.id))
       else params.set("catalogoId", String(canRec.id))
       const pdfRes = await fetch(`/api/pdf/dictamen-prestacion-completo?${params}`)

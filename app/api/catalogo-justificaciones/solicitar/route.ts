@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { requireCatalogoConsulta } from "@/lib/api-guard"
 import { validarVigencia, parseFechaLocal } from "@/lib/vigencia"
+import { generarFolioCatalogo, tipoFolioPorRegimen } from "@/lib/folio-catalogo"
 
 function parseVigenciaRango(nuevaVigencia: string): { inicio: Date; fin: Date } | null {
   const [inicioStr, finStr] = nuevaVigencia.split("/").map((s) => s.trim())
@@ -88,8 +89,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const record = await prisma.catalogo_solicitud.create({
+    // Folio actual del dictamen (NN/MM/AAAA-CH|CA). Se toma el consecutivo y se
+    // guarda la fila en una sola transacción: si algo falla no queda hueco.
+    // Un régimen que no es Honorarios ni Asimilados no lleva folio nuevo
+    // (sigue con el formato anterior "folio de origen-N").
+    const tipoFolio = tipoFolioPorRegimen(catalogo.regimen_contratacion)
+    const record = await prisma.$transaction(async (tx) => tx.catalogo_solicitud.create({
       data: {
+        ...(tipoFolio ? await generarFolioCatalogo(tx, tipoFolio) : {}),
         catalogo_justificacion_id: Number(catalogo_justificacion_id),
         usuario_id: String(usuario_id),
         nueva_vigencia: String(nueva_vigencia).trim(),
@@ -100,7 +107,7 @@ export async function POST(req: NextRequest) {
         programa_anterior: esCancelacion || !nuevo_programa_proyecto ? null : (String(programa_anterior ?? "").trim() || null),
         nuevo_programa_proyecto: esCancelacion || !nuevo_programa_proyecto ? null : String(nuevo_programa_proyecto).trim(),
       },
-    })
+    }))
 
     broadcastUpdate(["catalogo"])
 
