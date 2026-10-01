@@ -50,6 +50,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useAuth } from "@/lib/auth-context"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
+import { esPeriodoAnioSiguiente } from "@/lib/captura-anio-siguiente"
 import { getNombreForClave, formatClave } from "@/lib/ua-claves-catalog"
 import { parseImporteTexto } from "@/lib/parse-importe"
 import { HistorialTimeline, ROLES_OCULTAN_OBSERVACIONES, type HistorialEntryData } from "@/components/historial-timeline"
@@ -1047,7 +1048,7 @@ function DetalleView({
 
   const permisoDisponible = (n === "borrador" || n === "en captura") && user?.id
     ? (getPermisosUsuario(user.id).find(
-        (p) => p.regimen === (sol.regimen as string) && p.active && !p.used
+        (p) => p.regimen === (sol.regimen as string) && p.active && !p.used && !esPeriodoAnioSiguiente(p.periodo)
       ) ?? null)
     : null
 

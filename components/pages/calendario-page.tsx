@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { FilterTabs } from "@/components/ui/filter-tabs"
@@ -10,11 +9,12 @@ import { Badge } from "@/components/ui/badge"
 import {
   Loader2, Check, X,
   CalendarPlus, ChevronDown, AlertCircle,
-  CalendarDays, FileText, Rows3,
+  CalendarDays, FileText, Rows3, Wallet,
 } from "lucide-react"
 import { PageLayout } from "@/components/page-layout"
 import { TabuladorTabContent } from "@/components/tabulador-tab-content"
 import { NotaTabContent } from "@/components/nota-tab-content"
+import { TiposPagoTabContent } from "@/components/tipos-pago-tab-content"
 import { useCalendario } from "@/lib/calendario-store"
 import { updateCalendario, fetchCalendario, fetchEjercicios, buildEmptyCalendario, buildCalendarioDesdeAnterior, mesNumero, mesDeQuincena, type CalendarioResponse } from "@/lib/calendario-api"
 import { useToast } from "@/hooks/use-toast"
@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DatePickerHabil, dmyToDate, dateToDmy } from "@/components/ui/date-picker-habil"
-
 type TabRecepcion = "honorarios" | "asimilados" | "nombramiento"
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -58,7 +57,6 @@ function DayMonthInput({
   const day = parts.length === 3 && !value.startsWith("/") ? (parts[0] ?? "") : ""
   const currentMonth = parts.length === 3 ? (parts[1] ?? mesNumero(mesName)) : mesNumero(mesName)
   const hasDayValue = day.length > 0
-
   const buildDate = (d: string, m: string) => {
     return d ? `${d}/${m}/${year}` : `/${m}/${year}`
   }
@@ -107,6 +105,7 @@ function DayMonthInput({
     </div>
   )
 }
+
 function DateCell({ value }: { value: string }) {
   if (!value) return <span className="text-muted-foreground/40">--/--/----</span>
   const parts = value.split("/")
@@ -121,7 +120,6 @@ function DateCell({ value }: { value: string }) {
     </span>
   )
 }
-
 export function CalendarioPage() {
   const { toast } = useToast()
   const {
@@ -136,7 +134,6 @@ export function CalendarioPage() {
   const isEmpty = !loading && honorarios.length === 0 && asimilados.length === 0 && nombramiento.length === 0
   const tieneFechas = (c: CalendarioResponse | null): c is CalendarioResponse =>
     !!c && c.honorarios.length + c.asimilados.length + c.nombramiento.length > 0
-
   const handleCreateYear = async (year: number = ejercicio) => {
     const anioAnterior = year - 1
     let anterior: CalendarioResponse | null = null
@@ -212,7 +209,6 @@ export function CalendarioPage() {
       return next
     })
   }
-
   const [availableYears, setAvailableYears] = useState<number[]>(() => [new Date().getFullYear()])
   const agregarAnios = (anios: number[]) =>
     setAvailableYears((prev) => [...new Set([...prev, ...anios])].sort((a, b) => a - b))
@@ -222,7 +218,7 @@ export function CalendarioPage() {
   useEffect(() => { agregarAnios([ejercicio]) }, [ejercicio])
   const [showNewYearInput, setShowNewYearInput] = useState(false)
   const [newYearValue, setNewYearValue] = useState("")
-  const [mainTab, setMainTab] = useState<"calendario" | "nota" | "tabulador">("calendario")
+  const [mainTab, setMainTab] = useState<"calendario" | "nota" | "tabulador" | "tipos-pago">("calendario")
   const handleAddYear = async () => {
     const year = parseInt(newYearValue, 10)
     if (!year || year < 2020 || year > 2099) {
@@ -270,6 +266,8 @@ export function CalendarioPage() {
           ? "Nota del Dictamen Técnico Funcional y de la Justificación de Prestación de Servicios"
           : mainTab === "tabulador"
             ? "Tabulador"
+            : mainTab === "tipos-pago"
+            ? "Tipos de pago"
             : "Calendario de Recepción"
       }
       description={
@@ -277,10 +275,12 @@ export function CalendarioPage() {
           ? "Este texto se imprime automáticamente en ambos documentos al guardar."
           : mainTab === "tabulador"
             ? "Niveles, categorías e importes brutos usados en la Equivalencia al Tabulador."
+            : mainTab === "tipos-pago"
+            ? "Opciones del campo Tipo de Pago en Nueva Solicitud y si aplica la Equivalencia al Tabulador."
             : `Periodo de aceptación y fechas límite para la recepción de solicitudes — Ejercicio ${ejercicio}`
       }
       >
-      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "calendario" | "nota" | "tabulador")} className="w-full gap-4">
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "calendario" | "nota" | "tabulador" | "tipos-pago")} className="w-full gap-4">
         <TabsList>
 
           <TabsTrigger value="calendario" className="gap-1.5">
@@ -289,6 +289,10 @@ export function CalendarioPage() {
 
           <TabsTrigger value="tabulador" className="gap-1.5">
             <Rows3 className="h-4 w-4" />Tabulador
+          </TabsTrigger>
+
+          <TabsTrigger value="tipos-pago" className="gap-1.5">
+            <Wallet className="h-4 w-4" />Tipos de pago
           </TabsTrigger>
 
           <TabsTrigger value="nota" className="gap-1.5">
@@ -529,6 +533,9 @@ export function CalendarioPage() {
         </TabsContent>
         <TabsContent value="tabulador">
           <TabuladorTabContent />
+        </TabsContent>
+        <TabsContent value="tipos-pago">
+          <TiposPagoTabContent />
         </TabsContent>
 
         <TabsContent value="nota">

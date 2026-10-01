@@ -519,9 +519,21 @@ model catalogo_solicitud {
   procesado                  Boolean                @default(false)
   procesado_en               DateTime?              @db.Timestamp(6)
   solicitud_nueva_id         Int?
+  // "Folio actual" del dictamen de esta reutilización/cancelación:
+  // NN/MM/AAAA-CH (Honorarios) o -CA (Asimilados), consecutivo global que se
+  // reinicia cada mes (ver lib/folio-catalogo.ts). null en las filas creadas
+  // antes de este formato: esas siguen mostrando "folio de origen-N".
+  folio                      String?                @unique @db.VarChar(50)
+  folio_consecutivo          Int?
+  folio_mes                  Int?
+  folio_anio                 Int?
+  folio_tipo                 String?                @db.VarChar(2)
   creado_en                  DateTime               @default(now()) @db.Timestamp(6)
   catalogo_justificacion     catalogo_justificacion @relation(fields: [catalogo_justificacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   usuario                    usuario                @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // CH y CA comparten contador: un consecutivo no se repite en el mismo mes/año.
+  @@unique([folio_anio, folio_mes, folio_consecutivo])
 }
 
 model permiso_captura {
@@ -555,4 +567,21 @@ model tabulador {
   actualizado_en    DateTime @default(now()) @updatedAt @db.Timestamp(6)
 
   @@index([ejercicio])
+}
+
+// Tipos de pago del combo "Tipo de Pago" en Nueva Solicitud (antes fijos en el
+// código), administrados en Configuración > Tipos de pago. `clave` es lo que se
+// guarda en solicitud.tipo_importe (VarChar(20)) y no cambia una vez creada.
+// Eliminar solo desactiva (`activo = false`): las solicitudes que ya usan la
+// clave la siguen mostrando.
+model tipo_pago {
+  id             Int      @id @default(autoincrement())
+  clave          String   @unique @db.VarChar(20)
+  nombre         String   @db.VarChar(20)
+  // false = no aplica "Equivalencia al Tabulador" (se bloquea y no se exige).
+  usa_tabulador  Boolean  @default(true)
+  orden          Int      @default(0)
+  activo         Boolean  @default(true)
+  creado_en      DateTime @default(now()) @db.Timestamp(6)
+  actualizado_en DateTime @default(now()) @updatedAt @db.Timestamp(6)
 }

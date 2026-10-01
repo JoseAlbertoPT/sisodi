@@ -55,6 +55,8 @@ const ESCRITURAS_CON_PERMISO: Record<string, RegExp> = {
   "app/api/configuracion/nota-dictamen/route.ts": /requireMenu\(/,
   "app/api/tabulador/route.ts": /requireMenu\(/,
   "app/api/tabulador/[id]/route.ts": /requireMenu\(/,
+  "app/api/tipos-pago/route.ts": /requireMenu\(/,
+  "app/api/tipos-pago/[id]/route.ts": /requireMenu\(/,
   "app/api/catalogo/centralizada/route.ts": /requireMenu\(/,
   "app/api/catalogo/centralizada/[id]/route.ts": /requireMenu\(/,
   "app/api/catalogo/centralizada/import/route.ts": /requireMenu\(/,

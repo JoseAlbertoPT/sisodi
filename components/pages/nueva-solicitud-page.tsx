@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { useSolicitudes, type TipoAdministracion } from "@/lib/solicitudes-store"
 import { useAutorizaciones } from "@/lib/autorizaciones-store"
+import { periodoAnioSiguiente } from "@/lib/captura-anio-siguiente"
 import { useAuth } from "@/lib/auth-context"
 import { parseDateDMY, isPeriodoVigente, type PeriodoCap3000, type PeriodoCap1000 } from "@/lib/calendario-recepcion-mock"
 import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
@@ -34,6 +35,8 @@ import { InfoTooltip } from "@/components/ui/info-tooltip"
 import { TOOLTIPS } from "@/lib/tooltips-textos"
 import { useHistoricoStore } from "@/lib/historico-store"
 import type { HistoricoRow } from "@/lib/parse-excel-historico"
+import { useTiposPago } from "@/hooks/use-tipos-pago"
+import { tipoPagoSinTabulador, type TipoPago } from "@/lib/tipos-pago"
 import { useTabulador } from "@/hooks/use-tabulador"
 import { secretariaAplica } from "@/lib/tabulador"
 import { filtrarSecretarias, getUAsForSecretaria, getClaveForUA } from "@/lib/ua-claves-catalog"
@@ -1098,9 +1101,26 @@ function TagInput({
     </div>
   )
 }
+// Combo "Tipo de Pago": tipos activos de Configuración > Tipos de pago, más el
+// ya guardado en la solicitud aunque después se haya eliminado.
+function TipoPagoSelect({ tipos, value, onChange }: { tipos: TipoPago[]; value: string; onChange: (v: string) => void }) {
+  const opciones = tipos.filter((t) => t.activo || t.clave === value)
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
+      <SelectContent>
+        {opciones.map((t) => <SelectItem key={t.clave} value={t.clave}>{t.nombre}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  )
+}
+function nombreTipoPago(tipos: TipoPago[], clave: string): string {
+  return tipos.find((t) => t.clave === clave)?.nombre ?? clave.replace(/_/g, " ")
+}
 type TabuladorEntry = { nivel: string; categoria: string }
-function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSeleccionadoChange, secretaria, initialNivel, initialCategoria }: {
+function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, noAplica = false, onSeleccionadoChange, secretaria, initialNivel, initialCategoria }: {
   nivelCategoria?: string; importeBruto?: string; readonly?: boolean
+  noAplica?: boolean
   onSeleccionadoChange?: (nivel: string, categoria: string) => void
   secretaria?: string
   initialNivel?: string
@@ -1120,6 +1140,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
     const normalized = parseImporteBruto(importeBruto || "")
     const q = normalized || ""
     setBusqueda(q)
+    if (noAplica) { setSeleccionado(null); return }
     if (initialNivel) {
       if (!q) return
       if (loadedImporteRef.current === null) {
@@ -1136,7 +1157,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
       if (match) { setSeleccionado({ nivel: match.nivel, categoria: match.categoria }); return }
     }
     setSeleccionado(null)
-  }, [importeBruto, rangosActivos, initialNivel])
+  }, [importeBruto, rangosActivos, initialNivel, noAplica])
   useEffect(() => {
     if (!onSeleccionadoChange) return
     onSeleccionadoChange(seleccionado?.nivel ?? "", seleccionado?.categoria ?? "")
@@ -1159,9 +1180,13 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, onSe
       <Label className="text-sm font-medium flex items-center gap-1.5">
         Equivalencia al Tabulador
         <InfoTooltip text={TOOLTIPS.TABULADOR} />
-        {readonly && <Lock className="h-3 w-3 text-muted-foreground" />}
+        {(readonly || noAplica) && <Lock className="h-3 w-3 text-muted-foreground" />}
       </Label>
-      {readonly ? (
+      {noAplica ? (
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2 min-h-9 cursor-not-allowed">
+          <span className="text-sm text-muted-foreground">No aplica para este tipo de pago</span>
+        </div>
+      ) : readonly ? (
         <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
           <span className="text-sm text-muted-foreground">
             {(() => {
@@ -1507,8 +1532,12 @@ function FormularioPrestacion({
     () => rangosActivosLimite.length > 0 ? Math.max(...rangosActivosLimite.map((r) => r.max)) : null,
     [rangosActivosLimite]
   )
-  const excedeLimiteTabulador = limiteImporteBruto !== null && parseMoney(importeBruto) > limiteImporteBruto
   const [tipoImporte, setTipoImporte] = useState(initialData?.tipoImporte || "Mensual")
+  const { tipos: tiposPago } = useTiposPago()
+  // Tipos de pago sin "Aplica equivalencia al tabulador" (ej. por hora, día o
+  // taller): el campo se bloquea y deja de ser requisito.
+  const sinTabulador = tipoPagoSinTabulador(tiposPago, tipoImporte)
+  const excedeLimiteTabulador = !sinTabulador && limiteImporteBruto !== null && parseMoney(importeBruto) > limiteImporteBruto
   const [actividades, setActividades] = useState<string[]>(
     datosRenovacion?.actividades
       ? splitList(datosRenovacion.actividades)
@@ -1605,13 +1634,13 @@ function FormularioPrestacion({
     const niv = nivelTabulador.trim().toUpperCase()
     const min = (niv === "105" || niv === "504") ? 7 : 5
     return {
-      I:   !!(urgSeleccionada && programaSeleccionado && regimenEfectivo && tipoActividadSeleccionado && numeroPrestadores && vigenciaInicio && vigenciaFin && importeBruto && nivelTabulador && categoriaTabulador) && !excedeLimiteTabulador,
+      I:   !!(urgSeleccionada && programaSeleccionado && regimenEfectivo && tipoActividadSeleccionado && numeroPrestadores && vigenciaInicio && vigenciaFin && importeBruto && (sinTabulador || (nivelTabulador && categoriaTabulador))) && !excedeLimiteTabulador,
       II:  !!(objeto?.trim()),
       III: actividades.filter(a => a.trim()).length >= min,
       IV:  responsabilidades.filter(r => r.trim()).length >= min,
       V:   escolaridad.some(e => e.trim()) && compAdm.some(c => c.trim()) && compTec.some(c => c.trim()) && compSoc.some(c => c.trim()) && valores.some(v => v.trim()) && areasExp.some(a => a.trim()),
     }
-  }, [urgSeleccionada, programaSeleccionado, regimenEfectivo, tipoActividadSeleccionado, numeroPrestadores, vigenciaInicio, vigenciaFin, importeBruto, nivelTabulador, categoriaTabulador, objeto, actividades, responsabilidades, escolaridad, compAdm, compTec, compSoc, valores, areasExp, excedeLimiteTabulador])
+  }, [urgSeleccionada, programaSeleccionado, regimenEfectivo, tipoActividadSeleccionado, numeroPrestadores, vigenciaInicio, vigenciaFin, importeBruto, nivelTabulador, categoriaTabulador, objeto, actividades, responsabilidades, escolaridad, compAdm, compTec, compSoc, valores, areasExp, excedeLimiteTabulador, sinTabulador])
 
   useEffect(() => {
     onStepValidityChange?.({ datos: seccion.I, alcance: seccion.II && seccion.III && seccion.IV, perfil: seccion.V })
@@ -1930,19 +1959,10 @@ function FormularioPrestacion({
               </Label>
               {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground capitalize">{tipoImporte}</span>
+                  <span className="text-sm text-muted-foreground">{nombreTipoPago(tiposPago, tipoImporte)}</span>
                 </div>
               ) : (
-                <Select value={tipoImporte} onValueChange={setTipoImporte}>
-                  <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Mensual">Mensual</SelectItem>
-                    <SelectItem value="Unico">Único</SelectItem>
-                    <SelectItem value="Por_hora">Por Hora</SelectItem>
-                    <SelectItem value="Por_taller">Por Taller</SelectItem>
-                    <SelectItem value="Por_dia">Por Día</SelectItem>
-                  </SelectContent>
-                </Select>
+                <TipoPagoSelect tipos={tiposPago} value={tipoImporte} onChange={setTipoImporte} />
               )}
             </div>
 
@@ -1976,6 +1996,7 @@ function FormularioPrestacion({
               nivelCategoria={datosRenovacion?.nivelCategoria}
               importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeBruto}
               readonly={bloqueadoPorRenovacion}
+              noAplica={sinTabulador}
               onSeleccionadoChange={(nivel, categoria) => { setNivelTabulador(nivel); setCategoriaTabulador(categoria) }}
               secretaria={secretariaConfirmada || secretariaInput}
               initialNivel={nivelTabulador || undefined}
@@ -2301,7 +2322,9 @@ function FormularioNombramiento({
     () => rangosActivosLimite.length > 0 ? Math.max(...rangosActivosLimite.map((r) => r.max)) : null,
     [rangosActivosLimite]
   )
-  const excedeLimiteTabulador = limiteImporteBruto !== null && parseMoney(importeNeto) > limiteImporteBruto
+  const { tipos: tiposPago } = useTiposPago()
+  const sinTabulador = tipoPagoSinTabulador(tiposPago, tipoImporte)
+  const excedeLimiteTabulador = !sinTabulador && limiteImporteBruto !== null && parseMoney(importeNeto) > limiteImporteBruto
   const [showSugerencias, setShowSugerencias] = useState(false)
   const [unidadAdscripcion, setUnidadAdscripcion] = useState(
     datosRenovacion?.unidadAdscripcion ?? initialData?.unidadAdministrativa ?? unidadFija ?? ""
@@ -2497,13 +2520,13 @@ function FormularioNombramiento({
     const niv = nivelTabulador.trim().toUpperCase()
     const min = (niv === "105" || niv === "504") ? 7 : 5
     return {
-      I:    !!(urgSeleccionada && programaInput && tipoActividadSeleccionado && numeroPrestadores && vigenciaInicio && vigenciaFin && importeNeto && nivelTabulador && categoriaTabulador && denominacion && puestoJefeInmediato) && !excedeLimiteTabulador,
+      I:    !!(urgSeleccionada && programaInput && tipoActividadSeleccionado && numeroPrestadores && vigenciaInicio && vigenciaFin && importeNeto && (sinTabulador || (nivelTabulador && categoriaTabulador)) && denominacion && puestoJefeInmediato) && !excedeLimiteTabulador,
       II:   !!(objetoNombramiento?.trim()),
       III:  funciones.filter(a => a.trim()).length >= min,
       IV:   responsabilidades.filter(r => r.trim()).length >= min,
       VIII: escolaridad.some(e => e.trim()) && compAdm.some(c => c.trim()) && compTec.some(c => c.trim()) && compSoc.some(c => c.trim()) && valores.some(v => v.trim()) && areasExp.some(a => a.trim()),
     }
-  }, [urgSeleccionada, programaInput, tipoActividadSeleccionado, numeroPrestadores, vigenciaInicio, vigenciaFin, importeNeto, nivelTabulador, categoriaTabulador, denominacion, puestoJefeInmediato, objetoNombramiento, funciones, responsabilidades, escolaridad, compAdm, compTec, compSoc, valores, areasExp, excedeLimiteTabulador])
+  }, [urgSeleccionada, programaInput, tipoActividadSeleccionado, numeroPrestadores, vigenciaInicio, vigenciaFin, importeNeto, nivelTabulador, categoriaTabulador, denominacion, puestoJefeInmediato, objetoNombramiento, funciones, responsabilidades, escolaridad, compAdm, compTec, compSoc, valores, areasExp, excedeLimiteTabulador, sinTabulador])
 
   useEffect(() => {
     onStepValidityChange?.({ datos: seccionNom.I, alcance: seccionNom.II && seccionNom.III && seccionNom.IV, perfil: seccionNom.VIII })
@@ -2776,19 +2799,10 @@ function FormularioNombramiento({
               </Label>
               {bloqueadoPorRenovacion ? (
                 <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-base px-3 py-2 min-h-9">
-                  <span className="text-sm text-muted-foreground capitalize">{tipoImporte}</span>
+                  <span className="text-sm text-muted-foreground">{nombreTipoPago(tiposPago, tipoImporte)}</span>
                 </div>
               ) : (
-                <Select value={tipoImporte} onValueChange={setTipoImporte}>
-                  <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Mensual">Mensual</SelectItem>
-                    <SelectItem value="Unico">Único</SelectItem>
-                    <SelectItem value="Por_hora">Por Hora</SelectItem>
-                    <SelectItem value="Por_taller">Por Taller</SelectItem>
-                    <SelectItem value="Por_dia">Por Día</SelectItem>
-                  </SelectContent>
-                </Select>
+                <TipoPagoSelect tipos={tiposPago} value={tipoImporte} onChange={setTipoImporte} />
               )}
             </div>
 
@@ -2822,6 +2836,7 @@ function FormularioNombramiento({
               nivelCategoria={datosRenovacion?.nivelCategoria}
               importeBruto={bloqueadoPorRenovacion ? datosRenovacion?.importeBruto : importeNeto}
               readonly={bloqueadoPorRenovacion}
+              noAplica={sinTabulador}
               onSeleccionadoChange={(nivel, categoria) => { setNivelTabulador(nivel); setCategoriaTabulador(categoria) }}
               secretaria={secretariaConfirmada || secretariaInput}
               initialNivel={nivelTabulador || undefined}
@@ -3357,7 +3372,7 @@ function ExcepcionDOForm({ onBack }: { onBack: () => void }) {
   )
 }
 
-function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSolicitud, tieneOficio: boolean): string[] {
+function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSolicitud, tieneOficio: boolean, tiposPago: TipoPago[]): string[] {
   const faltantes: string[] = []
   if (!tieneOficio) faltantes.push("Oficio de Suficiencia Presupuestal")
   const check = (val: string | string[] | undefined, label: string) => {
@@ -3389,8 +3404,10 @@ function validarCamposCompletos(formData: Partial<FormularioData>, tipo: TipoSol
   check(formData.vigenciaInicio,       "Vigencia Inicio")
   check(formData.vigenciaFin,          "Vigencia Fin")
   check(formData.importeBruto,         "Importe Bruto")
-  check(formData.nivelTabulador,       "Nivel Tabulador")
-  check(formData.categoriaTabulador,   "Categoría Tabulador")
+  if (!tipoPagoSinTabulador(tiposPago, formData.tipoImporte)) {
+    check(formData.nivelTabulador,     "Nivel Tabulador")
+    check(formData.categoriaTabulador, "Categoría Tabulador")
+  }
   check(formData.objeto,               "Objeto de la Contratación")
   checkMinArray(formData.actividades,       "Actividades",       minActResp)
   checkMinArray(formData.responsabilidades, "Responsabilidades", minActResp)
@@ -3453,16 +3470,21 @@ function periodoNombreAMes(nombre: string): number | null {
 
 function buildSolicitudPayload({
   usuarioId, tipo, regimenPeriodo, periodoNombre, esExtemporanea, esRenovacion, folioSeleccionado, formData, tipoAdministracion,
+  anioSiguiente = false,
 }: {
   usuarioId: string; tipo: TipoSolicitud; regimenPeriodo: string; periodoNombre: string; esExtemporanea: boolean
   esRenovacion: string; folioSeleccionado: string; formData: Partial<FormularioData>; tipoAdministracion?: string
+  /** Solicitud del año siguiente: el servidor valida el permiso y fija periodo (enero) y año. */
+  anioSiguiente?: boolean
 }) {
   const periodoMesResuelto = periodoNombreAMes(periodoNombre)
   return {
     usuarioId,
     tipo_administracion: tipoAdministracion ?? "centralizada",
     tipo_solicitud: tipo === "prestacion" ? "Prestacion de Servicios" : "Nombramiento Tiempo Det.",
-    ...(periodoMesResuelto !== null ? { periodoMes: periodoMesResuelto, periodoAnio: new Date().getFullYear() } : {}),
+    ...(anioSiguiente
+      ? { anioSiguiente: true, regimenPeriodo }
+      : periodoMesResuelto !== null ? { periodoMes: periodoMesResuelto, periodoAnio: new Date().getFullYear() } : {}),
     esExtemporanea,
     secretaria:            formData.secretaria            ?? null,
     unidad_administrativa: formData.unidadAdministrativa  ?? null,
@@ -3733,7 +3755,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
   }, [])
 
   const { } = useSolicitudes()
-  const { getPermisoActivo, consumirPermiso } = useAutorizaciones()
+  const { getPermisoActivo, consumirPermiso, recargar: recargarPermisos } = useAutorizaciones()
   const { user } = useAuth()
   const [regimenPeriodo,      setRegimenPeriodo]      = useState<"" | "honorarios" | "asimilados" | "nombramiento">(editSolicitud?.regimen ?? "")
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState(
@@ -3757,6 +3779,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
   const [calAsimilados,    setCalAsimilados]    = useState<PeriodoCap1000[]>([])
   const [calNombramiento,  setCalNombramiento]  = useState<PeriodoCap1000[]>([])
   const [calCargando,      setCalCargando]      = useState(true)
+  const { tipos: tiposPago } = useTiposPago()
   const fetchCalendario = useCallback(() => {
     const year = new Date().getFullYear()
     return fetch(`/api/calendario?ejercicio=${year}`)
@@ -3853,12 +3876,24 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
   // completa para asimilados/nombramiento), calculado del nombre + año en curso.
   // Se usa para acotar la Vigencia (Inicio) cuando hay permiso de Habilitar
   // Captura — ver getRangoPeriodoIso. No depende del calendario de recepción.
-  const periodoRango = useMemo(
-    () => getRangoPeriodoIso(regimenPeriodo, periodoSeleccionado, new Date().getFullYear()),
-    [regimenPeriodo, periodoSeleccionado],
+  // Permiso "Capturar solicitud" del año siguiente (lib/captura-anio-siguiente.ts):
+  // si el usuario lo tiene para el régimen elegido, la solicitud
+  // es del ejercicio siguiente y no se pide mes ni quincena. Solo para
+  // solicitudes nuevas.
+  const anioSiguiente = new Date().getFullYear() + 1
+  const modoAnioSiguiente = !!(
+    !editSolicitud && regimenPeriodo && user?.id &&
+    getPermisoActivo(user.id, regimenPeriodo, periodoAnioSiguiente(anioSiguiente))
   )
 
-  const periodoVencido = periodoSeleccionado ? (periodoInfo ? !periodoInfo.enTiempo : false) : false
+  const periodoRango = useMemo(
+    () => modoAnioSiguiente
+      ? { inicio: `${anioSiguiente}-01-01`, fin: `${anioSiguiente}-12-31` }
+      : getRangoPeriodoIso(regimenPeriodo, periodoSeleccionado, new Date().getFullYear()),
+    [modoAnioSiguiente, anioSiguiente, regimenPeriodo, periodoSeleccionado],
+  )
+
+  const periodoVencido = !modoAnioSiguiente && periodoSeleccionado ? (periodoInfo ? !periodoInfo.enTiempo : false) : false
   const permisoActivo = regimenPeriodo && periodoSeleccionado && user?.id
     ? getPermisoActivo(user.id, regimenPeriodo, periodoSeleccionado) : null
 
@@ -3871,7 +3906,10 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
     return honOk && asimOk && nomOk
   }, [calCargando, calHonorarios, calAsimilados, calNombramiento])
 
-  const puedeAvanzarDeTipo = !!(tipo && regimenPeriodo && periodoSeleccionado && (!periodoVencido || permisoActivo) && calendarioCompleto)
+  const puedeAvanzarDeTipo = !!(
+    tipo && regimenPeriodo && calendarioCompleto &&
+    (modoAnioSiguiente || (periodoSeleccionado && (!periodoVencido || permisoActivo)))
+  )
   const [secretariaFrescaTexto, setSecretariaFrescaTexto] = useState<string | null>(null)
   useEffect(() => {
     const sesionTieneSecretaria = !!(user?.secretariaTexto ?? user?.area)
@@ -4051,7 +4089,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         const effectiveFormData = editSolicitud?.formData
           ? { ...editSolicitud.formData, ...formData }
           : formData
-        const faltantes = validarCamposCompletos(effectiveFormData, tipo, tieneOficio)
+        const faltantes = validarCamposCompletos(effectiveFormData, tipo, tieneOficio, tiposPago)
         if (faltantes.length > 0) {
           setErrorBorrador(`Campos obligatorios incompletos: ${faltantes.join(", ")}`)
           setGuardandoBorrador(false)
@@ -4149,7 +4187,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
           solicitudId = Number(editSolicitud.id)
           setFolioGenerado(json.data?.folio_recepcion ?? json.data?.folio_justificacion ?? editSolicitud.id)
         } else {
-          const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData, tipoAdministracion: user?.tipoAdministracion })
+          const payload = buildSolicitudPayload({ usuarioId, tipo, regimenPeriodo, periodoNombre: periodoSeleccionado, esExtemporanea: !modoAnioSiguiente && !periodoStillValid && hasPermiso, esRenovacion, folioSeleccionado, formData, tipoAdministracion: user?.tipoAdministracion, anioSiguiente: modoAnioSiguiente })
           const res = await fetchConTimeout("/api/solicitudes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
           const json = await res.json()
           if (!res.ok || !json.ok) { setErrorEnvio(json.error ?? "Error al registrar la solicitud."); setEnviando(false); return }
@@ -4161,7 +4199,10 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         // El permiso solo se consume una vez que la solicitud ya quedó creada/
         // actualizada correctamente — si se consumiera antes y el registro
         // fallara, el usuario se quedaría sin permiso y sin solicitud.
-        if (!periodoStillValid && hasPermiso && user?.id && regimenPeriodo && periodoSeleccionado) {
+        // El permiso del año siguiente ya lo consumió el servidor al crearla.
+        if (modoAnioSiguiente) {
+          void recargarPermisos()
+        } else if (!periodoStillValid && hasPermiso && user?.id && regimenPeriodo && periodoSeleccionado) {
           await consumirPermiso(user.id, regimenPeriodo, periodoSeleccionado)
         }
 
@@ -4188,7 +4229,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
         setEnviado(true)
       } catch { setErrorEnvio("Error de conexión.") } finally { setEnviando(false) }
     },
-    [user, regimenPeriodo, periodoSeleccionado, consumirPermiso, tipo, formData, archivosAdjuntos, esRenovacion, folioSeleccionado, editSolicitud]
+    [user, regimenPeriodo, periodoSeleccionado, consumirPermiso, recargarPermisos, modoAnioSiguiente, tipo, formData, archivosAdjuntos, esRenovacion, folioSeleccionado, editSolicitud]
   )
 
   const handleReset = useCallback(() => {
@@ -4305,11 +4346,12 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     <SelectContent className="vino-force">
                       <SelectItem value="honorarios">Honorarios</SelectItem>
                       <SelectItem value="asimilados">Honorarios Asimilados a Salarios</SelectItem>
-                      <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado</SelectItem>
+                      {/* Nombramiento por Tiempo Determinado: no aplica en esta etapa.
+                      <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado</SelectItem> */}
                     </SelectContent>
                   </Select>
                 </div>
-                {regimenPeriodo === "honorarios" && (
+                {regimenPeriodo === "honorarios" && !modoAnioSiguiente && (
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Mes de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
@@ -4318,7 +4360,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     </Select>
                   </div>
                 )}
-                {regimenPeriodo === "asimilados" && (
+                {regimenPeriodo === "asimilados" && !modoAnioSiguiente && (
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
@@ -4327,7 +4369,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     </Select>
                   </div>
                 )}
-                {regimenPeriodo === "nombramiento" && (
+                {regimenPeriodo === "nombramiento" && !modoAnioSiguiente && (
                   <div className="flex flex-col gap-1.5">
                     <Label className="text-sm font-medium">Quincena de aplicación<span className="text-destructive ml-0.5">*</span></Label>
                     <Select value={periodoSeleccionado} onValueChange={(v) => { setPeriodoSeleccionado(v); setFolioSeleccionado("") }}>
@@ -4338,7 +4380,19 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                 )}
               </div>
 
-              {periodoSeleccionado && periodoInfo && (
+              {modoAnioSiguiente && (
+                <div className="rounded-lg border-2 border-secondary/30 bg-secondary/5 p-4 flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-secondary" />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-semibold text-card-foreground">Solicitud para el ejercicio {anioSiguiente}</span>
+                    <span className="text-xs text-muted-foreground">
+                      Tiene autorización para capturar una solicitud del año siguiente en este régimen. No se requiere mes ni quincena; la vigencia debe iniciar a partir del 1 de enero de {anioSiguiente}. El permiso se usa al enviar la solicitud.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {!modoAnioSiguiente && periodoSeleccionado && periodoInfo && (
                 <div className={`rounded-lg border-2 p-4 flex flex-col gap-3 ${periodoInfo.enTiempo ? "border-secondary/30 bg-secondary/5" : "border-destructive/40 bg-destructive/5"}`}>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="flex flex-col gap-1">
@@ -4695,7 +4749,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
           )}
 
           {(() => {
-            const periodoStillValid = periodoInfo?.enTiempo ?? false
+            const periodoStillValid = modoAnioSiguiente || (periodoInfo?.enTiempo ?? false)
             const hasPermiso = !!permisoActivo
             const isEditingBorrador = !!editSolicitud?.id
             const _periodoMin = periodoRango?.inicio
@@ -4715,7 +4769,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             const effectiveFormDataForValidation = editSolicitud?.formData
               ? { ...editSolicitud.formData, ...formData }
               : formData
-            const camposFaltantes = esRenovacion !== "si" ? validarCamposCompletos(effectiveFormDataForValidation, tipo, tieneOficio) : []
+            const camposFaltantes = esRenovacion !== "si" ? validarCamposCompletos(effectiveFormDataForValidation, tipo, tieneOficio, tiposPago) : []
             const camposOk = camposFaltantes.length === 0
             const hasDupErrors = stepErrors.alcance || stepErrors.perfil
             const canSend = (periodoStillValid || hasPermiso || isEditingBorrador) && !enviando && !guardandoBorrador && vigenciaOk && camposOk && !hasDupErrors
@@ -4790,6 +4844,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                       </Button>
                     ) : (
                       <>
+                        {/* Las del año siguiente no se guardan como borrador: el permiso es de un solo uso y se valida al crearla. */}
+                        {!modoAnioSiguiente && (
                         <Button variant="outline" disabled={guardandoBorrador || enviando} onClick={handleGuardarBorrador}
                           className="gap-1.5 bg-[#F3F4F6] text-[#4B5563] border-[#D1D5DB] hover:bg-[#F3F4F6] hover:text-[#4B5563] active:bg-[#F3F4F6] active:text-[#4B5563] focus:bg-[#F3F4F6] focus:text-[#4B5563]">
                           {guardandoBorrador
@@ -4797,6 +4853,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                             : "Guardar Borrador"
                           }
                         </Button>
+                        )}
                         <Button className="min-w-[160px]" variant="primary"
                           disabled={!canSend} onClick={() => handleEnviarAValidacion(periodoStillValid, hasPermiso, isEditingBorrador)}>
                           {enviando

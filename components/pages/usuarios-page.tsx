@@ -15,7 +15,7 @@ import {
   Search, KeyRound, MoreVertical, MoreHorizontal, Pencil, X, PowerOff, Power,
   ChevronRight, Building2,
   Loader2, ShieldCheck, CheckCircle2, Eye, EyeOff, Trash2, Lock, User,
-  Landmark, Factory, Inbox, Info,
+  Landmark, Factory, Inbox, Info, FilePlus,
 } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { PageLayout } from "@/components/page-layout"
 import { useAutorizaciones, type PermisoCaptura } from "@/lib/autorizaciones-store"
+import { periodoAnioSiguiente, esPeriodoAnioSiguiente } from "@/lib/captura-anio-siguiente"
 import { useCalendario } from "@/lib/calendario-store"
 import { useAuth } from "@/lib/auth-context"
 import {
@@ -33,6 +34,7 @@ import {
 } from "@/lib/permisos-api"
 import {
   MenuPermisoTree, CATALOGO_MENU_KEY, CATALOGO_ACCION_ADMINISTRACION, CATALOGO_ACCION_CONSULTA,
+  CATALOGO_ACCION_NINGUNA, catalogoIncluyeAdministracion, catalogoIncluyeConsulta,
   VERIFICACION_ACCION_SIN_FIRMA,
 } from "@/components/menu-permiso-tree"
 import {
@@ -1048,7 +1050,7 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
                     onCatalogoAccionChange={(menuId, accion, checked) => {
                       setSelectedPermisos((prev) => ({
                         ...prev,
-                        menuActions: setCatalogoAccion(prev.menuActions, menuId, accion, checked),
+                        menuActions: setCatalogoAccion(prev.menuActions, menuId, accion, checked, form.rol),
                       }))
                     }}
                     onVerificacionAccionChange={(menuId, checked) => {
@@ -1582,16 +1584,24 @@ function toggleMenuId(ids: string[], menuId: string, checked: boolean): string[]
   return Array.from(set)
 }
 
+// Sin override guardado, lo que se ve es el default por rol: el primer clic
+// debe partir de ese estado efectivo (no de una lista vacía) para que quitar o
+// poner una acción realmente cambie algo. Si se desmarcan ambas, se guarda
+// CATALOGO_ACCION_NINGUNA porque [] volvería a significar "default por rol".
 function setCatalogoAccion(
   actions: Record<string, string[]>,
   menuId: string,
   accion: "consulta" | "administracion",
   checked: boolean,
+  rolUsuario: string | undefined,
 ): Record<string, string[]> {
+  const actual = actions[menuId]
+  const current = new Set<string>()
+  if (catalogoIncluyeConsulta(actual, rolUsuario))       current.add(CATALOGO_ACCION_CONSULTA)
+  if (catalogoIncluyeAdministracion(actual, rolUsuario)) current.add(CATALOGO_ACCION_ADMINISTRACION)
   const valor = accion === "administracion" ? CATALOGO_ACCION_ADMINISTRACION : CATALOGO_ACCION_CONSULTA
-  const current = new Set(actions[menuId] ?? [])
   if (checked) current.add(valor); else current.delete(valor)
-  return { ...actions, [menuId]: Array.from(current) }
+  return { ...actions, [menuId]: current.size > 0 ? Array.from(current) : [CATALOGO_ACCION_NINGUNA] }
 }
 
 function clearCatalogoAccion(actions: Record<string, string[]>, menuId: string): Record<string, string[]> {
@@ -1621,21 +1631,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   const [permisosSaveLoading, setPermisosSaveLoading] = useState(false)
   const [permisosSaveError, setPermisosSaveError] = useState<string | null>(null)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
-  const { habilitarPermiso, revocarPermiso, getPermisosUsuario } = useAutorizaciones()
-  const { honorarios: calHon, asimilados: calAs, nombramiento: calNom } = useCalendario()
-  const { user: currentUser } = useAuth()
-  const [capturaHabilitada, setCapturaHabilitada] = useState(false)
-  const [regimenCap, setRegimenCap] = useState<"honorarios" | "asimilados" | "nombramiento" | "">("")
-  const [periodoCap, setPeriodoCap]  = useState("")
-  const permisosCaptura = getPermisosUsuario(usuario.id)
-  const activosCaptura  = permisosCaptura.filter((p) => p.active && !p.used)
-  const periodoOpcionesCap = regimenCap === "honorarios"
-    ? calHon.map((r) => r.mes)
-    : regimenCap === "asimilados"
-    ? calAs.map((r) => r.quincena)
-    : regimenCap === "nombramiento"
-    ? calNom.map((r) => r.quincena)
-    : []
 
   const isDirty = useMemo(() => {
     if (permisos == null || initialPermisos == null) return false
@@ -1681,9 +1676,9 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
   const handleCatalogoAccionChange = useCallback((menuId: string, accion: "consulta" | "administracion", checked: boolean) => {
     setPermisos((prev) => {
       if (!prev) return prev
-      return { ...prev, menuActions: setCatalogoAccion(prev.menuActions, menuId, accion, checked) }
+      return { ...prev, menuActions: setCatalogoAccion(prev.menuActions, menuId, accion, checked, usuario.rol) }
     })
-  }, [])
+  }, [usuario.rol])
 
   const handleVerificacionAccionChange = useCallback((menuId: string, checked: boolean) => {
     setPermisos((prev) => {
@@ -1697,12 +1692,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     setPermisosSaveError(null)
     setPermisosSaveLoading(true)
     try {
-      if (capturaHabilitada && regimenCap && periodoCap) {
-        await habilitarPermiso({ userId: usuario.id, regimen: regimenCap, periodo: periodoCap, grantedBy: currentUser?.nombre ?? "Administrador" })
-        setCapturaHabilitada(false)
-        setRegimenCap("")
-        setPeriodoCap("")
-      }
       const updated = await updatePermisosUser(usuario.id, permisos)
       setPermisos(updated)
       setInitialPermisos(updated)
@@ -1712,7 +1701,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     } finally {
       setPermisosSaveLoading(false)
     }
-  }, [usuario.id, permisos, capturaHabilitada, regimenCap, periodoCap, habilitarPermiso, currentUser, onClose])
+  }, [usuario.id, permisos, onClose])
   const requestClose = useCallback(() => {
     if (isDirty) setShowCloseConfirm(true)
     else onClose()
@@ -1722,12 +1711,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     setPermisosSaveError(null)
     setPermisosSaveLoading(true)
     try {
-      if (capturaHabilitada && regimenCap && periodoCap) {
-        await habilitarPermiso({ userId: usuario.id, regimen: regimenCap, periodo: periodoCap, grantedBy: currentUser?.nombre ?? "Administrador" })
-        setCapturaHabilitada(false)
-        setRegimenCap("")
-        setPeriodoCap("")
-      }
       const updated = await updatePermisosUser(usuario.id, permisos)
       setPermisos(updated)
       setInitialPermisos(updated)
@@ -1738,7 +1721,7 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     } finally {
       setPermisosSaveLoading(false)
     }
-  }, [usuario.id, permisos, capturaHabilitada, regimenCap, periodoCap, habilitarPermiso, currentUser, onClose])
+  }, [usuario.id, permisos, onClose])
 
   return (
     <>
@@ -1827,101 +1810,6 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
           {!permisosLoading && permisos != null && (!tree || tree.length === 0) && !treeLoading && (
             <p className="text-sm text-muted-foreground py-4">No hay menús configurados.</p>
           )}
-          {!permisosLoading && permisos != null && (
-            <>
-              <div
-                className={`rounded-lg transition-all ${
-                  capturaHabilitada
-                    ? "bg-primary/[0.03] border border-primary/10"
-                    : "bg-transparent border border-transparent hover:bg-muted/30"
-                }`}
-              >
-                <div className="flex items-center gap-3 px-3 py-2.5">
-                  <Switch
-                    id="habilitar-captura-switch"
-                    checked={capturaHabilitada}
-                    onCheckedChange={(v) => {
-                      setCapturaHabilitada(v)
-                      if (!v) { setRegimenCap(""); setPeriodoCap("") }
-                    }}
-                    className="shrink-0"
-                  />
-                  <label
-                    htmlFor="habilitar-captura-switch"
-                    className={`text-sm font-medium cursor-pointer flex-1 ${capturaHabilitada ? "text-card-foreground" : "text-muted-foreground"}`}
-                  >
-                    Habilitar captura
-                  </label>
-                  {activosCaptura.length > 0 && (
-                    <Badge variant="outline" className="text-[10px] font-mono shrink-0">
-                      {activosCaptura.length}
-                    </Badge>
-                  )}
-                </div>
-
-                {capturaHabilitada && (
-                  <div className="flex flex-col gap-3 px-3 pb-3 ml-11">
-                    {activosCaptura.length > 0 && (
-                      <div className="flex flex-col gap-2">
-                        {activosCaptura.map((p, i) => (
-                          <div key={i} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs font-medium text-card-foreground">{p.regimen} · {p.periodo}</span>
-                              <span className="text-[10px] text-muted-foreground">Otorgado: {p.grantedAt} por {p.grantedBy}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => void revocarPermiso(p.id)}
-                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                              title="Revocar permiso"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-2">
-                      <Label className="text-sm">Régimen</Label>
-                      <Select value={regimenCap} onValueChange={(v) => { setRegimenCap(v as typeof regimenCap); setPeriodoCap("") }}>
-                        <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
-                        <SelectContent className="z-[200]">
-                          <SelectItem value="honorarios">Honorarios</SelectItem>
-                          <SelectItem value="asimilados">Asimilados a Salarios</SelectItem>
-                          <SelectItem value="nombramiento">Nombramiento TD</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {regimenCap && (
-                      <div className="flex flex-col gap-2">
-                        <Label className="text-sm">{regimenCap === "honorarios" ? "Mes" : "Quincena"} de aplicación</Label>
-                        <Select value={periodoCap} onValueChange={setPeriodoCap}>
-                          <SelectTrigger className="bg-background">
-                            <SelectValue placeholder={`Seleccione ${regimenCap === "honorarios" ? "mes" : "quincena"}`} />
-                          </SelectTrigger>
-                          <SelectContent className="z-[200]">
-                            {periodoOpcionesCap.map((p) => (
-                              <SelectItem key={p} value={p}>{p}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    {capturaHabilitada && regimenCap && !periodoCap && (
-                      <p className="text-[11px] text-muted-foreground">
-                        Selecciona {regimenCap === "honorarios" ? "el mes" : "la quincena"} y luego da clic en "Guardar permisos".
-                      </p>
-                    )}
-                    {capturaHabilitada && !regimenCap && (
-                      <p className="text-[11px] text-muted-foreground">
-                        Selecciona el régimen y luego da clic en "Guardar permisos".
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
         </div>
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
           {permisosSaveError && (
@@ -1948,6 +1836,244 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
       </div>
     </div>
     </>
+  )
+}
+
+type CapturaModalProps = {
+  usuario: Usuario
+  onClose: () => void
+}
+// Habilita al usuario a capturar una solicitud para un régimen y periodo
+// específicos (permiso de un solo uso, ver /api/permisos-captura).
+function CapturaModal({ usuario, onClose }: CapturaModalProps) {
+  const { habilitarPermiso, revocarPermiso, getPermisosUsuario } = useAutorizaciones()
+  const { honorarios: calHon, asimilados: calAs, nombramiento: calNom } = useCalendario()
+  const { user: currentUser } = useAuth()
+  const [error, setError] = useState<string | null>(null)
+
+  const activos = getPermisosUsuario(usuario.id).filter((p) => p.active && !p.used)
+  const activosCaptura = activos.filter((p) => !esPeriodoAnioSiguiente(p.periodo))
+
+  // "Capturar solicitud": capturar una solicitud del año
+  // siguiente para el régimen autorizado, sin mes ni quincena
+  // (lib/captura-anio-siguiente.ts). Un solo uso.
+  const anioSiguiente = new Date().getFullYear() + 1
+  const activosAnioSiguiente = activos.filter((p) => p.periodo === periodoAnioSiguiente(anioSiguiente))
+  const [anioSigHabilitado, setAnioSigHabilitado] = useState(() => activosAnioSiguiente.length > 0)
+  const [regimenAnioSig, setRegimenAnioSig] = useState<"honorarios" | "asimilados" | "nombramiento" | "">("")
+
+  // "Capturas habilitadas": captura extemporánea de un régimen y periodo específicos.
+  // Abierto de entrada si ya tiene capturas activas, para que se vean sin buscarlas.
+  const [capturaHabilitada, setCapturaHabilitada] = useState(() => activosCaptura.length > 0)
+  const [regimenCap, setRegimenCap] = useState<"honorarios" | "asimilados" | "nombramiento" | "">("")
+  const [periodoCap, setPeriodoCap] = useState("")
+  const [guardando, setGuardando] = useState(false)
+  const periodoOpcionesCap = regimenCap === "honorarios"
+    ? calHon.map((r) => r.mes)
+    : regimenCap === "asimilados"
+    ? calAs.map((r) => r.quincena)
+    : regimenCap === "nombramiento"
+    ? calNom.map((r) => r.quincena)
+    : []
+
+  const otorgadoPor = currentUser?.nombre ?? "Administrador"
+
+  // Un solo "Guardar" para las dos secciones: otorga lo que esté llenado en cada una.
+  const pendienteAnioSig = anioSigHabilitado && !!regimenAnioSig
+  const pendienteCaptura = capturaHabilitada && !!regimenCap && !!periodoCap
+  const handleGuardar = useCallback(async () => {
+    if (!pendienteAnioSig && !pendienteCaptura) return
+    setError(null)
+    setGuardando(true)
+    try {
+      if (pendienteAnioSig && regimenAnioSig) {
+        await habilitarPermiso({ userId: usuario.id, regimen: regimenAnioSig, periodo: periodoAnioSiguiente(anioSiguiente), grantedBy: otorgadoPor })
+        setRegimenAnioSig("")
+      }
+      if (pendienteCaptura && regimenCap) {
+        await habilitarPermiso({ userId: usuario.id, regimen: regimenCap, periodo: periodoCap, grantedBy: otorgadoPor })
+        setRegimenCap("")
+        setPeriodoCap("")
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al guardar")
+    } finally {
+      setGuardando(false)
+    }
+  }, [usuario.id, pendienteAnioSig, pendienteCaptura, regimenAnioSig, regimenCap, periodoCap, anioSiguiente, habilitarPermiso, otorgadoPor])
+
+  const handleRevocar = useCallback(async (id: number) => {
+    setError(null)
+    try {
+      await revocarPermiso(id)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al revocar")
+    }
+  }, [revocarPermiso])
+
+  const listaPermisos = (lista: PermisoCaptura[], vacio: string, etiqueta: (p: PermisoCaptura) => string) =>
+    lista.length === 0 ? (
+      <p className="text-xs text-muted-foreground">{vacio}</p>
+    ) : (
+      lista.map((p) => (
+        <div key={p.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-medium text-card-foreground">{etiqueta(p)}</span>
+            <span className="text-[10px] text-muted-foreground">Otorgado: {p.grantedAt} por {p.grantedBy}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleRevocar(p.id)}
+            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+            title="Revocar permiso"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))
+    )
+
+  const selectRegimen = (
+    value: string,
+    onChange: (v: "honorarios" | "asimilados" | "nombramiento") => void,
+  ) => (
+    <div className="flex flex-col gap-2">
+      <Label className="text-sm">Régimen</Label>
+      <Select value={value} onValueChange={(v) => onChange(v as "honorarios" | "asimilados" | "nombramiento")}>
+        <SelectTrigger className="bg-background"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
+        <SelectContent className="z-[200]">
+          <SelectItem value="honorarios">Honorarios</SelectItem>
+          <SelectItem value="asimilados">Asimilados a Salarios</SelectItem>
+          {/* Nombramiento por Tiempo Determinado: no aplica en esta etapa.
+          <SelectItem value="nombramiento">Nombramiento TD</SelectItem> */}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="w-full max-w-lg max-h-[90vh] rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div>
+            <h2 className="ds-title-md text-content-high">Captura/Solicitud</h2>
+            <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+          {/* Capturar solicitud (año siguiente) */}
+          <div className={`rounded-lg border transition-all ${anioSigHabilitado ? "bg-primary/[0.03] border-primary/10" : "border-border"}`}>
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <Switch
+                id="capturar-solicitud-switch"
+                checked={anioSigHabilitado}
+                onCheckedChange={(v) => { setAnioSigHabilitado(v); if (!v) setRegimenAnioSig("") }}
+                className="shrink-0"
+              />
+              <label htmlFor="capturar-solicitud-switch" className="flex-1 cursor-pointer">
+                <span className="block text-sm font-medium text-card-foreground">Capturar solicitud</span>
+                <span className="block text-[11px] text-muted-foreground">Solicitudes del ejercicio {anioSiguiente}, sin elegir mes ni quincena.</span>
+              </label>
+              {activosAnioSiguiente.length > 0 && (
+                <Badge variant="outline" className="text-[10px] font-mono shrink-0">{activosAnioSiguiente.length}</Badge>
+              )}
+            </div>
+
+            {anioSigHabilitado && (
+              <div className="flex flex-col gap-4 px-3 pb-3">
+                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50/50 border border-blue-200/50 rounded-md px-3 py-2.5">
+                  <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-500" />
+                  <span>
+                    El usuario podrá capturar una solicitud del ejercicio {anioSiguiente} en el régimen seleccionado, sin elegir mes ni quincena. El permiso se consume al enviar la solicitud.
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {listaPermisos(activosAnioSiguiente, `Sin permisos para el ejercicio ${anioSiguiente}.`, (p) => `${p.regimen} · ${p.periodo}`)}
+                </div>
+                {selectRegimen(regimenAnioSig, setRegimenAnioSig)}
+              </div>
+            )}
+          </div>
+
+          {/* Capturas habilitadas (extemporáneas por periodo) */}
+          <div className={`rounded-lg border transition-all ${capturaHabilitada ? "bg-primary/[0.03] border-primary/10" : "border-border"}`}>
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <Switch
+                id="capturas-habilitadas-switch"
+                checked={capturaHabilitada}
+                onCheckedChange={(v) => { setCapturaHabilitada(v); if (!v) { setRegimenCap(""); setPeriodoCap("") } }}
+                className="shrink-0"
+              />
+              <label htmlFor="capturas-habilitadas-switch" className="flex-1 cursor-pointer">
+                <span className="block text-sm font-medium text-card-foreground">Capturas habilitadas</span>
+                <span className="block text-[11px] text-muted-foreground">Permiso para capturar un régimen y periodo específicos.</span>
+              </label>
+              {activosCaptura.length > 0 && (
+                <Badge variant="outline" className="text-[10px] font-mono shrink-0">{activosCaptura.length}</Badge>
+              )}
+            </div>
+
+            {capturaHabilitada && (
+              <div className="flex flex-col gap-4 px-3 pb-3">
+                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50/50 border border-blue-200/50 rounded-md px-3 py-2.5">
+                  <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-500" />
+                  <span>
+                    Habilita al usuario para capturar una solicitud del régimen y periodo seleccionados. El permiso se consume al enviar la solicitud.
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {listaPermisos(activosCaptura, "El usuario no tiene capturas habilitadas.", (p) => `${p.regimen} · ${p.periodo}`)}
+                </div>
+                {selectRegimen(regimenCap, (v) => { setRegimenCap(v); setPeriodoCap("") })}
+                {regimenCap && (
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-sm">{regimenCap === "honorarios" ? "Mes" : "Quincena"} de aplicación</Label>
+                    <Select value={periodoCap} onValueChange={setPeriodoCap}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder={`Seleccione ${regimenCap === "honorarios" ? "mes" : "quincena"}`} />
+                      </SelectTrigger>
+                      <SelectContent className="z-[200]">
+                        {periodoOpcionesCap.map((p) => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
+          <Button
+            variant="default"
+            className="rounded-full h-10 px-6 font-normal border border-[var(--sem-bg-surface-high)] bg-[#f5f4f2] text-content-high hover:bg-[#eae9e2]"
+            onClick={onClose}
+          >
+            Cerrar
+          </Button>
+          <div className="flex items-center gap-2">
+            {error && <span className="text-sm text-destructive">{error}</span>}
+            <Button variant="vino"
+              className="rounded-full h-10 px-6 font-normal shadow-sm"
+              onClick={() => void handleGuardar()}
+              disabled={guardando || (!pendienteAnioSig && !pendienteCaptura)}
+            >
+              {guardando && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Guardar
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1988,6 +2114,7 @@ export function UsuariosPage() {
   const [tabEstatus,    setTabEstatus]    = useState<"activos" | "deshabilitados">("activos")
   const [currentPage,   setCurrentPage]   = useState(1)
   const [permisoUserId,         setPermisoUserId]         = useState<string | null>(null)
+  const [capturaUserId,         setCapturaUserId]         = useState<string | null>(null)
   const [editingUserId,         setEditingUserId]         = useState<string | null>(null)
   const [showNewForm,           setShowNewForm]           = useState(false)
   const [newFormKey,            setNewFormKey]            = useState(0)
@@ -2043,6 +2170,7 @@ export function UsuariosPage() {
   }
   const usuarioEditando       = editingUserId         ? usuarios.find((u) => u.id === editingUserId)         ?? null : null
   const usuarioPermiso        = permisoUserId         ? usuarios.find((u) => u.id === permisoUserId)         ?? null : null
+  const usuarioCaptura        = capturaUserId         ? usuarios.find((u) => u.id === capturaUserId)         ?? null : null
   return (
     <PageLayout
       title="Usuarios"
@@ -2067,6 +2195,13 @@ export function UsuariosPage() {
           key={usuarioPermiso.id}
           usuario={usuarioPermiso}
           onClose={() => setPermisoUserId(null)}
+        />
+      )}
+      {usuarioCaptura && (
+        <CapturaModal
+          key={usuarioCaptura.id}
+          usuario={usuarioCaptura}
+          onClose={() => setCapturaUserId(null)}
         />
       )}
 
@@ -2169,6 +2304,11 @@ export function UsuariosPage() {
         <DropdownMenuItem onClick={() => setPermisoUserId(row.id)}>
           <KeyRound className="mr-2 h-4 w-4" />
           Permisos
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={() => setCapturaUserId(row.id)}>
+          <FilePlus className="mr-2 h-4 w-4" />
+          Captura/Solicitud
         </DropdownMenuItem>
 
         <DropdownMenuItem onClick={() => setEditingUserId(row.id)}>

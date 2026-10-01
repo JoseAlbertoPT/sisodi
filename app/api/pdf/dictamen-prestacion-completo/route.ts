@@ -127,7 +127,12 @@ async function resolverFirma(input: FirmaInput): Promise<FirmaPortal> {
   };
 }
 
-async function buildResponse(solicitudId: string | null, overrides: PdfOverrides = {}, catalogoId: string | null = null, firma: FirmaPortal | null = null) {
+function parseCatalogoSolicitudId(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+async function buildResponse(solicitudId: string | null, overrides: PdfOverrides = {}, catalogoId: string | null = null, firma: FirmaPortal | null = null, catalogoSolicitudId: number | null = null) {
   if (!solicitudId && !catalogoId) {
     return NextResponse.json(
       { ok: false, error: "Falta solicitudId o catalogoId" },
@@ -181,7 +186,7 @@ async function buildResponse(solicitudId: string | null, overrides: PdfOverrides
 
   let dictamenResult, cartaResult;
   try {
-    dictamenResult = await buildDictamenPrestacionBuffer(solicitudId, overrides, catalogoId);
+    dictamenResult = await buildDictamenPrestacionBuffer(solicitudId, overrides, catalogoId, catalogoSolicitudId);
     cartaResult = await buildCartaDescriptivaBuffer(solicitudId, clave || null, catalogoId, new Date(), firmaCarta);
   } catch (e) {
     console.error("[pdf/dictamen-prestacion-completo] Error generando buffers:", e);
@@ -256,7 +261,7 @@ export async function GET(req: NextRequest) {
   if (np) overrides.numeroPrestadores = Number(np);
   const pp = searchParams.get("programaProyecto"); if (pp) overrides.programaProyecto = pp;
   const ib = searchParams.get("importeBruto"); if (ib) overrides.importeBruto = Number(ib);
-  return buildResponse(solicitudId, overrides, catalogoId);
+  return buildResponse(solicitudId, overrides, catalogoId, null, parseCatalogoSolicitudId(searchParams.get("catalogoSolicitudId")));
 }
 
 export async function POST(req: NextRequest) {
@@ -308,5 +313,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return buildResponse(solicitudId, overrides, catalogoId, firma);
+  return buildResponse(solicitudId, overrides, catalogoId, firma, parseCatalogoSolicitudId(body?.catalogoSolicitudId));
 }
