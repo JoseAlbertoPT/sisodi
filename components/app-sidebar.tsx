@@ -23,8 +23,6 @@ import {
   FileOutput,
   Menu as MenuIcon,
   LogOut,
-  Info,
-  X,
 } from "lucide-react"
 import {
   Tooltip,
@@ -33,6 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useSidebar } from "@/context/sidebar-context"
 
 export type PageKey =
@@ -141,13 +140,11 @@ function SidebarItem({
             onClick={onClick}
             aria-label={label}
             className={cn(
-              "flex w-9 h-9 mx-auto justify-center items-center rounded-xl transition-colors",
-              isActive
-                ? "bg-bg-base text-content-high shadow-sm"
-                : "text-content-low hover:bg-reactive-surface-hover"
+              "flex h-11 w-11 mx-auto items-center justify-center rounded-2xl text-content-high transition-colors",
+              isActive ? "bg-bg-base shadow-sm" : "hover:bg-reactive-surface-hover"
             )}
           >
-            <span className="[&>svg]:h-[18px] [&>svg]:w-[18px]">{icon}</span>
+            <span className="[&>svg]:h-5 [&>svg]:w-5">{icon}</span>
           </button>
         </TooltipTrigger>
         <TooltipContent side="right">{label}</TooltipContent>
@@ -159,17 +156,25 @@ function SidebarItem({
     <button
       type="button"
       onClick={onClick}
+      title={label}
       className={cn(
-        "flex w-full items-center gap-6 rounded-xl px-3 py-2.5 transition-colors text-left",
-        isActive
-          ? "bg-bg-base text-content-high shadow-sm"
-          : "text-content-low hover:bg-reactive-surface-hover"
+        "flex w-full items-center gap-4 rounded-2xl px-4 py-3 text-left text-content-high transition-colors",
+        isActive ? "bg-bg-base shadow-sm" : "hover:bg-reactive-surface-hover"
       )}
     >
-      <span className="shrink-0 [&>svg]:h-[18px] [&>svg]:w-[18px]">{icon}</span>
+      <span className="shrink-0 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
       <span className="flex-1 truncate font-sans text-[14px] font-normal leading-[120%]">{label}</span>
     </button>
   )
+}
+
+function getInitials(nombre: string | undefined): string {
+  if (!nombre) return ""
+  const palabras = nombre
+    .replace(/^(ing|lic|dr|dra|mtro|mtra)\.?\s+/i, "")
+    .split(/\s+/)
+    .filter(Boolean)
+  return palabras.slice(0, 2).map((p) => p[0]).join("").toUpperCase()
 }
 
 export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: SidebarProps) {
@@ -182,6 +187,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
   const [menusError, setMenusError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   useRealtime(["permisos"], () => setRetryCount((n) => n + 1))
 
@@ -195,7 +201,7 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
     fetchMyMenus(user.rol, user.id)
       .then((data) => {
         if (cancelled) return
-        if (JSON.stringify(data) !== JSON.stringify(menuTreeRef.current11)) setMenuTree(data)
+        if (JSON.stringify(data) !== JSON.stringify(menuTreeRef.current)) setMenuTree(data)
       })
       .catch((e) => { if (!cancelled) setMenusError(e instanceof Error ? e.message : "Error al cargar menú") })
       .finally(() => { if (!cancelled && esCargaInicial) setMenusLoading(false) })
@@ -216,153 +222,144 @@ export function AppSidebar({ currentPage, onNavigate, collapsed, onMenuReady }: 
     onMenuReady?.(true)
   }, [menuTree, menusLoading, currentPage, onNavigate, INTERNAL_PAGES, onMenuReady])
 
-  const { allLeaves } = useMemo(() => {
-    if (!menuTree) return { allLeaves: [] }
-    const leaves = collectLeafNodes(menuTree)
-      .filter((n) => n.key && n.route !== null && n.key !== "revision-do" && n.key !== "progreso-firmado")
-
-    return { allLeaves: leaves }
+  // Cada nodo raíz del menú (Justificaciones, Gestión DGDO, Configuración…) es una sección
+  // separada por una línea, como en el diseño de Figma.
+  const sections = useMemo(() => {
+    if (!menuTree) return []
+    return menuTree
+      .map((root) => ({
+        id: root.id,
+        leaves: collectLeafNodes([root]).filter(
+          (n) => n.key && n.route !== null && n.key !== "revision-do" && n.key !== "progreso-firmado"
+        ),
+      }))
+      .filter((s) => s.leaves.length > 0)
   }, [menuTree])
   return (
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "relative flex h-full flex-col bg-bg-surface-low rounded-xl transition-all duration-300 overflow-hidden",
-          "fixed inset-y-1 left-1 z-40 w-[calc(100%-0.5rem)] max-w-[280px] shadow-lg",
+          "relative flex h-full flex-col bg-bg-surface-low rounded-2xl transition-all duration-300 overflow-hidden",
+          "fixed inset-y-1 left-1 z-40 w-[calc(100%-0.5rem)] max-w-[304px] shadow-lg",
           "md:relative md:inset-auto md:translate-x-0 md:shadow-none md:flex-shrink-0 md:max-w-none",
-          collapsed ? "-translate-x-[calc(100%+8px)] md:-translate-x-0 md:w-[93px]" : "translate-x-0 md:w-[280px]"
+          collapsed ? "-translate-x-[calc(100%+8px)] md:-translate-x-0 md:w-[93px]" : "translate-x-0 md:w-[304px]"
         )}
         aria-label="Navegación principal"
       >
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label="Cerrar menú"
-          className="md:hidden absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full text-content-low hover:bg-reactive-surface-hover transition-colors"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {/* Header */}
         <div
           className={cn(
-            "flex shrink-0 items-center justify-center p-3 pb-4 gap-2",
-            collapsed ? "px-0 py-3" : ""
+            "flex shrink-0 items-center",
+            collapsed ? "flex-col gap-3 px-0 pt-6 pb-4" : "h-[100px] gap-3 px-6 pt-6 pb-4"
           )}
         >
-          {collapsed ? (
-            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-bg-surface-md flex-shrink-0">
-              <img src="/logo-quetzal-icono.svg" alt="Quetzal" style={{ width: 36, height: 36, objectFit: "contain" }} />
-            </div>
-          ) : (
-            <div className="flex items-center gap-2.5 px-1">
-              <img src="/logo-quetzal-icono.svg" alt="Quetzal" style={{ width: 40, height: 40, objectFit: "contain", flexShrink: 0 }} />
-              <img src="/finanzas-logo-cortado.svg" alt="Finanzas" style={{ width: 130, height: 45, objectFit: "contain", objectPosition: "left" }} />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border-md bg-bg-base">
+            <img src="/sidebar/isotipo.svg" alt="Gobierno de Morelos" width={24} height={25.309} />
+          </div>
+          {!collapsed && (
+            <div className="flex min-w-0 flex-1 flex-col gap-1 font-sans leading-[120%]">
+              <p className="truncate text-[16px] font-bold tracking-[0.16px] text-content-high">SEDITEF</p>
+              <p className="truncate text-[12px] font-light tracking-[0.12px] text-content-low">Portal Administrador</p>
             </div>
           )}
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={collapsed ? "Expandir barra lateral" : "Colapsar barra lateral"}
+            className="flex shrink-0 items-center justify-center rounded-lg bg-bg-surface-md p-2 transition-colors hover:bg-border-low"
+          >
+            <img
+              src="/sidebar/icon-colapsar.svg"
+              alt=""
+              width={20}
+              height={20}
+              className={cn("transition-transform", collapsed && "rotate-180")}
+            />
+          </button>
         </div>
 
-        {collapsed ? (
-          <div className="mb-2 flex justify-center">
-            <div className="w-12 border-t border-border-low" />
-          </div>
-        ) : (
-          <div className="mb-2 border-t border-border-low" />
-        )}
+        {/* Main */}
+        <div className={cn("flex min-h-0 flex-1 flex-col", collapsed ? "px-3" : "px-6")}>
+          <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-2" aria-label="Menú">
+            {menusLoading && (
+              <p className="text-xs text-content-low px-4 py-2">Cargando…</p>
+            )}
+            {!menusLoading && menusError && (
+              <div className="flex flex-col gap-1 px-4 py-2">
+                <p className="text-xs text-red-500">{menusError}</p>
+                <button
+                  type="button"
+                  onClick={() => setRetryCount((n) => n + 1)}
+                  className="text-xs text-content-low underline hover:text-content-high text-left"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
 
+            {!menusLoading && !menusError && menuTree && sections.map((section) => (
+              <div key={section.id} className="flex flex-col gap-1 py-2">
+                {section.leaves.map((node) => (
+                  <SidebarItem
+                    key={node.id}
+                    label={node.label}
+                    icon={getIconForNode(node)}
+                    isActive={currentPage === (node.key as PageKey)}
+                    onClick={() => onNavigate(node.key as PageKey)}
+                    collapsed={collapsed}
+                  />
+                ))}
+              </div>
+            ))}
+          </nav>
+        </div>
 
-        <nav className="flex flex-1 flex-col overflow-y-auto px-2 pt-1 pb-2 gap-1" aria-label="Menú">
-          {menusLoading && (
-            <p className="text-xs text-content-low px-3 py-2">Cargando…</p>
-          )}
-          {!menusLoading && menusError && (
-            <div className="flex flex-col gap-1 px-3 py-2">
-              <p className="text-xs text-red-500">{menusError}</p>
+        {/* Footer: usuario; al hacer clic abre el menú con "Cerrar sesión" */}
+        <div className={cn("shrink-0 py-4", collapsed ? "px-3" : "px-6")}>
+          <Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+            <PopoverTrigger asChild>
               <button
                 type="button"
-                onClick={() => setRetryCount((n) => n + 1)}
-                className="text-xs text-content-low underline hover:text-content-high text-left"
-              >
-                Reintentar
-              </button>
-            </div>
-          )}
-
-          {!menusLoading && !menusError && menuTree && (
-            <>
-              {allLeaves.map((node) => (
-                <SidebarItem
-                  key={node.id}
-                  label={node.label}
-                  icon={getIconForNode(node)}
-                  isActive={currentPage === (node.key as PageKey)}
-                  onClick={() => onNavigate(node.key as PageKey)}
-                  collapsed={collapsed}
-                />
-              ))}
-            </>
-          )}
-        </nav>
-
-        <div className="shrink-0 border-t border-border-low px-2 py-2 flex flex-col gap-1">
-          {collapsed ? (
-            <>
-              {/* <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate("acerca-de")}
-                    className={cn(
-                      "flex w-9 h-9 mx-auto justify-center items-center rounded-xl transition-colors",
-                      currentPage === "acerca-de"
-                        ? "bg-bg-base text-content-high shadow-sm"
-                        : "text-content-low hover:bg-reactive-surface-hover"
-                    )}
-                    aria-label="Acerca de"
-                  >
-                    <Info className="h-[18px] w-[18px]" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">Acerca de</TooltipContent>
-              </Tooltip> */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmLogout(true)}
-                    className="flex w-9 h-9 mx-auto items-center justify-center rounded-xl text-content-low hover:bg-reactive-surface-hover transition-colors"
-                    aria-label="Cerrar sesión"
-                  >
-                    <LogOut className="h-[18px] w-[18px]" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">Cerrar sesión</TooltipContent>
-              </Tooltip>
-            </>
-          ) : (
-            <>
-              {/* <button
-                type="button"
-                onClick={() => onNavigate("acerca-de")}
+                aria-label="Opciones de usuario"
                 className={cn(
-                  "flex w-full items-center gap-6 rounded-xl px-3 py-2.5 transition-colors text-left font-sans text-[14px] font-normal leading-[120%]",
-                  currentPage === "acerca-de"
-                    ? "bg-bg-base text-content-high shadow-sm"
-                    : "text-content-low hover:bg-reactive-surface-hover"
+                  "flex items-center rounded-2xl text-left transition-colors",
+                  collapsed ? "mx-auto h-11 w-11 justify-center" : "w-full gap-4 px-4 py-3",
+                  userMenuOpen ? "bg-bg-surface-md" : "hover:bg-reactive-surface-hover"
                 )}
               >
-                <Info className="h-[18px] w-[18px] shrink-0" />
-                <span>Acerca de</span>
-              </button> */}
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-primary-low">
+                  <span className="font-sans text-[14px] font-light leading-[120%] tracking-[0.14px] text-accent-on-primary-low">
+                    {getInitials(user?.nombre)}
+                  </span>
+                </div>
+                {!collapsed && (
+                  <div className="flex min-w-0 flex-1 flex-col font-sans">
+                    <p className="truncate text-[14px] font-normal leading-[120%] text-content-high" title={user?.nombre}>
+                      {user?.nombre}
+                    </p>
+                    <p className="truncate text-[12px] font-light leading-[140%] tracking-[0.12px] text-content-low">
+                      {user?.rol}
+                    </p>
+                  </div>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              side={collapsed ? "right" : "top"}
+              align="start"
+              sideOffset={8}
+              className="w-[var(--radix-popover-trigger-width)] min-w-[200px] rounded-2xl border-border-low bg-bg-base p-1 shadow-md"
+            >
               <button
                 type="button"
-                onClick={() => setConfirmLogout(true)}
-                className="flex w-full items-center gap-6 px-3 py-2.5 rounded-xl text-content-low hover:bg-reactive-surface-hover transition-colors font-sans text-[14px] font-normal leading-[120%]"
-                aria-label="Cerrar sesión"
+                onClick={() => { setUserMenuOpen(false); setConfirmLogout(true) }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-content-high transition-colors hover:bg-reactive-surface-hover"
               >
-                <LogOut className="h-[18px] w-[18px] shrink-0" />
-                <span>Cerrar sesión</span>
+                <LogOut className="h-[18px] w-[18px] shrink-0 text-content-low" />
+                <span className="font-sans text-[14px] font-normal leading-[120%]">Cerrar sesión</span>
               </button>
-            </>
-          )}
+            </PopoverContent>
+          </Popover>
         </div>
       </aside>
       <ConfirmDialog

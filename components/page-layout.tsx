@@ -26,7 +26,7 @@ export function PageLayout({ title, description, children, noContainer = false }
               type="button"
               onClick={toggle}
               aria-label="Alternar menú"
-              className="flex-shrink-0 text-content-low hover:text-content-high transition-colors"
+              className="flex-shrink-0 text-content-low hover:text-content-high transition-colors md:hidden"
             >
               <PanelLeft className="h-5 w-5" />
             </button>

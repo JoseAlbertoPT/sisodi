@@ -183,7 +183,7 @@ export function AppShell() {
   return (
     <SidebarContext.Provider value={{ collapsed , toggle }}>
       <SessionInvalidWatcher />
-      <div className="flex h-screen overflow-hidden bg-bg-surface-low p-1 md:p-2 gap-1 md:gap-2">
+      <div className="flex h-screen overflow-hidden bg-bg-surface-low p-1 gap-1 md:py-6 md:pr-6 md:pl-0 md:gap-0">
         <AppSidebar
           currentPage={sidebarCurrentPage}
           onNavigate={handleNavigate}
@@ -197,7 +197,7 @@ export function AppShell() {
             onClick={() => setCollapsed(true)}
           />
         )}
-        <main className="flex flex-1 flex-col overflow-y-auto bg-bg-base rounded-xl min-w-0">
+        <main className="flex flex-1 flex-col overflow-y-auto bg-bg-base rounded-2xl min-w-0">
           {showSplash && user
             ? <WelcomePage userName={user.nombre} userRole={user.rol} />
             : menuReady ? renderPage() : null
