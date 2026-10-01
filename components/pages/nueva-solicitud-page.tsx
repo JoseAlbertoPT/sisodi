@@ -4346,7 +4346,8 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     <SelectContent className="vino-force">
                       <SelectItem value="honorarios">Honorarios</SelectItem>
                       <SelectItem value="asimilados">Honorarios Asimilados a Salarios</SelectItem>
-                      <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado</SelectItem>
+                      {/* Nombramiento por Tiempo Determinado: no aplica en esta etapa.
+                      <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado</SelectItem> */}
                     </SelectContent>
                   </Select>
                 </div>

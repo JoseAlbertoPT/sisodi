@@ -1944,7 +1944,8 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
         <SelectContent className="z-[200]">
           <SelectItem value="honorarios">Honorarios</SelectItem>
           <SelectItem value="asimilados">Asimilados a Salarios</SelectItem>
-          <SelectItem value="nombramiento">Nombramiento TD</SelectItem>
+          {/* Nombramiento por Tiempo Determinado: no aplica en esta etapa.
+          <SelectItem value="nombramiento">Nombramiento TD</SelectItem> */}
         </SelectContent>
       </Select>
     </div>
