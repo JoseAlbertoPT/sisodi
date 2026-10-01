@@ -60,7 +60,9 @@ import { folioSinSiglas } from "@/lib/clave-dictamen"
 import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
 import { useProgramasSigef } from "@/hooks/use-programas-sigef"
 import { useTabulador } from "@/hooks/use-tabulador"
-import { buscarRangoTabulador, buscarRangoPorImporte } from "@/lib/tabulador"
+import { buscarRangoTabulador, buscarRangoPorImporte, secretariaAplica } from "@/lib/tabulador"
+import { useTiposPago } from "@/hooks/use-tipos-pago"
+import { tipoPagoSinTabulador } from "@/lib/tipos-pago"
 import { parseCertificadoInfo } from "@/lib/certificado-cer"
 import { parseImporteTexto } from "@/lib/parse-importe"
 const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => m.PdfPreview), {
@@ -72,7 +74,6 @@ const PdfPreview = dynamic(() => import("@/components/pdf-preview").then((m) => 
     </div>
   ),
 })
-
 interface CatalogoRecord {
   id: number
   solicitud_id: number
@@ -101,7 +102,6 @@ interface CatalogoRecord {
   }
   _count: { catalogo_solicitudes: number }
 }
-
 interface AdminRecord extends CatalogoRecord {
   catalogo_solicitudes: {
     id: number
@@ -137,18 +137,15 @@ function regimenBadgeColor(raw: string | null | undefined): { color: string; bgC
   if (r.includes("nombramiento") || r.includes("tiempo determinado")) return { color: C_AMARILLO, bgColor: C_AMARILLO_BG }
   return { color: C_VERDE_ESTADO, bgColor: C_VERDE_ESTADO_BG }
 }
-
 function fmtMoney(val: string | null | undefined) {
   if (!val) return "—"
   const n = Number(val)
   if (isNaN(n)) return val
   return n.toLocaleString("es-MX", { style: "currency", currency: "MXN" })
 }
-
 function parseMoney(str: string): number {
   return parseImporteTexto(str) ?? -1
 }
-/** Normaliza lo capturado ("348,00", "1.300,50", "1300.5") a "1,300.50". */
 function formatMoneyInput(raw: string): string {
   const n = parseImporteTexto(raw)
   if (n === null) return ""
@@ -235,7 +232,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [solPrestadores, setSolPrestadores] = useState("")
   const [solPrograma, setSolPrograma]       = useState("")
   const [solImporteBruto, setSolImporteBruto] = useState("")
-
   const [showFirmarSol, setShowFirmarSol]     = useState(false)
   const [solFirmaCargo, setSolFirmaCargo]     = useState("")
   const [solFirmaCargoBloqueado, setSolFirmaCargoBloqueado] = useState(false)
@@ -253,7 +249,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const [canLoading, setCanLoading]   = useState(false)
   const [canError, setCanError]       = useState<string | null>(null)
   const [canFirmarCatalogo, setCanFirmarCatalogo] = useState(false)
-
   useEffect(() => {
     if (!user?.id) { setCanFirmarCatalogo(false); return }
     fetch(`/api/catalogo-justificaciones/puede-administrar?userId=${user.id}`)
@@ -264,16 +259,25 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
   const progSigef = useProgramasSigef(solRec ? entidadNombre(solRec) : "")
   const solImporteBrutoNum = solImporteBruto.trim() ? parseMoney(solImporteBruto) : null
   const { rangos: rangosTabuladorSol, loading: loadingTabuladorSol } = useTabulador()
+  const { tipos: tiposPagoSol } = useTiposPago()
+  // Tipos de pago sin "Aplica equivalencia al tabulador" (ej. por hora, día o
+  // taller): no se muestra ni se valida el rango del nivel/categoría, solo que
+  // el importe no pase del máximo del tabulador de la Secretaría.
+  const sinTabuladorSol = !!solRec && tipoPagoSinTabulador(tiposPagoSol, solRec.tipo_pago ?? undefined)
   const rangoTabuladorSol = useMemo(() => {
-    if (!solRec) return null
+    if (!solRec || sinTabuladorSol) return null
     return buscarRangoTabulador(rangosTabuladorSol, solRec.solicitud.nivel_tabulador, solRec.solicitud.categoria_tabulador, entidadNombre(solRec))
-  }, [rangosTabuladorSol, solRec])
-  // Registros sin nivel/categoría (importados del Excel histórico): el rango se
-  // deduce del importe capturado. No se valida contra él — siempre lo contiene.
+  }, [rangosTabuladorSol, solRec, sinTabuladorSol])
   const rangoPorImporteSol = useMemo(() => {
-    if (!solRec || rangoTabuladorSol) return null
+    if (!solRec || rangoTabuladorSol || sinTabuladorSol) return null
     return buscarRangoPorImporte(rangosTabuladorSol, solImporteBrutoNum, entidadNombre(solRec))
-  }, [rangosTabuladorSol, rangoTabuladorSol, solRec, solImporteBrutoNum])
+  }, [rangosTabuladorSol, rangoTabuladorSol, solRec, solImporteBrutoNum, sinTabuladorSol])
+  const limiteMaxSol = useMemo(() => {
+    if (!solRec || !sinTabuladorSol) return null
+    const aplicables = rangosTabuladorSol.filter((r) => secretariaAplica(r.secretarias, entidadNombre(solRec)))
+    return aplicables.length > 0 ? Math.max(...aplicables.map((r) => r.max)) : null
+  }, [rangosTabuladorSol, solRec, sinTabuladorSol])
+  const excedeMaximoSol = limiteMaxSol !== null && solImporteBrutoNum !== null && solImporteBrutoNum > limiteMaxSol
   const importeFueraDeRango =
     rangoTabuladorSol !== null
     && solImporteBrutoNum !== null
@@ -395,6 +399,10 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
         setSolError(`El número de prestadores no puede exceder ${maxPrestadores} para esta secretaría`)
         return
       }
+    }
+    if (excedeMaximoSol && limiteMaxSol !== null) {
+      setSolError(`El importe bruto no puede exceder ${fmtMoney(String(limiteMaxSol))} (monto máximo del Tabulador)`)
+      return
     }
     if (importeFueraDeRango && rangoTabuladorSol) {
       setSolError(
@@ -641,7 +649,6 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                             <MoreHorizontal className="h-4 w-4 text-content-low" />
                           </button>
                         </DropdownMenuTrigger>
-
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openView(rec)}>
                             <Eye className="h-4 w-4" /> Ver
@@ -937,7 +944,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                       <span className="font-normal text-muted-foreground">
                         (Nivel {rangoPorImporteSol.nivel} · Categoría {rangoPorImporteSol.categoria} — rango tabulador: {fmtMoney(String(rangoPorImporteSol.min))} a {fmtMoney(String(rangoPorImporteSol.max))})
                       </span>
-                    ) : solImporteBrutoNum !== null && !loadingTabuladorSol ? (
+                    ) : solImporteBrutoNum !== null && !loadingTabuladorSol && !sinTabuladorSol ? (
                       <span className="font-normal text-muted-foreground">
                         (El importe no corresponde a ningún rango del tabulador {new Date().getFullYear()})
                       </span>
@@ -951,11 +958,17 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     onBlur={() => setSolImporteBruto((v) => formatMoneyInput(v))}
                     disabled={solLoading}
                     className={
-                      importeFueraDeRango
+                      importeFueraDeRango || excedeMaximoSol
                          ? "bg-background border-destructive focus-visible:border-destructive"
                         : "bg-background"
                     }
                   />
+                  {excedeMaximoSol && limiteMaxSol !== null && (
+                    <div className="flex items-center gap-2 text-xs text-destructive">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      Superaste el monto máximo del Tabulador ({fmtMoney(String(limiteMaxSol))}).
+                    </div>
+                  )}
                   {importeFueraDeRango && rangoTabuladorSol && (
                     <div className="flex items-center gap-2 text-xs text-destructive">
                       <AlertCircle className="h-4 w-4 shrink-0" />

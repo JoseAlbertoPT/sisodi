@@ -556,3 +556,20 @@ model tabulador {
 
   @@index([ejercicio])
 }
+
+// Tipos de pago del combo "Tipo de Pago" en Nueva Solicitud (antes fijos en el
+// código), administrados en Configuración > Tipos de pago. `clave` es lo que se
+// guarda en solicitud.tipo_importe (VarChar(20)) y no cambia una vez creada.
+// Eliminar solo desactiva (`activo = false`): las solicitudes que ya usan la
+// clave la siguen mostrando.
+model tipo_pago {
+  id             Int      @id @default(autoincrement())
+  clave          String   @unique @db.VarChar(20)
+  nombre         String   @db.VarChar(20)
+  // false = no aplica "Equivalencia al Tabulador" (se bloquea y no se exige).
+  usa_tabulador  Boolean  @default(true)
+  orden          Int      @default(0)
+  activo         Boolean  @default(true)
+  creado_en      DateTime @default(now()) @db.Timestamp(6)
+  actualizado_en DateTime @default(now()) @updatedAt @db.Timestamp(6)
+}

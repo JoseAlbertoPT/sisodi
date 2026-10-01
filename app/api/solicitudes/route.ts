@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { getEstadoId } from "@/lib/estado-cache"
 import { validarVigencia, parseFechaLocal as parseDate } from "@/lib/vigencia"
+import { periodoAnioSiguiente } from "@/lib/captura-anio-siguiente"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
 async function resolverPeriodoId(periodoId?: number, mes?: number, anio?: number): Promise<number | undefined> {
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const {
-      usuarioId, tipo_solicitud, periodoId, periodoMes, periodoAnio, esExtemporanea,
+      usuarioId, tipo_solicitud, periodoId, esExtemporanea,
       secretaria, unidad_administrativa, unidad_responsable,
       programa_proyecto, regimen, tipo_actividades, numero_prestadores,
       denominacion, vigencia_inicio, vigencia_fin, importe_bruto,
@@ -88,13 +89,44 @@ export async function POST(req: NextRequest) {
       riesgo_caidas, riesgo_mutilaciones, riesgo_golpes, riesgo_otros,
       condicion_cambio_domicilio, condicion_horario, condicion_viajar, resguardo_activos,
       estado_nombre, tipo_administracion,
+      anioSiguiente, regimenPeriodo,
     } = body
+    let { periodoMes, periodoAnio } = body
     if (!usuarioId)      return NextResponse.json({ ok: false, error: "usuarioId es requerido" }, { status: 400 })
     // El id que manda el cliente debe ser el de la sesión (lib/session.ts).
     const actorErr = verificarActor(sesion, usuarioId)
     if (actorErr) return actorErr
     if (!tipo_solicitud) return NextResponse.json({ ok: false, error: "tipo_solicitud es requerido" }, { status: 400 })
     const estadoNombre = estado_nombre ?? "En Captura"
+
+    // Solicitud del año siguiente (lib/captura-anio-siguiente.ts): solo con un
+    // permiso activo para ese régimen, y no como borrador (el permiso es de
+    // un solo uso y se consume aquí mismo al crearla).
+    const anioActual = new Date().getFullYear()
+    let permisoAnioSiguienteId: number | null = null
+    if (anioSiguiente === true) {
+      if (estado_nombre === "Borrador") {
+        return NextResponse.json({ ok: false, error: "Las solicitudes del año siguiente no se pueden guardar como borrador." }, { status: 400 })
+      }
+      const permiso = await prisma.permiso_captura.findFirst({
+        where: {
+          usuario_id: sesion.id,
+          regimen:    String(regimenPeriodo ?? ""),
+          periodo:    periodoAnioSiguiente(anioActual + 1),
+          active:     true,
+          used:       false,
+        },
+        select: { id: true },
+      })
+      if (!permiso) {
+        return NextResponse.json({ ok: false, error: "No tiene permiso para capturar solicitudes del año siguiente en este régimen." }, { status: 403 })
+      }
+      permisoAnioSiguienteId = permiso.id
+      periodoMes  = 1
+      periodoAnio = anioActual + 1
+    } else if (periodoAnio != null && Number(periodoAnio) > anioActual) {
+      return NextResponse.json({ ok: false, error: "No se pueden capturar solicitudes de un año posterior." }, { status: 403 })
+    }
 
     const [usuarioCreador, estadoIdResuelto, periodoIdResuelto] = await Promise.all([
       prisma.usuario.findUnique({
@@ -128,7 +160,8 @@ export async function POST(req: NextRequest) {
     const trunc = (val: string | null | undefined, max: number): string | null =>
         val ? val.substring(0, max) : null
 
-    const year       = new Date().getFullYear()
+    // El folio lleva el año del ejercicio de la solicitud (el siguiente, si aplica).
+    const year       = permisoAnioSiguienteId != null ? anioActual + 1 : anioActual
     const esBorrador = estadoNombre === "Borrador"
     if (!esBorrador && vigencia_inicio && vigencia_fin) {
       const inicioDate = parseDate(vigencia_inicio)
@@ -239,6 +272,13 @@ export async function POST(req: NextRequest) {
           : "Solicitud creada y enviada a validación UEFA",
       },
     })
+    if (permisoAnioSiguienteId != null) {
+      await prisma.permiso_captura.update({
+        where: { id: permisoAnioSiguienteId },
+        data:  { active: false, used: true, consumed_at: new Date() },
+      })
+      broadcastUpdate(["permisos-captura"])
+    }
     broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({ ok: true, data: nueva, folio: folioJustificacion }, { status: 201 })
   } catch (error: any) {

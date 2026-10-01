@@ -10,6 +10,9 @@ import type { MenuNode } from "@/lib/permisos-api"
 export const CATALOGO_MENU_KEY = "catalogo-justificaciones"
 export const CATALOGO_ACCION_ADMINISTRACION = "administracion"
 export const CATALOGO_ACCION_CONSULTA = "consulta"
+// Override explícito "sin Consulta ni Administración": un arreglo vacío
+// significa "default por rol", así que hace falta un marcador para "ninguna".
+export const CATALOGO_ACCION_NINGUNA = "ninguna"
 // Deben reflejar lib/api-guard.ts:ROLES_ADMIN_CATALOGO/ROLES_CONSULTA_CATALOGO — duplicados
 // porque ese módulo importa Prisma y no puede usarse desde un componente cliente.
 const ROLES_ADMIN_CATALOGO = ["Administrador", "Emisor", "Verificador"]
