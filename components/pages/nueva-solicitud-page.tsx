@@ -1232,7 +1232,7 @@ function TabuladorNiveles({ nivelCategoria, importeBruto, readonly = false, noAp
 function MarcoNormativoModal({ onAccept, onDismiss }: { onAccept: () => void; onDismiss: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onDismiss} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div className="relative z-10 w-full max-w-md bg-white flex flex-col overflow-hidden"
         style={{ borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
 
@@ -1315,7 +1315,7 @@ function FormulaLlenadoModal({ tipo, onClose }: { tipo: "objeto" | "actividades"
   const { formula, titulo, descripcion, filas } = FORMULA_LLENADO_CONTENIDO[tipo]
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div
         className="relative z-10 w-full bg-white flex flex-col overflow-hidden"
         style={{ maxWidth: 760, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}
@@ -4566,7 +4566,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     {showModalMismasCondiciones && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         {/* Backdrop */}
-                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModalMismasCondiciones(false)} />
+                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
                         {/* Modal — DS Cuadro de Diálogo */}
                         <div className="relative z-10 w-full bg-white flex flex-col overflow-hidden"

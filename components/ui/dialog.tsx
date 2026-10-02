@@ -46,10 +46,14 @@ function DialogOverlay({
   )
 }
 
+// Los modales solo se cierran con su botón (Cancelar / X): un clic afuera o
+// la tecla Esc ya no los cierran, para no perder lo que se estaba capturando.
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onInteractOutside,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -63,6 +67,8 @@ function DialogContent({
           'bg-white data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 flex flex-col w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-2xl p-0 border border-[var(--sem-bg-surface-high)] shadow-lg duration-200 sm:max-w-lg overflow-hidden max-h-[90vh]',
           className,
         )}
+        onInteractOutside={(e) => { e.preventDefault(); onInteractOutside?.(e) }}
+        onEscapeKeyDown={(e) => { e.preventDefault(); onEscapeKeyDown?.(e) }}
         {...props}
       >
         {children}

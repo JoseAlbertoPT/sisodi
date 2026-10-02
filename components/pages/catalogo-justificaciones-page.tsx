@@ -315,7 +315,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
             r.tipo_pago,
             r.importe_bruto,
             r.solicitud.folio_dictamen,
-            r.solicitud.secretaria_txt_snapshot,
+            r.solicitud.   secretaria_txt_snapshot,
             r.solicitud.secretaria,
           ].join(" ")).replace(/\s+/g, " ")
           return haystack.includes(qNorm)

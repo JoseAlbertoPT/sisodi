@@ -801,7 +801,6 @@ function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioFormProps) {
     )}
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       >
       <div className="w-full max-w-[720px] mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[96vh] flex flex-col overflow-hidden">
         <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent shrink-0">
@@ -1298,7 +1297,6 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: EditarUsuarioModalPro
     />
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="w-full max-w-xl mx-4 rounded-2xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden">
 
@@ -1749,13 +1747,12 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
     </AlertDialog>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) requestClose() }}
     >
       <div className="w-full max-w-2xl max-h-[90vh] rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div>
             <h2 className="ds-title-md text-content-high">
-              Permisos de menús
+              Módulos
             </h2>
             <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
           </div>
@@ -1954,12 +1951,11 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="w-full max-w-lg max-h-[90vh] rounded-xl border border-border bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div>
-            <h2 className="ds-title-md text-content-high">Captura/Solicitud</h2>
+            <h2 className="ds-title-md text-content-high">Permisos</h2>
             <p className="text-xs text-muted-foreground">{usuario.nombre}</p>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onClose}>
@@ -2303,12 +2299,12 @@ export function UsuariosPage() {
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setPermisoUserId(row.id)}>
           <KeyRound className="mr-2 h-4 w-4" />
-          Permisos
+          Módulos
         </DropdownMenuItem>
 
         <DropdownMenuItem onClick={() => setCapturaUserId(row.id)}>
           <FilePlus className="mr-2 h-4 w-4" />
-          Captura/Solicitud
+          Permisos
         </DropdownMenuItem>
 
         <DropdownMenuItem onClick={() => setEditingUserId(row.id)}>

@@ -1222,7 +1222,7 @@ function DetalleView({ solicitud, filtro, onBack, onAprobar, onObservar, onEditS
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-white">Historial de Estatus</span>
                   <span className="text-[10px] text-white/60">
-                    Folio {solicitud.folioRecepcion ? folioFormateado : (solicitud.folioSolicitud ?? solicitud.id)}
+                    Folio {solicitud.folioRecepcion ? folioFormateado : (folioJustificacionFormateado ?? solicitud.folioSolicitud ?? solicitud.id)}
                   </span>
                 </div>
                 {!ROLES_OCULTAN_OBSERVACIONES.includes((user as any)?.rol) && (

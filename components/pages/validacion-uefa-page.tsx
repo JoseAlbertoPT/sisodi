@@ -1342,7 +1342,7 @@ function DetalleView({ solicitud, onBack, onAprobar, onObservar, onEditSolicitud
                 <HistorialPanel
                   entries={solicitud.historial}
                   title="Historial de Estatus"
-                  folio={solicitud.folio}
+                  folio={folioMostrar}
                   estado={solicitud.estado}
                   tipo={solicitud.tipo}
                 />
