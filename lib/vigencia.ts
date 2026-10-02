@@ -18,6 +18,17 @@ export function parseFechaLocal(v: unknown): Date | null {
 }
 
 /**
+ * Fecha sin hora (columnas @db.Date como vigencia_inicio/vigencia_fin) en
+ * DD/MM/AAAA. La API las manda como "2027-01-02T00:00:00.000Z": leerlas con
+ * `new Date()` y mostrarlas en hora local las recorre un día hacia atrás
+ * (01/01/2027). No usar para timestamps (fecha de creación, envío, etc.).
+ */
+export function formatFechaSoloDia(v: unknown, vacio = ""): string {
+  const d = parseFechaLocal(v)
+  return d ? d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" }) : vacio
+}
+
+/**
  * Regla de negocio: la vigencia de una carta descriptiva/dictamen no puede
  * exceder 6 meses desde su inicio, y nunca cruza el 31 de diciembre del año
  * en que inició (no hay prórroga automática de un año a otro).
@@ -51,7 +62,12 @@ export interface ValidacionVigencia {
  * usuarios con permiso especial), así que no se replica aquí como bloqueo
  * duro de backend.
  */
-export function validarVigencia(inicio: Date, fin: Date): ValidacionVigencia {
+export function validarVigencia(
+  inicio: Date,
+  fin: Date,
+  /** Vigencia extendida del Catálogo (lib/permiso-catalogo.ts): solo hasta el 31 de diciembre, sin el tope de 6 meses. */
+  opciones: { sinLimiteSeisMeses?: boolean } = {},
+): ValidacionVigencia {
   const inicioDia = startOfDay(inicio)
   const finDia = startOfDay(fin)
 
@@ -61,11 +77,13 @@ export function validarVigencia(inicio: Date, fin: Date): ValidacionVigencia {
   if (isBefore(finDia, inicioDia)) {
     return { ok: false, error: "La fecha de término de vigencia no puede ser anterior a la fecha de inicio." }
   }
-  const maxima = calcularVigenciaMaxima(inicioDia)
+  const maxima = opciones.sinLimiteSeisMeses ? startOfDay(endOfYear(inicioDia)) : calcularVigenciaMaxima(inicioDia)
   if (isBefore(maxima, finDia)) {
     return {
       ok: false,
-      error: "La fecha de término de vigencia excede el máximo permitido (6 meses, sin cruzar el 31 de diciembre del año de inicio).",
+      error: opciones.sinLimiteSeisMeses
+        ? "La fecha de término de vigencia no puede pasar del 31 de diciembre del año de inicio."
+        : "La fecha de término de vigencia excede el máximo permitido (6 meses, sin cruzar el 31 de diciembre del año de inicio).",
     }
   }
   return { ok: true }

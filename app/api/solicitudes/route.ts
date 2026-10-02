@@ -6,8 +6,61 @@ import { broadcastUpdate } from "@/lib/sse-manager"
 import { getEstadoId } from "@/lib/estado-cache"
 import { validarVigencia, parseFechaLocal as parseDate } from "@/lib/vigencia"
 import { periodoAnioSiguiente } from "@/lib/captura-anio-siguiente"
+import { regimenPermisoVigencia, type RegimenBase } from "@/lib/permiso-vigencia-solicitud"
+import { otorgadoMinimoVigente } from "@/lib/permiso-expiracion"
 
 const ALL_APARTADOS = ["solicitudes", "filtro", "dashboard", "revision", "dictamenes", "validacion"]
+
+type ResultadoVigencia =
+  | { ok: true; permisoId: number | null; extendida: boolean }
+  | { ok: false; error: string }
+
+// Regla de 6 meses, salvo que la solicitud ya tenga vigencia extendida o el
+// usuario tenga el permiso "Captura nueva solicitud" para ese régimen y
+// periodo (lib/permiso-vigencia-solicitud.ts): entonces hasta el 31-dic.
+// Devuelve el permiso a consumir solo si de verdad se necesitó.
+async function validarVigenciaSolicitud(
+  inicio: Date,
+  fin: Date,
+  { usuarioId, regimenPeriodo, periodoNombre, yaExtendida }:
+    { usuarioId: string; regimenPeriodo?: string; periodoNombre?: string; yaExtendida: boolean },
+): Promise<ResultadoVigencia> {
+  const normal = validarVigencia(inicio, fin)
+  if (normal.ok) return { ok: true, permisoId: null, extendida: false }
+
+  let permisoId: number | null = null
+  if (!yaExtendida) {
+    const regimenes = ["honorarios", "asimilados", "nombramiento"]
+    const permiso = regimenPeriodo && regimenes.includes(regimenPeriodo) && periodoNombre
+      ? await prisma.permiso_captura.findFirst({
+          where: {
+            usuario_id: usuarioId,
+            regimen:    regimenPermisoVigencia(regimenPeriodo as RegimenBase),
+            periodo:    periodoNombre,
+            active:     true,
+            used:       false,
+            granted_at: { gt: otorgadoMinimoVigente() },
+          },
+          select: { id: true },
+        })
+      : null
+    if (!permiso) return { ok: false, error: normal.error ?? "Vigencia inválida" }
+    permisoId = permiso.id
+  }
+  const extendida = validarVigencia(inicio, fin, { sinLimiteSeisMeses: true })
+  return extendida.ok
+    ? { ok: true, permisoId, extendida: true }
+    : { ok: false, error: extendida.error ?? "Vigencia inválida" }
+}
+
+async function consumirPermisoVigencia(permisoId: number | null) {
+  if (permisoId == null) return
+  await prisma.permiso_captura.update({
+    where: { id: permisoId },
+    data:  { active: false, used: true, consumed_at: new Date() },
+  })
+  broadcastUpdate(["permisos-captura"])
+}
 async function resolverPeriodoId(periodoId?: number, mes?: number, anio?: number): Promise<number | undefined> {
   if (mes && anio) {
     let periodo = await prisma.periodo.findUnique({ where: { mes_anio: { mes, anio } } })
@@ -115,6 +168,7 @@ export async function POST(req: NextRequest) {
           periodo:    periodoAnioSiguiente(anioActual + 1),
           active:     true,
           used:       false,
+          granted_at: { gt: otorgadoMinimoVigente() },
         },
         select: { id: true },
       })
@@ -163,14 +217,20 @@ export async function POST(req: NextRequest) {
     // El folio lleva el año del ejercicio de la solicitud (el siguiente, si aplica).
     const year       = permisoAnioSiguienteId != null ? anioActual + 1 : anioActual
     const esBorrador = estadoNombre === "Borrador"
+    let permisoVigenciaId: number | null = null
+    let vigenciaExtendida = false
     if (!esBorrador && vigencia_inicio && vigencia_fin) {
       const inicioDate = parseDate(vigencia_inicio)
       const finDate = parseDate(vigencia_fin)
       if (inicioDate && finDate) {
-        const validacion = validarVigencia(inicioDate, finDate)
+        const validacion = await validarVigenciaSolicitud(inicioDate, finDate, {
+          usuarioId: sesion.id, regimenPeriodo, periodoNombre: body.periodoNombre, yaExtendida: false,
+        })
         if (!validacion.ok) {
           return NextResponse.json({ ok: false, error: validacion.error }, { status: 400 })
         }
+        permisoVigenciaId = validacion.permisoId
+        vigenciaExtendida = validacion.extendida
       }
     }
     let folioJustificacion: string | null = null
@@ -213,6 +273,7 @@ export async function POST(req: NextRequest) {
         periodo_id:            (periodoIdResuelto ?? periodoId ?? 1) as number,
         folio_justificacion:   folioJustificacion,
         es_extemporanea:       esExtemporanea ?? false,
+        vigencia_extendida:    vigenciaExtendida,
         secretaria:            trunc(secretaria, 200),
         unidad_administrativa: trunc(unidad_administrativa, 200),
         unidad_responsable:    trunc(unidad_responsable, 200),
@@ -279,6 +340,7 @@ export async function POST(req: NextRequest) {
       })
       broadcastUpdate(["permisos-captura"])
     }
+    await consumirPermisoVigencia(permisoVigenciaId)
     broadcastUpdate(ALL_APARTADOS)
     return NextResponse.json({ ok: true, data: nueva, folio: folioJustificacion }, { status: 201 })
   } catch (error: any) {
@@ -363,11 +425,23 @@ export async function PATCH(req: NextRequest) {
       data.vigencia_inicio = parseDate(campos.vigencia_inicio)
     if (campos.vigencia_fin !== undefined)
       data.vigencia_fin = parseDate(campos.vigencia_fin)
+    let permisoVigenciaId: number | null = null
     if (data.vigencia_inicio && data.vigencia_fin) {
-      const validacion = validarVigencia(data.vigencia_inicio, data.vigencia_fin)
+      const actual = await prisma.solicitud.findUnique({
+        where:  { id: solicitudId },
+        select: { vigencia_extendida: true },
+      })
+      const validacion = await validarVigenciaSolicitud(data.vigencia_inicio, data.vigencia_fin, {
+        usuarioId:      sesion.id,
+        regimenPeriodo: campos.regimenPeriodo,
+        periodoNombre:  campos.periodoNombre,
+        yaExtendida:    !!actual?.vigencia_extendida,
+      })
       if (!validacion.ok) {
         return NextResponse.json({ ok: false, error: validacion.error }, { status: 400 })
       }
+      permisoVigenciaId = validacion.permisoId
+      if (validacion.extendida) data.vigencia_extendida = true
     }
     if (campos.periodoMes !== undefined && campos.periodoAnio !== undefined) {
       const pid = await resolverPeriodoId(undefined, Number(campos.periodoMes), Number(campos.periodoAnio))
@@ -394,6 +468,8 @@ export async function PATCH(req: NextRequest) {
         },
       },
     })
+
+    await consumirPermisoVigencia(permisoVigenciaId)
 
     if (usuarioId && historialDiff && historialDiff.length > 0) {
       const estadoModId = await getEstadoId("Modificada", {

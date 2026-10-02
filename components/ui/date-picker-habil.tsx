@@ -70,6 +70,18 @@ function getInhabilDates(year: number): Date[] {
 
 const INHABILES: Date[] = [2025, 2026, 2027, 2028, 2029, 2030].flatMap(getInhabilDates)
 
+/** Día marcado como inhábil (no se puede elegir en el calendario). */
+export function esDiaInhabil(d: Date): boolean {
+  return INHABILES.some((x) => x.getFullYear() === d.getFullYear() && x.getMonth() === d.getMonth() && x.getDate() === d.getDate())
+}
+
+/** El mismo día si es hábil; si no, el siguiente día hábil. */
+export function primerDiaHabilDesde(d: Date): Date {
+  const r = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  while (esDiaInhabil(r)) r.setDate(r.getDate() + 1)
+  return r
+}
+
 export function isoToDate(s: string): Date | undefined {
   if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined
   const [y, m, d] = s.split("-").map(Number)

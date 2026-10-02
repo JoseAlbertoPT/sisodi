@@ -57,6 +57,7 @@ import { HistorialTimeline, ROLES_OCULTAN_OBSERVACIONES, type HistorialEntryData
 import { AvanceSolicitud, PanelHeader } from "@/components/solicitud-status-tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useRealtime } from "@/hooks/use-realtime"
+import { formatFechaSoloDia } from "@/lib/vigencia"
 
 type UrgTab =
   | "Borradores"
@@ -392,8 +393,8 @@ function mapApiItem(item: any): UrgSolicitud {
     numeroPrestadores:    item.numero_prestadores != null
       ? String(item.numero_prestadores)
       : "",
-    vigenciaInicio:       fmt(item.vigencia_inicio),
-    vigenciaFin:          fmt(item.vigencia_fin),
+    vigenciaInicio:       formatFechaSoloDia(item.vigencia_inicio),
+    vigenciaFin:          formatFechaSoloDia(item.vigencia_fin),
     vigenciaInicioISO:    fmtISO(item.vigencia_inicio),
     vigenciaFinISO:       fmtISO(item.vigencia_fin),
     importeBruto,

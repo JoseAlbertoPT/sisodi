@@ -29,8 +29,9 @@ import { useAutorizaciones } from "@/lib/autorizaciones-store"
 import { periodoAnioSiguiente } from "@/lib/captura-anio-siguiente"
 import { useAuth } from "@/lib/auth-context"
 import { parseDateDMY, isPeriodoVigente, type PeriodoCap3000, type PeriodoCap1000 } from "@/lib/calendario-recepcion-mock"
-import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-picker-habil"
+import { DatePickerHabil, isoToDate, dateToIso, primerDiaHabilDesde } from "@/components/ui/date-picker-habil"
 import { calcularVigenciaMaxima, esInicioSinRangoValido, MENSAJE_INICIO_31_DIC } from "@/lib/vigencia"
+import { regimenPermisoVigencia, vigenciaMaximaExtendida } from "@/lib/permiso-vigencia-solicitud"
 import { InfoTooltip } from "@/components/ui/info-tooltip"
 import { TOOLTIPS } from "@/lib/tooltips-textos"
 import { useHistoricoStore } from "@/lib/historico-store"
@@ -357,10 +358,11 @@ function todayIso(): string {
   const d = String(now.getDate()).padStart(2, "0")
   return `${y}-${m}-${d}`
 }
-function getVigenciaFinLimiteIso(inicioIso: string): string | undefined {
+/** `extendida`: permiso "Captura nueva solicitud" (lib/permiso-vigencia-solicitud.ts), hasta el 31-dic sin tope de 6 meses. */
+function getVigenciaFinLimiteIso(inicioIso: string, extendida = false): string | undefined {
   const inicio = isoToDate(inicioIso)
   if (!inicio) return undefined
-  return dateToIso(calcularVigenciaMaxima(inicio))
+  return dateToIso(extendida ? vigenciaMaximaExtendida(inicio) : calcularVigenciaMaxima(inicio))
 }
 function clampIso(value: string, min?: string, max?: string): string {
   let v = value
@@ -1391,6 +1393,7 @@ function FormularioPrestacion({
   tipoAdministracionUsuario = "centralizada",
   initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin,
   permisoActivo = false,
+  vigenciaExtendida = false,
   subStep, onStepValidityChange, onStepErrorChange,
 }: {
   prefilled: boolean
@@ -1413,6 +1416,8 @@ function FormularioPrestacion({
   periodoFechaFin?: string
 
   permisoActivo?: boolean
+  /** Permiso "Captura nueva solicitud": término hasta el 31-dic, sin tope de 6 meses. */
+  vigenciaExtendida?: boolean
   subStep?: SubStep
   onStepValidityChange?: (v: StepValidity) => void
   onStepErrorChange?: (v: StepErrors) => void
@@ -2017,7 +2022,7 @@ function FormularioPrestacion({
 
                 const vigMin       = permisoActivo ? (periodoFechaInicio || undefined) : clampIso(todayIso(), periodoFechaInicio, periodoFechaFin)
                 const vigMaxInicio = periodoFechaFin || undefined
-                const vigMax = getVigenciaFinLimiteIso(vigenciaInicio)
+                const vigMax = getVigenciaFinLimiteIso(vigenciaInicio, vigenciaExtendida)
                 const inicio31Dic = !!vigenciaInicio && esInicioSinRangoValido(isoToDate(vigenciaInicio)!)
                 const inicioError = !!vigenciaInicio && ((!!vigMin && vigenciaInicio < vigMin) || (!!vigMaxInicio && vigenciaInicio > vigMaxInicio) || inicio31Dic)
                 const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
@@ -2053,7 +2058,7 @@ function FormularioPrestacion({
                       />
                       {finError && (
                         <p className="text-xs text-destructive flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3 shrink-0" />La vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso.
+                          <AlertCircle className="h-3 w-3 shrink-0" />{vigenciaExtendida ? "La vigencia no puede pasar del 31 de diciembre del año en que inicia." : "La vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso."}
                         </p>
                       )}
                     </div>
@@ -2249,6 +2254,7 @@ function FormularioNombramiento({
   prefilled, esRenovacion = false, excelRows = [], datosRenovacion, onFormChange, onArchivoChange, archivosActuales, secretariaFija, unidadFija, claveReportePlazas, catalogoUAs = [],
   tipoAdministracionUsuario = "centralizada", initialData, existingAdjuntos, periodoFechaInicio, periodoFechaFin, regimenPeriodo = "",
   permisoActivo = false,
+  vigenciaExtendida = false,
   subStep, onStepValidityChange, onStepErrorChange,
 }: {
   prefilled: boolean; esRenovacion?: boolean; excelRows?: HistoricoRow[]
@@ -2270,6 +2276,8 @@ function FormularioNombramiento({
   regimenPeriodo?: string
   // Habilitar Captura: ver comentario en FormularioPrestacion.
   permisoActivo?: boolean
+  /** Permiso "Captura nueva solicitud": término hasta el 31-dic, sin tope de 6 meses. */
+  vigenciaExtendida?: boolean
   // Sin valor: se muestran todas las secciones en una sola página (modo edición/corrección).
   subStep?: SubStep
   onStepValidityChange?: (v: StepValidity) => void
@@ -2862,7 +2870,7 @@ function FormularioNombramiento({
                 // El límite máximo de término es solo la regla de 6 meses / 31-dic
                 // (lib/vigencia.ts), igual que en catalogo-justificaciones-page.tsx.
                 // El periodo de recepción (calendario) no debe acotar la vigencia.
-                const vigMax = getVigenciaFinLimiteIso(vigenciaInicio)
+                const vigMax = getVigenciaFinLimiteIso(vigenciaInicio, vigenciaExtendida)
                 const inicio31Dic = !!vigenciaInicio && esInicioSinRangoValido(isoToDate(vigenciaInicio)!)
                 const inicioError = !!vigenciaInicio && ((!!vigMin && vigenciaInicio < vigMin) || (!!vigMaxInicio && vigenciaInicio > vigMaxInicio) || inicio31Dic)
                 const finError    = !!vigenciaFin    && !!vigMax && vigenciaFin    > vigMax
@@ -2895,7 +2903,7 @@ function FormularioNombramiento({
                         className={finError ? "border-destructive" : ""}
                       />
                       {finError && (
-                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />La vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso.</p>
+                        <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3 shrink-0" />{vigenciaExtendida ? "La vigencia no puede pasar del 31 de diciembre del año en que inicia." : "La vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso."}</p>
                       )}
                     </div>
                   </div>
@@ -3468,6 +3476,9 @@ function periodoNombreAMes(nombre: string): number | null {
   return null
 }
 
+/** Valor en la lista de régimen para la opción "… del ejercicio AAAA" (permiso del año siguiente). */
+const PREFIJO_ANIO_SIGUIENTE = "anio-siguiente:"
+
 function buildSolicitudPayload({
   usuarioId, tipo, regimenPeriodo, periodoNombre, esExtemporanea, esRenovacion, folioSeleccionado, formData, tipoAdministracion,
   anioSiguiente = false,
@@ -3482,8 +3493,12 @@ function buildSolicitudPayload({
     usuarioId,
     tipo_administracion: tipoAdministracion ?? "centralizada",
     tipo_solicitud: tipo === "prestacion" ? "Prestacion de Servicios" : "Nombramiento Tiempo Det.",
+    // Régimen y mes/quincena elegidos: el servidor los usa para validar los
+    // permisos (año siguiente, vigencia de más de 6 meses).
+    regimenPeriodo,
+    periodoNombre,
     ...(anioSiguiente
-      ? { anioSiguiente: true, regimenPeriodo }
+      ? { anioSiguiente: true }
       : periodoMesResuelto !== null ? { periodoMes: periodoMesResuelto, periodoAnio: new Date().getFullYear() } : {}),
     esExtemporanea,
     secretaria:            formData.secretaria            ?? null,
@@ -3881,14 +3896,36 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
   // es del ejercicio siguiente y no se pide mes ni quincena. Solo para
   // solicitudes nuevas.
   const anioSiguiente = new Date().getFullYear() + 1
-  const modoAnioSiguiente = !!(
-    !editSolicitud && regimenPeriodo && user?.id &&
-    getPermisoActivo(user.id, regimenPeriodo, periodoAnioSiguiente(anioSiguiente))
+  // Con el permiso, el régimen aparece dos veces en la lista: el normal (año en
+  // curso, pide mes/quincena) y "… del ejercicio AAAA" (usa el permiso). Así el
+  // usuario decide si lo ocupa, en vez de que el permiso se use a la fuerza.
+  const [usarAnioSiguiente, setUsarAnioSiguiente] = useState(false)
+  const tienePermisoAnioSiguiente = useCallback(
+    (regimen: string) => !!(
+      !editSolicitud && user?.id &&
+      getPermisoActivo(user.id, regimen, periodoAnioSiguiente(anioSiguiente))
+    ),
+    [editSolicitud, user?.id, getPermisoActivo, anioSiguiente],
   )
+  const modoAnioSiguiente = usarAnioSiguiente && !!regimenPeriodo && tienePermisoAnioSiguiente(regimenPeriodo)
+
+  // Permiso "Captura nueva solicitud" (lib/permiso-vigencia-solicitud.ts) para
+  // este régimen y mes/quincena: vigencia de más de 6 meses, hasta el 31-dic.
+  // Al editar, una solicitud que ya se guardó así conserva el límite extendido.
+  const permisoVigenciaExtendida = !!(
+    !modoAnioSiguiente && regimenPeriodo && periodoSeleccionado && user?.id &&
+    getPermisoActivo(user.id, regimenPermisoVigencia(regimenPeriodo), periodoSeleccionado)
+  )
+  const vigenciaYaExtendida = useMemo(() => {
+    const ini = isoToDate(editSolicitud?.formData?.vigenciaInicio ?? "")
+    const fin = isoToDate(editSolicitud?.formData?.vigenciaFin ?? "")
+    return !!(ini && fin && fin > calcularVigenciaMaxima(ini))
+  }, [editSolicitud])
+  const vigenciaExtendida = permisoVigenciaExtendida || vigenciaYaExtendida
 
   const periodoRango = useMemo(
     () => modoAnioSiguiente
-      ? { inicio: `${anioSiguiente}-01-01`, fin: `${anioSiguiente}-12-31` }
+      ? { inicio: dateToIso(primerDiaHabilDesde(new Date(anioSiguiente, 0, 1))), fin: `${anioSiguiente}-12-31` }
       : getRangoPeriodoIso(regimenPeriodo, periodoSeleccionado, new Date().getFullYear()),
     [modoAnioSiguiente, anioSiguiente, regimenPeriodo, periodoSeleccionado],
   )
@@ -4238,7 +4275,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
     setStep("tipo"); setTipo("")
     setEsRenovacion(""); setFolioSeleccionado(""); setCondicionRenovacion("")
     setPrefilled(false); setLockVigenciaOnly(false); setDatosRenovacion(null)
-    setRegimenPeriodo(""); setPeriodoSeleccionado("")
+    setRegimenPeriodo(""); setPeriodoSeleccionado(""); setUsarAnioSiguiente(false)
     setErrorEnvio(null); setErrorBorrador(null); setFormData({})
     setSubStep("datos")
   }, [])
@@ -4336,8 +4373,10 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               <div className="grid gap-2 md:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-sm font-medium">Régimen de Contratación<span className="text-destructive ml-0.5">*</span></Label>
-                  <Select value={regimenPeriodo} onValueChange={(v) => {
-                    const nuevo = v as "honorarios" | "asimilados" | "nombramiento"
+                  <Select value={regimenPeriodo && modoAnioSiguiente ? `${PREFIJO_ANIO_SIGUIENTE}${regimenPeriodo}` : regimenPeriodo} onValueChange={(v) => {
+                    const esAnioSig = v.startsWith(PREFIJO_ANIO_SIGUIENTE)
+                    const nuevo = (esAnioSig ? v.slice(PREFIJO_ANIO_SIGUIENTE.length) : v) as "honorarios" | "asimilados" | "nombramiento"
+                    setUsarAnioSiguiente(esAnioSig)
                     setRegimenPeriodo(nuevo); setPeriodoSeleccionado(""); setFolioSeleccionado("")
                     if (nuevo === "nombramiento") setTipo("nombramiento")
                     else setTipo("prestacion")
@@ -4345,7 +4384,13 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                     <SelectTrigger className="w-full"><SelectValue placeholder="Seleccione régimen" /></SelectTrigger>
                     <SelectContent className="vino-force">
                       <SelectItem value="honorarios">Honorarios</SelectItem>
+                      {tienePermisoAnioSiguiente("honorarios") && (
+                        <SelectItem value={`${PREFIJO_ANIO_SIGUIENTE}honorarios`}>Honorarios del ejercicio ({anioSiguiente})</SelectItem>
+                      )}
                       <SelectItem value="asimilados">Honorarios Asimilados a Salarios</SelectItem>
+                      {tienePermisoAnioSiguiente("asimilados") && (
+                        <SelectItem value={`${PREFIJO_ANIO_SIGUIENTE}asimilados`}>Honorarios Asimilados a Salarios del ejercicio ({anioSiguiente})</SelectItem>
+                      )}
                       {/* Nombramiento por Tiempo Determinado: no aplica en esta etapa.
                       <SelectItem value="nombramiento">Nombramiento por Tiempo Determinado</SelectItem> */}
                     </SelectContent>
@@ -4386,9 +4431,18 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-semibold text-card-foreground">Solicitud para el ejercicio {anioSiguiente}</span>
                     <span className="text-xs text-muted-foreground">
-                      Tiene autorización para capturar una solicitud del año siguiente en este régimen. No se requiere mes ni quincena; la vigencia debe iniciar a partir del 1 de enero de {anioSiguiente}. El permiso se usa al enviar la solicitud.
+                      Tiene autorización para capturar una solicitud del año siguiente en este régimen. No se requiere mes ni quincena; la vigencia debe iniciar en {anioSiguiente}, a partir del primer día hábil. El permiso se usa al enviar la solicitud.
                     </span>
                   </div>
+                </div>
+              )}
+
+              {permisoVigenciaExtendida && (
+                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50/50 border border-blue-200/50 rounded-md px-3 py-2.5">
+                  <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-500" />
+                  <span>
+                    Tiene autorización para este régimen y periodo: la vigencia de la solicitud puede ser de más de 6 meses, hasta el 31 de diciembre del año en que inicia. El permiso se usa al enviar la solicitud con una vigencia mayor a 6 meses.
+                  </span>
                 </div>
               )}
 
@@ -4718,6 +4772,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               periodoFechaInicio={periodoRango?.inicio}
               periodoFechaFin={periodoRango?.fin}
               permisoActivo={!!permisoActivo}
+              vigenciaExtendida={vigenciaExtendida}
               subStep={usarWizard ? subStep : undefined}
               onStepValidityChange={usarWizard ? setStepValidity : undefined}
               onStepErrorChange={usarWizard ? setStepErrors : undefined}
@@ -4742,6 +4797,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
               periodoFechaFin={periodoRango?.fin}
               regimenPeriodo={regimenPeriodo}
               permisoActivo={!!permisoActivo}
+              vigenciaExtendida={vigenciaExtendida}
               subStep={usarWizard ? subStep : undefined}
               onStepValidityChange={usarWizard ? setStepValidity : undefined}
               onStepErrorChange={usarWizard ? setStepErrors : undefined}
@@ -4754,7 +4810,7 @@ export function NuevaSolicitudPage({ editSolicitud, onAfterSave, onCancel, onGoT
             const isEditingBorrador = !!editSolicitud?.id
             const _periodoMin = periodoRango?.inicio
             const _periodoMax = periodoRango?.fin
-            const _reglaFinMax = getVigenciaFinLimiteIso(formData.vigenciaInicio ?? "")
+            const _reglaFinMax = getVigenciaFinLimiteIso(formData.vigenciaInicio ?? "", vigenciaExtendida)
             const _inicio31DicIso = isoToDate(formData.vigenciaInicio ?? "")
             const _inicio31Dic = !!_inicio31DicIso && esInicioSinRangoValido(_inicio31DicIso)
             const _inicioOk = !!formData.vigenciaInicio &&

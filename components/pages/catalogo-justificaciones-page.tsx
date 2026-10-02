@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { DatePickerHabil, dateToIso, isoToDate } from "@/components/ui/date-picker-habil"
 import { addMonths } from "date-fns"
 import { calcularVigenciaMaxima, esInicioSinRangoValido, MENSAJE_INICIO_31_DIC } from "@/lib/vigencia"
+import { useAutorizaciones } from "@/lib/autorizaciones-store"
+import { REGIMEN_PERMISO_CATALOGO, prefijoPermisoCatalogo, vigenciaMaximaCatalogoExtendida } from "@/lib/permiso-catalogo"
 import { InfoTooltip } from "@/components/ui/info-tooltip"
 import { TOOLTIPS } from "@/lib/tooltips-textos"
 import { Badge } from "@/components/ui/badge"
@@ -346,8 +348,16 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
       controller.abort()
     }
   }, [showView, viewRec])
+  // Permiso "Captura catálogo" para este folio (lib/permiso-catalogo.ts): la
+  // vigencia puede pasar de 6 meses, hasta el 31 de diciembre del año de inicio.
+  const { getPermisosUsuario } = useAutorizaciones()
+  const solVigenciaExtendida = !!(solRec && user?.id && getPermisosUsuario(user.id).some(
+    (p) => p.active && !p.used && p.regimen === REGIMEN_PERMISO_CATALOGO && p.periodo.startsWith(prefijoPermisoCatalogo(solRec.id)),
+  ))
+  const vigenciaMaximaSol = (inicio: Date) =>
+    solVigenciaExtendida ? vigenciaMaximaCatalogoExtendida(inicio) : calcularVigenciaMaxima(inicio)
   useEffect(() => {
-    if (solVigFin && solVigFin > calcularVigenciaMaxima(solVigInicio ?? todayStart)) setSolVigFin(undefined)
+    if (solVigFin && solVigFin > vigenciaMaximaSol(solVigInicio ?? todayStart)) setSolVigFin(undefined)
   }, [solVigInicio])
   const openView = (rec: CatalogoRecord) => { setViewRec(rec); setShowView(true) }
   const openTerminos = (rec: CatalogoRecord) => {
@@ -393,7 +403,12 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
     if (!canFirmarCatalogo) { setSolError("Solo un usuario con rol UEFA o Administrador puede firmar."); return }
     if (!solVigInicio || !solVigFin) { setSolError("La vigencia es requerida"); return }
     if (esInicioSinRangoValido(solVigInicio)) { setSolError(MENSAJE_INICIO_31_DIC); return }
-    if (solVigFin > calcularVigenciaMaxima(solVigInicio)) { setSolError("La nueva vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso"); return }
+    if (solVigFin > vigenciaMaximaSol(solVigInicio)) {
+      setSolError(solVigenciaExtendida
+        ? "La nueva vigencia no puede pasar del 31 de diciembre del año en que inicia"
+        : "La nueva vigencia no puede exceder 6 meses ni el 31 de diciembre del año en curso")
+      return
+    }
     if (!isParaestatal(solRec) && solPrestadores) {
       const maxPrestadores = maxPrestadoresPermitido(entidadNombre(solRec))
       if (Number(solPrestadores) > maxPrestadores) {
@@ -834,6 +849,11 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                     Nueva vigencia
                     <InfoTooltip text={TOOLTIPS.VIGENCIA} />
                   </Label>
+                  {solVigenciaExtendida && (
+                    <p className="text-xs text-secondary">
+                      Tiene autorización para este folio: la vigencia puede ser de más de 6 meses, hasta el 31 de diciembre del año en que inicia.
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                       <span className="text-xs text-muted-foreground">Inicio</span>
@@ -855,7 +875,7 @@ function ConsultaTab({ onCountChange }: { onCountChange?: (n: number) => void })
                       <DatePickerHabil
                         value={solVigFin}
                         fromDate={solVigInicio ?? todayStart}
-                        toDate={calcularVigenciaMaxima(solVigInicio ?? todayStart)}
+                        toDate={vigenciaMaximaSol(solVigInicio ?? todayStart)}
                         onChange={(d) => setSolVigFin(d)}
                         placeholder="Seleccionar término"
                       />

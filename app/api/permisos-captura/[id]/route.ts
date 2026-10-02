@@ -3,6 +3,7 @@ import { requireSesion } from "@/lib/session"
 import { puedeGestionarUsuarios } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { venceEnPermiso, fechaHoraMx } from "@/lib/permiso-expiracion"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const sesion = await requireSesion()
@@ -42,9 +43,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({
       id: updated.id, userId: updated.usuario_id, regimen: updated.regimen,
       periodo: updated.periodo, active: updated.active, used: updated.used,
-      grantedAt: updated.granted_at.toISOString().replace("T", " ").slice(0, 16),
+      grantedAt: fechaHoraMx(updated.granted_at),
       grantedBy: updated.granted_by,
-      consumedAt: updated.consumed_at ? updated.consumed_at.toISOString().replace("T", " ").slice(0, 16) : null,
+      consumedAt: updated.consumed_at ? fechaHoraMx(updated.consumed_at) : null,
+      venceAt: venceEnPermiso(updated.granted_at).toISOString(),
     })
   } catch (e) {
     console.error("[PATCH /api/permisos-captura/[id]]", e)

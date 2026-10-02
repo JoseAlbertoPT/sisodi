@@ -45,6 +45,7 @@ import { DatePickerHabil, isoToDate, dateToIso } from "@/components/ui/date-pick
 import { parseDateDMY } from "@/lib/calendario-recepcion-mock"
 import { StatusBadge, estadoBadge, C_VERDE_ESTADO, C_VERDE_ESTADO_BG, C_ROSA_VINO, C_ROSA_VINO_BG, C_AMARILLO } from "@/components/ui/status-badge"
 import { HistorialPanel, BitacoraPanel, ObservacionesPanel, type BitacoraEntry } from "@/components/solicitud-status-tabs"
+import { formatFechaSoloDia } from "@/lib/vigencia"
 const COLOR_SI        = "#6E795A"
 const COLOR_SI_TEXT   = "#283c2a"
 const COLOR_NO        = "#832B56"
@@ -353,8 +354,8 @@ function mapBDtoDetalle(item: any): SolicitudDetalle {
     fechaCreacion:        formatFecha(item.fecha_creacion),
     fechaEnvio,
     esExtemporanea:       item.es_extemporanea ?? false,
-    vigenciaInicio:       formatFecha(item.vigencia_inicio),
-    vigenciaFin:          formatFecha(item.vigencia_fin),
+    vigenciaInicio:       formatFechaSoloDia(item.vigencia_inicio, "—"),
+    vigenciaFin:          formatFechaSoloDia(item.vigencia_fin, "—"),
     importeBruto:         item.importe_bruto != null
       ? `$${Number(item.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
       : "—",

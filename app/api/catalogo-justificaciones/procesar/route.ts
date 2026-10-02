@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
 import { requireCatalogoAdmin } from "@/lib/api-guard"
 import { validarVigencia, parseFechaLocal as parseDate } from "@/lib/vigencia"
+import { REGIMEN_PERMISO_CATALOGO, prefijoPermisoCatalogo } from "@/lib/permiso-catalogo"
 
 function trunc(val: string | null | undefined, max: number): string | null {
   return val ? val.substring(0, max) : null
@@ -66,7 +67,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Formato de vigencia inválido" }, { status: 400 })
     }
 
-    const validacionVigencia = validarVigencia(nuevaInicio, nuevaFin)
+    let validacionVigencia = validarVigencia(nuevaInicio, nuevaFin)
+    if (!validacionVigencia.ok) {
+      // Se pidió con permiso "Captura catálogo" (ya consumido al solicitarla):
+      // se permite la vigencia de más de 6 meses (lib/permiso-catalogo.ts).
+      const permisoUsado = await prisma.permiso_captura.findFirst({
+        where: {
+          usuario_id: catSol.usuario_id,
+          regimen:    REGIMEN_PERMISO_CATALOGO,
+          periodo:    { startsWith: prefijoPermisoCatalogo(catSol.catalogo_justificacion_id) },
+          used:       true,
+        },
+        select: { id: true },
+      })
+      if (permisoUsado) validacionVigencia = validarVigencia(nuevaInicio, nuevaFin, { sinLimiteSeisMeses: true })
+    }
     if (!validacionVigencia.ok) {
       await prisma.$executeRaw`UPDATE catalogo_solicitud SET procesado = false WHERE id = ${id}`
       return NextResponse.json({ error: validacionVigencia.error }, { status: 400 })

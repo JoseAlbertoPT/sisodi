@@ -15,7 +15,7 @@ function norm(str: string): string {
 }
 
 export function SelectConBusqueda({
-  opciones, value, onValueChange, placeholder, disabled = false, className = "",
+  opciones, value, onValueChange, placeholder, disabled = false, className = "", contentClassName = "",
 }: {
   opciones: { value: string; label: string }[]
   value: string
@@ -23,6 +23,8 @@ export function SelectConBusqueda({
   placeholder: string
   disabled?: boolean
   className?: string
+  /** Clases extra de la lista desplegable (p. ej. z-index dentro de un modal). */
+  contentClassName?: string
 }) {
   const [busqueda, setBusqueda] = useState("")
   const [open, setOpen] = useState(false)
@@ -53,7 +55,7 @@ export function SelectConBusqueda({
         </span>
       </SelectTrigger>
       <SelectContent
-        className="rounded-[12px] border-[#E5E7EB] shadow-lg p-1.5"
+        className={`rounded-[12px] border-[#E5E7EB] shadow-lg p-1.5 ${contentClassName}`}
         style={{ width: "var(--radix-select-trigger-width)", maxWidth: "var(--radix-select-trigger-width)" }}
       >
 

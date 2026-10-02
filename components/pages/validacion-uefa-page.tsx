@@ -46,6 +46,7 @@ import { HistorialPanel, ObservacionesPanel } from "@/components/solicitud-statu
 import { ConfirmToast } from "@/components/ui/confirm-toast"
 import { TablePagination, ITEMS_PER_PAGE } from "@/components/ui/table-pagination"
 import { type EditSolicitudPayload } from "@/components/pages/nueva-solicitud-page"
+import { formatFechaSoloDia } from "@/lib/vigencia"
 
 type UefaEstado = string
 
@@ -310,8 +311,8 @@ function mapBDtoSolicitud(item: any): UefaSolicitud {
     tipo:                 item.tipo_solicitud ?? "—",
     secretaria:           item.secretaria ?? item.usuario?.area?.nombre ?? "—",
     fecha:                item.fecha_creacion ? formatFecha(item.fecha_creacion) : "—",
-    vigenciaInicio:       item.vigencia_inicio ? formatFecha(item.vigencia_inicio) : "—",
-    vigenciaFin:          item.vigencia_fin    ? formatFecha(item.vigencia_fin)    : "—",
+    vigenciaInicio:       formatFechaSoloDia(item.vigencia_inicio, "—"),
+    vigenciaFin:          formatFechaSoloDia(item.vigencia_fin, "—"),
     fechaEnvio:           item.fecha_envio     ? formatFecha(item.fecha_envio)
                           : item.fecha_creacion ? formatFecha(item.fecha_creacion) : "—",
     importeBruto:         item.importe_bruto

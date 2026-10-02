@@ -5,6 +5,8 @@ import { broadcastUpdate } from "@/lib/sse-manager"
 import { requireCatalogoConsulta } from "@/lib/api-guard"
 import { validarVigencia, parseFechaLocal } from "@/lib/vigencia"
 import { generarFolioCatalogo, tipoFolioPorRegimen } from "@/lib/folio-catalogo"
+import { REGIMEN_PERMISO_CATALOGO, prefijoPermisoCatalogo } from "@/lib/permiso-catalogo"
+import { otorgadoMinimoVigente } from "@/lib/permiso-expiracion"
 
 function parseVigenciaRango(nuevaVigencia: string): { inicio: Date; fin: Date } | null {
   const [inicioStr, finStr] = nuevaVigencia.split("/").map((s) => s.trim())
@@ -61,6 +63,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Registro de catálogo no encontrado" }, { status: 404 })
     }
 
+    // Con permiso "Captura catálogo" para este folio (lib/permiso-catalogo.ts)
+    // la vigencia puede pasar de 6 meses; el permiso solo se gasta si de
+    // verdad se usó (si la vigencia cabe en 6 meses, se conserva).
+    let permisoCatalogoId: number | null = null
     if (!esCancelacion) {
       const rango = parseVigenciaRango(String(nueva_vigencia).trim())
       if (!rango) {
@@ -68,7 +74,22 @@ export async function POST(req: NextRequest) {
       }
       const validacion = validarVigencia(rango.inicio, rango.fin)
       if (!validacion.ok) {
-        return NextResponse.json({ error: validacion.error }, { status: 400 })
+        const permiso = await prisma.permiso_captura.findFirst({
+          where: {
+            usuario_id: sesion.id,
+            regimen:    REGIMEN_PERMISO_CATALOGO,
+            periodo:    { startsWith: prefijoPermisoCatalogo(Number(catalogo_justificacion_id)) },
+            active:     true,
+            used:       false,
+            granted_at: { gt: otorgadoMinimoVigente() },
+          },
+          select: { id: true },
+        })
+        const validacionExtendida = permiso ? validarVigencia(rango.inicio, rango.fin, { sinLimiteSeisMeses: true }) : validacion
+        if (!validacionExtendida.ok) {
+          return NextResponse.json({ error: validacionExtendida.error }, { status: 400 })
+        }
+        permisoCatalogoId = permiso?.id ?? null
       }
     }
 
@@ -109,6 +130,13 @@ export async function POST(req: NextRequest) {
       },
     }))
 
+    if (permisoCatalogoId != null) {
+      await prisma.permiso_captura.update({
+        where: { id: permisoCatalogoId },
+        data:  { active: false, used: true, consumed_at: new Date() },
+      })
+      broadcastUpdate(["permisos-captura"])
+    }
     broadcastUpdate(["catalogo"])
 
     return NextResponse.json({ record }, { status: 201 })

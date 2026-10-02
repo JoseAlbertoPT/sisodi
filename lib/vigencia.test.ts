@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   calcularVigenciaMaxima,
+  formatFechaSoloDia,
   esInicioSinRangoValido,
   validarVigencia,
   parseFechaLocal,
@@ -86,5 +87,16 @@ describe("parseFechaLocal", () => {
     const inicio = parseFechaLocal("2026-01-01")!
     const fin = parseFechaLocal("2026-06-24")!
     expect(validarVigencia(inicio, fin)).toEqual({ ok: true })
+  })
+})
+
+describe("formatFechaSoloDia", () => {
+  it("regresión: '2027-01-02T00:00:00.000Z' (como llega de la API) se muestra 02/01/2027, no 01/01/2027", () => {
+    expect(formatFechaSoloDia("2027-01-02T00:00:00.000Z")).toBe("02/01/2027")
+    expect(formatFechaSoloDia("2027-01-22")).toBe("22/01/2027")
+  })
+  it("vacío → valor por defecto", () => {
+    expect(formatFechaSoloDia(null)).toBe("")
+    expect(formatFechaSoloDia(undefined, "—")).toBe("—")
   })
 })

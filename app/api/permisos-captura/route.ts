@@ -3,6 +3,7 @@ import { requireSesion } from "@/lib/session"
 import { puedeGestionarUsuarios } from "@/lib/api-guard"
 import { prisma } from "@/lib/prisma"
 import { broadcastUpdate } from "@/lib/sse-manager"
+import { otorgadoMinimoVigente, permisoVencido, venceEnPermiso, fechaHoraMx } from "@/lib/permiso-expiracion"
 
 function toClient(p: {
   id: number; usuario_id: string; regimen: string; periodo: string
@@ -13,11 +14,13 @@ function toClient(p: {
     userId: p.usuario_id,
     regimen: p.regimen,
     periodo: p.periodo,
-    active: p.active,
+    active: p.active && !permisoVencido(p.granted_at),
     used: p.used,
-    grantedAt: p.granted_at.toISOString().replace("T", " ").slice(0, 16),
+    grantedAt: fechaHoraMx(p.granted_at),
+    /** ISO completo: el cliente lo usa para dejar de tratarlo como activo al vencer. */
+    venceAt: venceEnPermiso(p.granted_at).toISOString(),
     grantedBy: p.granted_by,
-    consumedAt: p.consumed_at ? p.consumed_at.toISOString().replace("T", " ").slice(0, 16) : null,
+    consumedAt: p.consumed_at ? fechaHoraMx(p.consumed_at) : null,
   }
 }
 
@@ -27,6 +30,12 @@ export async function GET(req: NextRequest) {
 
   try {
     const usuarioId = req.nextUrl.searchParams.get("usuarioId")
+    // Los permisos vencidos (más de 3 días desde que se otorgaron) se
+    // desactivan en la BD, para que ninguna otra consulta los tome por activos.
+    await prisma.permiso_captura.updateMany({
+      where: { active: true, used: false, granted_at: { lte: otorgadoMinimoVigente() } },
+      data:  { active: false },
+    })
     const rows = await prisma.permiso_captura.findMany({
       where: usuarioId ? { usuario_id: usuarioId } : undefined,
       orderBy: { granted_at: "desc" },

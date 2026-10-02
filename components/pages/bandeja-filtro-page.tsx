@@ -61,6 +61,7 @@ import { generateCartaDescriptivaPDF } from "@/lib/generate-carta-descriptiva-pd
 import { claveParaPdf } from "@/lib/clave-dictamen"
 import { puedeMostrarFolioDictamen } from "@/lib/firma-visibilidad"
 import { useRealtime } from "@/hooks/use-realtime"
+import { formatFechaSoloDia } from "@/lib/vigencia"
 
 interface FiltroSolicitud {
   id: string
@@ -445,7 +446,7 @@ function ExpedienteCompleto({ raw, hidePerfil }: { raw: any; hidePerfil?: boolea
             </FieldSection>
             <FieldSection title="Condiciones de la Contratación">
               <ReadOnlyField accent label="Número de Prestadores de Servicio"     value={raw?.numero_prestadores != null ? String(raw.numero_prestadores) : "—"} />
-              <ReadOnlyField accent label="Vigencia"                             value={`${formatFecha(raw?.vigencia_inicio)} — ${formatFecha(raw?.vigencia_fin)}`} />
+              <ReadOnlyField accent label="Vigencia"                             value={`${formatFechaSoloDia(raw?.vigencia_inicio, "—")} — ${formatFechaSoloDia(raw?.vigencia_fin, "—")}`} />
               <ReadOnlyField accent label="Importe Bruto"                        value={raw?.importe_bruto != null ? `$${Number(raw.importe_bruto).toLocaleString("es-MX", { minimumFractionDigits: 2 })}` : "—"} />
               {esNombramiento && (raw?.nivel_tabulador || raw?.categoria_tabulador) && (
                 <ReadOnlyField

@@ -1,25 +1,28 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
+import type { RegimenPermisoVigencia } from "@/lib/permiso-vigencia-solicitud"
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from "react"
 import { useAuth } from "@/lib/auth-context"
 
 export interface PermisoCaptura {
   id: number
-  userId: string          
-  regimen: "honorarios" | "asimilados" | "nombramiento"
+  userId: string
+  regimen: "honorarios" | "asimilados" | "nombramiento" | "catalogo" | RegimenPermisoVigencia
   periodo: string
   active: boolean
   used: boolean
   grantedAt: string
   grantedBy: string
   consumedAt: string | null
+  /** Fecha/hora (ISO) en que vence: los permisos valen 3 días (lib/permiso-expiracion.ts). */
+  venceAt?: string
 }
 
 interface PermisosContextType {
   permisos: PermisoCaptura[]
   habilitarPermiso: (data: {
     userId: string
-    regimen: "honorarios" | "asimilados" | "nombramiento"
+    regimen: "honorarios" | "asimilados" | "nombramiento" | "catalogo" | RegimenPermisoVigencia
     periodo: string
     grantedBy: string
   }) => Promise<void>
@@ -33,7 +36,20 @@ interface PermisosContextType {
 const PermisosContext = createContext<PermisosContextType | undefined>(undefined)
 
 export function AutorizacionesProvider({ children }: { children: ReactNode }) {
-  const [permisos, setPermisos] = useState<PermisoCaptura[]>([])
+  const [permisosRaw, setPermisos] = useState<PermisoCaptura[]>([])
+  // Un permiso que vence mientras la página está abierta deja de contar como
+  // activo sin recargar: se revisa contra la hora actual cada minuto.
+  const [ahora, setAhora] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setAhora(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  const permisos = useMemo(
+    () => permisosRaw.map((p) =>
+      p.active && p.venceAt && new Date(p.venceAt).getTime() <= ahora ? { ...p, active: false } : p,
+    ),
+    [permisosRaw, ahora],
+  )
   // La API exige sesión: se carga (y recarga) al iniciar sesión, no al montar
   // el layout — antes del login la petición solo devolvería 401.
   const { user } = useAuth()
@@ -68,7 +84,7 @@ export function AutorizacionesProvider({ children }: { children: ReactNode }) {
 
   const habilitarPermiso = useCallback(async (data: {
     userId: string
-    regimen: "honorarios" | "asimilados" | "nombramiento"
+    regimen: "honorarios" | "asimilados" | "nombramiento" | "catalogo" | RegimenPermisoVigencia
     periodo: string
     grantedBy: string
   }) => {

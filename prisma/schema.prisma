@@ -231,6 +231,9 @@ model solicitud {
   periodo_id            Int
   tipo_solicitud        String                @db.VarChar(100)
   es_extemporanea       Boolean?              @default(false)
+  // Se capturó con permiso "Captura nueva solicitud": su vigencia puede pasar
+  // de 6 meses (hasta el 31-dic). Se conserva para que editarla después no la rechace.
+  vigencia_extendida    Boolean               @default(false)
   folio_recepcion       String?               @db.VarChar(50)
   folio_dictamen        String?               @db.VarChar(50)
   fecha_creacion        DateTime?             @default(now()) @db.Timestamp(6)

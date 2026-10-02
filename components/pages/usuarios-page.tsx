@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { SearchInput } from "@/components/ui/search-input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SelectConBusqueda } from "@/components/ui/select-con-busqueda"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -26,6 +27,8 @@ import {
 import { PageLayout } from "@/components/page-layout"
 import { useAutorizaciones, type PermisoCaptura } from "@/lib/autorizaciones-store"
 import { periodoAnioSiguiente, esPeriodoAnioSiguiente } from "@/lib/captura-anio-siguiente"
+import { REGIMEN_PERMISO_CATALOGO, periodoPermisoCatalogo, esPermisoCatalogo, folioDePermisoCatalogo } from "@/lib/permiso-catalogo"
+import { regimenPermisoVigencia, esPermisoVigenciaSolicitud, regimenDePermisoVigencia } from "@/lib/permiso-vigencia-solicitud"
 import { useCalendario } from "@/lib/calendario-store"
 import { useAuth } from "@/lib/auth-context"
 import {
@@ -1838,18 +1841,48 @@ function PermisoModal({ usuario, onClose }: PermisoModalProps) {
 
 type CapturaModalProps = {
   usuario: Usuario
+  /** Usuarios con rol UEFA, para el permiso "Captura catálogo". */
+  usuariosUefa: Usuario[]
   onClose: () => void
 }
+type FolioCatalogo = { id: number; folioDictamen: string | null; programaProyecto: string | null; regimen: string | null; vigencia: string | null }
 // Habilita al usuario a capturar una solicitud para un régimen y periodo
 // específicos (permiso de un solo uso, ver /api/permisos-captura).
-function CapturaModal({ usuario, onClose }: CapturaModalProps) {
-  const { habilitarPermiso, revocarPermiso, getPermisosUsuario } = useAutorizaciones()
+function CapturaModal({ usuario, usuariosUefa, onClose }: CapturaModalProps) {
+  const { permisos, habilitarPermiso, revocarPermiso, getPermisosUsuario } = useAutorizaciones()
   const { honorarios: calHon, asimilados: calAs, nombramiento: calNom } = useCalendario()
   const { user: currentUser } = useAuth()
   const [error, setError] = useState<string | null>(null)
 
   const activos = getPermisosUsuario(usuario.id).filter((p) => p.active && !p.used)
-  const activosCaptura = activos.filter((p) => !esPeriodoAnioSiguiente(p.periodo))
+  const activosCaptura = activos.filter((p) => !esPeriodoAnioSiguiente(p.periodo) && !esPermisoCatalogo(p) && !esPermisoVigenciaSolicitud(p))
+
+  // "Captura catálogo": a un usuario UEFA, para un folio de dictamen del
+  // Catálogo, permitirle reutilizarlo con vigencia de más de 6 meses
+  // (lib/permiso-catalogo.ts). Un solo uso.
+  const [catHabilitado, setCatHabilitado] = useState(false)
+  const [uefaSel, setUefaSel] = useState("")
+  const [folioSel, setFolioSel] = useState("")
+  const [folios, setFolios] = useState<FolioCatalogo[]>([])
+  const [cargandoFolios, setCargandoFolios] = useState(false)
+  // Folios habilitados: de todos los UEFA, o solo del usuario elegido.
+  const activosCatalogo = permisos.filter(
+    (p) => p.active && !p.used && esPermisoCatalogo(p) && (!uefaSel || p.userId === uefaSel),
+  )
+  const nombreUsuario = (id: string) => usuariosUefa.find((u) => u.id === id)?.nombre ?? "Usuario"
+  useEffect(() => {
+    setFolioSel("")
+    setFolios([])
+    if (!uefaSel) return
+    let cancelled = false
+    setCargandoFolios(true)
+    fetch(`/api/permisos-captura/catalogo-folios?usuarioId=${encodeURIComponent(uefaSel)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((j) => { if (!cancelled) setFolios(j.folios ?? []) })
+      .catch(() => { if (!cancelled) setError("No se pudieron cargar los folios del catálogo") })
+      .finally(() => { if (!cancelled) setCargandoFolios(false) })
+    return () => { cancelled = true }
+  }, [uefaSel])
 
   // "Capturar solicitud": capturar una solicitud del año
   // siguiente para el régimen autorizado, sin mes ni quincena
@@ -1873,16 +1906,38 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
     ? calNom.map((r) => r.quincena)
     : []
 
+  // "Captura nueva solicitud": para un régimen y mes/quincena, una solicitud
+  // nueva con vigencia de más de 6 meses (lib/permiso-vigencia-solicitud.ts).
+  const activosVigencia = activos.filter((p) => esPermisoVigenciaSolicitud(p))
+  const [vigHabilitado, setVigHabilitado] = useState(() => activosVigencia.length > 0)
+  const [regimenVig, setRegimenVig] = useState<"honorarios" | "asimilados" | "nombramiento" | "">("")
+  const [periodoVig, setPeriodoVig] = useState("")
+  const periodoOpcionesVig = regimenVig === "honorarios"
+    ? calHon.map((r) => r.mes)
+    : regimenVig === "asimilados"
+    ? calAs.map((r) => r.quincena)
+    : regimenVig === "nombramiento"
+    ? calNom.map((r) => r.quincena)
+    : []
+
   const otorgadoPor = currentUser?.nombre ?? "Administrador"
 
-  // Un solo "Guardar" para las dos secciones: otorga lo que esté llenado en cada una.
+  // Un solo "Guardar" para todas las secciones: otorga lo que esté llenado en cada una.
   const pendienteAnioSig = anioSigHabilitado && !!regimenAnioSig
   const pendienteCaptura = capturaHabilitada && !!regimenCap && !!periodoCap
+  const pendienteCatalogo = catHabilitado && !!uefaSel && !!folioSel
+  const pendienteVigencia = vigHabilitado && !!regimenVig && !!periodoVig
+  const hayPendiente = pendienteAnioSig || pendienteCaptura || pendienteCatalogo || pendienteVigencia
   const handleGuardar = useCallback(async () => {
-    if (!pendienteAnioSig && !pendienteCaptura) return
+    if (!hayPendiente) return
     setError(null)
     setGuardando(true)
     try {
+      if (pendienteVigencia && regimenVig) {
+        await habilitarPermiso({ userId: usuario.id, regimen: regimenPermisoVigencia(regimenVig), periodo: periodoVig, grantedBy: otorgadoPor })
+        setRegimenVig("")
+        setPeriodoVig("")
+      }
       if (pendienteAnioSig && regimenAnioSig) {
         await habilitarPermiso({ userId: usuario.id, regimen: regimenAnioSig, periodo: periodoAnioSiguiente(anioSiguiente), grantedBy: otorgadoPor })
         setRegimenAnioSig("")
@@ -1892,12 +1947,19 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
         setRegimenCap("")
         setPeriodoCap("")
       }
+      if (pendienteCatalogo) {
+        const folio = folios.find((f) => String(f.id) === folioSel)
+        if (folio) {
+          await habilitarPermiso({ userId: uefaSel, regimen: REGIMEN_PERMISO_CATALOGO, periodo: periodoPermisoCatalogo(folio.id, folio.folioDictamen), grantedBy: otorgadoPor })
+          setFolioSel("")
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al guardar")
     } finally {
       setGuardando(false)
     }
-  }, [usuario.id, pendienteAnioSig, pendienteCaptura, regimenAnioSig, regimenCap, periodoCap, anioSiguiente, habilitarPermiso, otorgadoPor])
+  }, [usuario.id, hayPendiente, pendienteAnioSig, pendienteCaptura, pendienteCatalogo, pendienteVigencia, regimenAnioSig, regimenCap, periodoCap, regimenVig, periodoVig, uefaSel, folioSel, folios, anioSiguiente, habilitarPermiso, otorgadoPor])
 
   const handleRevocar = useCallback(async (id: number) => {
     setError(null)
@@ -1917,6 +1979,11 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
           <div className="flex flex-col gap-0.5">
             <span className="text-xs font-medium text-card-foreground">{etiqueta(p)}</span>
             <span className="text-[10px] text-muted-foreground">Otorgado: {p.grantedAt} por {p.grantedBy}</span>
+            {p.venceAt && (
+              <span className="text-[10px] text-muted-foreground">
+                Vence: {new Date(p.venceAt).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
+              </span>
+            )}
           </div>
           <button
             type="button"
@@ -1974,8 +2041,8 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
                 className="shrink-0"
               />
               <label htmlFor="capturar-solicitud-switch" className="flex-1 cursor-pointer">
-                <span className="block text-sm font-medium text-card-foreground">Capturar solicitud</span>
-                <span className="block text-[11px] text-muted-foreground">Solicitudes del ejercicio {anioSiguiente}, sin elegir mes ni quincena.</span>
+                <span className="block text-sm font-medium text-card-foreground">Capturar en Nuevo Ejercicio</span>
+                <span className="block text-[11px] text-muted-foreground">Solicitudes del ejercicio próximo, sin elegir mes ni quincena.</span>
               </label>
               {activosAnioSiguiente.length > 0 && (
                 <Badge variant="outline" className="text-[10px] font-mono shrink-0">{activosAnioSiguiente.length}</Badge>
@@ -1998,6 +2065,75 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
             )}
           </div>
 
+          {/* Captura catálogo (vigencia de más de 6 meses en una reutilización) */}
+          <div className={`rounded-lg border transition-all ${catHabilitado ? "bg-primary/[0.03] border-primary/10" : "border-border"}`}>
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <Switch
+                id="captura-catalogo-switch"
+                checked={catHabilitado}
+                onCheckedChange={(v) => { setCatHabilitado(v); if (!v) { setUefaSel(""); setFolioSel("") } }}
+                className="shrink-0"
+              />
+              <label htmlFor="captura-catalogo-switch" className="flex-1 cursor-pointer">
+                <span className="block text-sm font-medium text-card-foreground">Capturar en Catálogo</span>
+                <span className="block text-[11px] text-muted-foreground">Solicitudes del catálogo, elige la vigencia.</span>
+              </label>
+            </div>
+
+            {catHabilitado && (
+              <div className="flex flex-col gap-4 px-3 pb-3">
+                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50/50 border border-blue-200/50 rounded-md px-3 py-2.5">
+                  <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-500" />
+                  <span>
+                    El usuario UEFA podrá reutilizar el folio de dictamen seleccionado con una vigencia de más de 6 meses (hasta el 31 de diciembre del año en que inicia). El permiso se consume al usarlo.
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {listaPermisos(
+                    activosCatalogo,
+                    uefaSel ? "Este usuario no tiene folios habilitados." : "No hay folios habilitados.",
+                    (p) => uefaSel
+                      ? `Folio ${folioDePermisoCatalogo(p.periodo)}`
+                      : `Folio ${folioDePermisoCatalogo(p.periodo)} · ${nombreUsuario(p.userId)}`,
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm">Usuario UEFA</Label>
+                  <SelectConBusqueda
+                    opciones={usuariosUefa.map((u) => ({ value: u.id, label: u.nombre }))}
+                    value={uefaSel}
+                    onValueChange={setUefaSel}
+                    placeholder="Seleccione usuario"
+                    className="bg-background"
+                    contentClassName="z-[200]"
+                  />
+                  {usuariosUefa.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No hay usuarios activos con rol UEFA.</p>
+                  )}
+                </div>
+                {uefaSel && (
+                  <>
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-sm">Folio de dictamen</Label>
+                      <SelectConBusqueda
+                        opciones={folios.map((f) => ({
+                          value: String(f.id),
+                          label: `${f.folioDictamen ?? "Sin folio"}${f.programaProyecto ? ` · ${f.programaProyecto}` : ""}`,
+                        }))}
+                        value={folioSel}
+                        onValueChange={setFolioSel}
+                        placeholder={cargandoFolios ? "Cargando folios…" : folios.length === 0 ? "Sin folios en su catálogo" : "Seleccione folio"}
+                        disabled={cargandoFolios || folios.length === 0}
+                        className="bg-background"
+                        contentClassName="z-[200]"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Capturas habilitadas (extemporáneas por periodo) */}
           <div className={`rounded-lg border transition-all ${capturaHabilitada ? "bg-primary/[0.03] border-primary/10" : "border-border"}`}>
             <div className="flex items-center gap-3 px-3 py-2.5">
@@ -2008,7 +2144,7 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
                 className="shrink-0"
               />
               <label htmlFor="capturas-habilitadas-switch" className="flex-1 cursor-pointer">
-                <span className="block text-sm font-medium text-card-foreground">Capturas habilitadas</span>
+                <span className="block text-sm font-medium text-card-foreground">Habilitar Captura</span>
                 <span className="block text-[11px] text-muted-foreground">Permiso para capturar un régimen y periodo específicos.</span>
               </label>
               {activosCaptura.length > 0 && (
@@ -2046,6 +2182,55 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
               </div>
             )}
           </div>
+
+          {/* Captura nueva solicitud (vigencia de más de 6 meses) */}
+          <div className={`rounded-lg border transition-all ${vigHabilitado ? "bg-primary/[0.03] border-primary/10" : "border-border"}`}>
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <Switch
+                id="captura-nueva-solicitud-switch"
+                checked={vigHabilitado}
+                onCheckedChange={(v) => { setVigHabilitado(v); if (!v) { setRegimenVig(""); setPeriodoVig("") } }}
+                className="shrink-0"
+              />
+              <label htmlFor="captura-nueva-solicitud-switch" className="flex-1 cursor-pointer">
+                <span className="block text-sm font-medium text-card-foreground">Capturar en Nueva Solicitud</span>
+                <span className="block text-[11px] text-muted-foreground">Solicitudes nuevas, elige la vigencia.</span>
+              </label>
+              {activosVigencia.length > 0 && (
+                <Badge variant="outline" className="text-[10px] font-mono shrink-0">{activosVigencia.length}</Badge>
+              )}
+            </div>
+
+            {vigHabilitado && (
+              <div className="flex flex-col gap-4 px-3 pb-3">
+                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-blue-50/50 border border-blue-200/50 rounded-md px-3 py-2.5">
+                  <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-500" />
+                  <span>
+                    El usuario podrá capturar una solicitud nueva del régimen y periodo seleccionados con una vigencia de más de 6 meses (hasta el 31 de diciembre del año en que inicia). El permiso se consume al usarlo.
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {listaPermisos(activosVigencia, "El usuario no tiene permisos de vigencia.", (p) => `${regimenDePermisoVigencia(p.regimen)} · ${p.periodo}`)}
+                </div>
+                {selectRegimen(regimenVig, (v) => { setRegimenVig(v); setPeriodoVig("") })}
+                {regimenVig && (
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-sm">{regimenVig === "honorarios" ? "Mes" : "Quincena"} de aplicación</Label>
+                    <Select value={periodoVig} onValueChange={setPeriodoVig}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder={`Seleccione ${regimenVig === "honorarios" ? "mes" : "quincena"}`} />
+                      </SelectTrigger>
+                      <SelectContent className="z-[200]">
+                        {periodoOpcionesVig.map((p) => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border bg-muted/30 rounded-b-xl shrink-0">
@@ -2061,7 +2246,7 @@ function CapturaModal({ usuario, onClose }: CapturaModalProps) {
             <Button variant="vino"
               className="rounded-full h-10 px-6 font-normal shadow-sm"
               onClick={() => void handleGuardar()}
-              disabled={guardando || (!pendienteAnioSig && !pendienteCaptura)}
+              disabled={guardando || !hayPendiente}
             >
               {guardando && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Guardar
@@ -2197,6 +2382,7 @@ export function UsuariosPage() {
         <CapturaModal
           key={usuarioCaptura.id}
           usuario={usuarioCaptura}
+          usuariosUefa={usuarios.filter((u) => u.rol.trim().toLowerCase() === "uefa" && u.estatus === "Activo")}
           onClose={() => setCapturaUserId(null)}
         />
       )}
